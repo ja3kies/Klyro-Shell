@@ -47,7 +47,6 @@ private val TextMuted = Color(0xFF94A3B8)
 private val Cyan = Color(0xFF00F0FF)
 private val Purple = Color(0xFF8338EC)
 private val Success = Color(0xFF00FF66)
-private val Error = Color(0xFFFF0055)
 
 class MainActivity : ComponentActivity() {
     private var installProgress by mutableIntStateOf(0)
@@ -278,7 +277,7 @@ private fun OrynTerminalApp(
                     }
                     Button(
                         onClick = onInstall,
-                        enabled = !installing && !bootstrapInstalled,
+                        enabled = !installing && !shellReady,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Cyan,
@@ -291,7 +290,7 @@ private fun OrynTerminalApp(
                         Text(
                             when {
                                 installing -> "Installing environment…"
-                                bootstrapInstalled -> "Bootstrap installed"
+                                shellReady -> "Runtime installed"
                                 bootstrapInstalled -> "Install proot runtime"
                                 else -> "Install private environment"
                             },
