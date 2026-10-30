@@ -37,6 +37,98 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
+      # Fetch ARM64 packages from the official Termux repository. APT verifies
+      # InRelease with the Termux keyring before accepting package SHA-256 data.
+      - name: Prepare verified Termux ARM64 proot runtime assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          KEY_COMMIT="cf263f833188fc7421eded4149fee617c0aad55b"
+          KEY_DIR="$(mktemp -d)"
+          export GNUPGHOME="$KEY_DIR/gnupg"
+          mkdir -m 700 -p "$GNUPGHOME"
+
+          KEYS=(
+            agnostic-apollo.gpg
+            grimler.gpg
+            kcubeterm.gpg
+            landfillbaby.gpg
+            mradityaalok.gpg
+            2096779623.gpg
+            thunder-coding.gpg
+            termux-autobuilds.gpg
+          )
+          for key in "${KEYS[@]}"; do
+            curl --fail --silent --show-error --location \
+              "https://raw.githubusercontent.com/termux/termux-packages/$KEY_COMMIT/packages/termux-keyring/$key" \
+              --output "$KEY_DIR/$key"
+          done
+
+          gpg --batch --import "$KEY_DIR"/*.gpg
+          gpg --batch --export > "$KEY_DIR/termux-archive-keyring.gpg"
+          sudo install -m 0644 "$KEY_DIR/termux-archive-keyring.gpg" \
+            /usr/share/keyrings/termux-archive-keyring.gpg
+
+          sudo dpkg --add-architecture aarch64
+          echo "deb [arch=aarch64 signed-by=/usr/share/keyrings/termux-archive-keyring.gpg] https://packages.termux.dev/apt/termux-main stable main" \
+            | sudo tee /etc/apt/sources.list.d/termux-main.list >/dev/null
+          sudo apt-get update
+
+          mkdir -p "$RUNNER_TEMP/termux-runtime/debs"
+          cd "$RUNNER_TEMP/termux-runtime/debs"
+          apt-get download proot:aarch64 libtalloc:aarch64 libandroid-shmem:aarch64
+
+          mkdir -p extracted
+          for deb in ./*.deb; do
+            dpkg-deb --extract "$deb" "extracted/$(basename "$deb" .deb)"
+          done
+
+          PREFIX_SUFFIX="data/data/com.termux/files/usr"
+          PROOT_ROOT="$(find extracted -type f -path "*/$PREFIX_SUFFIX/bin/proot" -print -quit)"
+          LOADER_ROOT="$(find extracted -type f -path "*/$PREFIX_SUFFIX/libexec/proot/loader" -print -quit)"
+          test -n "$PROOT_ROOT"
+          test -n "$LOADER_ROOT"
+
+          ASSET_ROOT="$GITHUB_WORKSPACE/app/src/main/assets/proot"
+          mkdir -p "$ASSET_ROOT/bin" "$ASSET_ROOT/lib" "$ASSET_ROOT/licenses"
+          install -m 0755 "$PROOT_ROOT" "$ASSET_ROOT/bin/proot"
+          install -m 0755 "$LOADER_ROOT" "$ASSET_ROOT/loader"
+
+          while IFS= read -r -d '' library; do
+            install -m 0644 "$library" "$ASSET_ROOT/lib/$(basename "$library")"
+          done < <(find -L extracted -type f \
+            \( -name 'libtalloc.so*' -o -name 'libandroid-shmem.so*' \) -print0)
+
+          for package in proot libtalloc libandroid-shmem; do
+            package_root="$(find extracted -type d -path "*/$PREFIX_SUFFIX/share/doc/$package" -print -quit)"
+            if [ -n "$package_root" ] && [ -f "$package_root/copyright" ]; then
+              install -m 0644 "$package_root/copyright" "$ASSET_ROOT/licenses/$package-copyright"
+            fi
+          done
+
+          test -s "$ASSET_ROOT/bin/proot"
+          test -s "$ASSET_ROOT/loader"
+          compgen -G "$ASSET_ROOT/lib/libtalloc.so*" >/dev/null
+          compgen -G "$ASSET_ROOT/lib/libandroid-shmem.so*" >/dev/null
+
+          {
+            echo "# Verified package versions from the signed Termux stable repository"
+            for package in proot libtalloc libandroid-shmem; do
+              deb="$(find . -maxdepth 1 -name "${package}_*_aarch64.deb" -print -quit)"
+              printf '# %s=%s\n' "$package" "$(dpkg-deb -f "$deb" Version)"
+            done
+            cd "$ASSET_ROOT"
+            find bin lib -type f -print0 | sort -z | xargs -0 sha256sum
+            sha256sum loader
+          } > "$ASSET_ROOT/runtime-manifest.txt"
+
+          readelf -h "$ASSET_ROOT/bin/proot" | grep -q 'AArch64'
+          readelf -d "$ASSET_ROOT/bin/proot" > "$RUNNER_TEMP/proot-dynamic.txt"
+          cat "$RUNNER_TEMP/proot-dynamic.txt"
+          echo "Verified proot runtime assets:"
+          cat "$ASSET_ROOT/runtime-manifest.txt"
+
       - name: Run JVM unit tests
         run: gradle :app:testDebugUnitTest
 
