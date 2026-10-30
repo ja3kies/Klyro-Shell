@@ -190,7 +190,7 @@ public final class TermuxBootstrapInstaller {
         String home = OrynPaths.TERMUX_VIRTUAL_HOME;
 
         java.util.ArrayList<String> args = new java.util.ArrayList<>();
-        args.add(proot.getAbsolutePath());
+        args.add(paths.getProot().getAbsolutePath());
         args.add("--link2symlink");
         args.add("-r");
         args.add(paths.getRoot().getAbsolutePath());
