@@ -184,27 +184,48 @@ public final class TermuxBootstrapInstaller {
         }
         String prefix = OrynPaths.TERMUX_VIRTUAL_PREFIX;
         String home = OrynPaths.TERMUX_VIRTUAL_HOME;
-        return new String[] {
-                proot.getAbsolutePath(),
-                "--link2symlink",
-                "-r", paths.getRoot().getAbsolutePath(),
-                "-b", "/dev",
-                "-b", "/proc",
-                "-b", "/sys",
-                "-b", paths.getPrefix().getAbsolutePath() + ":" + prefix,
-                "-b", paths.getHome().getAbsolutePath() + ":" + home,
-                "-w", home,
-                "/usr/bin/env", "-i",
-                "HOME=" + home,
-                "PREFIX=" + prefix,
-                "PATH=" + prefix + "/bin:/system/bin:/system/xbin",
-                "TERM=xterm-256color",
-                "COLORTERM=truecolor",
-                "LANG=en_US.UTF-8",
-                "TMPDIR=" + prefix + "/tmp",
-                "LD_PRELOAD=" + prefix + "/lib/libtermux-exec.so",
-                prefix + "/bin/bash", "--login"
-        };
+
+        java.util.ArrayList<String> args = new java.util.ArrayList<>();
+        args.add(proot.getAbsolutePath());
+        args.add("--link2symlink");
+        args.add("-r");
+        args.add(paths.getRoot().getAbsolutePath());
+        addBind(args, "/dev");
+        addBind(args, "/proc");
+        addBind(args, "/sys");
+        addBind(args, "/system");
+        // These mount points vary across Android releases and OEM builds.
+        addBindIfPresent(args, "/apex");
+        addBindIfPresent(args, "/vendor");
+        addBindIfPresent(args, "/product");
+        args.add("-b");
+        args.add(paths.getPrefix().getAbsolutePath() + ":" + prefix);
+        args.add("-b");
+        args.add(paths.getHome().getAbsolutePath() + ":" + home);
+        args.add("-w");
+        args.add(home);
+        args.add("/usr/bin/env");
+        args.add("-i");
+        args.add("HOME=" + home);
+        args.add("PREFIX=" + prefix);
+        args.add("PATH=" + prefix + "/bin:/system/bin:/system/xbin");
+        args.add("TERM=xterm-256color");
+        args.add("COLORTERM=truecolor");
+        args.add("LANG=en_US.UTF-8");
+        args.add("TMPDIR=" + prefix + "/tmp");
+        args.add("LD_PRELOAD=" + prefix + "/lib/libtermux-exec.so");
+        args.add(prefix + "/bin/bash");
+        args.add("--login");
+        return args.toArray(new String[0]);
+    }
+
+    private static void addBind(java.util.List<String> args, String hostPath) {
+        args.add("-b");
+        args.add(hostPath);
+    }
+
+    private static void addBindIfPresent(java.util.List<String> args, String hostPath) {
+        if (new File(hostPath).isDirectory()) addBind(args, hostPath);
     }
 
     private boolean isValidArchive(File file) throws Exception {
