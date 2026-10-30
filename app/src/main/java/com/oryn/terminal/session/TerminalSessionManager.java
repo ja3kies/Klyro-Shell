@@ -39,9 +39,7 @@ public final class TerminalSessionManager {
     }
 
     public boolean isReady() {
-        return paths.isBootstrapInstalled()
-                && paths.getProot().isFile()
-                && paths.getProot().canExecute();
+        return paths.isBootstrapInstalled() && paths.isProotInstalled();
     }
 
     public TerminalSession startBash(String name, TerminalSession.Listener listener)
@@ -70,6 +68,7 @@ public final class TerminalSessionManager {
         Map<String, String> environment = new LinkedHashMap<>();
         environment.put("HOME", paths.getHome().getAbsolutePath());
         environment.put("TMPDIR", paths.getTmp().getAbsolutePath());
+        environment.put("LD_LIBRARY_PATH", paths.getProotLibDir().getAbsolutePath());
         environment.put("PATH", "/system/bin:/system/xbin:/vendor/bin");
         environment.put("ANDROID_ROOT", "/system");
         environment.put("ANDROID_DATA", "/data");
