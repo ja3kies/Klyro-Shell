@@ -128,7 +128,7 @@ Only after this gate passes should the UI be redesigned around the Neon Obsidian
 - The installer builds the future proot launch argv, including Android runtime mounts required by Termux binaries. It refuses to launch until Oryn's private proot binary exists.
 - Added JVM tests for the private path contract and virtual bind destinations; CI now runs `testDebugUnitTest` before assembling the APK.
 
-**Not yet verified on-device:** actual archive extraction/symlink behavior, ELF loading, proot execution, `bash`, `pkg update`, package installs, and coexistence with an installed Termux. The bootstrap is not yet connected to the UI or a PTY session. Do not mark the environment operational until those checks pass.
+**Not yet verified on-device:** actual archive extraction/symlink behavior, ELF loading, proot execution, `bash`, `pkg update`, package installs, and coexistence with an installed Termux. The onboarding UI now invokes the bootstrap installer and then the proot runtime installer. Do not mark the environment operational until device checks pass.
 
 
 ## Step 5 implementation — PTY-backed Bash session engine (2026-10-30)
@@ -140,4 +140,20 @@ Only after this gate passes should the UI be redesigned around the Neon Obsidian
 - Ensured the extracted Termux prefix contains the `tmp` directory referenced by the login environment.
 - Added a JVM test for the host environment's path isolation.
 
-**Current gate:** the session engine is implemented, but Bash cannot launch yet because Oryn's private proot executable has not been installed. The engine is not connected to a terminal renderer yet; ANSI parsing, scrollback UI, keyboard controls, and on-device shell validation remain outstanding. No shell execution or package-manager success is claimed.
+**Current gate:** the PTY session engine and private proot runtime installer are implemented. The engine is not connected to a terminal renderer yet; ANSI parsing, scrollback UI, keyboard controls, and on-device shell validation remain outstanding. No successful Bash launch or package-manager operation is claimed.
+
+
+## Step 6 implementation — verified ARM64 proot runtime (2026-10-30)
+
+- GitHub Actions imports the official Termux repository signing keys from a pinned `termux-packages` commit and uses APT's signed stable repository metadata.
+- Runtime package versions are pinned: `proot 5.1.107.101`, `libtalloc 2.5.0`, and `libandroid-shmem 0.7`.
+- CI extracts the ARM64 executable, both shared-library dependencies, and the unbundled proot loader. It includes the package copyright files when present and generates a SHA-256 manifest.
+- CI confirms the executable is AArch64 and reports its dynamic dependencies: `libtalloc.so.2` and `libandroid-shmem.so`.
+- Added `ProotRuntimeInstaller`: verifies each packaged asset, stages it under Oryn's private storage, applies executable permissions, and activates the runtime with rollback.
+- The loader is installed inside Oryn's private Termux-compatible prefix. The proot host process receives `LD_LIBRARY_PATH` pointing to Oryn's private library directory.
+- Onboarding now installs the bootstrap first, then the proot runtime. Bash remains unavailable until both are present.
+- Added JVM tests for complete runtime readiness and private library-path isolation.
+
+**CI verified:** runtime assets prepared, JVM tests passed, ARM64 debug APK built and uploaded.
+
+**Still unverified on a physical ARM64 device:** proot startup, ELF loading under Android's linker, first Bash launch, PTY interaction, `pkg update`, package installation/upgrades, and coexistence with an existing Termux installation. The current screen is still setup/onboarding; a terminal renderer and keyboard UI are the next implementation phase.
