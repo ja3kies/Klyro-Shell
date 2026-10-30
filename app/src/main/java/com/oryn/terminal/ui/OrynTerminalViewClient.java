@@ -40,8 +40,11 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
         InputMethodManager manager = (InputMethodManager)
                 context.getSystemService(Context.INPUT_METHOD_SERVICE);
         View view = terminalView;
-        if (manager != null && view != null) {
-            manager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+        if (view != null) {
+            view.requestFocus();
+            if (manager != null) {
+                manager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+            }
         }
     }
 
