@@ -37,7 +37,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
-    public void onTextChanged(@NonNull com.termux.terminal.com.termux.terminal.TerminalSession session) {
+    public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.post(view::onScreenUpdated);
     }
@@ -64,7 +64,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
-    public void onPasteTextFromClipboard(@Nullable com.termux.terminal.com.termux.terminal.TerminalSession session) {
+    public void onPasteTextFromClipboard(@Nullable com.termux.terminal.TerminalSession session) {
         if (session == null) return;
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
