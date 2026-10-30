@@ -213,7 +213,16 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_oryn_terminal_core_PtyProcess_nativeSendSignal(
         JNIEnv*, jclass, jint pid, jint sig) {
     if (pid <= 0) return -1;
-    return kill(static_cast<pid_t>(pid), sig);
+    // forkpty makes the child a session/process-group leader. Signal the
+    // whole foreground job tree so closing a tab cannot orphan child tools.
+    pid_t processGroup = -static_cast<pid_t>(pid);
+    if (kill(processGroup, sig) == 0) return 0;
+    int groupError = errno;
+    if (groupError == ESRCH || groupError == EPERM) {
+        return kill(static_cast<pid_t>(pid), sig);
+    }
+    errno = groupError;
+    return -errno;
 }
 
 extern "C" JNIEXPORT jint JNICALL
