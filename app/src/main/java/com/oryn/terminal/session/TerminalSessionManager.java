@@ -7,6 +7,7 @@ import com.oryn.terminal.termux.TermuxBootstrapInstaller;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -41,25 +42,36 @@ public final class TerminalSessionManager {
         return paths.isBootstrapInstalled() && paths.isProotInstalled();
     }
 
-    public TerminalSession startBash(String name, TerminalSession.Listener listener)
-            throws IOException {
+    public com.termux.terminal.TerminalSession startBash(
+            String name,
+            com.termux.terminal.TerminalSessionClient client
+    ) throws IOException {
         if (!isReady()) {
             throw new IOException("Oryn's private bootstrap and complete proot runtime are required.");
         }
 
-        // No fallback to Android's system shell or the separate Termux installation.
+        // Use the maintained Termux PTY + VT terminal engine, but only Oryn-owned paths.
         String[] command = bootstrap.buildLoginCommand();
-        String id = UUID.randomUUID().toString();
-        return TerminalSession.start(
-                id,
-                name == null || name.trim().isEmpty() ? "Bash" : name.trim(),
-                command,
-                buildHostEnvironment(paths),
-                paths.getRoot(),
-                24,
-                80,
-                listener
-        );
+        String[] args = Arrays.copyOfRange(command, 1, command.length);
+        Map<String, String> hostEnvironment = buildHostEnvironment(paths);
+        String[] environment = new String[hostEnvironment.size()];
+        int index = 0;
+        for (Map.Entry<String, String> entry : hostEnvironment.entrySet()) {
+            environment[index++] = entry.getKey() + "=" + entry.getValue();
+        }
+
+        com.termux.terminal.TerminalSession session =
+                new com.termux.terminal.TerminalSession(
+                        command[0],
+                        paths.getRoot().getAbsolutePath(),
+                        args,
+                        environment,
+                        5000,
+                        client
+                );
+        session.mSessionName = name == null || name.trim().isEmpty()
+                ? "Bash" : name.trim();
+        return session;
     }
 
     /** Host-side environment for proot; all writable paths stay inside Oryn. */
