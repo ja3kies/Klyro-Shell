@@ -163,13 +163,13 @@ flowchart TD
 
 ## ✦ Build
 
-The Android project scaffold is being established. Build instructions will be finalized once the Gradle wrapper and CI pipeline are committed.
-
-Planned local build command:
+The Android project scaffold is in place. Open the repository in Android Studio and let Gradle sync, or use Gradle 8.10.2 with JDK 17 and Android SDK 35:
 
 ```bash
-./gradlew assembleDebug
+gradle :app:assembleDebug
 ```
+
+The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`. GitHub Actions also builds the debug APK on pushes and pull requests to `main`.
 
 The first verified build will be an installable ARM64 debug APK. A successful APK build alone will not count as proof that shell execution or package installation works.
 
