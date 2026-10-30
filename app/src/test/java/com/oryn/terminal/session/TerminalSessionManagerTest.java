@@ -24,6 +24,8 @@ public class TerminalSessionManagerTest {
 
         assertEquals(paths.getHome().getAbsolutePath(), environment.get("HOME"));
         assertEquals(paths.getTmp().getAbsolutePath(), environment.get("TMPDIR"));
+        assertEquals(paths.getProotLibDir().getAbsolutePath(),
+                environment.get("LD_LIBRARY_PATH"));
         assertEquals("/system/bin:/system/xbin:/vendor/bin", environment.get("PATH"));
         assertEquals("/system", environment.get("ANDROID_ROOT"));
         assertEquals("/data", environment.get("ANDROID_DATA"));
