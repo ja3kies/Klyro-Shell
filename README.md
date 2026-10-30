@@ -128,13 +128,13 @@ A dark, focused interface with a small number of expressive accents. Neon is use
 
 ## ✦ Architecture
 
-The intended runtime is split into clear boundaries so the UI never owns shell-process logic.
+The runtime is split into clear boundaries so the UI never owns shell-process logic. Oryn uses the Termux `terminal-view` UI with a locally vendored `terminal-emulator` module patched to reject terminal-originated OSC 52 clipboard writes.
 
 ```mermaid
 flowchart TD
     UI["Jetpack Compose UI"] --> VM["ViewModel / Session State"]
     VM --> SM["Session Manager"]
-    SM --> PTY["Native PTY bridge"]
+    SM --> PTY["Termux PTY engine"]
     PTY --> SHELL["Bash / Zsh"]
     SHELL --> ENV["Oryn-owned userland"]
     ENV --> PKG["Package manager"]
@@ -156,7 +156,7 @@ flowchart TD
 | Language | Kotlin |
 | UI | Jetpack Compose + Material 3 |
 | Android minimum | API 26 target, subject to device testing |
-| Terminal process | Native PTY bridge (prototype evaluation) |
+| Terminal process | Termux terminal-view + Oryn-patched terminal-emulator |
 | Userland compatibility | Termux packages via isolated proot mapping (under validation) |
 | Build | Gradle / Android Gradle Plugin |
 | Target ABI | ARM64 first |
@@ -194,12 +194,12 @@ A successful APK build proves compilation and packaging only. It does not prove 
 - [ ] Validate bootstrap extraction, symlinks, proot and Bash execution on-device
 - [ ] Verify independent app storage and Termux coexistence
 - [x] Connect onboarding to the private bootstrap and proot installers
-- [ ] Connect the session manager to an ANSI-capable terminal renderer
+- [x] Connect the session manager to the Termux ANSI terminal renderer
 - [ ] Validate Bash and real package-manager operations on ARM64
 - [ ] Build horizontal session tabs and session lifecycle
 - [ ] Add Zsh and developer tool presets
 - [ ] Add settings, accessibility and terminal customization
-- [ ] Run automated tests and maintain reproducible CI builds
+- [x] Add OSC 52 clipboard-write regression coverage\n- [ ] Run automated tests and maintain reproducible CI builds
 - [ ] Produce a tested release APK
 
 ## ✦ Project status
