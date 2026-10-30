@@ -134,10 +134,18 @@ public final class ProotRuntimeInstaller {
         if (previousLoader.exists() && !previousLoader.delete()) {
             throw new IOException("Cannot clear previous loader backup.");
         }
-        if (binDir.exists()) move(binDir, previousBin);
-        if (loader.exists()) move(loader, previousLoader);
 
+        boolean backedUpBin = false;
+        boolean backedUpLoader = false;
         try {
+            if (binDir.exists()) {
+                move(binDir, previousBin);
+                backedUpBin = true;
+            }
+            if (loader.exists()) {
+                move(loader, previousLoader);
+                backedUpLoader = true;
+            }
             move(stagingBin, binDir);
             move(stagingLoader, loader);
         } catch (Exception activationError) {
@@ -146,8 +154,8 @@ public final class ProotRuntimeInstaller {
                 throw new IOException("Runtime activation failed and loader cleanup failed.",
                         activationError);
             }
-            if (previousBin.exists()) move(previousBin, binDir);
-            if (previousLoader.exists()) move(previousLoader, loader);
+            if (backedUpBin && previousBin.exists()) move(previousBin, binDir);
+            if (backedUpLoader && previousLoader.exists()) move(previousLoader, loader);
             throw activationError;
         }
 
