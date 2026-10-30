@@ -157,3 +157,16 @@ Only after this gate passes should the UI be redesigned around the Neon Obsidian
 **CI verified:** runtime assets prepared, JVM tests passed, ARM64 debug APK built and uploaded.
 
 **Still unverified on a physical ARM64 device:** proot startup, ELF loading under Android's linker, first Bash launch, PTY interaction, `pkg update`, package installation/upgrades, and coexistence with an existing Termux installation. The current screen is still setup/onboarding; a terminal renderer and keyboard UI are the next implementation phase.
+
+
+## Security patch — OSC 52 clipboard writes (2026-10-30)
+
+- Vendored the Termux `terminal-emulator` module from upstream tag `v0.118.0` into `terminal-emulator/` and switched Oryn to that local module while retaining the upstream `terminal-view` UI.
+- Disabled the parser's OSC 52 clipboard-write handler. Untrusted terminal output can no longer reach Oryn's Android clipboard callback through OSC 52.
+- Manual selection copy remains wired through `terminal-view`; the app callback was deliberately not disabled.
+- Added `testOrynBlocksOsc52ClipboardWrites` to the upstream OSC test suite with a harmless Base64 marker.
+- Preserved the upstream license in `terminal-emulator/LICENSE.md` and recorded provenance in `terminal-emulator/UPSTREAM.md`.
+
+**Validation status:** source patch and regression test are committed. CI run must pass before considering the integration build-verified. Physical-device checks are still required to confirm both OSC 52 blocking and manual selection copy on Android. This patch does not change the installed Termux app or its data.
+
+**Residual limits:** this prevents terminal-driven clipboard writes; it does not make proot a security sandbox and does not prevent other clipboard APIs or user-approved paste operations.
