@@ -18,6 +18,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,6 +50,11 @@ fun TerminalPane(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var controlActive by remember { mutableStateOf(viewClient.isControlDown()) }
+    var altActive by remember { mutableStateOf(viewClient.isAltDown()) }
+    var shiftActive by remember { mutableStateOf(false) }
+    var fnActive by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -123,11 +132,21 @@ fun TerminalPane(
         ) {
             TerminalExtraKey("ESC") { session.writeCodePoint(false, 27) }
             TerminalExtraKey("TAB") { session.writeCodePoint(false, 9) }
-            TerminalExtraKey("CTRL", active = viewClient.isControlDown()) {
-                viewClient.setControlDown(!viewClient.isControlDown())
+            TerminalExtraKey("CTRL", active = controlActive) {
+                controlActive = !controlActive
+                viewClient.setControlDown(controlActive)
             }
-            TerminalExtraKey("ALT", active = viewClient.isAltDown()) {
-                viewClient.setAltDown(!viewClient.isAltDown())
+            TerminalExtraKey("ALT", active = altActive) {
+                altActive = !altActive
+                viewClient.setAltDown(altActive)
+            }
+            TerminalExtraKey("SHIFT", active = shiftActive) {
+                shiftActive = !shiftActive
+                viewClient.setShiftDown(shiftActive)
+            }
+            TerminalExtraKey("FN", active = fnActive) {
+                fnActive = !fnActive
+                viewClient.setFnDown(fnActive)
             }
             TerminalExtraKey("↑") { write(session, "\u001B[A") }
             TerminalExtraKey("↓") { write(session, "\u001B[B") }
