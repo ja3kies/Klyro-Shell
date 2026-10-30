@@ -77,7 +77,8 @@ jobs:
 
           mkdir -p "$RUNNER_TEMP/termux-runtime/debs"
           cd "$RUNNER_TEMP/termux-runtime/debs"
-          apt-get download proot:aarch64 libtalloc:aarch64 libandroid-shmem:aarch64
+          # Keep the runtime reproducible; update these pins deliberately with the Termux sources.
+          apt-get download proot:aarch64=5.1.107.101 libtalloc:aarch64=2.5.0 libandroid-shmem:aarch64=0.7
 
           mkdir -p extracted
           for deb in ./*.deb; do
