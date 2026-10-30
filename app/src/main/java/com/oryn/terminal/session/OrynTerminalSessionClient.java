@@ -3,7 +3,6 @@ package com.oryn.terminal.session;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 
@@ -11,7 +10,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.termux.terminal.TerminalEmulator;
-import com.termux.terminal.TerminalSession;
 import com.termux.terminal.TerminalSessionClient;
 import com.termux.view.TerminalView;
 
@@ -39,7 +37,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
-    public void onTextChanged(@NonNull TerminalSession session) {
+    public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.post(view::onScreenUpdated);
     }
@@ -66,7 +64,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
-    public void onPasteTextFromClipboard(@Nullable TerminalSession session) {
+    public void onPasteTextFromClipboard(@Nullable com.termux.terminal.TerminalSession session) {
         if (session == null) return;
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
