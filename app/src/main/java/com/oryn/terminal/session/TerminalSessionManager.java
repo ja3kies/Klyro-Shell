@@ -31,11 +31,10 @@ public final class TerminalSessionManager {
         if (!paths.isBootstrapInstalled()) {
             return "Oryn's private Bash environment is not installed yet.";
         }
-        File proot = paths.getProot();
-        if (!proot.isFile() || !proot.canExecute()) {
-            return "Bash is installed, but Oryn's private proot runtime is missing.";
+        if (!paths.isProotInstalled()) {
+            return "Bootstrap is installed, but Oryn's complete private proot runtime is missing.";
         }
-        return "Bash runtime ready.";
+        return "Private proot runtime installed; Bash startup still needs device validation.";
     }
 
     public boolean isReady() {
@@ -44,11 +43,11 @@ public final class TerminalSessionManager {
 
     public TerminalSession startBash(String name, TerminalSession.Listener listener)
             throws IOException {
-        if (!paths.isBootstrapInstalled()) {
-            throw new IOException("Install Oryn's private Termux-compatible environment first.");
+        if (!isReady()) {
+            throw new IOException("Oryn's private bootstrap and complete proot runtime are required.");
         }
 
-        // buildLoginCommand refuses to start unless Oryn's own proot binary exists.
+        // No fallback to Android's system shell or the separate Termux installation.
         String[] command = bootstrap.buildLoginCommand();
         String id = UUID.randomUUID().toString();
         return TerminalSession.start(
