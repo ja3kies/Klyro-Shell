@@ -60,10 +60,6 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
 
     @Override
     public boolean onCodePoint(int codePoint, boolean ctrlDown, TerminalSession session) {
-        controlDown = false;
-        altDown = false;
-        shiftDown = false;
-        fnDown = false;
         return false;
     }
 
