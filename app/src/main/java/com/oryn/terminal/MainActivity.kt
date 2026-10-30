@@ -167,7 +167,7 @@ class MainActivity : ComponentActivity() {
             shellReady = manager.isReady()
             if (shellReady) {
                 statusMessage = "Private proot runtime installed. Bash startup still requires on-device validation."
-            } else if (bootstrapInstalled && statusMessage.isBlank()) {
+            } else {
                 statusMessage = manager.getReadinessMessage()
             }
         } catch (error: IOException) {
