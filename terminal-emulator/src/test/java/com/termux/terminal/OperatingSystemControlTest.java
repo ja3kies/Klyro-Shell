@@ -197,7 +197,7 @@ public class OperatingSystemControlTest extends TerminalTestCase {
 	public void testOrynBlocksOsc52ClipboardWrites() throws Exception {
 		withTerminalSized(10, 10);
 		// Harmless marker; OSC 52 must never reach the clipboard callback.
-		enterString("\\033]52;c;SGVsbG8sIHdvcmxk\\007");
+		enterString("\033]52;c;SGVsbG8sIHdvcmxk\007");
 		assertTrue("OSC 52 must not write to clipboard", mOutput.clipboardPuts.isEmpty());
 	}
 }
