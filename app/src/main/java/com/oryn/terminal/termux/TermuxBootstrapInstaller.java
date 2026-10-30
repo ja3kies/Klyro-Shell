@@ -137,6 +137,11 @@ public final class TermuxBootstrapInstaller {
         pkg.setExecutable(true, false);
         apt.setExecutable(true, false);
 
+        File stagingTmp = new File(staging, "tmp");
+        if (!stagingTmp.mkdirs() && !stagingTmp.isDirectory()) {
+            throw new IOException("Cannot create the private Termux TMPDIR.");
+        }
+
         writeIfAbsent(new File(paths.getHome(), ".bashrc"),
                 "# Oryn Terminal shell profile\n"
                 + "export PS1='\\[\\e[38;2;0;240;255m\\]oryn\\[\\e[0m\\] \\w $ '\n"
