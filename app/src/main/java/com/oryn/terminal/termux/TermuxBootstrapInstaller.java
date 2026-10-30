@@ -95,6 +95,10 @@ public final class TermuxBootstrapInstaller {
         File prefix = paths.getPrefix();
         File previous = paths.getPreviousPrefix();
 
+        // Recover if Android killed the app during the two-rename activation.
+        if (!prefix.exists() && previous.exists()) move(previous.toPath(), prefix.toPath());
+        if (prefix.exists() && previous.exists()) deleteTree(previous);
+
         if (isValidArchive(archive)) {
             progress(listener, "Verified cached bootstrap archive", 12);
         } else {
