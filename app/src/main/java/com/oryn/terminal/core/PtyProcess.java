@@ -25,9 +25,9 @@ public class PtyProcess implements Closeable {
     public static final int SIGWINCH = 28;
 
     private final Object writeLock = new Object();
-    private int pid = -1;
-    private int fd = -1;
-    private boolean closed = false;
+    private volatile int pid = -1;
+    private volatile int fd = -1;
+    private volatile boolean closed = false;
 
     private final InputStream inputStream = new InputStream() {
         private final byte[] one = new byte[1];
