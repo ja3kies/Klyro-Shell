@@ -126,6 +126,7 @@ class MainActivity : ComponentActivity() {
                     } else {
                         isInstalling = false
                         refreshReadiness()
+                        statusMessage = message
                     }
                 }
             }
@@ -153,8 +154,8 @@ class MainActivity : ComponentActivity() {
             override fun onComplete(success: Boolean, message: String) {
                 runOnUiThread {
                     isInstalling = false
-                    statusMessage = message
                     refreshReadiness()
+                    if (!success) statusMessage = message
                 }
             }
         })
