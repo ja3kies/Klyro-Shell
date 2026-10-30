@@ -22,6 +22,8 @@ public class OrynPathsTest {
         assertTrue(paths.getHome().getCanonicalPath().startsWith(base));
         assertTrue(paths.getTmp().getCanonicalPath().startsWith(base));
         assertTrue(paths.getProot().getParentFile().getCanonicalPath().startsWith(base));
+        assertTrue(paths.getProotLibDir().getCanonicalPath().startsWith(base));
+        assertTrue(paths.getProotLoader().getCanonicalPath().startsWith(base));
         assertFalse(paths.getRoot().getAbsolutePath().contains("/data/data/com.termux/"));
 
         assertTrue(new File(paths.getRoot(), "data/data/com.termux/files/usr").isDirectory());
