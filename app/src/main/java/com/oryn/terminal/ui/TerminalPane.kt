@@ -40,6 +40,7 @@ private val TerminalMuted = Color(0xFF94A3B8)
 @Composable
 fun TerminalPane(
     session: TerminalSession,
+    title: String,
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
     onClose: () -> Unit,
@@ -65,7 +66,7 @@ fun TerminalPane(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    session.mSessionName ?: "Bash",
+                    title,
                     color = TerminalAccent,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
