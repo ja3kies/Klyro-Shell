@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ja3kies/Oryn-Terminal/actions"><img src="https://img.shields.io/badge/build-in%20progress-64748b?style=for-the-badge&logo=githubactions&logoColor=white" alt="Build in progress"></a>
+  <a href="https://github.com/ja3kies/Oryn-Terminal/actions"><img src="https://img.shields.io/github/actions/workflow/status/ja3kies/Oryn-Terminal/android-build.yml?branch=main&style=for-the-badge&logo=githubactions" alt="Build status"></a>
   <img src="https://img.shields.io/badge/platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android">
   <img src="https://img.shields.io/badge/language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin">
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
@@ -163,15 +163,21 @@ flowchart TD
 
 ## ✦ Build
 
-The Android project scaffold is in place. Open the repository in Android Studio and let Gradle sync, or use Gradle 8.10.2 with JDK 17 and Android SDK 35:
+The Android project scaffold is in place. Use Gradle 8.10.2, JDK 17 and Android SDK 35.
 
-```bash
-gradle :app:assembleDebug
-```
+GitHub Actions prepares the ARM64 runtime assets before building. It verifies the official Termux stable APT metadata, then downloads these pinned packages:
 
-The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`. GitHub Actions also builds the debug APK on pushes and pull requests to `main`.
+| Package | Version |
+|:--|:--|
+| `proot` | `5.1.107.101` |
+| `libtalloc` | `2.5.0` |
+| `libandroid-shmem` | `0.7` |
 
-The first verified build will be an installable ARM64 debug APK. A successful APK build alone will not count as proof that shell execution or package installation works.
+The runtime files are extracted into APK assets with a SHA-256 manifest. Oryn verifies that manifest again before copying the files into its own private storage. The CI workflow performs this preparation automatically; a plain local Gradle build needs the generated files under `app/src/main/assets/proot/`.
+
+The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`. GitHub Actions builds and uploads it on pushes and pull requests to `main`.
+
+A successful APK build proves compilation and packaging only. It does not prove that proot or Bash starts correctly on a physical device.
 
 ## ✦ Roadmap
 
@@ -183,9 +189,11 @@ The first verified build will be an installable ARM64 debug APK. A successful AP
 - [x] Add a PTY-backed Bash session manager with isolated host environment and process-group cleanup
 - [x] Add Oryn-private path layout and virtual Termux bind mapping
 - [x] Add pinned, SHA-256-verified ARM64 bootstrap installer
-- [ ] Add and verify Oryn's private ARM64 proot runtime
-- [ ] Validate bootstrap extraction, symlinks and proot execution on-device
+- [x] Add the private ARM64 proot runtime installer and verified CI packaging
+- [x] Pin the official Termux proot runtime package versions
+- [ ] Validate bootstrap extraction, symlinks, proot and Bash execution on-device
 - [ ] Verify independent app storage and Termux coexistence
+- [x] Connect onboarding to the private bootstrap and proot installers
 - [ ] Connect the session manager to an ANSI-capable terminal renderer
 - [ ] Validate Bash and real package-manager operations on ARM64
 - [ ] Build horizontal session tabs and session lifecycle
