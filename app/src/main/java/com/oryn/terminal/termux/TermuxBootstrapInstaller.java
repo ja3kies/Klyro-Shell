@@ -183,9 +183,8 @@ public final class TermuxBootstrapInstaller {
      */
     public String[] buildLoginCommand() throws IOException {
         if (!isInstalled()) throw new IOException("Oryn bootstrap is not installed.");
-        File proot = paths.getProot();
-        if (!proot.isFile() || !proot.canExecute()) {
-            throw new IOException("Oryn's private proot binary is not installed yet.");
+        if (!paths.isProotInstalled()) {
+            throw new IOException("Oryn's complete private proot runtime is not installed yet.");
         }
         String prefix = OrynPaths.TERMUX_VIRTUAL_PREFIX;
         String home = OrynPaths.TERMUX_VIRTUAL_HOME;
