@@ -21,6 +21,8 @@ public final class OrynPaths {
     private final File home;
     private final File tmp;
     private final File proot;
+    private final File prootLibDir;
+    private final File prootLoader;
     private final File stagingPrefix;
     private final File previousPrefix;
 
@@ -32,6 +34,8 @@ public final class OrynPaths {
         this.home = child(root, "home");
         this.tmp = child(root, "tmp");
         this.proot = child(filesDir, "bin/proot");
+        this.prootLibDir = child(filesDir, "bin/lib");
+        this.prootLoader = child(prefix, "libexec/proot/loader");
         this.stagingPrefix = child(root, "usr.staging");
         this.previousPrefix = child(root, "usr.previous");
     }
@@ -42,6 +46,8 @@ public final class OrynPaths {
     public File getHome() { return home; }
     public File getTmp() { return tmp; }
     public File getProot() { return proot; }
+    public File getProotLibDir() { return prootLibDir; }
+    public File getProotLoader() { return prootLoader; }
     public File getStagingPrefix() { return stagingPrefix; }
     public File getPreviousPrefix() { return previousPrefix; }
 
@@ -52,8 +58,9 @@ public final class OrynPaths {
         mkdir(tmp);
         mkdir(prefix.getParentFile());
         mkdir(proot.getParentFile());
+        mkdir(prootLibDir);
 
-        // proot resolves bind destinations inside its private rootfs.
+        // proot resolves bind destinations inside Oryn's private rootfs.
         mkdir(child(root, "data/data/com.termux/files/usr"));
         mkdir(child(root, "data/data/com.termux/files/home"));
         mkdir(child(root, "dev"));
@@ -72,6 +79,25 @@ public final class OrynPaths {
                 && new File(prefix, "bin/pkg").exists()
                 && new File(prefix, "bin/apt").exists()
                 && new File(prefix, ".oryn-bootstrap-version").isFile();
+    }
+
+    /** True only when every Oryn-owned proot runtime component is present. */
+    public boolean isProotInstalled() {
+        return proot.isFile()
+                && proot.canExecute()
+                && prootLoader.isFile()
+                && prootLoader.canExecute()
+                && hasLibrary("libtalloc.so")
+                && hasLibrary("libandroid-shmem.so");
+    }
+
+    private boolean hasLibrary(String prefix) {
+        File[] files = prootLibDir.listFiles();
+        if (files == null) return false;
+        for (File file : files) {
+            if (file.isFile() && file.getName().startsWith(prefix)) return true;
+        }
+        return false;
     }
 
     private File child(File parent, String relative) throws IOException {
