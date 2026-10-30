@@ -28,6 +28,28 @@ public class OrynPathsTest {
         assertTrue(new File(paths.getRoot(), "data/data/com.termux/files/home").isDirectory());
     }
 
+
+    @Test
+    public void prootRuntimeRequiresBinaryLoaderAndBothLibraries() throws Exception {
+        File files = Files.createTempDirectory("oryn-proot-test").toFile();
+        OrynPaths paths = new OrynPaths(files);
+        paths.prepareLayout();
+
+        assertFalse(paths.isProotInstalled());
+
+        assertTrue(paths.getProot().createNewFile());
+        paths.getProot().setExecutable(true, false);
+        File loader = paths.getProotLoader();
+        assertTrue(loader.getParentFile().mkdirs());
+        assertTrue(loader.createNewFile());
+        loader.setExecutable(true, false);
+        assertTrue(new File(paths.getProotLibDir(), "libtalloc.so.2").createNewFile());
+        assertFalse(paths.isProotInstalled());
+
+        assertTrue(new File(paths.getProotLibDir(), "libandroid-shmem.so").createNewFile());
+        assertTrue(paths.isProotInstalled());
+    }
+
     @Test
     public void termuxCompiledPathsAreVirtualCompatibilityTargets() {
         assertEquals("/data/data/com.termux/files/usr", OrynPaths.TERMUX_VIRTUAL_PREFIX);
