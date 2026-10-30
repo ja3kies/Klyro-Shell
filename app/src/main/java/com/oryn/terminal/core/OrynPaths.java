@@ -58,7 +58,13 @@ public final class OrynPaths {
         mkdir(child(root, "data/data/com.termux/files/home"));
         mkdir(child(root, "dev"));
         mkdir(child(root, "proc"));
-        mkdir(child(root, "sys"));\n        mkdir(child(root, "system"));\n        mkdir(child(root, "apex"));\n        mkdir(child(root, "vendor"));\n        mkdir(child(root, "product"));\n        mkdir(child(root, "sdcard"));\n        mkdir(child(root, "storage"));
+        mkdir(child(root, "sys"));
+        mkdir(child(root, "system"));
+        mkdir(child(root, "apex"));
+        mkdir(child(root, "vendor"));
+        mkdir(child(root, "product"));
+        mkdir(child(root, "sdcard"));
+        mkdir(child(root, "storage"));
     }
 
     public boolean isBootstrapInstalled() {
