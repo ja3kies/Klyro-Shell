@@ -201,7 +201,7 @@ public final class ProotRuntimeInstaller {
     }
 
     private static boolean isAllowedAssetPath(String path) {
-        if (path.startsWith("/") || path.contains("..") || path.contains("\\\")
+        if (path.startsWith("/") || path.contains("..") || path.contains("\\")
                 || path.contains(":")) return false;
         if ("loader".equals(path) || "bin/proot".equals(path)) return true;
         return path.matches("lib/[A-Za-z0-9._+\\-]+");
