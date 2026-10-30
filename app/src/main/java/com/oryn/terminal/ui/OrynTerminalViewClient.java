@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 
 import com.termux.terminal.TerminalSession;
@@ -12,6 +13,7 @@ import com.termux.view.TerminalViewClient;
 /** Minimal input/gesture bridge for Termux's terminal view, with Oryn-owned modifier state. */
 public final class OrynTerminalViewClient implements TerminalViewClient {
     private final Context context;
+    private volatile View terminalView;
     private volatile boolean controlDown;
     private volatile boolean altDown;
     private volatile boolean shiftDown;
@@ -20,6 +22,8 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
     public OrynTerminalViewClient(Context context) {
         this.context = context.getApplicationContext();
     }
+
+    public void attachView(View view) { terminalView = view; }
 
     public void setControlDown(boolean value) { controlDown = value; }
     public void setAltDown(boolean value) { altDown = value; }
@@ -35,8 +39,10 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
     public void onSingleTapUp(MotionEvent event) {
         InputMethodManager manager = (InputMethodManager)
                 context.getSystemService(Context.INPUT_METHOD_SERVICE);
-        if (manager != null) manager.showSoftInput(event.getDevice() == null ? null : null,
-                InputMethodManager.SHOW_IMPLICIT);
+        View view = terminalView;
+        if (manager != null && view != null) {
+            manager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+        }
     }
 
     @Override public boolean shouldBackButtonBeMappedToEscape() { return false; }
