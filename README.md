@@ -178,15 +178,17 @@ The first verified build will be an installable ARM64 debug APK. A successful AP
 - [x] Product requirements and isolation contract
 - [x] Compare terminal foundations and document technical risks
 - [x] Establish repository README and visual direction
-- [ ] Create Android application scaffold with Oryn identity
-- [ ] Integrate and validate native PTY engine
+- [x] Create Android application scaffold with Oryn identity
+- [x] Integrate native PTY bridge into the Android project
+- [x] Add Oryn-private path layout and virtual Termux bind mapping
+- [x] Add pinned, SHA-256-verified ARM64 bootstrap installer
+- [ ] Validate bootstrap extraction, symlinks and proot execution on-device
 - [ ] Verify independent app storage and Termux coexistence
-- [ ] Replace outdated bootstrap with a pinned, verified release
 - [ ] Validate Bash and real package-manager operations on ARM64
 - [ ] Build horizontal session tabs and session lifecycle
 - [ ] Add Zsh and developer tool presets
 - [ ] Add settings, accessibility and terminal customization
-- [ ] Add automated tests and reproducible CI builds
+- [ ] Run automated tests and maintain reproducible CI builds
 - [ ] Produce a tested release APK
 
 ## ✦ Project status
