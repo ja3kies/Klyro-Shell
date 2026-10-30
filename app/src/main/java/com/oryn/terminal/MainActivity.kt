@@ -16,11 +16,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +34,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.oryn.terminal.session.TerminalSessionManager
+import com.oryn.terminal.termux.TermuxBootstrapInstaller
+import java.io.IOException
 
 private val Obsidian = Color(0xFF0B0F19)
 private val SurfaceDark = Color(0xFF111827)
@@ -36,10 +45,30 @@ private val TextPrimary = Color(0xFFE2E8F0)
 private val TextMuted = Color(0xFF94A3B8)
 private val Cyan = Color(0xFF00F0FF)
 private val Purple = Color(0xFF8338EC)
+private val Success = Color(0xFF00FF66)
+private val Error = Color(0xFFFF0055)
 
 class MainActivity : ComponentActivity() {
+    private var installProgress by mutableIntStateOf(0)
+    private var isInstalling by mutableStateOf(false)
+    private var statusMessage by mutableStateOf("Checking Oryn's private environment…")
+    private var bootstrapInstalled by mutableStateOf(false)
+    private var shellReady by mutableStateOf(false)
+    private var installer: TermuxBootstrapInstaller? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        try {
+            installer = TermuxBootstrapInstaller(this)
+            val manager = TerminalSessionManager(this)
+            statusMessage = manager.getReadinessMessage()
+            bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
+            shellReady = manager.isReady()
+        } catch (error: IOException) {
+            statusMessage = "Environment check failed: ${error.message}"
+        }
+
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
@@ -51,18 +80,66 @@ class MainActivity : ComponentActivity() {
                     onSurface = TextPrimary
                 )
             ) {
-                OrynTerminalApp()
+                OrynTerminalApp(
+                    progress = installProgress,
+                    installing = isInstalling,
+                    status = statusMessage,
+                    bootstrapInstalled = bootstrapInstalled,
+                    shellReady = shellReady,
+                    onInstall = ::installBootstrap
+                )
             }
         }
+    }
+
+    private fun installBootstrap() {
+        if (isInstalling) return
+        val activeInstaller = installer ?: run {
+            statusMessage = "Installer is unavailable. Restart Oryn and try again."
+            return
+        }
+        isInstalling = true
+        installProgress = 0
+        statusMessage = "Preparing Oryn's private environment…"
+
+        activeInstaller.install(object : TermuxBootstrapInstaller.Listener {
+            override fun onProgress(stage: String, percent: Int) {
+                runOnUiThread {
+                    installProgress = percent.coerceIn(0, 100)
+                    statusMessage = stage
+                }
+            }
+
+            override fun onComplete(success: Boolean, message: String) {
+                runOnUiThread {
+                    isInstalling = false
+                    statusMessage = message
+                    try {
+                        val manager = TerminalSessionManager(this@MainActivity)
+                        bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
+                        shellReady = manager.isReady()
+                        if (success && !shellReady) {
+                            statusMessage = "Bootstrap installed. Oryn's private proot runtime is still required before Bash can start."
+                        }
+                    } catch (error: IOException) {
+                        statusMessage = "Environment validation failed: ${error.message}"
+                    }
+                }
+            }
+        })
     }
 }
 
 @Composable
-private fun OrynTerminalApp() {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Obsidian
-    ) {
+private fun OrynTerminalApp(
+    progress: Int,
+    installing: Boolean,
+    status: String,
+    bootstrapInstalled: Boolean,
+    shellReady: Boolean,
+    onInstall: () -> Unit
+) {
+    Surface(modifier = Modifier.fillMaxSize(), color = Obsidian) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -83,42 +160,33 @@ private fun OrynTerminalApp() {
                     Text("⌘", color = Cyan, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 }
                 Column {
-                    Text(
-                        "ORYN",
-                        color = TextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
-                    )
-                    Text(
-                        "TERMINAL",
-                        color = TextMuted,
-                        fontSize = 10.sp,
-                        letterSpacing = 2.5.sp
-                    )
+                    Text("ORYN", color = TextPrimary, fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Text("TERMINAL", color = TextMuted, fontSize = 10.sp,
+                        letterSpacing = 2.5.sp)
                 }
                 Spacer(Modifier.weight(1f))
                 Box(
-                    modifier = Modifier
-                        .size(9.dp)
-                        .background(Cyan, CircleShape)
+                    Modifier.size(9.dp).background(
+                        if (shellReady) Success else if (bootstrapInstalled) Purple else Cyan,
+                        CircleShape
+                    )
                 )
-                Text("FOUNDATION", color = TextMuted, fontSize = 10.sp, letterSpacing = 1.sp)
+                Text(
+                    if (shellReady) "READY" else "SETUP",
+                    color = TextMuted, fontSize = 10.sp, letterSpacing = 1.sp
+                )
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     "Your command line.\nYour own space.",
-                    color = TextPrimary,
-                    fontSize = 30.sp,
-                    lineHeight = 36.sp,
+                    color = TextPrimary, fontSize = 30.sp, lineHeight = 36.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    "A standalone Android terminal, designed to live alongside Termux — never replace it.",
-                    color = TextMuted,
-                    fontSize = 14.sp,
-                    lineHeight = 21.sp
+                    "A standalone Android terminal that lives alongside Termux — without touching its data.",
+                    color = TextMuted, fontSize = 14.sp, lineHeight = 21.sp
                 )
             }
 
@@ -131,42 +199,55 @@ private fun OrynTerminalApp() {
                     modifier = Modifier.padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(7.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        repeat(3) { index ->
-                            val dotColor = when (index) {
-                                0 -> Color(0xFFFF0055)
-                                1 -> Color(0xFFFBBF24)
-                                else -> Color(0xFF00FF66)
-                            }
-                            Box(
-                                Modifier
-                                    .size(8.dp)
-                                    .background(dotColor, CircleShape)
-                            )
-                        }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("PRIVATE ENVIRONMENT", color = Cyan, fontSize = 10.sp,
+                            letterSpacing = 1.3.sp)
                         Spacer(Modifier.weight(1f))
-                        Text("SESSION 01", color = TextMuted, fontSize = 10.sp, letterSpacing = 1.sp)
+                        Text(
+                            if (bootstrapInstalled) "BOOTSTRAP OK" else "NOT INSTALLED",
+                            color = if (bootstrapInstalled) Success else TextMuted,
+                            fontSize = 9.sp, letterSpacing = 0.8.sp
+                        )
                     }
                     Text(
-                        "Native PTY bridge added — shell integration next.",
+                        status,
                         color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp
                     )
-                    Text(
-                        "The PTY process adapter is now part of the Android project. The next milestone is connecting it to a managed shell session. No simulated command output is shown here.",
-                        color = TextMuted,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("oryn", color = Cyan, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
-                        Text("  ~/home  ", color = TextMuted, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
-                        Text("›", color = Purple, fontFamily = FontFamily.Monospace, fontSize = 16.sp)
-                        Text("  _", color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                    if (installing) {
+                        Box(
+                            Modifier.fillMaxWidth().height(5.dp)
+                                .background(Elevated, CircleShape)
+                        ) {
+                            Box(
+                                Modifier.fillMaxWidth(progress / 100f).height(5.dp)
+                                    .background(Cyan, CircleShape)
+                            )
+                        }
+                        Text("$progress%", color = Cyan, fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace)
+                    }
+                    Button(
+                        onClick = onInstall,
+                        enabled = !installing && !bootstrapInstalled,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Cyan,
+                            contentColor = Obsidian,
+                            disabledContainerColor = Elevated,
+                            disabledContentColor = TextMuted
+                        ),
+                        shape = RoundedCornerShape(13.dp)
+                    ) {
+                        Text(
+                            when {
+                                installing -> "Installing environment…"
+                                bootstrapInstalled -> "Bootstrap installed"
+                                else -> "Install private environment"
+                            },
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
@@ -178,14 +259,18 @@ private fun OrynTerminalApp() {
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("ISOLATION FIRST", color = Cyan, fontSize = 10.sp, letterSpacing = 1.4.sp)
+                    Text("SHELL STATUS", color = Purple, fontSize = 10.sp,
+                        letterSpacing = 1.4.sp)
                     Text(
-                        "Oryn has its own app identity and private storage. Your existing Termux installation is not modified.",
-                        color = TextPrimary,
-                        fontSize = 13.sp,
-                        lineHeight = 19.sp
+                        if (shellReady) "Bash runtime detected."
+                        else "Bash is locked until Oryn's own ARM64 proot runtime is installed and validated.",
+                        color = TextPrimary, fontSize = 13.sp, lineHeight = 19.sp
+                    )
+                    Text(
+                        "No fallback to the system shell or your existing Termux installation is allowed.",
+                        color = TextMuted, fontSize = 11.sp, lineHeight = 16.sp
                     )
                 }
             }
@@ -194,9 +279,7 @@ private fun OrynTerminalApp() {
             Text(
                 "NEON OBSIDIAN  ·  EARLY DEVELOPMENT",
                 modifier = Modifier.align(Alignment.CenterHorizontally),
-                color = TextMuted,
-                fontSize = 9.sp,
-                letterSpacing = 1.2.sp
+                color = TextMuted, fontSize = 9.sp, letterSpacing = 1.2.sp
             )
         }
     }
