@@ -97,11 +97,6 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
-    public void setTerminalShellPid(@NonNull com.termux.terminal.TerminalSession session, int pid) {
-        if (listener != null) listener.onShellPid(pid);
-    }
-
-    @Override
     public Integer getTerminalCursorStyle() {
         return TerminalEmulator.TERMINAL_CURSOR_STYLE_BAR;
     }
