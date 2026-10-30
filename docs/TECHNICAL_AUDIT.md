@@ -129,3 +129,15 @@ Only after this gate passes should the UI be redesigned around the Neon Obsidian
 - Added JVM tests for the private path contract and virtual bind destinations; CI now runs `testDebugUnitTest` before assembling the APK.
 
 **Not yet verified on-device:** actual archive extraction/symlink behavior, ELF loading, proot execution, `bash`, `pkg update`, package installs, and coexistence with an installed Termux. The bootstrap is not yet connected to the UI or a PTY session. Do not mark the environment operational until those checks pass.
+
+
+## Step 5 implementation — PTY-backed Bash session engine (2026-10-30)
+
+- Added `TerminalSession`: owns one PTY process, streams UTF-8 output, writes terminal input, supports resize, and shuts down with SIGTERM followed by SIGKILL escalation.
+- Added `TerminalSessionManager`: creates Bash sessions only when the Oryn-owned bootstrap and Oryn-owned proot binary are present. It refuses to fall back to the installed Termux app or Android's system shell.
+- Host-side writable environment variables point only to Oryn's private `filesDir/termux` directories. Termux compatibility paths remain virtual destinations inside proot.
+- Updated native signal delivery to target the PTY process group, so child jobs are included when a session is closed.
+- Ensured the extracted Termux prefix contains the `tmp` directory referenced by the login environment.
+- Added a JVM test for the host environment's path isolation.
+
+**Current gate:** the session engine is implemented, but Bash cannot launch yet because Oryn's private proot executable has not been installed. The engine is not connected to a terminal renderer yet; ANSI parsing, scrollback UI, keyboard controls, and on-device shell validation remain outstanding. No shell execution or package-manager success is claimed.
