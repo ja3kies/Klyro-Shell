@@ -16,4 +16,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "OrynTerminal"
-include(":app")
+include(":app", ":terminal-emulator")
