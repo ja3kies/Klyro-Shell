@@ -37,25 +37,25 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
-    public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
+    public void onTextChanged(@NonNull com.termux.terminal.com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.post(view::onScreenUpdated);
     }
 
     @Override
-    public void onTitleChanged(@NonNull TerminalSession session) {
+    public void onTitleChanged(@NonNull com.termux.terminal.TerminalSession session) {
         if (listener != null) listener.onTitleChanged(session.getTitle());
     }
 
     @Override
-    public void onSessionFinished(@NonNull TerminalSession session) {
+    public void onSessionFinished(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.postInvalidate();
         if (listener != null) listener.onSessionFinished(session.getExitStatus());
     }
 
     @Override
-    public void onCopyTextToClipboard(@NonNull TerminalSession session, String text) {
+    public void onCopyTextToClipboard(@NonNull com.termux.terminal.TerminalSession session, String text) {
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
         if (clipboard != null) {
@@ -64,7 +64,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
-    public void onPasteTextFromClipboard(@Nullable com.termux.terminal.TerminalSession session) {
+    public void onPasteTextFromClipboard(@Nullable com.termux.terminal.com.termux.terminal.TerminalSession session) {
         if (session == null) return;
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
@@ -78,14 +78,14 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
-    public void onBell(@NonNull TerminalSession session) {
+    public void onBell(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.post(() ->
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP));
     }
 
     @Override
-    public void onColorsChanged(@NonNull TerminalSession session) {
+    public void onColorsChanged(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.postInvalidate();
     }
@@ -97,7 +97,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
-    public void setTerminalShellPid(@NonNull TerminalSession session, int pid) {
+    public void setTerminalShellPid(@NonNull com.termux.terminal.TerminalSession session, int pid) {
         if (listener != null) listener.onShellPid(pid);
     }
 
