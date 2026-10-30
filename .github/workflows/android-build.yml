@@ -38,7 +38,10 @@ jobs:
           gradle-version: "8.10.2"
 
       - name: Run JVM unit tests
-        run: gradle :app:testDebugUnitTest\n\n      - name: Build ARM64 debug APK\n        run: gradle :app:assembleDebug
+        run: gradle :app:testDebugUnitTest
+
+      - name: Build ARM64 debug APK
+        run: gradle :app:assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
