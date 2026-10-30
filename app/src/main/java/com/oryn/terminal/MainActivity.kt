@@ -151,13 +151,13 @@ private fun OrynTerminalApp() {
                         Text("SESSION 01", color = TextMuted, fontSize = 10.sp, letterSpacing = 1.sp)
                     }
                     Text(
-                        "Terminal runtime is being integrated.",
+                        "Native PTY bridge added — shell integration next.",
                         color = TextPrimary,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        "The next milestone is a real PTY-backed shell. No simulated command output is shown here.",
+                        "The PTY process adapter is now part of the Android project. The next milestone is connecting it to a managed shell session. No simulated command output is shown here.",
                         color = TextMuted,
                         fontSize = 12.sp,
                         lineHeight = 18.sp
