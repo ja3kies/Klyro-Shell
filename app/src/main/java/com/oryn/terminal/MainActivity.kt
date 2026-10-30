@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oryn.terminal.session.TerminalSessionManager
+import com.oryn.terminal.termux.ProotRuntimeInstaller
 import com.oryn.terminal.termux.TermuxBootstrapInstaller
 import java.io.IOException
 
@@ -55,12 +56,14 @@ class MainActivity : ComponentActivity() {
     private var bootstrapInstalled by mutableStateOf(false)
     private var shellReady by mutableStateOf(false)
     private var installer: TermuxBootstrapInstaller? = null
+    private var runtimeInstaller: ProotRuntimeInstaller? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         try {
             installer = TermuxBootstrapInstaller(this)
+            runtimeInstaller = ProotRuntimeInstaller(this)
             val manager = TerminalSessionManager(this)
             statusMessage = manager.getReadinessMessage()
             bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
@@ -86,14 +89,19 @@ class MainActivity : ComponentActivity() {
                     status = statusMessage,
                     bootstrapInstalled = bootstrapInstalled,
                     shellReady = shellReady,
-                    onInstall = ::installBootstrap
+                    onInstall = ::installEnvironment
                 )
             }
         }
     }
 
-    private fun installBootstrap() {
+    private fun installEnvironment() {
         if (isInstalling) return
+        if (bootstrapInstalled) {
+            installProotRuntime()
+            return
+        }
+
         val activeInstaller = installer ?: run {
             statusMessage = "Installer is unavailable. Restart Oryn and try again."
             return
@@ -112,21 +120,61 @@ class MainActivity : ComponentActivity() {
 
             override fun onComplete(success: Boolean, message: String) {
                 runOnUiThread {
-                    isInstalling = false
+                    bootstrapInstalled = success
                     statusMessage = message
-                    try {
-                        val manager = TerminalSessionManager(this@MainActivity)
-                        bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
-                        shellReady = manager.isReady()
-                        if (success && !shellReady) {
-                            statusMessage = "Bootstrap installed. Oryn's private proot runtime is still required before Bash can start."
-                        }
-                    } catch (error: IOException) {
-                        statusMessage = "Environment validation failed: ${error.message}"
+                    if (success) {
+                        installProotRuntime()
+                    } else {
+                        isInstalling = false
+                        refreshReadiness()
                     }
                 }
             }
         })
+    }
+
+    private fun installProotRuntime() {
+        val activeInstaller = runtimeInstaller ?: run {
+            isInstalling = false
+            statusMessage = "Proot installer is unavailable. Restart Oryn and try again."
+            return
+        }
+        isInstalling = true
+        installProgress = 0
+        statusMessage = "Installing Oryn's verified ARM64 proot runtime…"
+
+        activeInstaller.install(object : ProotRuntimeInstaller.Listener {
+            override fun onProgress(stage: String, percent: Int) {
+                runOnUiThread {
+                    installProgress = percent.coerceIn(0, 100)
+                    statusMessage = stage
+                }
+            }
+
+            override fun onComplete(success: Boolean, message: String) {
+                runOnUiThread {
+                    isInstalling = false
+                    statusMessage = message
+                    refreshReadiness()
+                }
+            }
+        })
+    }
+
+    private fun refreshReadiness() {
+        try {
+            val manager = TerminalSessionManager(this)
+            bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
+            shellReady = manager.isReady()
+            if (shellReady) {
+                statusMessage = "Private proot runtime installed. Bash startup still requires on-device validation."
+            } else if (bootstrapInstalled && statusMessage.isBlank()) {
+                statusMessage = manager.getReadinessMessage()
+            }
+        } catch (error: IOException) {
+            shellReady = false
+            statusMessage = "Environment validation failed: ${error.message}"
+        }
     }
 }
 
@@ -173,7 +221,7 @@ private fun OrynTerminalApp(
                     )
                 )
                 Text(
-                    if (shellReady) "READY" else "SETUP",
+                    if (shellReady) "RUNTIME READY" else "SETUP",
                     color = TextMuted, fontSize = 10.sp, letterSpacing = 1.sp
                 )
             }
@@ -244,6 +292,7 @@ private fun OrynTerminalApp(
                             when {
                                 installing -> "Installing environment…"
                                 bootstrapInstalled -> "Bootstrap installed"
+                                bootstrapInstalled -> "Install proot runtime"
                                 else -> "Install private environment"
                             },
                             fontWeight = FontWeight.SemiBold
@@ -264,8 +313,9 @@ private fun OrynTerminalApp(
                     Text("SHELL STATUS", color = Purple, fontSize = 10.sp,
                         letterSpacing = 1.4.sp)
                     Text(
-                        if (shellReady) "Bash runtime detected."
-                        else "Bash is locked until Oryn's own ARM64 proot runtime is installed and validated.",
+                        if (shellReady) "Oryn's private proot runtime is installed. Bash startup still needs validation on an Android device."
+                        else if (bootstrapInstalled) "Bootstrap is installed. Install Oryn's private ARM64 proot runtime to unlock Bash."
+                        else "Bash is locked until Oryn's private bootstrap and proot runtime are installed.",
                         color = TextPrimary, fontSize = 13.sp, lineHeight = 19.sp
                     )
                     Text(
