@@ -118,3 +118,14 @@ Only after this gate passes should the UI be redesigned around the Neon Obsidian
 - Added an ARM64-only NDK/CMake build configuration and a GitHub Actions debug-APK workflow.
 
 **Not yet verified:** native compilation, PTY spawning on a physical device, shell session lifecycle, bootstrap installation, and package-manager operations. The upstream PTY source is attributed to Chimera Terminal; recheck applicable terms before any public redistribution.
+
+
+## Step 4 implementation — bootstrap and private paths (2026-10-30)
+
+- Added `OrynPaths` as the single owner of the app-private Termux-compatible layout: `files/termux/usr`, `home`, `tmp`, and Oryn's private `bin/proot`.
+- The hardcoded Termux paths are represented only as **virtual destinations inside proot**. The bind sources are Oryn-owned directories; no code path intentionally accesses the installed Termux app's data.
+- Added a bootstrap installer pinned to Termux `bootstrap-2026.10.25-r1+apt.android-7` ARM64, with the GitHub release asset SHA-256, HTTPS download limits, staging extraction, traversal checks, symlink validation, post-extraction checks, and interrupted-swap recovery.
+- The installer builds the future proot launch argv, including Android runtime mounts required by Termux binaries. It refuses to launch until Oryn's private proot binary exists.
+- Added JVM tests for the private path contract and virtual bind destinations; CI now runs `testDebugUnitTest` before assembling the APK.
+
+**Not yet verified on-device:** actual archive extraction/symlink behavior, ELF loading, proot execution, `bash`, `pkg update`, package installs, and coexistence with an installed Termux. The bootstrap is not yet connected to the UI or a PTY session. Do not mark the environment operational until those checks pass.
