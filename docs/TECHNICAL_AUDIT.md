@@ -108,3 +108,13 @@ Do not begin a broad UI rewrite yet. First validate Chimera's bootstrap and proo
 6. Reboot/background test multiple independent PTY sessions.
 
 Only after this gate passes should the UI be redesigned around the Neon Obsidian system.
+
+
+## Oryn implementation progress
+
+- Created a new Android app module using the Oryn namespace and application ID `com.oryn.terminal`.
+- Added a Jetpack Compose foundation screen using the Neon Obsidian palette.
+- Ported Chimera's JNI PTY process adapter into `com.oryn.terminal.core.PtyProcess` and renamed the native library/JNI symbols to `oryn_pty` / `com_oryn_terminal_core_PtyProcess`.
+- Added an ARM64-only NDK/CMake build configuration and a GitHub Actions debug-APK workflow.
+
+**Not yet verified:** native compilation, PTY spawning on a physical device, shell session lifecycle, bootstrap installation, and package-manager operations. The upstream PTY source is attributed to Chimera Terminal; recheck applicable terms before any public redistribution.
