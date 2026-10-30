@@ -137,6 +137,8 @@ public final class ProotRuntimeInstaller {
 
         boolean backedUpBin = false;
         boolean backedUpLoader = false;
+        boolean activatedBin = false;
+        boolean activatedLoader = false;
         try {
             if (binDir.exists()) {
                 move(binDir, previousBin);
@@ -147,10 +149,12 @@ public final class ProotRuntimeInstaller {
                 backedUpLoader = true;
             }
             move(stagingBin, binDir);
+            activatedBin = true;
             move(stagingLoader, loader);
+            activatedLoader = true;
         } catch (Exception activationError) {
-            deleteTree(binDir);
-            if (loader.exists() && !loader.delete()) {
+            if (activatedBin) deleteTree(binDir);
+            if (activatedLoader && loader.exists() && !loader.delete()) {
                 throw new IOException("Runtime activation failed and loader cleanup failed.",
                         activationError);
             }
