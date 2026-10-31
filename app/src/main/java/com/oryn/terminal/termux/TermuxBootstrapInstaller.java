@@ -58,10 +58,9 @@ public final class TermuxBootstrapInstaller {
     }
 
     public TermuxBootstrapInstaller(Context context) throws IOException {
-        Context app = context.getApplicationContext();
         this(new OrynPaths(
-                app.getFilesDir(),
-                new File(app.getApplicationInfo().nativeLibraryDir)
+                context.getApplicationContext().getFilesDir(),
+                new File(context.getApplicationContext().getApplicationInfo().nativeLibraryDir)
         ));
     }
 
