@@ -418,7 +418,7 @@ private fun OrynTerminalApp(
                         }
                         Text(
                             status,
-                            color = if (technicalErrorDetails != null) Color(0xFFFF8AA5) else TextPrimary,
+                            color = if (technicalErrorDetails != null || sessionFailureMessage != null) Color(0xFFFF8AA5) else TextPrimary,
                             fontSize = 13.sp,
                             lineHeight = 19.sp
                         )
