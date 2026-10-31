@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,10 +95,46 @@ public final class ProotRuntimeInstaller {
                     10 + (index * 80 / entries.size()));
         }
 
+        installVersionedTalloc(entries);
+
         if (!paths.isProotInstalled()) {
             throw new IOException("The packaged PRoot executable, loader or shared libraries are missing.");
         }
         progress(listener, "Private ARM64 runtime verified", 100);
+    }
+
+    /**
+     * Android's jniLibs packaging only extracts files ending in ".so". Termux
+     * PRoot links against the SONAME libtalloc.so.2, so stage the verified
+     * libtalloc.so payload under that exact name in Oryn-owned private storage.
+     */
+    private void installVersionedTalloc(List<ManifestEntry> entries) throws Exception {
+        ManifestEntry talloc = null;
+        for (ManifestEntry entry : entries) {
+            if ("lib/libtalloc.so".equals(entry.path)) {
+                talloc = entry;
+                break;
+            }
+        }
+        if (talloc == null) {
+            throw new IOException("The APK-native libtalloc.so dependency is missing from the manifest.");
+        }
+
+        File source = resolvePackagedFile(talloc.path);
+        File destination = new File(paths.getProotDependencyDir(), "libtalloc.so.2");
+        File staging = new File(paths.getProotDependencyDir(), "libtalloc.so.2.part");
+        try {
+            Files.copy(source.toPath(), staging.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            verifyFile(new ManifestEntry("private/libtalloc.so.2", talloc.sha256), staging);
+            try {
+                Files.move(staging.toPath(), destination.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException unsupported) {
+                Files.move(staging.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            if (staging.exists()) staging.delete();
+        }
     }
 
     private File resolvePackagedFile(String manifestPath) throws IOException {
