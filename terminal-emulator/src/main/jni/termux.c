@@ -127,17 +127,25 @@ JNIEXPORT jint JNICALL Java_com_termux_terminal_JNI_createSubprocess(
         return throw_runtime_exception(env, "Invalid command, working directory, or process ID array");
     }
 
-    jsize size = args ? (*env)->GetArrayLength(env, args) : 0;
-    char** argv = (char**) calloc((size_t) size + 1, sizeof(char*));
-    if (!argv) return throw_runtime_exception(env, "Couldn't allocate argv array");
-
-    int result = -1;
-    int procId = 0;
-    int ptm = -1;
+    jsize arg_count = args ? (*env)->GetArrayLength(env, args) : 0;
+    jsize env_count = envVars ? (*env)->GetArrayLength(env, envVars) : 0;
+    char** argv = (char**) calloc((size_t) arg_count + 1, sizeof(char*));
+    char** envp = NULL;
     char const* cmd_cwd = NULL;
     char const* cmd_utf8 = NULL;
+    int procId = 0;
+    int ptm = -1;
+    int result = -1;
 
-    for (jsize i = 0; i < size; ++i) {
+    if (!argv) return throw_runtime_exception(env, "Couldn't allocate argv array");
+
+    envp = (char**) calloc((size_t) env_count + 1, sizeof(char*));
+    if (!envp) {
+        throw_runtime_exception(env, "Couldn't allocate envp array");
+        goto cleanup;
+    }
+
+    for (jsize i = 0; i < arg_count; ++i) {
         jstring arg_java_string = (jstring) (*env)->GetObjectArrayElement(env, args, i);
         if (!arg_java_string) {
             throw_runtime_exception(env, "Null argument in argv");
@@ -160,24 +168,17 @@ JNIEXPORT jint JNICALL Java_com_termux_terminal_JNI_createSubprocess(
         }
     }
 
-    size = envVars ? (*env)->GetArrayLength(env, envVars) : 0;
-    char** envp = (char**) calloc((size_t) size + 1, sizeof(char*));
-    if (!envp) {
-        throw_runtime_exception(env, "Couldn't allocate envp array");
-        goto cleanup;
-    }
-
-    for (jsize i = 0; i < size; ++i) {
+    for (jsize i = 0; i < env_count; ++i) {
         jstring env_java_string = (jstring) (*env)->GetObjectArrayElement(env, envVars, i);
         if (!env_java_string) {
             throw_runtime_exception(env, "Null environment entry");
-            goto cleanup_env;
+            goto cleanup;
         }
 
         char const* env_utf8 = (*env)->GetStringUTFChars(env, env_java_string, NULL);
         if (!env_utf8) {
             (*env)->DeleteLocalRef(env, env_java_string);
-            goto cleanup_env;
+            goto cleanup;
         }
 
         envp[i] = strdup(env_utf8);
@@ -186,15 +187,15 @@ JNIEXPORT jint JNICALL Java_com_termux_terminal_JNI_createSubprocess(
 
         if (!envp[i]) {
             throw_runtime_exception(env, "Couldn't allocate environment entry");
-            goto cleanup_env;
+            goto cleanup;
         }
     }
 
     cmd_cwd = (*env)->GetStringUTFChars(env, cwd, NULL);
-    if (!cmd_cwd) goto cleanup_env;
+    if (!cmd_cwd) goto cleanup;
 
     cmd_utf8 = (*env)->GetStringUTFChars(env, cmd, NULL);
-    if (!cmd_utf8) goto cleanup_env;
+    if (!cmd_utf8) goto cleanup;
 
     ptm = create_subprocess(env, cmd_utf8, cmd_cwd, argv, envp, &procId, rows, columns);
 
@@ -203,31 +204,30 @@ JNIEXPORT jint JNICALL Java_com_termux_terminal_JNI_createSubprocess(
     (*env)->ReleaseStringUTFChars(env, cwd, cmd_cwd);
     cmd_cwd = NULL;
 
-    if (ptm < 0) goto cleanup_env;
+    if (ptm < 0) goto cleanup;
 
-    (*env)->SetIntArrayRegion(env, processIdArray, 0, 1, (jint*) &procId);
+    jint process_id = (jint) procId;
+    (*env)->SetIntArrayRegion(env, processIdArray, 0, 1, &process_id);
     if ((*env)->ExceptionCheck(env)) {
         kill(procId, SIGKILL);
         waitpid(procId, NULL, 0);
         close(ptm);
         ptm = -1;
-        goto cleanup_env;
+        goto cleanup;
     }
 
     result = ptm;
 
-cleanup_env:
-    if (envp) {
-        for (jsize i = 0; i < size; ++i) free(envp[i]);
-        free(envp);
-    }
 cleanup:
     if (cmd_utf8) (*env)->ReleaseStringUTFChars(env, cmd, cmd_utf8);
     if (cmd_cwd) (*env)->ReleaseStringUTFChars(env, cwd, cmd_cwd);
     if (argv) {
-        jsize arg_count = args ? (*env)->GetArrayLength(env, args) : 0;
         for (jsize i = 0; i < arg_count; ++i) free(argv[i]);
         free(argv);
+    }
+    if (envp) {
+        for (jsize i = 0; i < env_count; ++i) free(envp[i]);
+        free(envp);
     }
 
     return result;
