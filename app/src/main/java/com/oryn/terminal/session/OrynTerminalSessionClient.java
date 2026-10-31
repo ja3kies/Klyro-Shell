@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 public final class OrynTerminalSessionClient implements TerminalSessionClient {
     public interface Listener {
         void onTitleChanged(String title);
-        void onSessionFinished(int exitStatus);
+        void onSessionFinished(com.termux.terminal.TerminalSession session, int exitStatus);
         void onShellPid(int pid);
     }
 
@@ -51,7 +51,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     public void onSessionFinished(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.postInvalidate();
-        if (listener != null) listener.onSessionFinished(session.getExitStatus());
+        if (listener != null) listener.onSessionFinished(session, session.getExitStatus());
     }
 
     @Override
