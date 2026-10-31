@@ -84,6 +84,11 @@ public final class ProotRuntimeInstaller {
         File stagingLoader = new File(paths.getFilesDir(), "proot-loader.staging");
         File previousLoader = new File(paths.getFilesDir(), "proot-loader.previous");
         File loader = paths.getProotLoader();
+        File transactionMarker = new File(paths.getFilesDir(), "proot-runtime.transaction");
+
+        // Recover any interrupted swap before touching staging or backup paths.
+        recoverInterruptedActivation(transactionMarker, binDir, previousBin, stagingBin,
+                loader, previousLoader, stagingLoader);
 
         paths.deletePrivateTree(stagingBin);
         if (!stagingBin.mkdirs() && !stagingBin.isDirectory()) {
@@ -138,48 +143,118 @@ public final class ProotRuntimeInstaller {
         }
 
         progress(listener, "Activating verified private runtime", 88);
-        paths.deletePrivateTree(previousBin);
-        if (previousLoader.exists() && !previousLoader.delete()) {
-            throw new IOException("Cannot clear previous loader backup.");
-        }
+        boolean hadBin = binDir.exists();
+        boolean hadLoader = loader.exists();
+        writeTransactionMarker(transactionMarker, hadBin, hadLoader, false);
 
-        boolean backedUpBin = false;
-        boolean backedUpLoader = false;
-        boolean activatedBin = false;
-        boolean activatedLoader = false;
         try {
-            if (binDir.exists()) {
-                move(binDir, previousBin);
-                backedUpBin = true;
-            }
-            if (loader.exists()) {
-                move(loader, previousLoader);
-                backedUpLoader = true;
-            }
+            if (hadBin) move(binDir, previousBin);
+            if (hadLoader) move(loader, previousLoader);
             move(stagingBin, binDir);
-            activatedBin = true;
             move(stagingLoader, loader);
-            activatedLoader = true;
-        } catch (Exception activationError) {
-            if (activatedBin) paths.deletePrivateTree(binDir);
-            if (activatedLoader && loader.exists() && !loader.delete()) {
-                throw new IOException("Runtime activation failed and loader cleanup failed.",
-                        activationError);
+
+            if (!paths.isProotInstalled()) {
+                throw new IOException("Installed runtime failed its final readiness check.");
             }
-            if (backedUpBin && previousBin.exists()) move(previousBin, binDir);
-            if (backedUpLoader && previousLoader.exists()) move(previousLoader, loader);
+
+            // Commit is durable before backup cleanup. A crash after this point
+            // keeps the new runtime and only retries cleanup on the next install.
+            writeTransactionMarker(transactionMarker, hadBin, hadLoader, true);
+        } catch (Exception activationError) {
+            try {
+                recoverInterruptedActivation(transactionMarker, binDir, previousBin, stagingBin,
+                        loader, previousLoader, stagingLoader);
+            } catch (Exception recoveryError) {
+                activationError.addSuppressed(recoveryError);
+            }
             throw activationError;
         }
 
+        // The committed marker remains until both backups are safely removed.
         paths.deletePrivateTree(previousBin);
         if (previousLoader.exists() && !previousLoader.delete()) {
-            throw new IOException("Runtime installed, but old loader backup could not be removed.");
+            throw new IOException("Runtime committed, but old loader backup cleanup failed.");
         }
-        if (!paths.isProotInstalled()) {
-            throw new IOException("Installed runtime failed its final readiness check.");
+        if (transactionMarker.exists() && !transactionMarker.delete()) {
+            throw new IOException("Runtime committed, but transaction marker cleanup failed.");
         }
         progress(listener, "Oryn's private proot runtime is installed", 100);
         complete(listener, true, "Verified ARM64 proot runtime installed in Oryn's private storage.");
+    }
+
+    /**
+     * Restores the last known-good runtime after an interrupted two-component swap.
+     * The marker records whether each component existed before activation. A committed
+     * marker means the new runtime passed readiness checks and only backup cleanup remains.
+     */
+    private void recoverInterruptedActivation(
+            File marker,
+            File binDir,
+            File previousBin,
+            File stagingBin,
+            File loader,
+            File previousLoader,
+            File stagingLoader) throws IOException {
+        boolean markerExists = marker.isFile();
+        boolean committed = false;
+        boolean hadBin = false;
+        boolean hadLoader = false;
+
+        if (markerExists) {
+            String state = new String(Files.readAllBytes(marker.toPath()), StandardCharsets.UTF_8);
+            committed = state.contains("state=COMMITTED");
+            hadBin = state.contains("hadBin=true");
+            hadLoader = state.contains("hadLoader=true");
+        }
+
+        if (committed) {
+            // Keep the verified new runtime; finish only the interrupted cleanup.
+            paths.deletePrivateTree(previousBin);
+            if (previousLoader.exists() && !previousLoader.delete()) {
+                throw new IOException("Cannot finish cleanup of previous proot loader.");
+            }
+        } else {
+            // Legacy recovery: older installer versions had no marker. If a backup
+            // exists, prefer restoring it over retaining a possibly partial activation.
+            if (previousBin.exists()) {
+                paths.deletePrivateTree(binDir);
+                move(previousBin, binDir);
+            } else if (markerExists && !hadBin) {
+                paths.deletePrivateTree(binDir);
+            }
+
+            if (previousLoader.exists()) {
+                if (loader.exists() && !loader.delete()) {
+                    throw new IOException("Cannot remove interrupted proot loader.");
+                }
+                File parent = loader.getParentFile();
+                if (!parent.mkdirs() && !parent.isDirectory()) {
+                    throw new IOException("Cannot recreate private proot loader directory.");
+                }
+                move(previousLoader, loader);
+            } else if (markerExists && !hadLoader && loader.exists() && !loader.delete()) {
+                throw new IOException("Cannot remove interrupted new proot loader.");
+            }
+        }
+
+        paths.deletePrivateTree(stagingBin);
+        if (stagingLoader.exists() && !stagingLoader.delete()) {
+            throw new IOException("Cannot remove staged proot loader.");
+        }
+        if (markerExists && marker.exists() && !marker.delete()) {
+            throw new IOException("Cannot clear proot runtime transaction marker.");
+        }
+    }
+
+    private static void writeTransactionMarker(
+            File marker, boolean hadBin, boolean hadLoader, boolean committed) throws IOException {
+        String value = "hadBin=" + hadBin + "\\n"
+                + "hadLoader=" + hadLoader + "\\n"
+                + "state=" + (committed ? "COMMITTED" : "PREPARED") + "\\n";
+        try (FileOutputStream out = new FileOutputStream(marker)) {
+            out.write(value.getBytes(StandardCharsets.UTF_8));
+            out.getFD().sync();
+        }
     }
 
     private List<ManifestEntry> readManifest() throws IOException {
