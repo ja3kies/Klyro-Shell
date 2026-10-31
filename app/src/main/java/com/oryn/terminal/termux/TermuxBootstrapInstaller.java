@@ -247,7 +247,7 @@ public final class TermuxBootstrapInstaller {
                     + "else printf 'KLYRO_UID_INVALID=%s\\n' \"$uid\"; exit 21; fi; "
                     + "if apt --version >/dev/null 2>&1; then printf '%s\\n' 'KLYRO_APT_OK'; "
                     + "else printf '%s\\n' 'KLYRO_APT_FAILED'; exit 22; fi; "
-                    + "if command -v pkg >/dev/null 2>&1 && pkg --help >/dev/null 2>&1; "
+                    + "if command -v pkg >/dev/null 2>&1 && pkg list-installed >/dev/null 2>&1; "
                     + "then printf '%s\\n' 'KLYRO_PKG_OK'; "
                     + "else printf '%s\\n' 'KLYRO_PKG_FAILED'; exit 23; fi");
         }
