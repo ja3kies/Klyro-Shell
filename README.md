@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/readme/klyro-shell-hero.svg" alt="Klyro Shell — Neon Obsidian preview" width="100%">
+  <img src="assets/readme/oryn-terminal-hero.svg" alt="Klyro Shell — Neon Obsidian preview" width="100%">
 </p>
 
 <h1 align="center">Klyro Shell</h1>
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ja3kies/Oryn-Terminal/actions"><img src="https://img.shields.io/github/actions/workflow/status/ja3kies/Oryn-Terminal/android-build.yml?branch=main&style=for-the-badge&logo=githubactions" alt="Build status"></a>
+  <a href="https://github.com/ja3kies/Klyro-Shell/actions"><img src="https://img.shields.io/github/actions/workflow/status/ja3kies/Klyro-Shell/android-build.yml?branch=main&style=for-the-badge&logo=githubactions" alt="Build status"></a>
   <img src="https://img.shields.io/badge/platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android">
   <img src="https://img.shields.io/badge/language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin">
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
@@ -48,7 +48,7 @@ The project is currently in its foundation phase. The interface and architecture
 | Neon Obsidian visual system | Native Android PTY target | Independent app sandbox | Bash by default |
 | Jetpack Compose + Material 3 | Real interactive shell | Separate `$HOME` and prefix | Optional Zsh |
 | Restrained cyan / purple accents | ANSI terminal rendering | No dependency on installed Termux | Git, SSH, Python, Node.js, Java |
-| Touch-first, keyboard-friendly UI | Multiple concurrent sessions | Package state owned by Oryn | Gradle and local servers |
+| Touch-first, keyboard-friendly UI | Multiple concurrent sessions | Package state owned by Klyro | Gradle and local servers |
 
 <sub>Planned capabilities are targets, not claims that they are already implemented.</sub>
 
@@ -70,7 +70,7 @@ The project is currently in its foundation phase. The interface and architecture
 
 ### ◈ A self-contained developer environment
 
-- **Termux-compatible package workflow** — a dedicated package environment owned by Oryn.
+- **Termux-compatible package workflow** — a dedicated package environment owned by Klyro.
 - **Developer tools** — Git, SSH, Python, Node.js, Java/Kotlin, Gradle, Nano and Vim.
 - **Local development** — run scripts and local servers directly on the device.
 - **Storage access** — explicit Android storage permissions and user-controlled access.
@@ -143,8 +143,8 @@ flowchart TD
 
 ### Isolation contract
 
-- Application ID: `com.oryn.terminal`
-- Private files, cache, preferences and session metadata belong to Oryn.
+- Application ID: `com.oryn.terminal (legacy application ID retained for installation continuity)`
+- Private files, cache, preferences and session metadata belong to Klyro.
 - The existing Termux package and its data are out of bounds.
 - Any compatibility path mapping must happen inside Klyro's own proot environment.
 - Package bootstrap archives must be pinned and checksum-verified before extraction.
@@ -156,14 +156,14 @@ flowchart TD
 | Language | Kotlin |
 | UI | Jetpack Compose + Material 3 |
 | Android minimum | API 26 target, subject to device testing |
-| Terminal process | Termux terminal-view + Oryn-patched terminal-emulator |
+| Terminal process | Termux terminal-view + Klyro-patched terminal-emulator |
 | Userland compatibility | Termux packages via isolated proot mapping (under validation) |
 | Build | Gradle / Android Gradle Plugin |
 | Target ABI | ARM64 first |
 
 ## ✦ Build
 
-The Android project scaffold is in place. Use Gradle 8.10.2, JDK 17 and Android SDK 35.
+The Android project scaffold is in place. Use Gradle 8.11.1, JDK 17, Android SDK 36 and NDK 27.0.12077973.
 
 GitHub Actions prepares the ARM64 runtime assets before building. It verifies the official Termux stable APT metadata, then downloads these pinned packages:
 
