@@ -149,7 +149,8 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-        if (runtimeInstalled) verifyRuntime()
+        // Re-verify packaged hashes and refresh private SONAME copies after APK updates.
+        if (runtimeInstalled) installProotRuntime()
     }
 
     private fun handlePrimaryAction() {
