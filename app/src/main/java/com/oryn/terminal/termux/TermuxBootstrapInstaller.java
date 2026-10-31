@@ -51,6 +51,11 @@ public final class TermuxBootstrapInstaller {
 
     private final OrynPaths paths;
     private final AtomicBoolean installing = new AtomicBoolean(false);
+    private volatile String lastErrorDetails;
+
+    public String getLastErrorDetails() {
+        return lastErrorDetails;
+    }
 
     public TermuxBootstrapInstaller(Context context) throws IOException {
         this(new OrynPaths(context.getApplicationContext().getFilesDir()));
@@ -71,11 +76,15 @@ public final class TermuxBootstrapInstaller {
             complete(listener, false, "Bootstrap installation is already running.");
             return;
         }
+        lastErrorDetails = null;
         Thread worker = new Thread(() -> {
             try {
                 installInternal(listener);
             } catch (Exception error) {
-                complete(listener, false, "Bootstrap installation failed: " + error.getMessage());
+                lastErrorDetails = diagnosticDetails(error);
+                complete(listener, false,
+                        "Oryn couldn't finish setting up its private environment. "
+                        + "Your existing Termux installation was not modified. You can retry.");
             } finally {
                 installing.set(false);
             }
@@ -390,6 +399,12 @@ public final class TermuxBootstrapInstaller {
         } catch (IOException atomicFailure) {
             Files.move(from, to);
         }
+    }
+
+    private static String diagnosticDetails(Exception error) {
+        java.io.StringWriter buffer = new java.io.StringWriter();
+        error.printStackTrace(new java.io.PrintWriter(buffer));
+        return buffer.toString();
     }
 
     private static void writeIfAbsent(File file, String value) throws IOException {
