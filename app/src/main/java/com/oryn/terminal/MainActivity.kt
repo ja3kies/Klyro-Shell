@@ -74,7 +74,7 @@ private val Success = Color(0xFF4DFF9A)
 class MainActivity : ComponentActivity() {
     private var installProgress by mutableIntStateOf(0)
     private var isInstalling by mutableStateOf(false)
-    private var statusMessage by mutableStateOf("Checking Oryn's private environment…")
+    private var statusMessage by mutableStateOf("Checking Klyro's private environment…")
     private var technicalErrorDetails by mutableStateOf<String?>(null)
     private var showTechnicalDetails by mutableStateOf(false)
     private var bootstrapInstalled by mutableStateOf(false)
@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
             runtimeInstalled = manager.isRuntimeInstalled()
         } catch (error: IOException) {
             technicalErrorDetails = error.stackTraceToString()
-            statusMessage = "Oryn couldn't verify its private environment."
+            statusMessage = "Klyro couldn't verify its private environment."
         }
 
         setContent {
@@ -132,7 +132,7 @@ class MainActivity : ComponentActivity() {
                         val details = technicalErrorDetails
                         if (!details.isNullOrBlank()) {
                             val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Oryn technical details", details))
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Klyro technical details", details))
                             Toast.makeText(this, "Technical details copied", Toast.LENGTH_SHORT).show()
                         }
                     },
@@ -192,14 +192,14 @@ class MainActivity : ComponentActivity() {
         }
 
         val activeInstaller = installer ?: run {
-            statusMessage = "Installer is unavailable. Restart Oryn and try again."
+            statusMessage = "Installer is unavailable. Restart Klyro and try again."
             return
         }
         technicalErrorDetails = null
         showTechnicalDetails = false
         isInstalling = true
         installProgress = 0
-        statusMessage = "Preparing Oryn's private environment…"
+        statusMessage = "Preparing Klyro's private environment…"
 
         activeInstaller.install(object : TermuxBootstrapInstaller.Listener {
             override fun onProgress(stage: String, percent: Int) {
@@ -230,14 +230,14 @@ class MainActivity : ComponentActivity() {
     private fun installProotRuntime() {
         val activeInstaller = runtimeInstaller ?: run {
             isInstalling = false
-            statusMessage = "Proot installer is unavailable. Restart Oryn and try again."
+            statusMessage = "Proot installer is unavailable. Restart Klyro and try again."
             return
         }
         technicalErrorDetails = null
         showTechnicalDetails = false
         isInstalling = true
         installProgress = 0
-        statusMessage = "Installing Oryn's verified ARM64 proot runtime…"
+        statusMessage = "Installing Klyro's verified ARM64 PRoot runtime…"
 
         activeInstaller.install(object : ProotRuntimeInstaller.Listener {
             override fun onProgress(stage: String, percent: Int) {
@@ -279,7 +279,7 @@ class MainActivity : ComponentActivity() {
             runtimeVerified = false
             technicalErrorDetails = error.stackTraceToString()
             showTechnicalDetails = false
-            statusMessage = "Oryn couldn't start Bash. Check the technical details."
+            statusMessage = "Klyro couldn't start Bash. Check the technical details."
         }
     }
 
@@ -303,7 +303,7 @@ class MainActivity : ComponentActivity() {
             runtimeInstalled = false
             technicalErrorDetails = error.stackTraceToString()
             showTechnicalDetails = false
-            statusMessage = "Oryn couldn't validate its private environment."
+            statusMessage = "Klyro couldn't validate its private environment."
         }
     }
 
@@ -381,9 +381,9 @@ private fun OrynTerminalApp(
                         Text("\\$", color = Cyan, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     }
                     Column {
-                        Text("ORYN", color = TextPrimary, fontSize = 18.sp,
+                        Text("KLYRO", color = TextPrimary, fontSize = 18.sp,
                             fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                        Text("TERMINAL", color = TextMuted, fontSize = 10.sp,
+                        Text("SHELL", color = TextMuted, fontSize = 10.sp,
                             letterSpacing = 2.5.sp)
                     }
                     Spacer(Modifier.weight(1f))
@@ -391,12 +391,12 @@ private fun OrynTerminalApp(
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Your command line.\nYour own space.",
+                        "Your shell.\nYour own space.",
                         color = TextPrimary, fontSize = 30.sp, lineHeight = 36.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "A standalone Android terminal that lives alongside Termux — without touching its data.",
+                        "A standalone Android shell with its own private environment — separate from Termux.",
                         color = TextMuted, fontSize = 14.sp, lineHeight = 21.sp
                     )
                 }
