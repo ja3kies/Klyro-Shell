@@ -154,11 +154,7 @@ public final class TermuxBootstrapInstaller {
             throw new IOException("Cannot create the private Termux TMPDIR.");
         }
 
-        writeIfAbsent(new File(paths.getHome(), ".bashrc"),
-                "# Oryn Terminal shell profile\n"
-                + "export PS1='\\[\\e[38;2;0;240;255m\\]oryn\\[\\e[0m\\] \\w $ '\n"
-                + "export EDITOR=nano\nexport PAGER=less\n"
-                + "alias ll='ls -lah'\nalias la='ls -A'\n");
+        writeKlyroBashProfile(new File(paths.getHome(), ".bashrc"));
         writeIfAbsent(new File(paths.getHome(), ".profile"),
                 "[ -f \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\"\n");
         writeIfAbsent(new File(staging, ".oryn-bootstrap-version"),
@@ -245,7 +241,15 @@ public final class TermuxBootstrapInstaller {
         args.add("--login");
         if (verificationMarker != null) {
             args.add("-c");
-            args.add("printf '%s\\n' '" + verificationMarker + "'");
+            args.add("printf '%s\\n' '" + verificationMarker + "'; "
+                    + "uid=\"$(id -u 2>/dev/null)\"; "
+                    + "if [[ \"$uid\" =~ ^[0-9]+$ ]]; then printf '%s\\n' 'KLYRO_UID_OK'; "
+                    + "else printf 'KLYRO_UID_INVALID=%s\\n' \"$uid\"; exit 21; fi; "
+                    + "if apt --version >/dev/null 2>&1; then printf '%s\\n' 'KLYRO_APT_OK'; "
+                    + "else printf '%s\\n' 'KLYRO_APT_FAILED'; exit 22; fi; "
+                    + "if command -v pkg >/dev/null 2>&1 && pkg --help >/dev/null 2>&1; "
+                    + "then printf '%s\\n' 'KLYRO_PKG_OK'; "
+                    + "else printf '%s\\n' 'KLYRO_PKG_FAILED'; exit 23; fi");
         }
         return args.toArray(new String[0]);
     }
@@ -457,6 +461,30 @@ public final class TermuxBootstrapInstaller {
         java.io.StringWriter buffer = new java.io.StringWriter();
         error.printStackTrace(new java.io.PrintWriter(buffer));
         return buffer.toString();
+    }
+
+
+    /** Creates the Klyro prompt and migrates only our exact legacy Oryn prompt. */
+    private static void writeKlyroBashProfile(File file) throws IOException {
+        String defaultProfile =
+                "# Klyro Shell profile\n"
+                + "export PS1='\\[\\e[38;2;0;240;255m\\]klyro\\[\\e[0m\\] \\w $ '\n"
+                + "export EDITOR=nano\nexport PAGER=less\n"
+                + "alias ll='ls -lah'\nalias la='ls -A'\n";
+        if (!file.isFile()) {
+            writeIfAbsent(file, defaultProfile);
+            return;
+        }
+
+        String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+        String legacyPrompt =
+                "export PS1='\\[\\e[38;2;0;240;255m\\]oryn\\[\\e[0m\\] \\w $ '";
+        String klyroPrompt =
+                "export PS1='\\[\\e[38;2;0;240;255m\\]klyro\\[\\e[0m\\] \\w $ '";
+        if (content.contains(legacyPrompt)) {
+            Files.write(file.toPath(),
+                    content.replace(legacyPrompt, klyroPrompt).getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     private static void writeIfAbsent(File file, String value) throws IOException {
