@@ -49,8 +49,12 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         sessionClient = null
         viewClient = null
         terminalTitle = "Bash"
-        sessionStatus = ""
+        sessionStatus = sessionFailureMessage ?: ""
+    }
+
+    fun clearSessionFailure() {
         sessionFailureMessage = null
+        sessionStatus = ""
     }
 
     override fun onTitleChanged(title: String?) {
