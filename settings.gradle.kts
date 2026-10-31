@@ -24,5 +24,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OrynTerminal"
+rootProject.name = "Klyro"
 include(":app", ":terminal-emulator")
