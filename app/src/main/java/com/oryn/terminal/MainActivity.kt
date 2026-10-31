@@ -102,6 +102,7 @@ class MainActivity : ComponentActivity() {
             statusMessage = manager.getReadinessMessage()
             bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
             runtimeInstalled = manager.isRuntimeInstalled()
+            if (bootstrapInstalled) installer?.migrateShellProfile()
         } catch (error: IOException) {
             technicalErrorDetails = error.stackTraceToString()
             statusMessage = "Klyro couldn't verify its private environment."
@@ -176,10 +177,12 @@ class MainActivity : ComponentActivity() {
             result.onSuccess { verification ->
                 bashStarted = verification.bashStarted
                 runtimeVerified = verification.isEnvironmentReady()
-                technicalErrorDetails = if (runtimeVerified) null else verification.diagnostics
+                val cleanStderr = verification.diagnostics.endsWith("STDERR:\n(empty)")
+                technicalErrorDetails = if (runtimeVerified && cleanStderr) null else verification.diagnostics
                 showTechnicalDetails = false
                 statusMessage = when {
-                    runtimeVerified -> "Environment ready · Bash, UID, APT and pkg verified."
+                    runtimeVerified && cleanStderr -> "Environment ready · Bash, UID, APT and pkg verified."
+                    runtimeVerified -> "Environment ready, but runtime warnings were detected. Review diagnostics."
                     bashStarted -> "Bash starts, but the environment is incomplete. Review diagnostics."
                     else -> "Bash startup failed. Review diagnostics."
                 }
