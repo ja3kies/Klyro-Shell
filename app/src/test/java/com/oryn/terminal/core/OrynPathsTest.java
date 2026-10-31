@@ -85,7 +85,7 @@ public class OrynPathsTest {
         assertTrue(paths.getProot().createNewFile());
         paths.getProot().setExecutable(true, false);
         File loader = paths.getProotLoader();
-        assertTrue(loader.getParentFile().mkdirs());
+        assertTrue(loader.getParentFile().isDirectory() || loader.getParentFile().mkdirs());
         assertTrue(loader.createNewFile());
         loader.setExecutable(true, false);
         assertTrue(new File(paths.getProotLibDir(), "libtalloc.so.2").createNewFile());
