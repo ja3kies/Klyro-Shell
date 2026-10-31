@@ -70,6 +70,17 @@ public class ProotRuntimeRecoveryTest {
         assertFile(loader, "old-loader");
     }
 
+    @Test public void interruptionAfterBothNewComponentsButBeforeCommitRestoresOldPair() throws Exception {
+        directoryWithFile(backupBin, "old-bin");
+        file(backupLoader, "old-loader");
+        directoryWithFile(bin, "new-bin");
+        file(loader, "new-loader");
+        writeMarker(true, true, false);
+        recover();
+        assertFile(bin, "old-bin");
+        assertFile(loader, "old-loader");
+    }
+
     @Test public void firstInstallRollbackRemovesPartialNewComponents() throws Exception {
         directoryWithFile(bin, "partial-bin");
         file(loader, "partial-loader");
