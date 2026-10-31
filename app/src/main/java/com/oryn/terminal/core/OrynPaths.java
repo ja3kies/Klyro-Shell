@@ -21,6 +21,7 @@ public final class OrynPaths {
     private final File tmp;
     private final File proot;
     private final File prootLibDir;
+    private final File prootDependencyDir;
     private final File prootLoader;
     private final File stagingPrefix;
     private final File previousPrefix;
@@ -42,6 +43,7 @@ public final class OrynPaths {
         this.tmp = child(root, "tmp");
         this.proot = child(runtimeLibDir, "libproot.so");
         this.prootLibDir = runtimeLibDir;
+        this.prootDependencyDir = child(filesDir, "proot-libs");
         this.prootLoader = child(runtimeLibDir, "libproot-loader.so");
         this.stagingPrefix = child(root, "usr.staging");
         this.previousPrefix = child(root, "usr.previous");
@@ -55,6 +57,7 @@ public final class OrynPaths {
     public File getTmp() { return tmp; }
     public File getProot() { return proot; }
     public File getProotLibDir() { return prootLibDir; }
+    public File getProotDependencyDir() { return prootDependencyDir; }
     public File getProotLoader() { return prootLoader; }
     public File getStagingPrefix() { return stagingPrefix; }
     public File getPreviousPrefix() { return previousPrefix; }
@@ -66,6 +69,7 @@ public final class OrynPaths {
         mkdir(tmp);
         mkdir(prefix.getParentFile());
         if (runtimeLibDirPrivate) mkdir(runtimeLibDir);
+        mkdir(prootDependencyDir);
         mkdir(child(root, "data/data/com.termux/files/usr"));
         mkdir(child(root, "data/data/com.termux/files/home"));
         mkdir(child(root, "dev"));
@@ -90,7 +94,8 @@ public final class OrynPaths {
     public boolean isProotInstalled() {
         return proot.isFile() && proot.canExecute()
                 && prootLoader.isFile() && prootLoader.canExecute()
-                && hasLibrary("libtalloc.so") && hasLibrary("libandroid-shmem.so");
+                && new File(prootDependencyDir, "libtalloc.so.2").isFile()
+                && hasLibrary("libandroid-shmem.so");
     }
 
     private boolean hasLibrary(String prefix) {
