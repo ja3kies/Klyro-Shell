@@ -36,7 +36,7 @@ public class TerminalSessionManagerTest {
     }
 
     @Test
-    public void hostEnvironmentPointsLoaderAndLibrariesToNativeDirectory() throws Exception {
+    public void hostEnvironmentUsesPrivateSonameAndNativeLibraryDirectories() throws Exception {
         File filesDir = temporaryFolder.newFolder("files");
         File nativeLibraryDir = temporaryFolder.newFolder("native");
         OrynPaths paths = new OrynPaths(filesDir, nativeLibraryDir);
@@ -45,7 +45,7 @@ public class TerminalSessionManagerTest {
 
         assertEquals(paths.getProotLoader().getAbsolutePath(), environment.get("PROOT_LOADER"));
         assertEquals(paths.getTmp().getAbsolutePath(), environment.get("PROOT_TMP_DIR"));
-        assertEquals(nativeLibraryDir.getAbsolutePath(), environment.get("LD_LIBRARY_PATH"));
+        assertEquals(paths.getProotDependencyDir().getAbsolutePath() + File.pathSeparator\n                + nativeLibraryDir.getAbsolutePath(), environment.get("LD_LIBRARY_PATH"));
         assertTrue(environment.get("PATH").contains("/system/bin"));
     }
 }
