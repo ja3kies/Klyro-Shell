@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
@@ -52,6 +53,7 @@ fun TerminalPane(
     title: String,
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
+    sessionFailureMessage: String?,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -105,6 +107,30 @@ fun TerminalPane(
                 )
             ) {
                 Text("End session", fontSize = 12.sp)
+            }
+        }
+
+        if (sessionFailureMessage != null) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                color = Color(0xFF2A1B25),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        sessionFailureMessage,
+                        color = Color(0xFFFFB4C0),
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onClose) {
+                        Text("Back to setup", color = TerminalAccent, fontSize = 12.sp)
+                    }
+                }
             }
         }
 
