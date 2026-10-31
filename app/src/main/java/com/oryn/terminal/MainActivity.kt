@@ -57,6 +57,8 @@ class MainActivity : ComponentActivity() {
     private var installProgress by mutableIntStateOf(0)
     private var isInstalling by mutableStateOf(false)
     private var statusMessage by mutableStateOf("Checking Oryn's private environment…")
+    private var technicalErrorDetails by mutableStateOf<String?>(null)
+    private var showTechnicalDetails by mutableStateOf(false)
     private var bootstrapInstalled by mutableStateOf(false)
     private var shellReady by mutableStateOf(false)
     private var activeSession by mutableStateOf<TerminalSession?>(null)
@@ -77,7 +79,8 @@ class MainActivity : ComponentActivity() {
             bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
             shellReady = manager.isReady()
         } catch (error: IOException) {
-            statusMessage = "Environment check failed: ${error.message}"
+            technicalErrorDetails = error.stackTraceToString()
+            statusMessage = "Oryn couldn't verify its private environment."
         }
 
         setContent {
@@ -95,6 +98,11 @@ class MainActivity : ComponentActivity() {
                     progress = installProgress,
                     installing = isInstalling,
                     status = statusMessage,
+                    technicalErrorDetails = technicalErrorDetails,
+                    showTechnicalDetails = showTechnicalDetails,
+                    onToggleTechnicalDetails = {
+                        showTechnicalDetails = !showTechnicalDetails
+                    },
                     bootstrapInstalled = bootstrapInstalled,
                     shellReady = shellReady,
                     session = activeSession,
@@ -120,6 +128,8 @@ class MainActivity : ComponentActivity() {
             statusMessage = "Installer is unavailable. Restart Oryn and try again."
             return
         }
+        technicalErrorDetails = null
+        showTechnicalDetails = false
         isInstalling = true
         installProgress = 0
         statusMessage = "Preparing Oryn's private environment…"
@@ -140,6 +150,8 @@ class MainActivity : ComponentActivity() {
                         installProotRuntime()
                     } else {
                         isInstalling = false
+                        technicalErrorDetails = activeInstaller.getLastErrorDetails()
+                        showTechnicalDetails = false
                         refreshReadiness()
                         statusMessage = message
                     }
@@ -154,6 +166,8 @@ class MainActivity : ComponentActivity() {
             statusMessage = "Proot installer is unavailable. Restart Oryn and try again."
             return
         }
+        technicalErrorDetails = null
+        showTechnicalDetails = false
         isInstalling = true
         installProgress = 0
         statusMessage = "Installing Oryn's verified ARM64 proot runtime…"
@@ -170,7 +184,11 @@ class MainActivity : ComponentActivity() {
                 runOnUiThread {
                     isInstalling = false
                     refreshReadiness()
-                    if (!success) statusMessage = message
+                    if (!success) {
+                        technicalErrorDetails = activeInstaller.getLastErrorDetails()
+                        showTechnicalDetails = false
+                        statusMessage = message
+                    }
                 }
             }
         })
@@ -211,7 +229,9 @@ class MainActivity : ComponentActivity() {
             activeSession = newSession
             statusMessage = "Starting private Bash session…"
         } catch (error: Exception) {
-            statusMessage = "Could not start Bash: ${error.message}"
+            technicalErrorDetails = error.stackTraceToString()
+            showTechnicalDetails = false
+            statusMessage = "Oryn couldn't start Bash. Check the technical details."
         }
     }
 
@@ -238,7 +258,9 @@ class MainActivity : ComponentActivity() {
             }
         } catch (error: IOException) {
             shellReady = false
-            statusMessage = "Environment validation failed: ${error.message}"
+            technicalErrorDetails = error.stackTraceToString()
+            showTechnicalDetails = false
+            statusMessage = "Oryn couldn't validate its private environment."
         }
     }
 
@@ -253,6 +275,9 @@ private fun OrynTerminalApp(
     progress: Int,
     installing: Boolean,
     status: String,
+    technicalErrorDetails: String?,
+    showTechnicalDetails: Boolean,
+    onToggleTechnicalDetails: () -> Unit,
     bootstrapInstalled: Boolean,
     shellReady: Boolean,
     session: TerminalSession?,
@@ -344,10 +369,46 @@ private fun OrynTerminalApp(
                         }
                         Text(
                             status,
-                            color = TextPrimary,
+                            color = if (technicalErrorDetails != null) Color(0xFFFF8AA5) else TextPrimary,
                             fontSize = 13.sp,
                             lineHeight = 19.sp
                         )
+                        if (technicalErrorDetails != null) {
+                            androidx.compose.material3.TextButton(
+                                onClick = onToggleTechnicalDetails
+                            ) {
+                                Text(
+                                    if (showTechnicalDetails) "Hide technical details"
+                                    else "View technical details",
+                                    color = Cyan,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            if (showTechnicalDetails) {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth().height(132.dp),
+                                    color = Obsidian,
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    androidx.compose.foundation.layout.Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(10.dp)
+                                            .verticalScroll(
+                                                androidx.compose.foundation.rememberScrollState()
+                                            )
+                                    ) {
+                                        Text(
+                                            technicalErrorDetails,
+                                            color = TextMuted,
+                                            fontSize = 10.sp,
+                                            lineHeight = 14.sp,
+                                            fontFamily = FontFamily.Monospace
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         if (installing) {
                             Box(
                                 Modifier.fillMaxWidth().height(5.dp)
@@ -378,6 +439,7 @@ private fun OrynTerminalApp(
                                     installing -> "Installing environment…"
                                     shellReady -> "Runtime installed"
                                     bootstrapInstalled -> "Install proot runtime"
+                                    technicalErrorDetails != null -> "Retry installation"
                                     else -> "Install private environment"
                                 },
                                 fontWeight = FontWeight.SemiBold
@@ -413,11 +475,11 @@ private fun OrynTerminalApp(
                         Text(
                             if (shellReady) "Oryn's private proot runtime is installed. Launch Bash to validate the shell on this device."
                             else if (bootstrapInstalled) "Bootstrap is installed. Install Oryn's private ARM64 proot runtime to unlock Bash."
-                            else "Bash is locked until Oryn's private bootstrap and proot runtime are installed.",
+                            else "Your private Bash environment will be ready after setup.",
                             color = TextPrimary, fontSize = 13.sp, lineHeight = 19.sp
                         )
                         Text(
-                            "No fallback to the system shell or your existing Termux installation is allowed.",
+                            "Oryn keeps its shell and packages separate from your existing Termux installation.",
                             color = TextMuted, fontSize = 11.sp, lineHeight = 16.sp
                         )
                     }
