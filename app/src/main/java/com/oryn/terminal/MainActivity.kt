@@ -70,8 +70,6 @@ class MainActivity : ComponentActivity() {
     }
     private var installer: TermuxBootstrapInstaller? = null
     private var runtimeInstaller: ProotRuntimeInstaller? = null
-    private var sessionClient: OrynTerminalSessionClient? = null
-    private var viewClient: OrynTerminalViewClient? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
