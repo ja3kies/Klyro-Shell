@@ -59,7 +59,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
         if (clipboard != null) {
-            clipboard.setPrimaryClip(ClipData.newPlainText("Oryn Terminal", text));
+            clipboard.setPrimaryClip(ClipData.newPlainText("Klyro Shell", text));
         }
     }
 
