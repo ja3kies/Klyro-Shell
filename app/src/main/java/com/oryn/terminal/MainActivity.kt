@@ -154,7 +154,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handlePrimaryAction() {
-        if (runtimeInstalled) verifyRuntime() else installEnvironment()
+        if (runtimeInstalled && technicalErrorDetails == null) verifyRuntime() else installEnvironment()
     }
 
     private fun verifyRuntime() {
