@@ -58,11 +58,11 @@ public final class ProotRuntimeInstaller {
             try {
                 verifyPackagedRuntime(listener);
                 complete(listener, true,
-                        "Verified ARM64 PRoot runtime from Oryn's APK-native storage.");
+                        "Verified ARM64 PRoot runtime from Klyro's APK-native storage.");
             } catch (Exception error) {
                 lastErrorDetails = diagnosticDetails(error);
                 complete(listener, false,
-                        "Oryn couldn't verify its packaged ARM64 runtime. Reinstall the current APK and retry.");
+                        "Klyro couldn't verify its packaged ARM64 runtime. Reinstall the current APK and retry.");
             } finally {
                 installing.set(false);
             }
@@ -75,7 +75,7 @@ public final class ProotRuntimeInstaller {
             throw new IOException("The packaged PRoot runtime supports ARM64 only.");
         }
         if (!paths.isBootstrapInstalled()) {
-            throw new IOException("Install Oryn's private bootstrap before verifying PRoot.");
+            throw new IOException("Install Klyro's private bootstrap before verifying PRoot.");
         }
 
         paths.prepareLayout();
