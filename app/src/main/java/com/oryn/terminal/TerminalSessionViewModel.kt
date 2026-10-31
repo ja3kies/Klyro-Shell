@@ -57,7 +57,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         terminalTitle = title?.takeIf { it.isNotBlank() } ?: "Bash"
     }
 
-    override fun onSessionFinished(exitStatus: Int) {
+    override fun onSessionFinished(session: TerminalSession, exitStatus: Int) {
+        if (activeSession !== session) return
         sessionFailureMessage = if (exitStatus == 0) null else
             "Bash couldn't start or exited unexpectedly (code $exitStatus). Return to setup and verify the runtime."
         sessionStatus = sessionFailureMessage ?: "Bash session ended."
