@@ -63,9 +63,18 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
 
     override fun onSessionFinished(session: TerminalSession, exitStatus: Int) {
         if (activeSession !== session) return
+
         sessionFailureMessage = if (exitStatus == 0) null else
-            "Bash couldn't start or exited unexpectedly (code $exitStatus). Return to setup and verify the runtime."
+            "Bash exited unexpectedly (code $exitStatus). Verify the runtime before starting another session."
         sessionStatus = sessionFailureMessage ?: "Bash session ended."
+
+        // Leave the terminal screen when its process exits; don't strand the user
+        // in a dead terminal view with no running shell.
+        activeSession = null
+        sessionClient?.attachView(null)
+        viewClient?.attachView(null)
+        sessionClient = null
+        viewClient = null
     }
 
     override fun onShellPid(pid: Int) {
