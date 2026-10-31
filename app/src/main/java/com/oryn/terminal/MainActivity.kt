@@ -120,7 +120,7 @@ class MainActivity : ComponentActivity() {
                     progress = installProgress,
                     installing = isInstalling,
                     status = terminalState.sessionStatus.ifBlank { statusMessage },
-                    runtimeVerified = runtimeVerified,
+                    runtimeVerified = runtimeVerified && terminalState.sessionFailureMessage == null,
                     verifyingRuntime = isVerifyingRuntime,
                     technicalErrorDetails = technicalErrorDetails,
                     showTechnicalDetails = showTechnicalDetails,
@@ -141,6 +141,7 @@ class MainActivity : ComponentActivity() {
                     terminalTitle = terminalState.terminalTitle,
                     sessionClient = terminalState.sessionClient,
                     viewClient = terminalState.viewClient,
+                    sessionFailureMessage = terminalState.sessionFailureMessage,
                     onInstall = ::handlePrimaryAction,
                     onLaunch = ::launchBash,
                     onClose = ::closeBash
@@ -320,6 +321,7 @@ private fun OrynTerminalApp(
     terminalTitle: String,
     sessionClient: OrynTerminalSessionClient?,
     viewClient: OrynTerminalViewClient?,
+    sessionFailureMessage: String?,
     onInstall: () -> Unit,
     onLaunch: () -> Unit,
     onClose: () -> Unit
@@ -349,6 +351,7 @@ private fun OrynTerminalApp(
                 title = terminalTitle,
                 sessionClient = sessionClient,
                 viewClient = viewClient,
+                sessionFailureMessage = sessionFailureMessage,
                 onClose = onClose
             )
         } else {
