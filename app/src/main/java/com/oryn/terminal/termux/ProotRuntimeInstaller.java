@@ -196,12 +196,18 @@ public final class ProotRuntimeInstaller {
             File previousLoader,
             File stagingLoader) throws IOException {
         boolean markerExists = marker.isFile();
+        File temporaryMarker = new File(marker.getParentFile(), marker.getName() + ".tmp");
         boolean committed = false;
         boolean hadBin = false;
         boolean hadLoader = false;
 
         if (markerExists) {
             String state = new String(Files.readAllBytes(marker.toPath()), StandardCharsets.UTF_8);
+            if ((!state.contains("state=PREPARED") && !state.contains("state=COMMITTED"))
+                    || (!state.contains("hadBin=true") && !state.contains("hadBin=false"))
+                    || (!state.contains("hadLoader=true") && !state.contains("hadLoader=false"))) {
+                throw new IOException("Proot runtime transaction marker is invalid; refusing unsafe recovery.");
+            }
             committed = state.contains("state=COMMITTED");
             hadBin = state.contains("hadBin=true");
             hadLoader = state.contains("hadLoader=true");
@@ -241,6 +247,9 @@ public final class ProotRuntimeInstaller {
         if (stagingLoader.exists() && !stagingLoader.delete()) {
             throw new IOException("Cannot remove staged proot loader.");
         }
+        if (temporaryMarker.exists() && !temporaryMarker.delete()) {
+            throw new IOException("Cannot clear temporary proot transaction marker.");
+        }
         if (markerExists && marker.exists() && !marker.delete()) {
             throw new IOException("Cannot clear proot runtime transaction marker.");
         }
@@ -248,12 +257,19 @@ public final class ProotRuntimeInstaller {
 
     private static void writeTransactionMarker(
             File marker, boolean hadBin, boolean hadLoader, boolean committed) throws IOException {
-        String value = "hadBin=" + hadBin + "\\n"
-                + "hadLoader=" + hadLoader + "\\n"
-                + "state=" + (committed ? "COMMITTED" : "PREPARED") + "\\n";
-        try (FileOutputStream out = new FileOutputStream(marker)) {
+        String value = "hadBin=" + hadBin + "\n"
+                + "hadLoader=" + hadLoader + "\n"
+                + "state=" + (committed ? "COMMITTED" : "PREPARED") + "\n";
+        File temporary = new File(marker.getParentFile(), marker.getName() + ".tmp");
+        try (FileOutputStream out = new FileOutputStream(temporary)) {
             out.write(value.getBytes(StandardCharsets.UTF_8));
             out.getFD().sync();
+        }
+        try {
+            Files.move(temporary.toPath(), marker.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException atomicFailure) {
+            Files.move(temporary.toPath(), marker.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
