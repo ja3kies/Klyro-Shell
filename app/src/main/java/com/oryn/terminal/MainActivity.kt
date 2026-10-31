@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
     private var bootstrapInstalled by mutableStateOf(false)
     private var runtimeInstalled by mutableStateOf(false)
     private var runtimeVerified by mutableStateOf(false)
+    private var bashStarted by mutableStateOf(false)
     private var isVerifyingRuntime by mutableStateOf(false)
     private val terminalState: TerminalSessionViewModel by lazy {
         ViewModelProvider(this)[TerminalSessionViewModel::class.java]
@@ -122,6 +123,7 @@ class MainActivity : ComponentActivity() {
                     installing = isInstalling,
                     status = terminalState.sessionFailureMessage ?: terminalState.sessionStatus.ifBlank { statusMessage },
                     runtimeVerified = runtimeVerified && terminalState.sessionFailureMessage == null,
+                    bashStarted = bashStarted,
                     verifyingRuntime = isVerifyingRuntime,
                     technicalErrorDetails = technicalErrorDetails,
                     showTechnicalDetails = showTechnicalDetails,
@@ -154,7 +156,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handlePrimaryAction() {
-        if (runtimeInstalled && technicalErrorDetails == null) verifyRuntime() else installEnvironment()
+        if (runtimeInstalled) verifyRuntime() else installEnvironment()
     }
 
     private fun verifyRuntime() {
@@ -162,7 +164,8 @@ class MainActivity : ComponentActivity() {
         terminalState.clearSessionFailure()
         isVerifyingRuntime = true
         runtimeVerified = false
-        statusMessage = "Checking Bash startup on this device…"
+        bashStarted = false
+        statusMessage = "Checking Bash, UID and package manager…"
         lifecycleScope.launch {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
@@ -170,16 +173,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
             isVerifyingRuntime = false
-            result.onSuccess {
-                runtimeVerified = true
-                technicalErrorDetails = null
+            result.onSuccess { verification ->
+                bashStarted = verification.bashStarted
+                runtimeVerified = verification.isEnvironmentReady()
+                technicalErrorDetails = if (runtimeVerified) null else verification.diagnostics
                 showTechnicalDetails = false
-                statusMessage = "Bash startup verified on this device."
+                statusMessage = when {
+                    runtimeVerified -> "Environment ready · Bash, UID, APT and pkg verified."
+                    bashStarted -> "Bash starts, but the environment is incomplete. Review diagnostics."
+                    else -> "Bash startup failed. Review diagnostics."
+                }
             }.onFailure { error ->
                 runtimeVerified = false
+                bashStarted = false
                 technicalErrorDetails = error.stackTraceToString()
                 showTechnicalDetails = false
-                statusMessage = "Runtime is installed, but Bash couldn't start. Review the diagnostics and retry."
+                statusMessage = "Klyro couldn't complete the environment check. Review diagnostics."
             }
         }
     }
@@ -197,6 +206,8 @@ class MainActivity : ComponentActivity() {
         }
         technicalErrorDetails = null
         showTechnicalDetails = false
+        bashStarted = false
+        runtimeVerified = false
         isInstalling = true
         installProgress = 0
         statusMessage = "Preparing Klyro's private environment…"
@@ -235,6 +246,8 @@ class MainActivity : ComponentActivity() {
         }
         technicalErrorDetails = null
         showTechnicalDetails = false
+        bashStarted = false
+        runtimeVerified = false
         isInstalling = true
         installProgress = 0
         statusMessage = "Installing Klyro's verified ARM64 PRoot runtime…"
@@ -277,6 +290,7 @@ class MainActivity : ComponentActivity() {
             statusMessage = "Starting private Bash session…"
         } catch (error: Exception) {
             runtimeVerified = false
+            bashStarted = false
             technicalErrorDetails = error.stackTraceToString()
             showTechnicalDetails = false
             statusMessage = "Klyro couldn't start Bash. Check the technical details."
@@ -294,6 +308,7 @@ class MainActivity : ComponentActivity() {
             bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
             runtimeInstalled = manager.isRuntimeInstalled()
             runtimeVerified = false
+            bashStarted = false
             if (runtimeInstalled) {
                 statusMessage = "Runtime installed · Bash startup has not been verified on this device."
             } else {
@@ -315,6 +330,7 @@ private fun OrynTerminalApp(
     installing: Boolean,
     status: String,
     runtimeVerified: Boolean,
+    bashStarted: Boolean,
     verifyingRuntime: Boolean,
     technicalErrorDetails: String?,
     showTechnicalDetails: Boolean,
@@ -332,15 +348,16 @@ private fun OrynTerminalApp(
     onClose: () -> Unit
 ) {
     val stateLabel = when {
-        runtimeVerified -> "BASH VERIFIED"
-        verifyingRuntime -> "CHECKING BASH"
+        runtimeVerified -> "ENVIRONMENT READY"
+        verifyingRuntime -> "CHECKING ENVIRONMENT"
+        bashStarted -> "BASH STARTS"
         runtimeInstalled -> "NOT VERIFIED"
-        bootstrapInstalled -> "BOOTSTRAP INSTALLED"
+        bootstrapInstalled -> "RUNTIME INSTALLED"
         else -> "SETUP"
     }
     val stateColor = when {
         runtimeVerified -> Success
-        verifyingRuntime || runtimeInstalled || bootstrapInstalled -> Warning
+        verifyingRuntime || bashStarted || runtimeInstalled || bootstrapInstalled -> Warning
         else -> Cyan
     }
 
