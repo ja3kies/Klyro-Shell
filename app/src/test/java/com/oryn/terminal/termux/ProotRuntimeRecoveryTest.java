@@ -135,6 +135,80 @@ public class ProotRuntimeRecoveryTest {
         assertFalse(new File(root, marker.getName() + ".tmp").exists());
     }
 
+    @Test public void bootstrapAllowsSafeRelativeSymlinks() throws Exception {
+        File prefix = temp.newFolder("bootstrap-relative");
+        File bin = new File(prefix, "bin");
+        File lib = new File(prefix, "lib");
+        assertTrue(bin.mkdirs());
+        assertTrue(lib.mkdirs());
+        file(new File(prefix, "SYMLINKS.txt"), "../lib/libc.so←bin/libc.so\n");
+        TermuxBootstrapInstaller installer =
+                new TermuxBootstrapInstaller(new com.oryn.terminal.core.OrynPaths(temp.newFolder("files")));
+        installer.createSymlinks(prefix);
+        assertTrue(Files.isSymbolicLink(new File(bin, "libc.so").toPath()));
+        assertEquals("../lib/libc.so",
+                Files.readSymbolicLink(new File(bin, "libc.so").toPath()).toString());
+    }
+
+    @Test public void bootstrapAllowsTermuxVirtualAbsoluteSymlinks() throws Exception {
+        File prefix = temp.newFolder("bootstrap-absolute");
+        File bin = new File(prefix, "bin");
+        assertTrue(bin.mkdirs());
+        String virtualTarget = com.oryn.terminal.core.OrynPaths.TERMUX_VIRTUAL_PREFIX + "/bin/sh";
+        file(new File(prefix, "SYMLINKS.txt"), virtualTarget + "←bin/sh\n");
+        TermuxBootstrapInstaller installer =
+                new TermuxBootstrapInstaller(new com.oryn.terminal.core.OrynPaths(temp.newFolder("files")));
+        installer.createSymlinks(prefix);
+        assertEquals(virtualTarget,
+                Files.readSymbolicLink(new File(bin, "sh").toPath()).toString());
+    }
+
+    @Test public void bootstrapRejectsAbsoluteSymlinkOutsideVirtualPrefix() throws Exception {
+        File prefix = temp.newFolder("bootstrap-outside");
+        assertTrue(new File(prefix, "bin").mkdirs());
+        file(new File(prefix, "SYMLINKS.txt"), "/system/bin/sh←bin/sh\n");
+        TermuxBootstrapInstaller installer =
+                new TermuxBootstrapInstaller(new com.oryn.terminal.core.OrynPaths(temp.newFolder("files")));
+        try {
+            installer.createSymlinks(prefix);
+            fail("Expected unsafe absolute target rejection");
+        } catch (IOException expected) {
+            assertTrue(expected.getMessage().contains("outside Termux prefix"));
+        }
+    }
+
+    @Test public void bootstrapRejectsRelativeSymlinkEscapingPrivatePrefix() throws Exception {
+        File prefix = temp.newFolder("bootstrap-traversal");
+        assertTrue(new File(prefix, "bin").mkdirs());
+        file(new File(prefix, "SYMLINKS.txt"), "../../../outside←bin/escape\n");
+        TermuxBootstrapInstaller installer =
+                new TermuxBootstrapInstaller(new com.oryn.terminal.core.OrynPaths(temp.newFolder("files")));
+        try {
+            installer.createSymlinks(prefix);
+            fail("Expected unsafe relative target rejection");
+        } catch (IOException expected) {
+            assertTrue(expected.getMessage().contains("escapes private prefix"));
+        }
+    }
+
+    @Test public void bootstrapRejectsSymlinkParentTraversal() throws Exception {
+        File prefix = temp.newFolder("bootstrap-parent");
+        File bin = new File(prefix, "bin");
+        assertTrue(bin.mkdirs());
+        File outside = temp.newFolder("bootstrap-parent-outside");
+        Files.createSymbolicLink(new File(bin, "redirect").toPath(), outside.toPath());
+        file(new File(prefix, "SYMLINKS.txt"), "../lib/libc.so←bin/redirect/libc.so\n");
+        TermuxBootstrapInstaller installer =
+                new TermuxBootstrapInstaller(new com.oryn.terminal.core.OrynPaths(temp.newFolder("files")));
+        try {
+            installer.createSymlinks(prefix);
+            fail("Expected symlink parent rejection");
+        } catch (IOException expected) {
+            assertTrue(expected.getMessage().contains("Symlink parent rejected"));
+        }
+        assertFalse(new File(outside, "libc.so").exists());
+    }
+
     private void recover() throws IOException {
         ProotRuntimeRecovery.recover(marker, bin, backupBin, stagingBin,
                 loader, backupLoader, stagingLoader, ProotRuntimeRecoveryTest::deleteTree);
