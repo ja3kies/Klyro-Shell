@@ -119,7 +119,7 @@ class MainActivity : ComponentActivity() {
                 OrynTerminalApp(
                     progress = installProgress,
                     installing = isInstalling,
-                    status = terminalState.sessionStatus.ifBlank { statusMessage },
+                    status = terminalState.sessionFailureMessage ?: terminalState.sessionStatus.ifBlank { statusMessage },
                     runtimeVerified = runtimeVerified && terminalState.sessionFailureMessage == null,
                     verifyingRuntime = isVerifyingRuntime,
                     technicalErrorDetails = technicalErrorDetails,
@@ -157,6 +157,7 @@ class MainActivity : ComponentActivity() {
 
     private fun verifyRuntime() {
         if (isVerifyingRuntime || !runtimeInstalled) return
+        terminalState.clearSessionFailure()
         isVerifyingRuntime = true
         runtimeVerified = false
         statusMessage = "Checking Bash startup on this device…"
