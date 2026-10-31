@@ -98,10 +98,12 @@ jobs:
           install -m 0755 "$PROOT_ROOT" "$NATIVE_ROOT/libproot.so"
           install -m 0755 "$LOADER_ROOT" "$NATIVE_ROOT/libproot-loader.so"
 
-          while IFS= read -r -d '' library; do
-            install -m 0644 "$library" "$NATIVE_ROOT/$(basename "$library")"
-          done < <(find -L extracted -type f \
-            \( -name 'libtalloc.so*' -o -name 'libandroid-shmem.so*' \) -print0)
+          TALLOC_LIBRARY="$(find -L extracted -type f -path "*/$PREFIX_SUFFIX/lib/libtalloc.so" -print -quit)"
+          SHMEM_LIBRARY="$(find -L extracted -type f -path "*/$PREFIX_SUFFIX/lib/libandroid-shmem.so" -print -quit)"
+          test -n "$TALLOC_LIBRARY"
+          test -n "$SHMEM_LIBRARY"
+          install -m 0644 "$TALLOC_LIBRARY" "$NATIVE_ROOT/libtalloc.so"
+          install -m 0644 "$SHMEM_LIBRARY" "$NATIVE_ROOT/libandroid-shmem.so"
 
           for package in proot libtalloc libandroid-shmem; do
             package_root="$(find extracted -type d -path "*/$PREFIX_SUFFIX/share/doc/$package" -print -quit)"
@@ -112,8 +114,9 @@ jobs:
 
           test -s "$NATIVE_ROOT/libproot.so"
           test -s "$NATIVE_ROOT/libproot-loader.so"
-          compgen -G "$NATIVE_ROOT/libtalloc.so*" >/dev/null
-          compgen -G "$NATIVE_ROOT/libandroid-shmem.so*" >/dev/null
+          test -s "$NATIVE_ROOT/libtalloc.so"
+          test -s "$NATIVE_ROOT/libandroid-shmem.so"
+          readelf -d "$NATIVE_ROOT/libtalloc.so" | grep -q 'SONAME.*libtalloc.so.2'
 
           {
             echo "# Verified package versions from the signed Termux stable repository"
@@ -123,10 +126,8 @@ jobs:
             done
             sha256sum "$NATIVE_ROOT/libproot.so" | awk '{print $1 " bin/proot"}'
             sha256sum "$NATIVE_ROOT/libproot-loader.so" | awk '{print $1 " loader"}'
-            for library in "$NATIVE_ROOT"/libtalloc.so* "$NATIVE_ROOT"/libandroid-shmem.so*; do
-              [ -f "$library" ] || continue
-              sha256sum "$library" | awk -v path="lib/$(basename "$library")" '{print $1 " " path}'
-            done
+            sha256sum "$NATIVE_ROOT/libtalloc.so" | awk '{print $1 " lib/libtalloc.so"}'
+            sha256sum "$NATIVE_ROOT/libandroid-shmem.so" | awk '{print $1 " lib/libandroid-shmem.so"}'
           } > "$ASSET_ROOT/runtime-manifest.txt"
 
           readelf -h "$NATIVE_ROOT/libproot.so" | grep -q 'AArch64'
