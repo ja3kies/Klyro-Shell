@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -301,6 +304,7 @@ private fun OrynTerminalApp(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 22.dp, vertical = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(22.dp)
             ) {
@@ -374,9 +378,7 @@ private fun OrynTerminalApp(
                             lineHeight = 19.sp
                         )
                         if (technicalErrorDetails != null) {
-                            androidx.compose.material3.TextButton(
-                                onClick = onToggleTechnicalDetails
-                            ) {
+                            TextButton(onClick = onToggleTechnicalDetails) {
                                 Text(
                                     if (showTechnicalDetails) "Hide technical details"
                                     else "View technical details",
@@ -390,13 +392,11 @@ private fun OrynTerminalApp(
                                     color = Obsidian,
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    androidx.compose.foundation.layout.Box(
+                                    Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(10.dp)
-                                            .verticalScroll(
-                                                androidx.compose.foundation.rememberScrollState()
-                                            )
+                                            .verticalScroll(rememberScrollState())
                                     ) {
                                         Text(
                                             technicalErrorDetails,
@@ -438,8 +438,8 @@ private fun OrynTerminalApp(
                                 when {
                                     installing -> "Installing environment…"
                                     shellReady -> "Runtime installed"
-                                    bootstrapInstalled -> "Install proot runtime"
                                     technicalErrorDetails != null -> "Retry installation"
+                                    bootstrapInstalled -> "Install proot runtime"
                                     else -> "Install private environment"
                                 },
                                 fontWeight = FontWeight.SemiBold
@@ -485,7 +485,7 @@ private fun OrynTerminalApp(
                     }
                 }
 
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(16.dp))
                 Text(
                     "NEON OBSIDIAN  ·  EARLY DEVELOPMENT",
                     modifier = Modifier.align(Alignment.CenterHorizontally),
