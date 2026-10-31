@@ -252,6 +252,8 @@ class MainActivity : ComponentActivity() {
                     isInstalling = false
                     refreshReadiness()
                     if (!success) {
+                        runtimeInstalled = false
+                        runtimeVerified = false
                         technicalErrorDetails = activeInstaller.getLastErrorDetails()
                         showTechnicalDetails = false
                         statusMessage = message
