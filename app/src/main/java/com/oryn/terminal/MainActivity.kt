@@ -1,6 +1,9 @@
 package com.oryn.terminal
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.ViewModelProvider
@@ -105,6 +108,14 @@ class MainActivity : ComponentActivity() {
                     showTechnicalDetails = showTechnicalDetails,
                     onToggleTechnicalDetails = {
                         showTechnicalDetails = !showTechnicalDetails
+                    },
+                    onCopyTechnicalDetails = {
+                        val details = technicalErrorDetails
+                        if (!details.isNullOrBlank()) {
+                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Oryn technical details", details))
+                            Toast.makeText(this, "Technical details copied", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     bootstrapInstalled = bootstrapInstalled,
                     shellReady = shellReady,
@@ -247,6 +258,7 @@ private fun OrynTerminalApp(
     technicalErrorDetails: String?,
     showTechnicalDetails: Boolean,
     onToggleTechnicalDetails: () -> Unit,
+    onCopyTechnicalDetails: () -> Unit,
     bootstrapInstalled: Boolean,
     shellReady: Boolean,
     session: TerminalSession?,
@@ -347,7 +359,7 @@ private fun OrynTerminalApp(
                             TextButton(onClick = onToggleTechnicalDetails) {
                                 Text(
                                     if (showTechnicalDetails) "Hide technical details"
-                                    else "View technical details",
+                                    else "Show technical details",
                                     color = Cyan,
                                     fontSize = 12.sp
                                 )
@@ -372,6 +384,9 @@ private fun OrynTerminalApp(
                                             fontFamily = FontFamily.Monospace
                                         )
                                     }
+                                }
+                                TextButton(onClick = onCopyTechnicalDetails) {
+                                    Text("Copy technical details", color = TextMuted, fontSize = 12.sp)
                                 }
                             }
                         }
@@ -398,13 +413,14 @@ private fun OrynTerminalApp(
                                 disabledContainerColor = Elevated,
                                 disabledContentColor = TextMuted
                             ),
-                            shape = RoundedCornerShape(13.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
                                 when {
                                     installing -> "Installing environment…"
                                     shellReady -> "Runtime installed"
-                                    technicalErrorDetails != null -> "Retry installation"
+                                    technicalErrorDetails != null && !bootstrapInstalled -> "Clean & retry installation"
+                                    technicalErrorDetails != null -> "Retry runtime setup"
                                     bootstrapInstalled -> "Install proot runtime"
                                     else -> "Install private environment"
                                 },
