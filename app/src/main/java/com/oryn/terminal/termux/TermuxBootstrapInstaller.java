@@ -58,7 +58,11 @@ public final class TermuxBootstrapInstaller {
     }
 
     public TermuxBootstrapInstaller(Context context) throws IOException {
-        this(new OrynPaths(context.getApplicationContext().getFilesDir()));
+        Context app = context.getApplicationContext();
+        this(new OrynPaths(
+                app.getFilesDir(),
+                new File(app.getApplicationInfo().nativeLibraryDir)
+        ));
     }
 
     public TermuxBootstrapInstaller(OrynPaths paths) {
@@ -191,9 +195,21 @@ public final class TermuxBootstrapInstaller {
      * paths are destinations inside Oryn's rootfs, not host filesystem paths.
      */
     public String[] buildLoginCommand() throws IOException {
+        return buildCommand(null);
+    }
+
+    /** Builds the same isolated login path with a one-shot marker for startup verification. */
+    public String[] buildVerificationCommand(String marker) throws IOException {
+        if (marker == null || !marker.matches("[A-Z0-9_]{1,64}")) {
+            throw new IllegalArgumentException("A safe verification marker is required.");
+        }
+        return buildCommand(marker);
+    }
+
+    private String[] buildCommand(String verificationMarker) throws IOException {
         if (!isInstalled()) throw new IOException("Oryn bootstrap is not installed.");
         if (!paths.isProotInstalled()) {
-            throw new IOException("Oryn's complete private proot runtime is not installed yet.");
+            throw new IOException("Oryn's APK-native PRoot runtime is not installed yet.");
         }
         String prefix = OrynPaths.TERMUX_VIRTUAL_PREFIX;
         String home = OrynPaths.TERMUX_VIRTUAL_HOME;
@@ -207,7 +223,6 @@ public final class TermuxBootstrapInstaller {
         addBind(args, "/proc");
         addBind(args, "/sys");
         addBind(args, "/system");
-        // These mount points vary across Android releases and OEM builds.
         addBindIfPresent(args, "/apex");
         addBindIfPresent(args, "/vendor");
         addBindIfPresent(args, "/product");
@@ -229,6 +244,10 @@ public final class TermuxBootstrapInstaller {
         args.add("LD_PRELOAD=" + prefix + "/lib/libtermux-exec.so");
         args.add(prefix + "/bin/bash");
         args.add("--login");
+        if (verificationMarker != null) {
+            args.add("-c");
+            args.add("printf '%s\\n' '" + verificationMarker + "'");
+        }
         return args.toArray(new String[0]);
     }
 

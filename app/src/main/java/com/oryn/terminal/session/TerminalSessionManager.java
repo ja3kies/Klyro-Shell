@@ -46,7 +46,7 @@ public final class TerminalSessionManager {
             String name,
             com.termux.terminal.TerminalSessionClient client
     ) throws IOException {
-        if (!isReady()) {
+        if (!isRuntimeInstalled()) {
             throw new IOException("Oryn's private bootstrap and complete proot runtime are required.");
         }
 

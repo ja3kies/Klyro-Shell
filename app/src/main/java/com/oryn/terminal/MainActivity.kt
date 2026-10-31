@@ -5,8 +5,14 @@ import android.content.ClipboardManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +24,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -58,7 +67,9 @@ private val TextPrimary = Color(0xFFE2E8F0)
 private val TextMuted = Color(0xFF94A3B8)
 private val Cyan = Color(0xFF00F0FF)
 private val Purple = Color(0xFF8338EC)
-private val Success = Color(0xFF00FF66)
+private val PurpleText = Color(0xFFB794F4)
+private val Warning = Color(0xFFFFC857)
+private val Success = Color(0xFF4DFF9A)
 
 class MainActivity : ComponentActivity() {
     private var installProgress by mutableIntStateOf(0)
@@ -67,7 +78,9 @@ class MainActivity : ComponentActivity() {
     private var technicalErrorDetails by mutableStateOf<String?>(null)
     private var showTechnicalDetails by mutableStateOf(false)
     private var bootstrapInstalled by mutableStateOf(false)
-    private var shellReady by mutableStateOf(false)
+    private var runtimeInstalled by mutableStateOf(false)
+    private var runtimeVerified by mutableStateOf(false)
+    private var isVerifyingRuntime by mutableStateOf(false)
     private val terminalState: TerminalSessionViewModel by lazy {
         ViewModelProvider(this)[TerminalSessionViewModel::class.java]
     }
@@ -76,6 +89,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
 
         try {
             installer = TermuxBootstrapInstaller(this)
@@ -83,7 +100,7 @@ class MainActivity : ComponentActivity() {
             val manager = TerminalSessionManager(this)
             statusMessage = manager.getReadinessMessage()
             bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
-            shellReady = manager.isReady()
+            runtimeInstalled = manager.isRuntimeInstalled()
         } catch (error: IOException) {
             technicalErrorDetails = error.stackTraceToString()
             statusMessage = "Oryn couldn't verify its private environment."
@@ -104,6 +121,8 @@ class MainActivity : ComponentActivity() {
                     progress = installProgress,
                     installing = isInstalling,
                     status = terminalState.sessionStatus.ifBlank { statusMessage },
+                    runtimeVerified = runtimeVerified,
+                    verifyingRuntime = isVerifyingRuntime,
                     technicalErrorDetails = technicalErrorDetails,
                     showTechnicalDetails = showTechnicalDetails,
                     onToggleTechnicalDetails = {
@@ -118,15 +137,46 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     bootstrapInstalled = bootstrapInstalled,
-                    shellReady = shellReady,
+                    runtimeInstalled = runtimeInstalled,
                     session = terminalState.activeSession,
                     terminalTitle = terminalState.terminalTitle,
                     sessionClient = terminalState.sessionClient,
                     viewClient = terminalState.viewClient,
-                    onInstall = ::installEnvironment,
+                    onInstall = ::handlePrimaryAction,
                     onLaunch = ::launchBash,
                     onClose = ::closeBash
                 )
+            }
+        }
+        if (runtimeInstalled) verifyRuntime()
+    }
+
+    private fun handlePrimaryAction() {
+        if (runtimeInstalled) verifyRuntime() else installEnvironment()
+    }
+
+    private fun verifyRuntime() {
+        if (isVerifyingRuntime || !runtimeInstalled) return
+        isVerifyingRuntime = true
+        runtimeVerified = false
+        statusMessage = "Checking Bash startup on this device…"
+        lifecycleScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    TerminalSessionManager(applicationContext).verifyBash()
+                }
+            }
+            isVerifyingRuntime = false
+            result.onSuccess {
+                runtimeVerified = true
+                technicalErrorDetails = null
+                showTechnicalDetails = false
+                statusMessage = "Bash startup verified on this device."
+            }.onFailure { error ->
+                runtimeVerified = false
+                technicalErrorDetails = error.stackTraceToString()
+                showTechnicalDetails = false
+                statusMessage = "Runtime is installed, but Bash couldn't start. Review the diagnostics and retry."
             }
         }
     }
@@ -202,6 +252,8 @@ class MainActivity : ComponentActivity() {
                         technicalErrorDetails = activeInstaller.getLastErrorDetails()
                         showTechnicalDetails = false
                         statusMessage = message
+                    } else if (runtimeInstalled) {
+                        verifyRuntime()
                     }
                 }
             }
@@ -219,6 +271,7 @@ class MainActivity : ComponentActivity() {
             terminalState.attachSession(newSession, newSessionClient, newViewClient)
             statusMessage = "Starting private Bash session…"
         } catch (error: Exception) {
+            runtimeVerified = false
             technicalErrorDetails = error.stackTraceToString()
             showTechnicalDetails = false
             statusMessage = "Oryn couldn't start Bash. Check the technical details."
@@ -234,14 +287,15 @@ class MainActivity : ComponentActivity() {
         try {
             val manager = TerminalSessionManager(this)
             bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
-            shellReady = manager.isReady()
-            if (shellReady) {
-                statusMessage = "Private proot runtime installed. Bash startup still requires on-device validation."
+            runtimeInstalled = manager.isRuntimeInstalled()
+            runtimeVerified = false
+            if (runtimeInstalled) {
+                statusMessage = "Runtime installed · Bash startup has not been verified on this device."
             } else {
                 statusMessage = manager.getReadinessMessage()
             }
         } catch (error: IOException) {
-            shellReady = false
+            runtimeInstalled = false
             technicalErrorDetails = error.stackTraceToString()
             showTechnicalDetails = false
             statusMessage = "Oryn couldn't validate its private environment."
@@ -255,12 +309,14 @@ private fun OrynTerminalApp(
     progress: Int,
     installing: Boolean,
     status: String,
+    runtimeVerified: Boolean,
+    verifyingRuntime: Boolean,
     technicalErrorDetails: String?,
     showTechnicalDetails: Boolean,
     onToggleTechnicalDetails: () -> Unit,
     onCopyTechnicalDetails: () -> Unit,
     bootstrapInstalled: Boolean,
-    shellReady: Boolean,
+    runtimeInstalled: Boolean,
     session: TerminalSession?,
     terminalTitle: String,
     sessionClient: OrynTerminalSessionClient?,
@@ -269,7 +325,25 @@ private fun OrynTerminalApp(
     onLaunch: () -> Unit,
     onClose: () -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = Obsidian) {
+    val stateLabel = when {
+        runtimeVerified -> "BASH VERIFIED"
+        verifyingRuntime -> "CHECKING BASH"
+        runtimeInstalled -> "NOT VERIFIED"
+        bootstrapInstalled -> "BOOTSTRAP INSTALLED"
+        else -> "SETUP"
+    }
+    val stateColor = when {
+        runtimeVerified -> Success
+        verifyingRuntime || runtimeInstalled || bootstrapInstalled -> Warning
+        else -> Cyan
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .imePadding(),
+        color = Obsidian
+    ) {
         if (session != null && sessionClient != null && viewClient != null) {
             TerminalPane(
                 session = session,
@@ -297,7 +371,7 @@ private fun OrynTerminalApp(
                             .background(Elevated, RoundedCornerShape(14.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("⌘", color = Cyan, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text("\\$", color = Cyan, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     }
                     Column {
                         Text("ORYN", color = TextPrimary, fontSize = 18.sp,
@@ -308,13 +382,13 @@ private fun OrynTerminalApp(
                     Spacer(Modifier.weight(1f))
                     Box(
                         Modifier.size(9.dp).background(
-                            if (shellReady) Success else if (bootstrapInstalled) Purple else Cyan,
+                            stateColor,
                             CircleShape
                         )
                     )
                     Text(
-                        if (shellReady) "RUNTIME READY" else "SETUP",
-                        color = TextMuted, fontSize = 10.sp, letterSpacing = 1.sp
+                        stateLabel,
+                        color = stateColor, fontSize = 10.sp, letterSpacing = 1.sp
                     )
                 }
 
@@ -344,8 +418,8 @@ private fun OrynTerminalApp(
                                 letterSpacing = 1.3.sp)
                             Spacer(Modifier.weight(1f))
                             Text(
-                                if (bootstrapInstalled) "BOOTSTRAP OK" else "NOT INSTALLED",
-                                color = if (bootstrapInstalled) Success else TextMuted,
+                                if (bootstrapInstalled) "BOOTSTRAP INSTALLED" else "NOT INSTALLED",
+                                color = TextMuted,
                                 fontSize = 9.sp, letterSpacing = 0.8.sp
                             )
                         }
@@ -405,7 +479,7 @@ private fun OrynTerminalApp(
                         }
                         Button(
                             onClick = onInstall,
-                            enabled = !installing && !shellReady,
+                            enabled = !installing && !verifyingRuntime && !runtimeVerified,
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Cyan,
@@ -418,16 +492,18 @@ private fun OrynTerminalApp(
                             Text(
                                 when {
                                     installing -> "Installing environment…"
-                                    shellReady -> "Runtime installed"
+                                    verifyingRuntime -> "Checking Bash…"
+                                    runtimeVerified -> "Bash verified"
+                                    runtimeInstalled -> "Verify Bash startup"
                                     technicalErrorDetails != null && !bootstrapInstalled -> "Clean & retry installation"
                                     technicalErrorDetails != null -> "Retry runtime setup"
-                                    bootstrapInstalled -> "Install proot runtime"
+                                    bootstrapInstalled -> "Verify packaged runtime"
                                     else -> "Install private environment"
                                 },
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                        if (shellReady) {
+                        if (runtimeVerified) {
                             Button(
                                 onClick = onLaunch,
                                 modifier = Modifier.fillMaxWidth(),
@@ -443,36 +519,7 @@ private fun OrynTerminalApp(
                     }
                 }
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Elevated.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("SHELL STATUS", color = Purple, fontSize = 10.sp,
-                            letterSpacing = 1.4.sp)
-                        Text(
-                            if (shellReady) "Oryn's private proot runtime is installed. Launch Bash to validate the shell on this device."
-                            else if (bootstrapInstalled) "Bootstrap is installed. Install Oryn's private ARM64 proot runtime to unlock Bash."
-                            else "Your private Bash environment will be ready after setup.",
-                            color = TextPrimary, fontSize = 13.sp, lineHeight = 19.sp
-                        )
-                        Text(
-                            "Oryn keeps its shell and packages separate from your existing Termux installation.",
-                            color = TextMuted, fontSize = 11.sp, lineHeight = 16.sp
-                        )
-                    }
-                }
 
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    "NEON OBSIDIAN  ·  EARLY DEVELOPMENT",
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    color = TextMuted, fontSize = 9.sp, letterSpacing = 1.2.sp
-                )
             }
         }
     }

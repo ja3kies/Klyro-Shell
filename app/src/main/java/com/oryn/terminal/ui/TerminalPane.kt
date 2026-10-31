@@ -11,11 +11,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +58,11 @@ fun TerminalPane(
     var altActive by remember { mutableStateOf(viewClient.isAltDown()) }
     var shiftActive by remember { mutableStateOf(false) }
     var fnActive by remember { mutableStateOf(false) }
+    var showEndSessionConfirmation by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = !showEndSessionConfirmation) {
+        showEndSessionConfirmation = true
+    }
 
     Column(
         modifier = modifier
@@ -63,7 +73,7 @@ fun TerminalPane(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(TerminalSurface)
-                .padding(start = 14.dp, end = 8.dp, top = 7.dp, bottom = 7.dp),
+                .padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
@@ -84,21 +94,23 @@ fun TerminalPane(
                 Text("ARM64", color = TerminalMuted, fontSize = 10.sp)
             }
             Button(
-                onClick = onClose,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                onClick = { showEndSessionConfirmation = true },
+                modifier = Modifier.heightIn(min = 48.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF1E293B),
                     contentColor = TerminalText
                 )
             ) {
-                Text("Close", fontSize = 11.sp)
+                Text("End session", fontSize = 12.sp)
             }
         }
 
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f)
+                .padding(horizontal = 8.dp),
             factory = { context ->
                 TerminalView(context, null).apply {
                     setTerminalViewClient(viewClient)
@@ -125,8 +137,8 @@ fun TerminalPane(
                 .fillMaxWidth()
                 .background(TerminalSurface)
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 6.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TerminalExtraKey("ESC") { session.writeCodePoint(false, 27) }
@@ -156,6 +168,25 @@ fun TerminalPane(
             TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
         }
     }
+
+    if (showEndSessionConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showEndSessionConfirmation = false },
+            title = { Text("End Bash session?") },
+            text = { Text("This will stop the running shell and its child processes.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showEndSessionConfirmation = false
+                    onClose()
+                }) { Text("End session") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndSessionConfirmation = false }) {
+                    Text("Keep session")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -166,7 +197,8 @@ private fun TerminalExtraKey(
 ) {
     Button(
         onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
+        modifier = Modifier.heightIn(min = 48.dp).widthIn(min = 48.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
                 else Color(0xFF1E293B),

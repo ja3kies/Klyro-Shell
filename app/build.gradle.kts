@@ -58,6 +58,12 @@ android {
     }
 
     packaging {
+        jniLibs {
+            // Extract APK-native runtime files into the executable nativeLibraryDir.
+            useLegacyPackaging = true
+            // Preserve the ELF bytes verified by the generated runtime manifest.
+            keepDebugSymbols += "**/*.so"
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }

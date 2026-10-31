@@ -91,13 +91,15 @@ jobs:
           test -n "$PROOT_ROOT"
           test -n "$LOADER_ROOT"
 
+          NATIVE_ROOT="$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a"
           ASSET_ROOT="$GITHUB_WORKSPACE/app/src/main/assets/proot"
-          mkdir -p "$ASSET_ROOT/bin" "$ASSET_ROOT/lib" "$ASSET_ROOT/licenses"
-          install -m 0755 "$PROOT_ROOT" "$ASSET_ROOT/bin/proot"
-          install -m 0755 "$LOADER_ROOT" "$ASSET_ROOT/loader"
+          rm -rf "$NATIVE_ROOT"
+          mkdir -p "$NATIVE_ROOT" "$ASSET_ROOT/licenses"
+          install -m 0755 "$PROOT_ROOT" "$NATIVE_ROOT/libproot.so"
+          install -m 0755 "$LOADER_ROOT" "$NATIVE_ROOT/libproot-loader.so"
 
           while IFS= read -r -d '' library; do
-            install -m 0644 "$library" "$ASSET_ROOT/lib/$(basename "$library")"
+            install -m 0644 "$library" "$NATIVE_ROOT/$(basename "$library")"
           done < <(find -L extracted -type f \
             \( -name 'libtalloc.so*' -o -name 'libandroid-shmem.so*' \) -print0)
 
@@ -108,10 +110,10 @@ jobs:
             fi
           done
 
-          test -s "$ASSET_ROOT/bin/proot"
-          test -s "$ASSET_ROOT/loader"
-          compgen -G "$ASSET_ROOT/lib/libtalloc.so*" >/dev/null
-          compgen -G "$ASSET_ROOT/lib/libandroid-shmem.so*" >/dev/null
+          test -s "$NATIVE_ROOT/libproot.so"
+          test -s "$NATIVE_ROOT/libproot-loader.so"
+          compgen -G "$NATIVE_ROOT/libtalloc.so*" >/dev/null
+          compgen -G "$NATIVE_ROOT/libandroid-shmem.so*" >/dev/null
 
           {
             echo "# Verified package versions from the signed Termux stable repository"
@@ -119,15 +121,19 @@ jobs:
               deb="$(find . -maxdepth 1 -name "${package}_*_aarch64.deb" -print -quit)"
               printf '# %s=%s\n' "$package" "$(dpkg-deb -f "$deb" Version)"
             done
-            cd "$ASSET_ROOT"
-            find bin lib -type f -print0 | sort -z | xargs -0 sha256sum
-            sha256sum loader
+            sha256sum "$NATIVE_ROOT/libproot.so" | awk '{print $1 " bin/proot"}'
+            sha256sum "$NATIVE_ROOT/libproot-loader.so" | awk '{print $1 " loader"}'
+            for library in "$NATIVE_ROOT"/libtalloc.so* "$NATIVE_ROOT"/libandroid-shmem.so*; do
+              [ -f "$library" ] || continue
+              sha256sum "$library" | awk -v path="lib/$(basename "$library")" '{print $1 " " path}'
+            done
           } > "$ASSET_ROOT/runtime-manifest.txt"
 
-          readelf -h "$ASSET_ROOT/bin/proot" | grep -q 'AArch64'
-          readelf -d "$ASSET_ROOT/bin/proot" > "$RUNNER_TEMP/proot-dynamic.txt"
+          readelf -h "$NATIVE_ROOT/libproot.so" | grep -q 'AArch64'
+          readelf -h "$NATIVE_ROOT/libproot-loader.so" | grep -q 'AArch64'
+          readelf -d "$NATIVE_ROOT/libproot.so" > "$RUNNER_TEMP/proot-dynamic.txt"
           cat "$RUNNER_TEMP/proot-dynamic.txt"
-          echo "Verified proot runtime assets:"
+          echo "Verified APK-native proot runtime files:"
           cat "$ASSET_ROOT/runtime-manifest.txt"
 
       - name: Run JVM unit tests
