@@ -122,7 +122,7 @@ public final class ProotRuntimeInstaller {
 
         File source = resolvePackagedFile(talloc.path);
         File destination = new File(paths.getProotDependencyDir(), "libtalloc.so.2");
-        File staging = new File(paths.getProotDependencyDir(), "libtalloc.so.2.part");
+        File staging = File.createTempFile("libtalloc-", ".part", paths.getProotDependencyDir());
         try {
             Files.copy(source.toPath(), staging.toPath(), StandardCopyOption.REPLACE_EXISTING);
             verifyFile(new ManifestEntry("private/libtalloc.so.2", talloc.sha256), staging);
