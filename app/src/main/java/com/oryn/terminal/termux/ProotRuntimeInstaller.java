@@ -188,71 +188,10 @@ public final class ProotRuntimeInstaller {
      * marker means the new runtime passed readiness checks and only backup cleanup remains.
      */
     private void recoverInterruptedActivation(
-            File marker,
-            File binDir,
-            File previousBin,
-            File stagingBin,
-            File loader,
-            File previousLoader,
-            File stagingLoader) throws IOException {
-        boolean markerExists = marker.isFile();
-        File temporaryMarker = new File(marker.getParentFile(), marker.getName() + ".tmp");
-        boolean committed = false;
-        boolean hadBin = false;
-        boolean hadLoader = false;
-
-        if (markerExists) {
-            String state = new String(Files.readAllBytes(marker.toPath()), StandardCharsets.UTF_8);
-            if ((!state.contains("state=PREPARED") && !state.contains("state=COMMITTED"))
-                    || (!state.contains("hadBin=true") && !state.contains("hadBin=false"))
-                    || (!state.contains("hadLoader=true") && !state.contains("hadLoader=false"))) {
-                throw new IOException("Proot runtime transaction marker is invalid; refusing unsafe recovery.");
-            }
-            committed = state.contains("state=COMMITTED");
-            hadBin = state.contains("hadBin=true");
-            hadLoader = state.contains("hadLoader=true");
-        }
-
-        if (committed) {
-            // Keep the verified new runtime; finish only the interrupted cleanup.
-            paths.deletePrivateTree(previousBin);
-            if (previousLoader.exists() && !previousLoader.delete()) {
-                throw new IOException("Cannot finish cleanup of previous proot loader.");
-            }
-        } else {
-            // Legacy recovery: older installer versions had no marker. If a backup
-            // exists, prefer restoring it over retaining a possibly partial activation.
-            if (previousBin.exists()) {
-                paths.deletePrivateTree(binDir);
-                move(previousBin, binDir);
-            } else if (markerExists && !hadBin) {
-                paths.deletePrivateTree(binDir);
-            }
-
-            if (previousLoader.exists()) {
-                if (loader.exists() && !loader.delete()) {
-                    throw new IOException("Cannot remove interrupted proot loader.");
-                }
-                File parent = loader.getParentFile();
-                if (!parent.mkdirs() && !parent.isDirectory()) {
-                    throw new IOException("Cannot recreate private proot loader directory.");
-                }
-                move(previousLoader, loader);
-            } else if (markerExists && !hadLoader && loader.exists() && !loader.delete()) {
-                throw new IOException("Cannot remove interrupted new proot loader.");
-            }
-        }
-
-        paths.deletePrivateTree(stagingBin);
-        if (stagingLoader.exists() && !stagingLoader.delete()) {
-            throw new IOException("Cannot remove staged proot loader.");
-        }
-        if (temporaryMarker.exists() && !temporaryMarker.delete()) {
-            throw new IOException("Cannot clear temporary proot transaction marker.");
-        }
-        if (markerExists && marker.exists() && !marker.delete()) {
-            throw new IOException("Cannot clear proot runtime transaction marker.");
-        }
+            File marker, File binDir, File previousBin, File stagingBin,
+            File loader, File previousLoader, File stagingLoader) throws IOException {
+        ProotRuntimeRecovery.recover(marker, binDir, previousBin, stagingBin,
+                loader, previousLoader, stagingLoader, paths::deletePrivateTree);
     }
 
     private static void writeTransactionMarker(
