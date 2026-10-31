@@ -20,6 +20,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         private set
     var sessionStatus by mutableStateOf("")
         private set
+    var sessionFailureMessage by mutableStateOf<String?>(null)
+        private set
 
     var sessionClient: OrynTerminalSessionClient? = null
         private set
@@ -36,6 +38,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         viewClient = terminalViewClient
         terminalTitle = "Bash"
         sessionStatus = "Starting private Bash session…"
+        sessionFailureMessage = null
     }
 
     fun closeSession() {
@@ -47,6 +50,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         viewClient = null
         terminalTitle = "Bash"
         sessionStatus = ""
+        sessionFailureMessage = null
     }
 
     override fun onTitleChanged(title: String?) {
@@ -54,7 +58,9 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     override fun onSessionFinished(exitStatus: Int) {
-        sessionStatus = "Bash exited with status $exitStatus."
+        sessionFailureMessage = if (exitStatus == 0) null else
+            "Bash couldn't start or exited unexpectedly (code $exitStatus). Return to setup and verify the runtime."
+        sessionStatus = sessionFailureMessage ?: "Bash session ended."
     }
 
     override fun onShellPid(pid: Int) {
