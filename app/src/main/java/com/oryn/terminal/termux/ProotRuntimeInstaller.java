@@ -37,6 +37,11 @@ public final class ProotRuntimeInstaller {
     private final Context context;
     private final OrynPaths paths;
     private final AtomicBoolean installing = new AtomicBoolean(false);
+    private volatile String lastErrorDetails;
+
+    public String getLastErrorDetails() {
+        return lastErrorDetails;
+    }
 
     public ProotRuntimeInstaller(Context context) throws IOException {
         this.context = context.getApplicationContext();
@@ -48,12 +53,15 @@ public final class ProotRuntimeInstaller {
             complete(listener, false, "Proot runtime installation is already running.");
             return;
         }
+        lastErrorDetails = null;
         Thread worker = new Thread(() -> {
             try {
                 installInternal(listener);
             } catch (Exception error) {
+                lastErrorDetails = diagnosticDetails(error);
                 complete(listener, false,
-                        "Proot runtime installation failed: " + error.getMessage());
+                        "Oryn couldn't finish installing its private runtime. "
+                        + "Your Termux installation was not modified. You can retry.");
             } finally {
                 installing.set(false);
             }
@@ -267,6 +275,12 @@ public final class ProotRuntimeInstaller {
         } catch (IOException atomicFailure) {
             Files.move(from.toPath(), to.toPath());
         }
+    }
+
+    private static String diagnosticDetails(Exception error) {
+        java.io.StringWriter buffer = new java.io.StringWriter();
+        error.printStackTrace(new java.io.PrintWriter(buffer));
+        return buffer.toString();
     }
 
     private static void progress(Listener listener, String stage, int percent) {
