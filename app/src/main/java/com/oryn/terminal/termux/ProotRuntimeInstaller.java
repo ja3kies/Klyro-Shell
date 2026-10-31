@@ -77,7 +77,7 @@ public final class ProotRuntimeInstaller {
         File previousLoader = new File(paths.getFilesDir(), "proot-loader.previous");
         File loader = paths.getProotLoader();
 
-        deleteTree(stagingBin);
+        paths.deletePrivateTree(stagingBin);
         if (!stagingBin.mkdirs() && !stagingBin.isDirectory()) {
             throw new IOException("Cannot create proot staging directory.");
         }
@@ -130,7 +130,7 @@ public final class ProotRuntimeInstaller {
         }
 
         progress(listener, "Activating verified private runtime", 88);
-        deleteTree(previousBin);
+        paths.deletePrivateTree(previousBin);
         if (previousLoader.exists() && !previousLoader.delete()) {
             throw new IOException("Cannot clear previous loader backup.");
         }
@@ -153,7 +153,7 @@ public final class ProotRuntimeInstaller {
             move(stagingLoader, loader);
             activatedLoader = true;
         } catch (Exception activationError) {
-            if (activatedBin) deleteTree(binDir);
+            if (activatedBin) paths.deletePrivateTree(binDir);
             if (activatedLoader && loader.exists() && !loader.delete()) {
                 throw new IOException("Runtime activation failed and loader cleanup failed.",
                         activationError);
@@ -163,7 +163,7 @@ public final class ProotRuntimeInstaller {
             throw activationError;
         }
 
-        deleteTree(previousBin);
+        paths.deletePrivateTree(previousBin);
         if (previousLoader.exists() && !previousLoader.delete()) {
             throw new IOException("Runtime installed, but old loader backup could not be removed.");
         }
@@ -267,15 +267,6 @@ public final class ProotRuntimeInstaller {
         } catch (IOException atomicFailure) {
             Files.move(from.toPath(), to.toPath());
         }
-    }
-
-    private static void deleteTree(File file) throws IOException {
-        if (!file.exists()) return;
-        if (file.isDirectory() && !Files.isSymbolicLink(file.toPath())) {
-            File[] children = file.listFiles();
-            if (children != null) for (File child : children) deleteTree(child);
-        }
-        if (!file.delete()) throw new IOException("Cannot remove " + file);
     }
 
     private static void progress(Listener listener, String stage, int percent) {
