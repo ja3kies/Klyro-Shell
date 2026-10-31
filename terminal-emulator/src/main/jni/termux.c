@@ -73,7 +73,9 @@ static int create_subprocess(JNIEnv* env,
         sigprocmask(SIG_UNBLOCK, &signals_to_unblock, 0);
 
         close(ptm);
-        setsid();
+        // The child PID becomes its process-group ID; Java can then terminate
+        // the shell and all descendants with kill(-pid, signal).
+        if (setsid() < 0) _exit(126);
 
         int pts = open(devname, O_RDWR);
         if (pts < 0) exit(-1);
