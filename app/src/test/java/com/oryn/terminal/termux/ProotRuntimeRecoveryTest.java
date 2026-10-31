@@ -33,7 +33,7 @@ public class ProotRuntimeRecoveryTest {
         writeMarker(true, true, false);
         recover();
         assertFile(bin, "old-bin");
-        assertFile(loader, "old-loader");
+        assertText(loader, "old-loader");
         assertFalse(marker.exists());
     }
 
@@ -45,7 +45,7 @@ public class ProotRuntimeRecoveryTest {
         writeMarker(true, true, false);
         recover();
         assertFile(bin, "old-bin");
-        assertFile(loader, "old-loader");
+        assertText(loader, "old-loader");
         assertFalse(backupBin.exists());
     }
 
@@ -57,7 +57,7 @@ public class ProotRuntimeRecoveryTest {
         writeMarker(true, true, false);
         recover();
         assertFile(bin, "old-bin");
-        assertFile(loader, "old-loader");
+        assertText(loader, "old-loader");
     }
 
     @Test public void interruptionAfterFirstNewComponentRestoresOldPair() throws Exception {
@@ -67,7 +67,7 @@ public class ProotRuntimeRecoveryTest {
         writeMarker(true, true, false);
         recover();
         assertFile(bin, "old-bin");
-        assertFile(loader, "old-loader");
+        assertText(loader, "old-loader");
     }
 
     @Test public void interruptionAfterBothNewComponentsButBeforeCommitRestoresOldPair() throws Exception {
@@ -78,7 +78,7 @@ public class ProotRuntimeRecoveryTest {
         writeMarker(true, true, false);
         recover();
         assertFile(bin, "old-bin");
-        assertFile(loader, "old-loader");
+        assertText(loader, "old-loader");
     }
 
     @Test public void firstInstallRollbackRemovesPartialNewComponents() throws Exception {
@@ -98,7 +98,7 @@ public class ProotRuntimeRecoveryTest {
         writeMarker(true, true, true);
         recover();
         assertFile(bin, "new-bin");
-        assertFile(loader, "new-loader");
+        assertText(loader, "new-loader");
         assertFalse(backupBin.exists());
         assertFalse(backupLoader.exists());
     }
@@ -110,7 +110,7 @@ public class ProotRuntimeRecoveryTest {
         file(loader, "partial-loader");
         recover();
         assertFile(bin, "old-bin");
-        assertFile(loader, "old-loader");
+        assertText(loader, "old-loader");
     }
 
     @Test public void malformedMarkerRefusesRecoveryWithoutDeletingAnything() throws Exception {
@@ -123,7 +123,7 @@ public class ProotRuntimeRecoveryTest {
             fail("Expected invalid marker rejection");
         } catch (IOException expected) {
             assertFile(bin, "valuable-bin");
-            assertFile(loader, "valuable-loader");
+            assertText(loader, "valuable-loader");
             assertTrue(marker.exists());
         }
     }
@@ -160,6 +160,10 @@ public class ProotRuntimeRecoveryTest {
     private static void assertFile(File directory, String expected) throws IOException {
         assertEquals(expected, new String(Files.readAllBytes(new File(directory, "payload").toPath()),
                 StandardCharsets.UTF_8));
+    }
+
+    private static void assertText(File file, String expected) throws IOException {
+        assertEquals(expected, new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
     }
 
     private static void deleteTree(File file) throws IOException {
