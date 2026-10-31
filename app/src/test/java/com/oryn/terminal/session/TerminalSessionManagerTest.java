@@ -18,6 +18,23 @@ public class TerminalSessionManagerTest {
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
+    public void environmentReadyRequiresAllVerificationLayers() {
+        TerminalSessionManager.VerificationResult partial =
+                new TerminalSessionManager.VerificationResult(
+                        true, true, true, false, 23, "pkg failed");
+        assertTrue(partial.bashStarted);
+        assertTrue(partial.uidValid);
+        assertTrue(partial.aptResponds);
+        assertTrue(!partial.pkgResponds);
+        assertTrue(!partial.isEnvironmentReady());
+
+        TerminalSessionManager.VerificationResult ready =
+                new TerminalSessionManager.VerificationResult(
+                        true, true, true, true, 0, "");
+        assertTrue(ready.isEnvironmentReady());
+    }
+
+    @Test
     public void terminalArgvRetainsExecutableAsArgvZero() {
         String[] command = {"/app/lib/libproot.so", "--link2symlink", "-r", "/private/root"};
         assertArrayEquals(command, TerminalSessionManager.buildTerminalArgv(command));
