@@ -335,34 +335,68 @@ public final class TermuxBootstrapInstaller {
     }
 
     /** Termux stores symlink metadata as "target←link" in SYMLINKS.txt. */
-    private void createSymlinks(File root) throws IOException {
+    void createSymlinks(File root) throws IOException {
         File map = new File(root, "SYMLINKS.txt");
         if (!map.isFile()) throw new IOException("Bootstrap is missing SYMLINKS.txt.");
+        Path rootPath = root.getCanonicalFile().toPath().normalize();
+        Path virtualPrefix = java.nio.file.Paths.get(OrynPaths.TERMUX_VIRTUAL_PREFIX).normalize();
         String content = new String(Files.readAllBytes(map.toPath()), StandardCharsets.UTF_8);
-        String base = root.getCanonicalPath() + File.separator;
         for (String line : content.split("\\r?\\n")) {
             int arrow = line.indexOf('\u2190');
             if (arrow <= 0 || arrow == line.length() - 1) continue;
             String target = line.substring(0, arrow).trim();
             String link = line.substring(arrow + 1).trim();
             while (link.startsWith("./")) link = link.substring(2);
-            if (target.isEmpty() || target.startsWith("/") || link.isEmpty()) {
-                throw new IOException("Unsafe symlink entry rejected.");
+            if (target.isEmpty() || target.indexOf('\\u0000') >= 0 || link.isEmpty()) {
+                throw new IOException("Invalid symlink entry: " + line);
             }
-            File linkFile = new File(root, link);
-            String linkPath = linkFile.getCanonicalPath();
-            if (!linkPath.startsWith(base)) throw new IOException("Symlink path escapes prefix.");
-            Path resolvedTarget = linkFile.getParentFile().toPath().resolve(target).normalize();
-            if (!resolvedTarget.toString().startsWith(root.toPath().normalize().toString()
-                    + File.separator)) {
-                throw new IOException("Symlink target escapes prefix.");
+
+            Path linkRelative = java.nio.file.Paths.get(link);
+            if (linkRelative.isAbsolute()) {
+                throw new IOException("Absolute symlink location rejected: " + link);
             }
-            File parent = linkFile.getParentFile();
-            if (parent != null && !parent.mkdirs() && !parent.isDirectory()) {
-                throw new IOException("Cannot create symlink parent.");
+            Path linkPath = rootPath.resolve(linkRelative).normalize();
+            if (!linkPath.startsWith(rootPath) || linkPath.equals(rootPath)) {
+                throw new IOException("Symlink location escapes private prefix: " + link);
             }
-            Files.deleteIfExists(linkFile.toPath());
-            Files.createSymbolicLink(linkFile.toPath(), new File(target).toPath());
+            Path parent = linkPath.getParent();
+            if (parent == null) throw new IOException("Symlink has no parent: " + link);
+            ensureNoSymlinkParents(rootPath, parent);
+            Files.createDirectories(parent);
+            ensureNoSymlinkParents(rootPath, parent);
+
+            Path targetPath = java.nio.file.Paths.get(target);
+            if (targetPath.isAbsolute()) {
+                Path normalizedAbsolute = targetPath.normalize();
+                // Termux binaries use this virtual prefix. proot maps it to
+                // Oryn's private prefix; no host Termux data is accessed.
+                if (!normalizedAbsolute.equals(virtualPrefix)
+                        && !normalizedAbsolute.startsWith(virtualPrefix)) {
+                    throw new IOException("Absolute symlink target is outside Termux prefix: "
+                            + target + " (link: " + link + ")");
+                }
+            } else {
+                Path resolvedTarget = parent.resolve(targetPath).normalize();
+                if (!resolvedTarget.startsWith(rootPath)) {
+                    throw new IOException("Relative symlink target escapes private prefix: "
+                            + target + " (link: " + link + ")");
+                }
+            }
+
+            Files.deleteIfExists(linkPath);
+            Files.createSymbolicLink(linkPath, targetPath);
+        }
+    }
+
+    private static void ensureNoSymlinkParents(Path root, Path directory) throws IOException {
+        Path current = root;
+        Path relative = root.relativize(directory);
+        for (Path part : relative) {
+            current = current.resolve(part);
+            if (Files.isSymbolicLink(current)) {
+                throw new IOException("Symlink parent rejected while creating bootstrap link: "
+                        + current);
+            }
         }
     }
 
