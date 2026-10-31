@@ -67,7 +67,6 @@ private val TextPrimary = Color(0xFFE2E8F0)
 private val TextMuted = Color(0xFF94A3B8)
 private val Cyan = Color(0xFF00F0FF)
 private val Purple = Color(0xFF8338EC)
-private val PurpleText = Color(0xFFB794F4)
 private val Warning = Color(0xFFFFC857)
 private val Success = Color(0xFF4DFF9A)
 
@@ -380,16 +379,6 @@ private fun OrynTerminalApp(
                             letterSpacing = 2.5.sp)
                     }
                     Spacer(Modifier.weight(1f))
-                    Box(
-                        Modifier.size(9.dp).background(
-                            stateColor,
-                            CircleShape
-                        )
-                    )
-                    Text(
-                        stateLabel,
-                        color = stateColor, fontSize = 10.sp, letterSpacing = 1.sp
-                    )
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -418,9 +407,9 @@ private fun OrynTerminalApp(
                                 letterSpacing = 1.3.sp)
                             Spacer(Modifier.weight(1f))
                             Text(
-                                if (bootstrapInstalled) "BOOTSTRAP INSTALLED" else "NOT INSTALLED",
-                                color = TextMuted,
-                                fontSize = 9.sp, letterSpacing = 0.8.sp
+                                stateLabel,
+                                color = stateColor,
+                                fontSize = 10.sp, letterSpacing = 0.8.sp
                             )
                         }
                         Text(
@@ -477,31 +466,32 @@ private fun OrynTerminalApp(
                             Text("$progress%", color = Cyan, fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace)
                         }
-                        Button(
-                            onClick = onInstall,
-                            enabled = !installing && !verifyingRuntime && !runtimeVerified,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Cyan,
-                                contentColor = Obsidian,
-                                disabledContainerColor = Elevated,
-                                disabledContentColor = TextMuted
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                when {
-                                    installing -> "Installing environment…"
-                                    verifyingRuntime -> "Checking Bash…"
-                                    runtimeVerified -> "Bash verified"
-                                    runtimeInstalled -> "Verify Bash startup"
-                                    technicalErrorDetails != null && !bootstrapInstalled -> "Clean & retry installation"
-                                    technicalErrorDetails != null -> "Retry runtime setup"
-                                    bootstrapInstalled -> "Verify packaged runtime"
-                                    else -> "Install private environment"
-                                },
-                                fontWeight = FontWeight.SemiBold
-                            )
+                        if (!runtimeVerified) {
+                            Button(
+                                onClick = onInstall,
+                                enabled = !installing && !verifyingRuntime,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Cyan,
+                                    contentColor = Obsidian,
+                                    disabledContainerColor = Elevated,
+                                    disabledContentColor = TextMuted
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    when {
+                                        installing -> "Installing environment…"
+                                        verifyingRuntime -> "Checking Bash…"
+                                        runtimeInstalled -> "Verify Bash startup"
+                                        technicalErrorDetails != null && !bootstrapInstalled -> "Clean & retry installation"
+                                        technicalErrorDetails != null -> "Retry runtime setup"
+                                        bootstrapInstalled -> "Verify packaged runtime"
+                                        else -> "Install private environment"
+                                    },
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                         if (runtimeVerified) {
                             Button(
