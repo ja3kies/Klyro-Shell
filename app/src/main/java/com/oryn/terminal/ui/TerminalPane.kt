@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,7 @@ fun TerminalPane(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val terminalTextSizePx = with(LocalDensity.current) { 14.sp.roundToPx() }
     var controlActive by remember { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember { mutableStateOf(viewClient.isAltDown()) }
     var shiftActive by remember { mutableStateOf(false) }
@@ -110,11 +112,11 @@ fun TerminalPane(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 12.dp),
             factory = { context ->
                 TerminalView(context, null).apply {
                     setTerminalViewClient(viewClient)
-                    setTextSize(14)
+                    setTextSize(terminalTextSizePx)
                     setBackgroundColor(AndroidColor.rgb(11, 15, 25))
                     isFocusable = true
                     isFocusableInTouchMode = true
@@ -137,7 +139,7 @@ fun TerminalPane(
                 .fillMaxWidth()
                 .background(TerminalSurface)
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -205,7 +207,7 @@ private fun TerminalExtraKey(
             contentColor = if (active) TerminalAccent else TerminalText
         )
     ) {
-        Text(label, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+        Text(label, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
     }
 }
 
