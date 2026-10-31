@@ -97,7 +97,7 @@ public final class TermuxBootstrapInstaller {
 
         // Recover if Android killed the app during the two-rename activation.
         if (!prefix.exists() && previous.exists()) move(previous.toPath(), prefix.toPath());
-        if (prefix.exists() && previous.exists()) deleteTree(previous);
+        if (prefix.exists() && previous.exists()) paths.deletePrivateTree(previous);
 
         if (isValidArchive(archive)) {
             progress(listener, "Verified cached bootstrap archive", 12);
@@ -115,7 +115,7 @@ public final class TermuxBootstrapInstaller {
             progress(listener, "Bootstrap checksum verified", 18);
         }
 
-        deleteTree(staging);
+        paths.deletePrivateTree(staging);
         if (!staging.mkdirs() && !staging.isDirectory()) {
             throw new IOException("Cannot create staging directory.");
         }
@@ -154,7 +154,7 @@ public final class TermuxBootstrapInstaller {
 
         // Swap only within Oryn's private filesDir. Restore the old prefix if
         // the final rename fails; never touch /data/data/com.termux.
-        deleteTree(previous);
+        paths.deletePrivateTree(previous);
         if (prefix.exists()) move(prefix.toPath(), previous.toPath());
         try {
             move(staging.toPath(), prefix.toPath());
@@ -164,7 +164,7 @@ public final class TermuxBootstrapInstaller {
             }
             throw swapError;
         }
-        deleteTree(previous);
+        paths.deletePrivateTree(previous);
         progress(listener, "Oryn bootstrap installed and validated", 100);
         complete(listener, true, "Installed " + BOOTSTRAP_TAG
                 + " (ARM64, " + extracted + " files) in Oryn private storage.");
@@ -390,15 +390,6 @@ public final class TermuxBootstrapInstaller {
         } catch (IOException atomicFailure) {
             Files.move(from, to);
         }
-    }
-
-    private static void deleteTree(File file) throws IOException {
-        if (!file.exists()) return;
-        if (file.isDirectory() && !Files.isSymbolicLink(file.toPath())) {
-            File[] children = file.listFiles();
-            if (children != null) for (File child : children) deleteTree(child);
-        }
-        if (!file.delete()) throw new IOException("Cannot remove " + file);
     }
 
     private static void writeIfAbsent(File file, String value) throws IOException {
