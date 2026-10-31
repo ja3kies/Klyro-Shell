@@ -2,7 +2,7 @@ name: Android build
 
 on:
   push:
-    branches: [main]
+    branches: [main, chore/android-api-36]
   pull_request:
     branches: [main]
   workflow_dispatch:
