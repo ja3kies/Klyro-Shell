@@ -30,12 +30,12 @@ jobs:
       - name: Set up Android SDK and NDK
         uses: android-actions/setup-android@v3
         with:
-          packages: "platforms;android-35 build-tools;35.0.0 ndk;27.0.12077973 cmake;3.22.1"
+          packages: "platforms;android-36 build-tools;36.0.0 ndk;27.0.12077973 cmake;3.22.1"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.10.2"
+          gradle-version: "8.11.1"
 
       # Fetch ARM64 packages from the official Termux repository. APT verifies
       # InRelease with the Termux keyring before accepting package SHA-256 data.
