@@ -6,10 +6,53 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
 
 import org.junit.Test;
 
 public class OrynPathsTest {
+
+    @Test
+    public void deletesDanglingSymlinksWithoutFollowingThem() throws Exception {
+        File files = Files.createTempDirectory("oryn-delete-test").toFile();
+        OrynPaths paths = new OrynPaths(files);
+        paths.prepareLayout();
+
+        File staging = paths.getStagingPrefix();
+        File lib = new File(staging, "lib");
+        assertTrue(lib.mkdirs());
+        Path dangling = new File(lib, "ncursesw").toPath();
+        Files.createSymbolicLink(dangling, java.nio.file.Paths.get("missing-libncursesw.so"));
+
+        File outside = Files.createTempDirectory("oryn-outside-test").toFile();
+        File marker = new File(outside, "keep.txt");
+        assertTrue(marker.createNewFile());
+        Path externalLink = new File(lib, "external").toPath();
+        Files.createSymbolicLink(externalLink, outside.toPath());
+
+        paths.deletePrivateTree(staging);
+
+        assertFalse(Files.exists(staging.toPath(), LinkOption.NOFOLLOW_LINKS));
+        assertTrue(marker.isFile());
+        assertTrue(Files.exists(outside.toPath()));
+    }
+
+    @Test
+    public void refusesToDeleteOutsidePrivateStorage() throws Exception {
+        File files = Files.createTempDirectory("oryn-boundary-test").toFile();
+        OrynPaths paths = new OrynPaths(files);
+        File outside = Files.createTempDirectory("oryn-outside-boundary").toFile();
+        boolean rejected = false;
+        try {
+            paths.deletePrivateTree(outside);
+        } catch (java.io.IOException expected) {
+            rejected = true;
+        }
+        assertTrue(rejected);
+        assertTrue(outside.isDirectory());
+    }
+
     @Test
     public void allManagedPathsStayInsideOrynFilesDirectory() throws Exception {
         File files = Files.createTempDirectory("oryn-paths-test").toFile();
