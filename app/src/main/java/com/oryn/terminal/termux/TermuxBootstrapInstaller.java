@@ -73,6 +73,13 @@ public final class TermuxBootstrapInstaller {
         return paths.isBootstrapInstalled();
     }
 
+    /** Safely updates only the generated legacy prompt in an existing private profile. */
+    public void migrateShellProfile() throws IOException {
+        if (isInstalled()) {
+            writeKlyroBashProfile(new File(paths.getHome(), ".bashrc"));
+        }
+    }
+
     /** Installs asynchronously. Listener callbacks run on the installer thread. */
     public void install(Listener listener) {
         if (!installing.compareAndSet(false, true)) {
@@ -86,7 +93,7 @@ public final class TermuxBootstrapInstaller {
             } catch (Exception error) {
                 lastErrorDetails = diagnosticDetails(error);
                 complete(listener, false,
-                        "Oryn couldn't finish setting up its private environment. "
+                        "Klyro couldn't finish setting up its private environment. "
                         + "Your existing Termux installation was not modified. You can retry.");
             } finally {
                 installing.set(false);
@@ -173,9 +180,9 @@ public final class TermuxBootstrapInstaller {
             throw swapError;
         }
         paths.deletePrivateTree(previous);
-        progress(listener, "Oryn bootstrap installed and validated", 100);
+        progress(listener, "Klyro environment installed and validated", 100);
         complete(listener, true, "Installed " + BOOTSTRAP_TAG
-                + " (ARM64, " + extracted + " files) in Oryn private storage.");
+                + " (ARM64, " + extracted + " files) in Klyro private storage.");
     }
 
     public static String archName() {
@@ -202,9 +209,9 @@ public final class TermuxBootstrapInstaller {
     }
 
     private String[] buildCommand(String verificationMarker) throws IOException {
-        if (!isInstalled()) throw new IOException("Oryn bootstrap is not installed.");
+        if (!isInstalled()) throw new IOException("Klyro bootstrap is not installed.");
         if (!paths.isProotInstalled()) {
-            throw new IOException("Oryn's APK-native PRoot runtime is not installed yet.");
+            throw new IOException("Klyro's APK-native PRoot runtime is not installed yet.");
         }
         String prefix = OrynPaths.TERMUX_VIRTUAL_PREFIX;
         String home = OrynPaths.TERMUX_VIRTUAL_HOME;
@@ -276,7 +283,7 @@ public final class TermuxBootstrapInstaller {
             connection.setConnectTimeout(20000);
             connection.setReadTimeout(45000);
             connection.setInstanceFollowRedirects(true);
-            connection.setRequestProperty("User-Agent", "OrynTerminal/0.1");
+            connection.setRequestProperty("User-Agent", "KlyroShell/0.1");
             int status = connection.getResponseCode();
             if (status != HttpURLConnection.HTTP_OK) {
                 throw new IOException("Bootstrap download returned HTTP " + status);
