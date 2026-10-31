@@ -123,7 +123,8 @@ public final class TerminalSessionManager {
 
         // Use the maintained Termux PTY + VT terminal engine, but only Oryn-owned paths.
         String[] command = bootstrap.buildLoginCommand();
-        String[] args = Arrays.copyOfRange(command, 1, command.length);
+        // JNI calls execvp(cmd, argv): argv[0] must name the executable, not the first option.
+        String[] args = buildTerminalArgv(command);
         Map<String, String> hostEnvironment = buildHostEnvironment(paths);
         String[] environment = new String[hostEnvironment.size()];
         int index = 0;
@@ -143,6 +144,14 @@ public final class TerminalSessionManager {
         session.mSessionName = name == null || name.trim().isEmpty()
                 ? "Bash" : name.trim();
         return session;
+    }
+
+    static String[] buildTerminalArgv(String[] command) {
+        if (command == null || command.length == 0 || command[0] == null
+                || command[0].trim().isEmpty()) {
+            throw new IllegalArgumentException("A complete command with argv[0] is required.");
+        }
+        return Arrays.copyOf(command, command.length);
     }
 
     /** Host-side environment for proot; all writable paths stay inside Oryn. */
