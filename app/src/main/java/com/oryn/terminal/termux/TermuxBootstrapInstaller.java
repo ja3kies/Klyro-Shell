@@ -347,7 +347,7 @@ public final class TermuxBootstrapInstaller {
             String target = line.substring(0, arrow).trim();
             String link = line.substring(arrow + 1).trim();
             while (link.startsWith("./")) link = link.substring(2);
-            if (target.isEmpty() || target.indexOf('\\u0000') >= 0 || link.isEmpty()) {
+            if (target.isEmpty() || target.indexOf(0) >= 0 || link.isEmpty()) {
                 throw new IOException("Invalid symlink entry: " + line);
             }
 
