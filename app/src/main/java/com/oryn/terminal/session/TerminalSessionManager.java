@@ -65,10 +65,10 @@ public final class TerminalSessionManager {
 
     public String getReadinessMessage() {
         if (!paths.isBootstrapInstalled()) {
-            return "Oryn's private Bash environment is not installed yet.";
+            return "Klyro's private Bash environment is not installed yet.";
         }
         if (!paths.isProotInstalled()) {
-            return "Bootstrap is installed, but Oryn's complete private proot runtime is missing.";
+            return "Bootstrap is installed, but Klyro's complete private PRoot runtime is missing.";
         }
         return "Runtime installed · Bash startup has not been verified on this device.";
     }
@@ -162,7 +162,7 @@ public final class TerminalSessionManager {
             com.termux.terminal.TerminalSessionClient client
     ) throws IOException {
         if (!isRuntimeInstalled()) {
-            throw new IOException("Oryn's private bootstrap and complete proot runtime are required.");
+            throw new IOException("Klyro's private bootstrap and complete PRoot runtime are required.");
         }
 
         // Use the maintained Termux PTY + VT terminal engine, but only Oryn-owned paths.
