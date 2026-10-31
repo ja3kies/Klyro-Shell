@@ -2,6 +2,10 @@ package com.oryn.terminal.core;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
 
 /**
  * Canonical private-storage layout for Oryn Terminal.
@@ -98,6 +102,37 @@ public final class OrynPaths {
             if (file.isFile() && file.getName().startsWith(prefix)) return true;
         }
         return false;
+    }
+
+
+    /**
+     * Deletes one Oryn-owned path without following symbolic links.
+     * The target's parent must resolve inside this app's private files directory.
+     */
+    public void deletePrivateTree(File target) throws IOException {
+        if (target == null) throw new IllegalArgumentException("target is required");
+        Path rootPath = filesDir.toPath();
+        File parentFile = target.getAbsoluteFile().getParentFile();
+        if (parentFile == null) throw new IOException("Invalid Oryn cleanup target.");
+        Path canonicalParent = parentFile.getCanonicalFile().toPath();
+        if (!canonicalParent.startsWith(rootPath)) {
+            throw new IOException("Refusing to delete a path outside Oryn private storage.");
+        }
+        Path targetPath = canonicalParent.resolve(target.getName()).normalize();
+        if (targetPath.equals(rootPath) || !targetPath.startsWith(rootPath)) {
+            throw new IOException("Refusing unsafe Oryn cleanup target.");
+        }
+        deleteTreeNoFollow(targetPath);
+    }
+
+    private static void deleteTreeNoFollow(Path path) throws IOException {
+        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) return;
+        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            try (DirectoryStream<Path> children = Files.newDirectoryStream(path)) {
+                for (Path child : children) deleteTreeNoFollow(child);
+            }
+        }
+        Files.delete(path);
     }
 
     private File child(File parent, String relative) throws IOException {
