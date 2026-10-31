@@ -159,7 +159,8 @@ public final class TerminalSessionManager {
         Map<String, String> environment = new LinkedHashMap<>();
         environment.put("HOME", paths.getHome().getAbsolutePath());
         environment.put("TMPDIR", paths.getTmp().getAbsolutePath());
-        environment.put("LD_LIBRARY_PATH", paths.getProotLibDir().getAbsolutePath());
+        environment.put("LD_LIBRARY_PATH", paths.getProotDependencyDir().getAbsolutePath()
+                + File.pathSeparator + paths.getProotLibDir().getAbsolutePath());
         environment.put("PROOT_LOADER", paths.getProotLoader().getAbsolutePath());
         environment.put("PROOT_TMP_DIR", paths.getTmp().getAbsolutePath());
         environment.put("PATH", "/system/bin:/system/xbin:/vendor/bin");
