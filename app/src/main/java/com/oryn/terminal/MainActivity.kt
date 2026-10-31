@@ -3,6 +3,7 @@ package com.oryn.terminal
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.ViewModelProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -64,8 +65,9 @@ class MainActivity : ComponentActivity() {
     private var showTechnicalDetails by mutableStateOf(false)
     private var bootstrapInstalled by mutableStateOf(false)
     private var shellReady by mutableStateOf(false)
-    private var activeSession by mutableStateOf<TerminalSession?>(null)
-    private var terminalTitle by mutableStateOf("Bash")
+    private val terminalState: TerminalSessionViewModel by lazy {
+        ViewModelProvider(this)[TerminalSessionViewModel::class.java]
+    }
     private var installer: TermuxBootstrapInstaller? = null
     private var runtimeInstaller: ProotRuntimeInstaller? = null
     private var sessionClient: OrynTerminalSessionClient? = null
@@ -100,7 +102,7 @@ class MainActivity : ComponentActivity() {
                 OrynTerminalApp(
                     progress = installProgress,
                     installing = isInstalling,
-                    status = statusMessage,
+                    status = terminalState.sessionStatus.ifBlank { statusMessage },
                     technicalErrorDetails = technicalErrorDetails,
                     showTechnicalDetails = showTechnicalDetails,
                     onToggleTechnicalDetails = {
@@ -108,10 +110,10 @@ class MainActivity : ComponentActivity() {
                     },
                     bootstrapInstalled = bootstrapInstalled,
                     shellReady = shellReady,
-                    session = activeSession,
-                    terminalTitle = terminalTitle,
-                    sessionClient = sessionClient,
-                    viewClient = viewClient,
+                    session = terminalState.activeSession,
+                    terminalTitle = terminalState.terminalTitle,
+                    sessionClient = terminalState.sessionClient,
+                    viewClient = terminalState.viewClient,
                     onInstall = ::installEnvironment,
                     onLaunch = ::launchBash,
                     onClose = ::closeBash
@@ -198,38 +200,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchBash() {
-        if (activeSession != null) return
+        if (terminalState.activeSession != null) return
         try {
             OrynTerminalPalette.apply()
             val manager = TerminalSessionManager(this)
-            val newSessionClient = OrynTerminalSessionClient(
-                this,
-                object : OrynTerminalSessionClient.Listener {
-                    override fun onTitleChanged(title: String?) {
-                        runOnUiThread {
-                            terminalTitle = title?.takeIf { it.isNotBlank() } ?: "Bash"
-                        }
-                    }
-
-                    override fun onSessionFinished(exitStatus: Int) {
-                        runOnUiThread {
-                            statusMessage = "Bash exited with status $exitStatus."
-                        }
-                    }
-
-                    override fun onShellPid(pid: Int) {
-                        runOnUiThread {
-                            statusMessage = "Bash session started (PID $pid)."
-                        }
-                    }
-                }
-            )
-            val newViewClient = OrynTerminalViewClient(this)
+            val newSessionClient = OrynTerminalSessionClient(applicationContext, terminalState)
+            val newViewClient = OrynTerminalViewClient(applicationContext)
             val newSession = manager.startBash("Bash", newSessionClient)
-            sessionClient = newSessionClient
-            viewClient = newViewClient
-            terminalTitle = "Bash"
-            activeSession = newSession
+            terminalState.attachSession(newSession, newSessionClient, newViewClient)
             statusMessage = "Starting private Bash session…"
         } catch (error: Exception) {
             technicalErrorDetails = error.stackTraceToString()
@@ -239,13 +217,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun closeBash() {
-        activeSession?.finishIfRunning()
-        activeSession = null
-        sessionClient?.attachView(null)
-        viewClient?.attachView(null)
-        sessionClient = null
-        viewClient = null
-        terminalTitle = "Bash"
+        terminalState.closeSession()
         statusMessage = "Bash session closed."
     }
 
@@ -267,10 +239,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onDestroy() {
-        if (isFinishing) closeBash()
-        super.onDestroy()
-    }
 }
 
 @Composable
