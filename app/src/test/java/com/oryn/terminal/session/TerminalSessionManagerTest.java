@@ -9,12 +9,19 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.util.Map;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TerminalSessionManagerTest {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+    @Test
+    public void terminalArgvRetainsExecutableAsArgvZero() {
+        String[] command = {"/app/lib/libproot.so", "--link2symlink", "-r", "/private/root"};
+        assertArrayEquals(command, TerminalSessionManager.buildTerminalArgv(command));
+    }
 
     @Test
     public void runtimeExecutablesResolveFromNativeLibraryDirectory() throws Exception {
