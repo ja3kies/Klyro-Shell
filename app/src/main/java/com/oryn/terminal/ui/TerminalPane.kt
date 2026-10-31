@@ -57,7 +57,7 @@ fun TerminalPane(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val terminalTextSizePx = with(LocalDensity.current) { 14.sp.roundToPx() }
+    val terminalTextSizePx = with(LocalDensity.current) { 15.sp.roundToPx() }
     var controlActive by remember { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember { mutableStateOf(viewClient.isAltDown()) }
     var shiftActive by remember { mutableStateOf(false) }
