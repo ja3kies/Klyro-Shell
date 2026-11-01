@@ -32,15 +32,18 @@ public final class TerminalSessionManager {
         public final boolean uidValid;
         public final boolean aptResponds;
         public final boolean pkgResponds;
+        public final boolean hasWarnings;
         public final int exitCode;
         public final String diagnostics;
 
         VerificationResult(boolean bashStarted, boolean uidValid, boolean aptResponds,
-                           boolean pkgResponds, int exitCode, String diagnostics) {
+                           boolean pkgResponds, int exitCode, String diagnostics,
+                           boolean hasWarnings) {
             this.bashStarted = bashStarted;
             this.uidValid = uidValid;
             this.aptResponds = aptResponds;
             this.pkgResponds = pkgResponds;
+            this.hasWarnings = hasWarnings;
             this.exitCode = exitCode;
             this.diagnostics = diagnostics == null ? "" : diagnostics;
         }
@@ -124,7 +127,7 @@ public final class TerminalSessionManager {
             boolean pkgResponds = stdout.contains("KLYRO_PKG_OK");
             return new VerificationResult(
                     bashStarted, uidValid, aptResponds, pkgResponds, exitCode,
-                    diagnostics(stdout, stderr, exitCode));
+                    diagnostics(stdout, stderr, exitCode), !stderr.isEmpty());
         } finally {
             if (process != null && process.isAlive()) process.destroyForcibly();
             stdoutFile.delete();
