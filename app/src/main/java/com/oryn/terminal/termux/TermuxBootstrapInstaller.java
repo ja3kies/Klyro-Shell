@@ -249,7 +249,7 @@ public final class TermuxBootstrapInstaller {
         if (verificationMarker != null) {
             args.add("-c");
             args.add("printf '%s\\n' '" + verificationMarker + "'; "
-                    + "uid=\"$(id -u 2>/dev/null)\"; "
+                    + "uid=\"$(id -u)\"; "
                     + "if [[ \"$uid\" =~ ^[0-9]+$ ]]; then printf '%s\\n' 'KLYRO_UID_OK'; "
                     + "else printf 'KLYRO_UID_INVALID=%s\\n' \"$uid\"; exit 21; fi; "
                     + "if apt --version >/dev/null 2>&1; then printf '%s\\n' 'KLYRO_APT_OK'; "
