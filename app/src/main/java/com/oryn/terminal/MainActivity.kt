@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -80,6 +81,7 @@ class MainActivity : ComponentActivity() {
     private var bootstrapInstalled by mutableStateOf(false)
     private var runtimeInstalled by mutableStateOf(false)
     private var runtimeVerified by mutableStateOf(false)
+    private var runtimeHasWarnings by mutableStateOf(false)
     private var bashStarted by mutableStateOf(false)
     private var isVerifyingRuntime by mutableStateOf(false)
     private val terminalState: TerminalSessionViewModel by lazy {
@@ -124,6 +126,7 @@ class MainActivity : ComponentActivity() {
                     installing = isInstalling,
                     status = terminalState.sessionFailureMessage ?: terminalState.sessionStatus.ifBlank { statusMessage },
                     runtimeVerified = runtimeVerified && terminalState.sessionFailureMessage == null,
+                    runtimeHasWarnings = runtimeHasWarnings,
                     bashStarted = bashStarted,
                     verifyingRuntime = isVerifyingRuntime,
                     technicalErrorDetails = technicalErrorDetails,
@@ -165,6 +168,7 @@ class MainActivity : ComponentActivity() {
         terminalState.clearSessionFailure()
         isVerifyingRuntime = true
         runtimeVerified = false
+        runtimeHasWarnings = false
         bashStarted = false
         statusMessage = "Checking Bash, UID and package manager…"
         lifecycleScope.launch {
@@ -177,17 +181,19 @@ class MainActivity : ComponentActivity() {
             result.onSuccess { verification ->
                 bashStarted = verification.bashStarted
                 runtimeVerified = verification.isEnvironmentReady()
-                val cleanStderr = verification.diagnostics.endsWith("STDERR:\n(empty)")
+                runtimeHasWarnings = verification.hasWarnings
+                val cleanStderr = !verification.hasWarnings
                 technicalErrorDetails = if (runtimeVerified && cleanStderr) null else verification.diagnostics
                 showTechnicalDetails = false
                 statusMessage = when {
                     runtimeVerified && cleanStderr -> "Environment ready · Bash, UID, APT and pkg verified."
-                    runtimeVerified -> "Environment ready, but runtime warnings were detected. Review diagnostics."
+                    runtimeVerified -> "Ready with warnings · Bash, UID, APT and pkg passed; review the runtime warnings before relying on the session."
                     bashStarted -> "Bash starts, but the environment is incomplete. Review diagnostics."
                     else -> "Bash startup failed. Review diagnostics."
                 }
             }.onFailure { error ->
                 runtimeVerified = false
+                runtimeHasWarnings = false
                 bashStarted = false
                 technicalErrorDetails = error.stackTraceToString()
                 showTechnicalDetails = false
@@ -211,6 +217,7 @@ class MainActivity : ComponentActivity() {
         showTechnicalDetails = false
         bashStarted = false
         runtimeVerified = false
+        runtimeHasWarnings = false
         isInstalling = true
         installProgress = 0
         statusMessage = "Preparing Klyro's private environment…"
@@ -251,6 +258,7 @@ class MainActivity : ComponentActivity() {
         showTechnicalDetails = false
         bashStarted = false
         runtimeVerified = false
+        runtimeHasWarnings = false
         isInstalling = true
         installProgress = 0
         statusMessage = "Installing Klyro's verified ARM64 PRoot runtime…"
@@ -311,6 +319,7 @@ class MainActivity : ComponentActivity() {
             bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
             runtimeInstalled = manager.isRuntimeInstalled()
             runtimeVerified = false
+            runtimeHasWarnings = false
             bashStarted = false
             if (runtimeInstalled) {
                 statusMessage = "Runtime installed · Bash startup has not been verified on this device."
@@ -333,6 +342,7 @@ private fun OrynTerminalApp(
     installing: Boolean,
     status: String,
     runtimeVerified: Boolean,
+    runtimeHasWarnings: Boolean,
     bashStarted: Boolean,
     verifyingRuntime: Boolean,
     technicalErrorDetails: String?,
@@ -351,6 +361,7 @@ private fun OrynTerminalApp(
     onClose: () -> Unit
 ) {
     val stateLabel = when {
+        runtimeVerified && runtimeHasWarnings -> "READY WITH WARNINGS"
         runtimeVerified -> "ENVIRONMENT READY"
         verifyingRuntime -> "CHECKING ENVIRONMENT"
         bashStarted -> "BASH STARTS"
@@ -359,6 +370,7 @@ private fun OrynTerminalApp(
         else -> "SETUP"
     }
     val stateColor = when {
+        runtimeVerified && runtimeHasWarnings -> Warning
         runtimeVerified -> Success
         verifyingRuntime || bashStarted || runtimeInstalled || bootstrapInstalled -> Warning
         else -> Cyan
@@ -442,7 +454,7 @@ private fun OrynTerminalApp(
                         }
                         Text(
                             status,
-                            color = if (technicalErrorDetails != null || sessionFailureMessage != null) Color(0xFFFF8AA5) else TextPrimary,
+                            color = if (technicalErrorDetails != null || sessionFailureMessage != null) Color(0xFFFF8AA5) else if (runtimeHasWarnings) Warning else TextPrimary,
                             fontSize = 13.sp,
                             lineHeight = 19.sp
                         )
@@ -457,7 +469,7 @@ private fun OrynTerminalApp(
                             }
                             if (showTechnicalDetails) {
                                 Surface(
-                                    modifier = Modifier.fillMaxWidth().height(132.dp),
+                                    modifier = Modifier.fillMaxWidth().height(160.dp),
                                     color = Obsidian,
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -470,8 +482,8 @@ private fun OrynTerminalApp(
                                         Text(
                                             technicalErrorDetails,
                                             color = TextMuted,
-                                            fontSize = 10.sp,
-                                            lineHeight = 14.sp,
+                                            fontSize = 12.sp,
+                                            lineHeight = 17.sp,
                                             fontFamily = FontFamily.Monospace
                                         )
                                     }
@@ -498,7 +510,7 @@ private fun OrynTerminalApp(
                             Button(
                                 onClick = onInstall,
                                 enabled = !installing && !verifyingRuntime,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Cyan,
                                     contentColor = Obsidian,
@@ -511,7 +523,7 @@ private fun OrynTerminalApp(
                                     when {
                                         installing -> "Installing environment…"
                                         verifyingRuntime -> "Checking Bash…"
-                                        runtimeInstalled -> "Verify Bash startup"
+                                        runtimeInstalled -> "Recheck environment"
                                         technicalErrorDetails != null && !bootstrapInstalled -> "Clean & retry installation"
                                         technicalErrorDetails != null -> "Retry runtime setup"
                                         bootstrapInstalled -> "Verify packaged runtime"
@@ -524,7 +536,7 @@ private fun OrynTerminalApp(
                         if (runtimeVerified) {
                             Button(
                                 onClick = onLaunch,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Purple,
                                     contentColor = Color.White
