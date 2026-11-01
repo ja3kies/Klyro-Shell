@@ -228,6 +228,12 @@ public final class TermuxBootstrapInstaller {
         addBindIfPresent(args, "/apex");
         addBindIfPresent(args, "/vendor");
         addBindIfPresent(args, "/product");
+        // Android's linker reads its generated config from /linkerconfig. Bind only the
+        // read-only, system-owned config files (never the directory), and only if they exist.
+        addLinkerConfigBinds(args, hostFile -> new File(hostFile).isFile());
+        for (String hostFile : LINKER_CONFIG_FILES) {
+            if (new File(hostFile).isFile()) paths.ensureFileBindTarget(hostFile);
+        }
         args.add("-b");
         args.add(paths.getPrefix().getAbsolutePath() + ":" + prefix);
         args.add("-b");
@@ -259,6 +265,18 @@ public final class TermuxBootstrapInstaller {
                     + "else printf '%s\\n' 'KLYRO_PKG_FAILED'; exit 23; fi");
         }
         return args.toArray(new String[0]);
+    }
+
+    static final String[] LINKER_CONFIG_FILES = {
+            "/linkerconfig/ld.config.txt",
+            "/linkerconfig/com.android.art/ld.config.txt"
+    };
+
+    static void addLinkerConfigBinds(java.util.List<String> args,
+                                     java.util.function.Predicate<String> hostFileExists) {
+        for (String hostFile : LINKER_CONFIG_FILES) {
+            if (hostFileExists.test(hostFile)) addBind(args, hostFile);
+        }
     }
 
     private static void addBind(java.util.List<String> args, String hostPath) {

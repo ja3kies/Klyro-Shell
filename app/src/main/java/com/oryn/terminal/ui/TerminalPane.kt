@@ -31,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,6 +57,7 @@ fun TerminalPane(
     viewClient: OrynTerminalViewClient,
     sessionFailureMessage: String?,
     onClose: () -> Unit,
+    runtimeHasWarnings: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val terminalTextSizePx = with(LocalDensity.current) { 15.sp.roundToPx() }
@@ -63,6 +66,7 @@ fun TerminalPane(
     var shiftActive by remember { mutableStateOf(false) }
     var fnActive by remember { mutableStateOf(false) }
     var showEndSessionConfirmation by remember { mutableStateOf(false) }
+    var warningNoteDismissed by remember { mutableStateOf(false) }
 
     BackHandler(enabled = !showEndSessionConfirmation) {
         showEndSessionConfirmation = true
@@ -95,7 +99,7 @@ fun TerminalPane(
                     fontFamily = FontFamily.Monospace
                 )
                 Text("·", color = TerminalMuted)
-                Text("ARM64", color = TerminalMuted, fontSize = 10.sp)
+                Text("ARM64", color = TerminalMuted, fontSize = 11.sp)
             }
             Button(
                 onClick = { showEndSessionConfirmation = true },
@@ -129,6 +133,33 @@ fun TerminalPane(
                     )
                     TextButton(onClick = onClose) {
                         Text("Back to setup", color = TerminalAccent, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+
+        if (runtimeHasWarnings && sessionFailureMessage == null && !warningNoteDismissed) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                color = Color(0xFF2B2415),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "The environment check reported warnings. Messages above the prompt may relate to them.",
+                        color = Color(0xFFFFC857),
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        onClick = { warningNoteDismissed = true },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
+                        Text("Dismiss", color = TerminalAccent, fontSize = 12.sp)
                     }
                 }
             }
@@ -171,10 +202,10 @@ fun TerminalPane(
         ) {
             TerminalExtraKey("ESC") { session.writeCodePoint(false, 27) }
             TerminalExtraKey("TAB") { session.writeCodePoint(false, 9) }
-            TerminalExtraKey("↑") { write(session, "\u001B[A") }
-            TerminalExtraKey("↓") { write(session, "\u001B[B") }
-            TerminalExtraKey("←") { write(session, "\u001B[D") }
-            TerminalExtraKey("→") { write(session, "\u001B[C") }
+            TerminalExtraKey("↑", description = "Up arrow", labelSize = 18.sp) { write(session, "\u001B[A") }
+            TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
+            TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
+            TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
             TerminalExtraKey("CTRL", active = controlActive) {
                 controlActive = !controlActive
                 viewClient.setControlDown(controlActive)
@@ -221,11 +252,16 @@ fun TerminalPane(
 private fun TerminalExtraKey(
     label: String,
     active: Boolean = false,
+    description: String? = null,
+    labelSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
-        modifier = Modifier.heightIn(min = 48.dp).widthIn(min = 48.dp),
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .widthIn(min = 48.dp)
+            .semantics { contentDescription = description ?: label },
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
@@ -233,7 +269,7 @@ private fun TerminalExtraKey(
             contentColor = if (active) TerminalAccent else TerminalText
         )
     ) {
-        Text(label, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        Text(label, fontSize = labelSize, fontFamily = FontFamily.Monospace)
     }
 }
 

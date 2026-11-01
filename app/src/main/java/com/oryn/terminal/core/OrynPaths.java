@@ -83,6 +83,24 @@ public final class OrynPaths {
         mkdir(child(root, "storage"));
     }
 
+    /**
+     * Creates an empty file bind target for an absolute virtual path (for example
+     * "/linkerconfig/ld.config.txt") strictly inside Oryn's private rootfs.
+     * Called only when the matching host file exists, so no placeholder can ever
+     * be read in place of a missing host file.
+     */
+    public void ensureFileBindTarget(String virtualPath) throws IOException {
+        if (virtualPath == null || !virtualPath.startsWith("/") || virtualPath.contains("..")) {
+            throw new IOException("Unsafe bind target: " + virtualPath);
+        }
+        File target = child(root, virtualPath.substring(1));
+        File parent = target.getParentFile();
+        mkdir(parent);
+        if (!target.exists() && !target.createNewFile()) {
+            throw new IOException("Cannot create bind target: " + virtualPath);
+        }
+    }
+
     public boolean isBootstrapInstalled() {
         return new File(prefix, "bin/bash").canExecute()
                 && new File(prefix, "bin/pkg").exists()
