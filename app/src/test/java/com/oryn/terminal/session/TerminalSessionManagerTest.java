@@ -21,7 +21,7 @@ public class TerminalSessionManagerTest {
     public void environmentReadyRequiresAllVerificationLayers() {
         TerminalSessionManager.VerificationResult partial =
                 new TerminalSessionManager.VerificationResult(
-                        true, true, true, false, 23, "pkg failed");
+                        true, true, true, false, 23, "pkg failed", false);
         assertTrue(partial.bashStarted);
         assertTrue(partial.uidValid);
         assertTrue(partial.aptResponds);
@@ -30,7 +30,7 @@ public class TerminalSessionManagerTest {
 
         TerminalSessionManager.VerificationResult ready =
                 new TerminalSessionManager.VerificationResult(
-                        true, true, true, true, 0, "");
+                        true, true, true, true, 0, "", false);
         assertTrue(ready.isEnvironmentReady());
     }
 
