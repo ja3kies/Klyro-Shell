@@ -171,6 +171,10 @@ fun TerminalPane(
         ) {
             TerminalExtraKey("ESC") { session.writeCodePoint(false, 27) }
             TerminalExtraKey("TAB") { session.writeCodePoint(false, 9) }
+            TerminalExtraKey("↑") { write(session, "\u001B[A") }
+            TerminalExtraKey("↓") { write(session, "\u001B[B") }
+            TerminalExtraKey("←") { write(session, "\u001B[D") }
+            TerminalExtraKey("→") { write(session, "\u001B[C") }
             TerminalExtraKey("CTRL", active = controlActive) {
                 controlActive = !controlActive
                 viewClient.setControlDown(controlActive)
@@ -187,10 +191,6 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
-            TerminalExtraKey("↑") { write(session, "\u001B[A") }
-            TerminalExtraKey("↓") { write(session, "\u001B[B") }
-            TerminalExtraKey("←") { write(session, "\u001B[D") }
-            TerminalExtraKey("→") { write(session, "\u001B[C") }
             TerminalExtraKey("HOME") { write(session, "\u001B[H") }
             TerminalExtraKey("END") { write(session, "\u001B[F") }
             TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
