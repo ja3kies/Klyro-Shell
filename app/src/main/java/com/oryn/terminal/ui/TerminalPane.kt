@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.widget.EditText
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -234,13 +237,17 @@ fun TerminalPane(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 TerminalExtraKey("HOME") { write(session, "\u001B[H") }
+                TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
                 TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
                 TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
-                TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
                 TerminalExtraKey("ALL", description = "Select all terminal text") { showSelectAll = true }
-                TerminalExtraKey("🧽", description = "Clear terminal display", labelSize = 18.sp) {
-                    write(session, "\u001B[H\u001B[2J")
+                TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
+                    session.emulator?.let { emulator ->
+                        val clear = "\u001B[H\u001B[2J".toByteArray(StandardCharsets.UTF_8)
+                        emulator.append(clear, clear.size)
+                        viewClient.invalidateTerminal()
+                    }
                 }
                 TerminalExtraKey("END") { write(session, "\u001B[F") }
             }
@@ -304,6 +311,7 @@ private fun TerminalExtraKey(
     active: Boolean = false,
     description: String? = null,
     labelSize: androidx.compose.ui.unit.TextUnit = 12.sp,
+    eraserIcon: Boolean = false,
     onClick: () -> Unit
 ) {
     Button(
@@ -319,7 +327,27 @@ private fun TerminalExtraKey(
             contentColor = if (active) TerminalAccent else TerminalText
         )
     ) {
-        Text(label, fontSize = labelSize, fontFamily = FontFamily.Monospace)
+        if (eraserIcon) {
+            Canvas(modifier = Modifier.width(24.dp).height(24.dp)) {
+                val outline = Path().apply {
+                    moveTo(size.width * 0.15f, size.height * 0.62f)
+                    lineTo(size.width * 0.57f, size.height * 0.15f)
+                    lineTo(size.width * 0.88f, size.height * 0.44f)
+                    lineTo(size.width * 0.47f, size.height * 0.88f)
+                    lineTo(size.width * 0.31f, size.height * 0.88f)
+                    close()
+                }
+                drawPath(outline, color = Color(0xFFE2E8F0), style = Stroke(width = 2.5.dp.toPx()))
+                drawLine(
+                    color = Color(0xFFE2E8F0),
+                    start = androidx.compose.ui.geometry.Offset(size.width * 0.40f, size.height * 0.37f),
+                    end = androidx.compose.ui.geometry.Offset(size.width * 0.70f, size.height * 0.67f),
+                    strokeWidth = 2.dp.toPx()
+                )
+            }
+        } else {
+            Text(label, fontSize = labelSize, fontFamily = FontFamily.Monospace)
+        }
     }
 }
 
