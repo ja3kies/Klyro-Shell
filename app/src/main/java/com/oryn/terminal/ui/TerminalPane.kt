@@ -1,6 +1,10 @@
 package com.oryn.terminal.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Color as AndroidColor
+import android.widget.EditText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -60,7 +66,9 @@ fun TerminalPane(
     runtimeHasWarnings: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val terminalTextSizePx = with(LocalDensity.current) { 15.sp.roundToPx() }
+    val terminalTextSizePx = with(LocalDensity.current) { 13.5.sp.roundToPx() }
+    val context = LocalContext.current
+    var showSelectAll by remember { mutableStateOf(false) }
     var controlActive by remember { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember { mutableStateOf(viewClient.isAltDown()) }
     var shiftActive by remember { mutableStateOf(false) }
@@ -191,41 +199,82 @@ fun TerminalPane(
             }
         )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(TerminalSurface)
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.fillMaxWidth().background(TerminalSurface)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            TerminalExtraKey("ESC") { session.writeCodePoint(false, 27) }
-            TerminalExtraKey("TAB") { session.writeCodePoint(false, 9) }
-            TerminalExtraKey("↑", description = "Up arrow", labelSize = 18.sp) { write(session, "\u001B[A") }
-            TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
-            TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
-            TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
-            TerminalExtraKey("CTRL", active = controlActive) {
-                controlActive = !controlActive
-                viewClient.setControlDown(controlActive)
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                TerminalExtraKey("ESC") { session.writeCodePoint(false, 27) }
+                TerminalExtraKey("TAB") { session.writeCodePoint(false, 9) }
+                TerminalExtraKey("CTRL", active = controlActive) {
+                    controlActive = !controlActive
+                    viewClient.setControlDown(controlActive)
+                }
+                TerminalExtraKey("↑", description = "Up arrow", labelSize = 18.sp) { write(session, "\u001B[A") }
+                TerminalExtraKey("ALT", active = altActive) {
+                    altActive = !altActive
+                    viewClient.setAltDown(altActive)
+                }
+                TerminalExtraKey("SHIFT", active = shiftActive) {
+                    shiftActive = !shiftActive
+                    viewClient.setShiftDown(shiftActive)
+                }
+                TerminalExtraKey("FN", active = fnActive) {
+                    fnActive = !fnActive
+                    viewClient.setFnDown(fnActive)
+                }
             }
-            TerminalExtraKey("ALT", active = altActive) {
-                altActive = !altActive
-                viewClient.setAltDown(altActive)
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                TerminalExtraKey("HOME") { write(session, "\u001B[H") }
+                TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
+                TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
+                TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
+                TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
+                TerminalExtraKey("ALL", description = "Select all terminal text") { showSelectAll = true }
+                TerminalExtraKey("⌫", description = "Clear terminal display", labelSize = 18.sp) {
+                    write(session, "\u001B[H\u001B[2J")
+                }
+                TerminalExtraKey("END") { write(session, "\u001B[F") }
             }
-            TerminalExtraKey("SHIFT", active = shiftActive) {
-                shiftActive = !shiftActive
-                viewClient.setShiftDown(shiftActive)
-            }
-            TerminalExtraKey("FN", active = fnActive) {
-                fnActive = !fnActive
-                viewClient.setFnDown(fnActive)
-            }
-            TerminalExtraKey("HOME") { write(session, "\u001B[H") }
-            TerminalExtraKey("END") { write(session, "\u001B[F") }
-            TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
         }
+    }
+
+    if (showSelectAll) {
+        val transcript = session.emulator?.screen?.transcriptText.orEmpty()
+        AlertDialog(
+            onDismissRequest = { showSelectAll = false },
+            title = { Text("Select all terminal text") },
+            text = {
+                AndroidView(
+                    factory = { ctx ->
+                        EditText(ctx).apply {
+                            isSingleLine = false
+                            setTextIsSelectable(true)
+                            setText(transcript)
+                            post { selectAll() }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", transcript))
+                    showSelectAll = false
+                }) { Text("Copy all") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSelectAll = false }) { Text("Close") }
+            }
+        )
     }
 
     if (showEndSessionConfirmation) {
@@ -260,9 +309,9 @@ private fun TerminalExtraKey(
         onClick = onClick,
         modifier = Modifier
             .heightIn(min = 48.dp)
-            .widthIn(min = 48.dp)
+            .width(54.dp)
             .semantics { contentDescription = description ?: label },
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
                 else Color(0xFF1E293B),
