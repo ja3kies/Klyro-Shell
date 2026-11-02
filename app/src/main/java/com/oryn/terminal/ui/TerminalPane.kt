@@ -238,7 +238,7 @@ fun TerminalPane(
                 TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
                 TerminalExtraKey("ALL", description = "Select all terminal text") { showSelectAll = true }
-                TerminalExtraKey("⌫", description = "Clear terminal display", labelSize = 18.sp) {
+                TerminalExtraKey("🧹", description = "Clear terminal display", labelSize = 18.sp) {
                     write(session, "\u001B[H\u001B[2J")
                 }
                 TerminalExtraKey("END") { write(session, "\u001B[F") }
