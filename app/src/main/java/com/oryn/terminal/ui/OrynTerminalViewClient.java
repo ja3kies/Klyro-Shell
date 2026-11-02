@@ -24,6 +24,10 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
     }
 
     public void attachView(View view) { terminalView = view; }
+    public void invalidateTerminal() {
+        View view = terminalView;
+        if (view != null) view.postInvalidate();
+    }
 
     public void setControlDown(boolean value) { controlDown = value; }
     public void setAltDown(boolean value) { altDown = value; }
