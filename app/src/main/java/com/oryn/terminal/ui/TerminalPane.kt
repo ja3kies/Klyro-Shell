@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+
 import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
@@ -234,11 +235,11 @@ fun TerminalPane(
             ) {
                 TerminalExtraKey("HOME") { write(session, "\u001B[H") }
                 TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
-                TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
                 TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
+                TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
                 TerminalExtraKey("ALL", description = "Select all terminal text") { showSelectAll = true }
-                TerminalExtraKey("🧹", description = "Clear terminal display", labelSize = 18.sp) {
+                TerminalExtraKey("🧽", description = "Clear terminal display", labelSize = 18.sp) {
                     write(session, "\u001B[H\u001B[2J")
                 }
                 TerminalExtraKey("END") { write(session, "\u001B[F") }
