@@ -3,6 +3,11 @@ package com.oryn.terminal
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Bundle
+import android.provider.OpenableColumns
+import androidx.activity.result.contract.ActivityResultContracts
+import com.oryn.terminal.core.OrynPaths
+import java.io.File
+import java.io.FileOutputStream
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -89,6 +94,68 @@ class MainActivity : ComponentActivity() {
     private val terminalState: TerminalSessionViewModel by lazy {
         ViewModelProvider(this)[TerminalSessionViewModel::class.java]
     }
+    private val importFileLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri == null) return@registerForActivityResult
+            lifecycleScope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val paths = OrynPaths(
+                            applicationContext.filesDir,
+                            File(applicationContext.applicationInfo.nativeLibraryDir)
+                        )
+                        val destinationDir = File(paths.home, "imports")
+                        if (!destinationDir.isDirectory && !destinationDir.mkdirs()) {
+                            throw IOException("Cannot create imports directory")
+                        }
+                        var sourceName = "imported-file"
+                        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                            if (cursor.moveToFirst()) {
+                                sourceName = cursor.getString(0) ?: sourceName
+                            }
+                        }
+                        val safeName = sourceName.substringAfterLast('/').substringAfterLast('\\')
+                            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                            .trimStart('.').take(80).ifBlank { "imported-file" }
+                        val target = generateSequence(0) { it + 1 }
+                            .map { n -> File(destinationDir, if (n == 0) safeName else "$" + "{n}_" + safeName) }
+                            .first { !it.exists() }
+                        val temporary = File.createTempFile(".klyro-import-", ".tmp", destinationDir)
+                        try {
+                            contentResolver.openInputStream(uri)?.use { input ->
+                                FileOutputStream(temporary).use { output ->
+                                    val buffer = ByteArray(8192)
+                                    var total = 0L
+                                    while (true) {
+                                        val count = input.read(buffer)
+                                        if (count < 0) break
+                                        total += count
+                                        if (total > 32L * 1024 * 1024) {
+                                            throw IOException("Import limited to 32 MiB")
+                                        }
+                                        output.write(buffer, 0, count)
+                                    }
+                                }
+                            } ?: throw IOException("Cannot open selected file")
+                            if (!temporary.renameTo(target)) throw IOException("Cannot finalize import")
+                        } finally {
+                            if (temporary.exists()) temporary.delete()
+                        }
+                        target.name
+                    }
+                }
+                result.onSuccess {
+                    Toast.makeText(this@MainActivity, "Imported: ~/imports/$" + "it", Toast.LENGTH_LONG).show()
+                }.onFailure {
+                    Toast.makeText(this@MainActivity, "Import failed: $" + "{it.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+    private fun chooseFileToImport() {
+        importFileLauncher.launch(arrayOf("*/*"))
+    }
+
     private var installer: TermuxBootstrapInstaller? = null
     private var runtimeInstaller: ProotRuntimeInstaller? = null
 
@@ -153,6 +220,7 @@ class MainActivity : ComponentActivity() {
                     onRenameTab = terminalState::renameTab,
                     onCloseTab = terminalState::closeTab,
                     onNewTab = ::launchBash,
+                    onImportFile = ::chooseFileToImport,
                     terminalTitle = terminalState.terminalTitle,
                     sessionClient = terminalState.sessionClient,
                     viewClient = terminalState.viewClient,
@@ -377,6 +445,7 @@ private fun OrynTerminalApp(
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
     onNewTab: () -> Unit,
+    onImportFile: () -> Unit,
     terminalTitle: String,
     sessionClient: OrynTerminalSessionClient?,
     viewClient: OrynTerminalViewClient?,
@@ -424,6 +493,7 @@ private fun OrynTerminalApp(
                 onRenameTab = onRenameTab,
                 onCloseTab = onCloseTab,
                 onNewTab = onNewTab,
+                onImportFile = onImportFile,
                 sessionClient = sessionClient,
                 viewClient = viewClient,
                 sessionFailureMessage = sessionFailureMessage,
