@@ -225,8 +225,8 @@ fun TerminalPane(
             else {
                 val result = mutableListOf<Int>()
                 val rows = screen.activeTranscriptRows
-                val columns = emulator.mColumns
-                for (row in -rows until emulator.mRows) {
+                val columns = emulator?.mColumns ?: 0
+                for (row in -rows until (emulator?.mRows ?: 0)) {
                     val line = screen.getSelectedText(0, row, columns, row, false)
                     if (line.contains(transcriptQuery, ignoreCase = true)) result.add(row)
                     if (result.size >= 10000) break
