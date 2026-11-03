@@ -218,13 +218,36 @@ fun TerminalPane(
         }
 
     if (showTranscriptSearch) {
-        val transcript = session.emulator?.screen?.transcriptText.orEmpty()
-        val matches = remember(transcript, transcriptQuery) {
-            if (transcriptQuery.isBlank()) emptyList()
-            else Regex(Regex.escape(transcriptQuery), RegexOption.IGNORE_CASE)
-                .findAll(transcript).map { it.range.first }.take(10000).toList()
+        val emulator = session.emulator
+        val screen = emulator?.screen
+        val matches = remember(screen, transcriptQuery) {
+            if (screen == null || transcriptQuery.isBlank()) emptyList<Int>()
+            else {
+                val result = mutableListOf<Int>()
+                val rows = screen.activeTranscriptRows
+                val columns = emulator.mColumns
+                for (row in -rows until emulator.mRows) {
+                    val line = screen.getSelectedText(0, row, columns, row, false)
+                    if (line.contains(transcriptQuery, ignoreCase = true)) result.add(row)
+                    if (result.size >= 10000) break
+                }
+                result
+            }
         }
         val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
+        fun goToMatch() {
+            if (matches.isNotEmpty()) {
+                val row = matches[position]
+                activeTerminalView?.let { view ->
+                    val visibleRows = emulator?.mRows ?: 1
+                    view.setTopRow((row - visibleRows / 2).coerceIn(
+                        -(screen?.activeTranscriptRows ?: 0), 0
+                    ))
+                    view.invalidate()
+                    view.requestFocus()
+                }
+            }
+        }
         Surface(color = TerminalSurface, modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedTextField(
@@ -241,14 +264,6 @@ fun TerminalPane(
                         fontSize = 12.sp
                     )
                     if (matches.isNotEmpty()) {
-                        val offset = matches[position]
-                        val start = (offset - 90).coerceAtLeast(0)
-                        val end = (offset + transcriptQuery.length + 90).coerceAtMost(transcript.length)
-                        Text(
-                            transcript.substring(start, end),
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp
-                        )
                         Row {
                             TextButton(onClick = {
                                 searchIndex = (position - 1 + matches.size) % matches.size
@@ -256,6 +271,7 @@ fun TerminalPane(
                             TextButton(onClick = {
                                 searchIndex = (position + 1) % matches.size
                             }) { Text("Next") }
+                            TextButton(onClick = { goToMatch() }) { Text("Go to line") }
                         }
                     }
                     TextButton(onClick = { showTranscriptSearch = false }) { Text("Close search") }
