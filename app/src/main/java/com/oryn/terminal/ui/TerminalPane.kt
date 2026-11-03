@@ -27,6 +27,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.activity.compose.BackHandler
@@ -61,6 +64,7 @@ private val TerminalAccent = Color(0xFF00F0FF)
 private val TerminalText = Color(0xFFE2E8F0)
 private val TerminalMuted = Color(0xFF94A3B8)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TerminalPane(
     session: TerminalSession,
@@ -68,6 +72,8 @@ fun TerminalPane(
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
     onSelectTab: (Long) -> Unit,
+    onRenameTab: (Long, String) -> Unit,
+    onCloseTab: (Long) -> Unit,
     onNewTab: () -> Unit,
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
@@ -79,6 +85,9 @@ fun TerminalPane(
     val terminalTextSizePx = with(LocalDensity.current) { 13.5.sp.roundToPx() }
     val context = LocalContext.current
     var showSelectAll by remember { mutableStateOf(false) }
+    var renameTarget by remember { mutableStateOf<Long?>(null) }
+    var renameValue by remember { mutableStateOf("") }
+    var closeTarget by remember { mutableStateOf<Long?>(null) }
     var controlActive by remember(viewClient) { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
     var shiftActive by remember(viewClient) { mutableStateOf(false) }
@@ -142,14 +151,24 @@ fun TerminalPane(
             tabs.forEach { (id, tabTitle) ->
                 Button(
                     onClick = { onSelectTab(id) },
-                    modifier = Modifier.heightIn(min = 44.dp),
+                    modifier = Modifier.heightIn(min = 44.dp)
+                        .combinedClickable(
+                            onClick = { onSelectTab(id) },
+                            onLongClick = { renameTarget = id; renameValue = tabTitle }
+                        )
+                        .semantics { contentDescription = "Session $tabTitle; long press to rename" },
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (id == activeTabId) TerminalAccent.copy(alpha = 0.2f)
                             else Color(0xFF1E293B),
                         contentColor = if (id == activeTabId) TerminalAccent else TerminalText
                     )
-                ) { Text(tabTitle.take(18), fontSize = 12.sp) }
+                ) {
+                    Text(tabTitle.take(18), fontSize = 12.sp)
+                    TextButton(onClick = { closeTarget = id }) {
+                        Text("×", fontSize = 16.sp)
+                    }
+                }
             }
             Button(
                 onClick = onNewTab,
@@ -284,6 +303,50 @@ fun TerminalPane(
                 TerminalExtraKey("END") { write(session, "\u001B[F") }
             }
         }
+    }
+
+    if (renameTarget != null) {
+        AlertDialog(
+            onDismissRequest = { renameTarget = null },
+            title = { Text("Rename session") },
+            text = {
+                OutlinedTextField(
+                    value = renameValue,
+                    onValueChange = { renameValue = it.take(32) },
+                    label = { Text("Session name") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = renameValue.isNotBlank(),
+                    onClick = {
+                        renameTarget?.let { onRenameTab(it, renameValue) }
+                        renameTarget = null
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameTarget = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (closeTarget != null) {
+        AlertDialog(
+            onDismissRequest = { closeTarget = null },
+            title = { Text("Close session?") },
+            text = { Text("The shell process in this tab will be stopped.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    closeTarget?.let(onCloseTab)
+                    closeTarget = null
+                }) { Text("Close session") }
+            },
+            dismissButton = {
+                TextButton(onClick = { closeTarget = null }) { Text("Cancel") }
+            }
+        )
     }
 
     if (showSelectAll) {
