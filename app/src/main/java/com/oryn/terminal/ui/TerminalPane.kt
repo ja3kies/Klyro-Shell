@@ -84,6 +84,7 @@ fun TerminalPane(
     onNewTab: () -> Unit,
     onImportFile: () -> Unit,
     onExportFile: () -> Unit,
+    onSetupStorage: () -> Unit,
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
     sessionFailureMessage: String?,
@@ -154,6 +155,9 @@ fun TerminalPane(
                     Text("⋮", color = TerminalAccent, fontSize = 22.sp)
                 }
                 DropdownMenu(expanded = showToolsMenu, onDismissRequest = { showToolsMenu = false }) {
+                    DropdownMenuItem(text = { Text("Set up storage folder") }, onClick = {
+                        showToolsMenu = false; onSetupStorage()
+                    })
                     DropdownMenuItem(text = { Text("Import file") }, onClick = {
                         showToolsMenu = false; onImportFile()
                     })
