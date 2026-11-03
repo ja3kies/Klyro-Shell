@@ -184,8 +184,17 @@ class MainActivity : ComponentActivity() {
             result.onSuccess { verification ->
                 bashStarted = verification.bashStarted
                 runtimeVerified = verification.isEnvironmentReady()
-                runtimeHasWarnings = verification.hasWarnings
-                val cleanStderr = !verification.hasWarnings
+                // Termux bootstrap may emit a harmless mandoc database warning.
+                // Suppress only this exact warning when all runtime checks passed.
+                val warningLines = verification.diagnostics.lines()
+                    .map { it.trim() }
+                    .filter { it.startsWith("WARNING", ignoreCase = true) ||
+                        it.startsWith("update-alternatives: warning:", ignoreCase = true) }
+                val onlyMissingMandoc = warningLines.isNotEmpty() &&
+                    warningLines.all { it.contains("makewhatis") && it.contains("mandoc") }
+                runtimeHasWarnings = verification.hasWarnings &&
+                    !(runtimeVerified && onlyMissingMandoc)
+                val cleanStderr = !runtimeHasWarnings
                 technicalErrorDetails = if (runtimeVerified && cleanStderr) null else verification.diagnostics
                 showTechnicalDetails = false
                 statusMessage = when {
