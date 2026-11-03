@@ -147,6 +147,10 @@ class MainActivity : ComponentActivity() {
                     bootstrapInstalled = bootstrapInstalled,
                     runtimeInstalled = runtimeInstalled,
                     session = terminalState.activeSession,
+                    tabs = terminalState.sessions.map { it.id to it.title },
+                    activeTabId = terminalState.activeTabId,
+                    onSelectTab = terminalState::selectTab,
+                    onNewTab = ::launchBash,
                     terminalTitle = terminalState.terminalTitle,
                     sessionClient = terminalState.sessionClient,
                     viewClient = terminalState.viewClient,
@@ -302,14 +306,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchBash() {
-        if (terminalState.activeSession != null) return
+        if (terminalState.sessions.size >= 8) return
         try {
             OrynTerminalPalette.apply()
             val manager = TerminalSessionManager(this)
-            val newSessionClient = OrynTerminalSessionClient(applicationContext, terminalState)
+            val tabId = terminalState.reserveTabId()
+            val newSessionClient = OrynTerminalSessionClient(applicationContext, terminalState.listenerFor(tabId))
             val newViewClient = OrynTerminalViewClient(applicationContext)
             val newSession = manager.startBash("Bash", newSessionClient)
-            terminalState.attachSession(newSession, newSessionClient, newViewClient)
+            terminalState.attachSession(newSession, newSessionClient, newViewClient, tabId)
             statusMessage = "Starting private Bash session…"
         } catch (error: Exception) {
             runtimeVerified = false
@@ -364,6 +369,10 @@ private fun OrynTerminalApp(
     bootstrapInstalled: Boolean,
     runtimeInstalled: Boolean,
     session: TerminalSession?,
+    tabs: List<Pair<Long, String>>,
+    activeTabId: Long?,
+    onSelectTab: (Long) -> Unit,
+    onNewTab: () -> Unit,
     terminalTitle: String,
     sessionClient: OrynTerminalSessionClient?,
     viewClient: OrynTerminalViewClient?,
@@ -405,6 +414,10 @@ private fun OrynTerminalApp(
             TerminalPane(
                 session = session,
                 title = terminalTitle,
+                tabs = tabs,
+                activeTabId = activeTabId,
+                onSelectTab = onSelectTab,
+                onNewTab = onNewTab,
                 sessionClient = sessionClient,
                 viewClient = viewClient,
                 sessionFailureMessage = sessionFailureMessage,
