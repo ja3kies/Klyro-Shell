@@ -30,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +64,10 @@ private val TerminalMuted = Color(0xFF94A3B8)
 fun TerminalPane(
     session: TerminalSession,
     title: String,
+    tabs: List<Pair<Long, String>>,
+    activeTabId: Long?,
+    onSelectTab: (Long) -> Unit,
+    onNewTab: () -> Unit,
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
     sessionFailureMessage: String?,
@@ -126,6 +131,33 @@ fun TerminalPane(
             }
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .background(TerminalSurface)
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            tabs.forEach { (id, tabTitle) ->
+                Button(
+                    onClick = { onSelectTab(id) },
+                    modifier = Modifier.heightIn(min = 44.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (id == activeTabId) TerminalAccent.copy(alpha = 0.2f)
+                            else Color(0xFF1E293B),
+                        contentColor = if (id == activeTabId) TerminalAccent else TerminalText
+                    )
+                ) { Text(tabTitle.take(18), fontSize = 12.sp) }
+            }
+            Button(
+                onClick = onNewTab,
+                enabled = tabs.size < 8,
+                modifier = Modifier.heightIn(min = 44.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+            ) { Text("+", fontSize = 18.sp) }
+        }
+
         if (sessionFailureMessage != null) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -177,6 +209,7 @@ fun TerminalPane(
             }
         }
 
+        key(session) {
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
@@ -202,6 +235,7 @@ fun TerminalPane(
                 }
             }
         )
+        }
 
         Column(
             modifier = Modifier.fillMaxWidth().background(TerminalSurface)
