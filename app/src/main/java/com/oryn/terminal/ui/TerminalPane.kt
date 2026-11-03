@@ -58,6 +58,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -481,6 +484,41 @@ fun TerminalPane(
                         else "Match ${position + 1} of ${matches.size}",
                         fontSize = 12.sp
                     )
+                    if (matches.isNotEmpty() && screen != null && emulator != null) {
+                        // Preview a physical transcript row without changing terminal output.
+                        val matchRow = matches[position]
+                        val line = screen.getSelectedText(
+                            0, matchRow, emulator.mColumns - 1, matchRow, false, false
+                        ).orEmpty()
+                        val offset = line.indexOf(transcriptQuery, ignoreCase = true)
+                        val preview = buildAnnotatedString {
+                            if (offset >= 0) {
+                                append(line.substring(0, offset))
+                                withStyle(SpanStyle(
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    background = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )) {
+                                    append(line.substring(offset, offset + transcriptQuery.length))
+                                }
+                                append(line.substring(offset + transcriptQuery.length))
+                            } else {
+                                // Matches may span wrapped physical rows.
+                                append(line)
+                            }
+                        }
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                text = preview,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                modifier = Modifier.fillMaxWidth().padding(10.dp)
+                            )
+                        }
+                    }
                     if (matches.isNotEmpty()) {
                         Row {
                             TextButton(onClick = {
