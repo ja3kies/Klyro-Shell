@@ -78,6 +78,7 @@ fun TerminalPane(
     onCloseTab: (Long) -> Unit,
     onNewTab: () -> Unit,
     onImportFile: () -> Unit,
+    onExportFile: () -> Unit,
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
     sessionFailureMessage: String?,
@@ -137,6 +138,9 @@ fun TerminalPane(
             }
             TextButton(onClick = { terminalFontSize = (terminalFontSize + 1f).coerceAtMost(24f) }) {
                 Text("A+", color = TerminalAccent)
+            }
+            TextButton(onClick = onExportFile) {
+                Text("Export", fontSize = 12.sp, color = TerminalAccent)
             }
             TextButton(
                 onClick = onImportFile,
