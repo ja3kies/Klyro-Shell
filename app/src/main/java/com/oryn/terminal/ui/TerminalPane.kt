@@ -243,11 +243,7 @@ fun TerminalPane(
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
                 TerminalExtraKey("ALL", description = "Select all terminal text") { showSelectAll = true }
                 TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
-                    session.emulator?.let { emulator ->
-                        val clear = "\u001B[H\u001B[2J".toByteArray(StandardCharsets.UTF_8)
-                        emulator.append(clear, clear.size)
-                        viewClient.invalidateTerminal()
-                    }
+                    session.writeCodePoint(false, 12) // Ctrl+L redraws Bash prompt
                 }
                 TerminalExtraKey("END") { write(session, "\u001B[F") }
             }
