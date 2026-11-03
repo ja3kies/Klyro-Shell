@@ -85,7 +85,8 @@ fun TerminalPane(
     runtimeHasWarnings: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val terminalTextSizePx = with(LocalDensity.current) { 13.5.sp.roundToPx() }
+    var terminalFontSize by remember { mutableStateOf(13.5f) }
+    val terminalTextSizePx = with(LocalDensity.current) { terminalFontSize.sp.roundToPx() }
     val context = LocalContext.current
     var showSelectAll by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<Long?>(null) }
@@ -130,6 +131,12 @@ fun TerminalPane(
                 )
                 Text("·", color = TerminalMuted)
                 Text("ARM64", color = TerminalMuted, fontSize = 11.sp)
+            }
+            TextButton(onClick = { terminalFontSize = (terminalFontSize - 1f).coerceAtLeast(9f) }) {
+                Text("A−", color = TerminalAccent)
+            }
+            TextButton(onClick = { terminalFontSize = (terminalFontSize + 1f).coerceAtMost(24f) }) {
+                Text("A+", color = TerminalAccent)
             }
             TextButton(
                 onClick = onImportFile,
