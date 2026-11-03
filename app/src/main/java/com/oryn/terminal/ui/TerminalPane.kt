@@ -491,12 +491,14 @@ fun TerminalPane(
                             0, matchRow, emulator.mColumns - 1, matchRow, false, false
                         ).orEmpty()
                         val offset = line.indexOf(transcriptQuery, ignoreCase = true)
+                        val highlightBackground = MaterialTheme.colorScheme.primary
+                        val highlightForeground = MaterialTheme.colorScheme.onPrimary
                         val preview = buildAnnotatedString {
                             if (offset >= 0) {
                                 append(line.substring(0, offset))
                                 withStyle(SpanStyle(
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    background = MaterialTheme.colorScheme.primary,
+                                    color = highlightForeground,
+                                    background = highlightBackground,
                                     fontWeight = FontWeight.Bold
                                 )) {
                                     append(line.substring(offset, offset + transcriptQuery.length))
