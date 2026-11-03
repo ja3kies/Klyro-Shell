@@ -6,6 +6,15 @@ import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.widget.EditText
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
@@ -87,9 +96,17 @@ fun TerminalPane(
     modifier: Modifier = Modifier
 ) {
     var terminalFontSize by remember { mutableStateOf(13.5f) }
+    var showToolsMenu by remember { mutableStateOf(false) }
+    var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
+    var pinchAccumulation by remember { mutableStateOf(1f) }
+    LaunchedEffect(activeTabId, activeTerminalView) {
+        activeTerminalView?.let { view ->
+            view.isFocusableInTouchMode = true
+            view.requestFocus()
+        }
+    }
     val terminalTextSizePx = with(LocalDensity.current) { terminalFontSize.sp.roundToPx() }
     val context = LocalContext.current
-    var showSelectAll by remember { mutableStateOf(false) }
     var showTranscriptSearch by remember { mutableStateOf(false) }
     var transcriptQuery by remember { mutableStateOf("") }
     var searchIndex by remember { mutableStateOf(0) }
@@ -136,29 +153,21 @@ fun TerminalPane(
                 Text("·", color = TerminalMuted)
                 Text("ARM64", color = TerminalMuted, fontSize = 11.sp)
             }
-            TextButton(onClick = { terminalFontSize = (terminalFontSize - 1f).coerceAtLeast(9f) }) {
-                Text("A−", color = TerminalAccent)
-            }
-            TextButton(onClick = { terminalFontSize = (terminalFontSize + 1f).coerceAtMost(24f) }) {
-                Text("A+", color = TerminalAccent)
-            }
-            TextButton(onClick = onExportFile) {
-                Text("Export", fontSize = 12.sp, color = TerminalAccent)
-            }
-            TextButton(
-                onClick = onImportFile,
-                modifier = Modifier.heightIn(min = 48.dp)
-            ) { Text("Import", fontSize = 12.sp, color = TerminalAccent) }
-            Button(
-                onClick = { showEndSessionConfirmation = true },
-                modifier = Modifier.heightIn(min = 48.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF1E293B),
-                    contentColor = TerminalText
-                )
-            ) {
-                Text("End session", fontSize = 12.sp)
+            Box {
+                TextButton(onClick = { showToolsMenu = true }) {
+                    Text("⋮", color = TerminalAccent, fontSize = 22.sp)
+                }
+                DropdownMenu(expanded = showToolsMenu, onDismissRequest = { showToolsMenu = false }) {
+                    DropdownMenuItem(text = { Text("Import file") }, onClick = {
+                        showToolsMenu = false; onImportFile()
+                    })
+                    DropdownMenuItem(text = { Text("Export file") }, onClick = {
+                        showToolsMenu = false; onExportFile()
+                    })
+                    DropdownMenuItem(text = { Text("End session") }, onClick = {
+                        showToolsMenu = false; showEndSessionConfirmation = true
+                    })
+                }
             }
         }
 
@@ -268,6 +277,15 @@ fun TerminalPane(
         AndroidView(
             modifier = Modifier
                 .fillMaxSize()
+                .pointerInput(session) {
+                    detectTransformGestures { _, _, zoom, _ ->
+                        pinchAccumulation *= zoom
+                        if (pinchAccumulation >= 1.12f || pinchAccumulation <= 0.89f) {
+                            terminalFontSize = (terminalFontSize * pinchAccumulation).coerceIn(9f, 24f)
+                            pinchAccumulation = 1f
+                        }
+                    }
+                }
                 .padding(horizontal = 12.dp),
             factory = { context ->
                 TerminalView(context, null).apply {
@@ -279,10 +297,12 @@ fun TerminalPane(
                     sessionClient.attachView(this)
                     viewClient.attachView(this)
                     attachSession(session)
+                    activeTerminalView = this
                 }
             },
             update = { view ->
                 view.setTextSize(terminalTextSizePx)
+                if (activeTerminalView !== view) activeTerminalView = view
                 sessionClient.attachView(view)
                 viewClient.attachView(view)
                 if (view.getCurrentSession() !== session) {
@@ -331,7 +351,11 @@ fun TerminalPane(
                 TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
                 TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
-                TerminalExtraKey("ALL", description = "Select all terminal text") { showSelectAll = true }
+                TerminalExtraKey("ALL", description = "Copy all terminal text") {
+                    val transcript = session.emulator?.screen?.transcriptText.orEmpty()
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", transcript))
+                }
                 TerminalExtraKey("FIND", description = "Search terminal transcript") {
                     transcriptQuery = ""
                     searchIndex = 0
@@ -437,37 +461,6 @@ fun TerminalPane(
             },
             confirmButton = {
                 TextButton(onClick = { showTranscriptSearch = false }) { Text("Close") }
-            }
-        )
-    }
-
-    if (showSelectAll) {
-        val transcript = session.emulator?.screen?.transcriptText.orEmpty()
-        AlertDialog(
-            onDismissRequest = { showSelectAll = false },
-            title = { Text("Select all terminal text") },
-            text = {
-                AndroidView(
-                    factory = { ctx ->
-                        EditText(ctx).apply {
-                            isSingleLine = false
-                            setTextIsSelectable(true)
-                            setText(transcript)
-                            post { selectAll() }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", transcript))
-                    showSelectAll = false
-                }) { Text("Copy all") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSelectAll = false }) { Text("Close") }
             }
         )
     }
