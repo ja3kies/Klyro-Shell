@@ -9,6 +9,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -78,10 +79,10 @@ fun TerminalPane(
     val terminalTextSizePx = with(LocalDensity.current) { 13.5.sp.roundToPx() }
     val context = LocalContext.current
     var showSelectAll by remember { mutableStateOf(false) }
-    var controlActive by remember { mutableStateOf(viewClient.isControlDown()) }
-    var altActive by remember { mutableStateOf(viewClient.isAltDown()) }
-    var shiftActive by remember { mutableStateOf(false) }
-    var fnActive by remember { mutableStateOf(false) }
+    var controlActive by remember(viewClient) { mutableStateOf(viewClient.isControlDown()) }
+    var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
+    var shiftActive by remember(viewClient) { mutableStateOf(false) }
+    var fnActive by remember(viewClient) { mutableStateOf(false) }
     var showEndSessionConfirmation by remember { mutableStateOf(false) }
     var warningNoteDismissed by remember { mutableStateOf(false) }
 
@@ -209,11 +210,11 @@ fun TerminalPane(
             }
         }
 
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
         key(session) {
         AndroidView(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+                .fillMaxSize()
                 .padding(horizontal = 12.dp),
             factory = { context ->
                 TerminalView(context, null).apply {
@@ -235,6 +236,7 @@ fun TerminalPane(
                 }
             }
         )
+        }
         }
 
         Column(
