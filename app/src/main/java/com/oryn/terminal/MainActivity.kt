@@ -118,7 +118,7 @@ class MainActivity : ComponentActivity() {
                             .replace(Regex("[^a-zA-Z0-9._-]"), "_")
                             .trimStart('.').take(80).ifBlank { "imported-file" }
                         val target = generateSequence(0) { it + 1 }
-                            .map { n -> File(destinationDir, if (n == 0) safeName else "$" + "{n}_" + safeName) }
+                            .map { n -> File(destinationDir, if (n == 0) safeName else n.toString() + "_" + safeName) }
                             .first { !it.exists() }
                         val temporary = File.createTempFile(".klyro-import-", ".tmp", destinationDir)
                         try {
@@ -145,9 +145,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 result.onSuccess {
-                    Toast.makeText(this@MainActivity, "Imported: ~/imports/$" + "it", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, "Imported: ~/imports/" + it, Toast.LENGTH_LONG).show()
                 }.onFailure {
-                    Toast.makeText(this@MainActivity, "Import failed: $" + "{it.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, "Import failed: " + (it.message ?: "unknown error"), Toast.LENGTH_LONG).show()
                 }
             }
         }
