@@ -9,10 +9,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusable
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -303,6 +299,7 @@ fun TerminalPane(
             update = { view ->
                 view.setTextSize(terminalTextSizePx)
                 if (activeTerminalView !== view) activeTerminalView = view
+                view.requestFocus()
                 sessionClient.attachView(view)
                 viewClient.attachView(view)
                 if (view.getCurrentSession() !== session) {
