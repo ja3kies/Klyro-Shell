@@ -6,6 +6,8 @@ import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.widget.EditText
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 
 import androidx.compose.material3.Text
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
@@ -62,6 +66,7 @@ private val TerminalAccent = Color(0xFF00F0FF)
 private val TerminalText = Color(0xFFE2E8F0)
 private val TerminalMuted = Color(0xFF94A3B8)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TerminalPane(
     session: TerminalSession,
@@ -146,22 +151,37 @@ fun TerminalPane(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             tabs.forEach { (id, tabTitle) ->
-                Button(
-                    onClick = { onSelectTab(id) },
-                    modifier = Modifier.heightIn(min = 44.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (id == activeTabId) TerminalAccent.copy(alpha = 0.2f)
-                            else Color(0xFF1E293B),
-                        contentColor = if (id == activeTabId) TerminalAccent else TerminalText
-                    )
+                Surface(
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .semantics {
+                            contentDescription = "Session $tabTitle"
+                            onLongClick("Renommer la session") {
+                                renameTarget = id
+                                renameValue = tabTitle
+                                true
+                            }
+                        }
+                        .combinedClickable(
+                            onClick = { onSelectTab(id) },
+                            onLongClick = {
+                                renameTarget = id
+                                renameValue = tabTitle
+                            }
+                        ),
+                    color = if (id == activeTabId) TerminalAccent.copy(alpha = 0.2f)
+                        else Color(0xFF1E293B),
+                    contentColor = if (id == activeTabId) TerminalAccent else TerminalText,
+                    shape = MaterialTheme.shapes.extraLarge
                 ) {
-                    Text(tabTitle.take(18), fontSize = 12.sp)
-                    TextButton(onClick = { renameTarget = id; renameValue = tabTitle }) {
-                        Text("✎", fontSize = 14.sp)
-                    }
-                    TextButton(onClick = { closeTarget = id }) {
-                        Text("×", fontSize = 16.sp)
+                    Row(
+                        modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(tabTitle.take(18), fontSize = 12.sp)
+                        TextButton(onClick = { closeTarget = id }) {
+                            Text("×", fontSize = 16.sp)
+                        }
                     }
                 }
             }
