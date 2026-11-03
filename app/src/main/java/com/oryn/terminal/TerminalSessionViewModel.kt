@@ -62,7 +62,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         tabId: Long = reserveTabId()
     ) {
         require(tabs.none { it.id == tabId }) { "Duplicate terminal tab ID" }
-        tabs.add(ShellTab(tabId, session, client, terminalViewClient))
+        tabs.add(ShellTab(tabId, session, client, terminalViewClient, title = "Session $tabId"))
         selectTab(tabId)
         sessionStatus = "Starting private Bash session…"
         sessionFailureMessage = null
@@ -80,7 +80,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     fun renameTab(id: Long, rawName: String) {
-        val name = rawName.trim().take(32)
+        val name = rawName.trim().replace(Regex("[\\p{Cntrl}]"), "").take(32)
         if (name.isBlank()) return
         val index = tabs.indexOfFirst { it.id == id }
         if (index >= 0) tabs[index] = tabs[index].copy(customTitle = name)
