@@ -15,6 +15,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -39,6 +42,7 @@ import androidx.compose.material3.TextButton
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +55,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -91,7 +96,6 @@ fun TerminalPane(
     runtimeHasWarnings: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    var terminalFontSize by remember { mutableStateOf(13.5f) }
     var showToolsMenu by remember { mutableStateOf(false) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
     LaunchedEffect(activeTabId, activeTerminalView) {
@@ -100,11 +104,37 @@ fun TerminalPane(
             view.requestFocus()
         }
     }
-    val terminalTextSizePx = with(LocalDensity.current) { terminalFontSize.sp.roundToPx() }
+    val terminalTextSizePx = with(LocalDensity.current) { 13.5.sp.roundToPx() }
     val context = LocalContext.current
     var showTranscriptSearch by remember { mutableStateOf(false) }
     var transcriptQuery by remember { mutableStateOf("") }
-    var searchIndex by remember { mutableStateOf(0) }
+    var searchIndex by remember(session) { mutableStateOf(0) }
+    var pendingSearch by remember(session) { mutableStateOf<Int?>(null) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    LaunchedEffect(pendingSearch, session) {
+        val index = pendingSearch ?: return@LaunchedEffect
+        val view = activeTerminalView ?: return@LaunchedEffect
+        // Dialog dismissal and IME animation resize the PTY and reset TerminalView's top row.
+        var stableFrames = 0
+        var lastHeight = -1
+        while (stableFrames < 3) {
+            withFrameNanos { }
+            stableFrames = if (ime.getBottom(density) == 0 && view.height == lastHeight) stableFrames + 1 else 0
+            lastHeight = view.height
+        }
+        session.emulator?.let { emulator ->
+            val matches = TranscriptSearch.findRows(emulator.screen, emulator.mColumns, emulator.mRows, transcriptQuery)
+            if (matches.isNotEmpty()) {
+                view.setTopRow(TranscriptSearch.topRow(matches[index.coerceAtMost(matches.lastIndex)],
+                    emulator.mRows, emulator.screen.activeTranscriptRows))
+                view.invalidate()
+            }
+        }
+        view.requestFocus()
+        pendingSearch = null
+    }
     var renameTarget by remember { mutableStateOf<Long?>(null) }
     var renameValue by remember { mutableStateOf("") }
     var closeTarget by remember { mutableStateOf<Long?>(null) }
@@ -119,35 +149,9 @@ fun TerminalPane(
         showEndSessionConfirmation = true
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(TerminalBackground)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(TerminalSurface)
-                .padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    title,
-                    color = TerminalAccent,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
-                )
-                Text("·", color = TerminalMuted)
-                Text("ARM64", color = TerminalMuted, fontSize = 11.sp)
-            }
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    val compact = maxHeight < 300.dp
+    val toolsMenu: @Composable () -> Unit = {
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
                     Text("⋮", color = TerminalAccent, fontSize = 22.sp)
@@ -170,6 +174,40 @@ fun TerminalPane(
                     })
                 }
             }
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(TerminalBackground)
+    ) {
+        if (!compact) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(TerminalSurface)
+                    .padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        title,
+                        color = TerminalAccent,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Text("·", color = TerminalMuted)
+                    Text("ARM64", color = TerminalMuted, fontSize = 11.sp)
+                }
+
+                toolsMenu()
+            }
         }
 
         Row(
@@ -179,6 +217,7 @@ fun TerminalPane(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            if (compact) toolsMenu()
             tabs.forEach { (id, tabTitle) ->
                 Surface(
                     modifier = Modifier
@@ -293,9 +332,7 @@ fun TerminalPane(
                 }
             },
             update = { view ->
-                view.setTextSize(terminalTextSizePx)
                 if (activeTerminalView !== view) activeTerminalView = view
-                view.requestFocus()
                 sessionClient.attachView(view)
                 viewClient.attachView(view)
                 if (view.getCurrentSession() !== session) {
@@ -306,6 +343,27 @@ fun TerminalPane(
         }
         }
 
+        val secondaryKeys: @Composable () -> Unit = {
+                TerminalExtraKey("HOME") { write(session, "\u001B[H") }
+                TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
+                TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
+                TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
+                TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
+                TerminalExtraKey("ALL", description = "Copy all terminal text") {
+                    val transcript = session.emulator?.screen?.transcriptText.orEmpty()
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", transcript))
+                }
+                TerminalExtraKey("FIND", description = "Search terminal transcript") {
+                    transcriptQuery = ""
+                    searchIndex = 0
+                    showTranscriptSearch = true
+                }
+                TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
+                    session.writeCodePoint(false, 12) // Ctrl+L redraws Bash prompt
+                }
+                TerminalExtraKey("END") { write(session, "\u001B[F") }
+        }
         Column(
             modifier = Modifier.fillMaxWidth().background(TerminalSurface)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
@@ -334,32 +392,17 @@ fun TerminalPane(
                     fnActive = !fnActive
                     viewClient.setFnDown(fnActive)
                 }
+                if (compact) secondaryKeys()
             }
-            Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                TerminalExtraKey("HOME") { write(session, "\u001B[H") }
-                TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
-                TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
-                TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
-                TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
-                TerminalExtraKey("ALL", description = "Copy all terminal text") {
-                    val transcript = session.emulator?.screen?.transcriptText.orEmpty()
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", transcript))
-                }
-                TerminalExtraKey("FIND", description = "Search terminal transcript") {
-                    transcriptQuery = ""
-                    searchIndex = 0
-                    showTranscriptSearch = true
-                }
-                TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
-                    session.writeCodePoint(false, 12) // Ctrl+L redraws Bash prompt
-                }
-                TerminalExtraKey("END") { write(session, "\u001B[F") }
+            if (!compact) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) { secondaryKeys() }
             }
         }
+    }
+
     }
 
     if (renameTarget != null) {
@@ -409,31 +452,15 @@ fun TerminalPane(
     if (showTranscriptSearch) {
         val emulator = session.emulator
         val screen = emulator?.screen
-        val matches = remember(screen, transcriptQuery) {
-            if (screen == null || transcriptQuery.isBlank()) emptyList<Int>()
-            else {
-                val result = mutableListOf<Int>()
-                val rows = screen.activeTranscriptRows
-                val columns = emulator?.mColumns ?: 0
-                for (row in -rows until (emulator?.mRows ?: 0)) {
-                    val line = screen.getSelectedText(0, row, columns, row, false)
-                    if (line.contains(transcriptQuery, ignoreCase = true)) result.add(row)
-                    if (result.size >= 10000) break
-                }
-                result
-            }
-        }
+        // Re-read the mutable buffer; a screen object keeps its identity as output arrives.
+        val matches = if (emulator == null || screen == null) emptyList<Int>()
+            else TranscriptSearch.findRows(screen, emulator.mColumns, emulator.mRows, transcriptQuery)
         val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
-        fun goToMatch() {
-            if (matches.isNotEmpty()) {
-                val row = matches[position]
+        fun goToMatch(index: Int) {
+            if (matches.isNotEmpty() && emulator != null) {
                 activeTerminalView?.let { view ->
-                    val visibleRows = emulator?.mRows ?: 1
-                    view.setTopRow((row - visibleRows / 2).coerceIn(
-                        -(screen?.activeTranscriptRows ?: 0), 0
-                    ))
+                    view.setTopRow(TranscriptSearch.topRow(matches[index], emulator.mRows, screen!!.activeTranscriptRows))
                     view.invalidate()
-                    view.requestFocus()
                 }
             }
         }
@@ -457,10 +484,12 @@ fun TerminalPane(
                     if (matches.isNotEmpty()) {
                         Row {
                             TextButton(onClick = {
-                                searchIndex = (position - 1 + matches.size) % matches.size
+                                searchIndex = TranscriptSearch.nextIndex(position, -1, matches.size)
+                                goToMatch(searchIndex)
                             }) { Text("Previous") }
                             TextButton(onClick = {
-                                searchIndex = (position + 1) % matches.size
+                                searchIndex = TranscriptSearch.nextIndex(position, 1, matches.size)
+                                goToMatch(searchIndex)
                             }) { Text("Next") }
                         }
                     }
@@ -468,7 +497,8 @@ fun TerminalPane(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    goToMatch()
+                    pendingSearch = position
+                    keyboard?.hide()
                     showTranscriptSearch = false
                 }, enabled = matches.isNotEmpty()) { Text("Go to line") }
             },
