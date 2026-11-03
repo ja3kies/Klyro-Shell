@@ -6,8 +6,6 @@ import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.widget.EditText
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -96,7 +94,6 @@ fun TerminalPane(
     var terminalFontSize by remember { mutableStateOf(13.5f) }
     var showToolsMenu by remember { mutableStateOf(false) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
-    var pinchAccumulation by remember { mutableStateOf(1f) }
     LaunchedEffect(activeTabId, activeTerminalView) {
         activeTerminalView?.let { view ->
             view.isFocusableInTouchMode = true
@@ -225,69 +222,6 @@ fun TerminalPane(
             ) { Text("+", fontSize = 18.sp) }
         }
 
-    if (showTranscriptSearch) {
-        val emulator = session.emulator
-        val screen = emulator?.screen
-        val matches = remember(screen, transcriptQuery) {
-            if (screen == null || transcriptQuery.isBlank()) emptyList<Int>()
-            else {
-                val result = mutableListOf<Int>()
-                val rows = screen.activeTranscriptRows
-                val columns = emulator?.mColumns ?: 0
-                for (row in -rows until (emulator?.mRows ?: 0)) {
-                    val line = screen.getSelectedText(0, row, columns, row, false)
-                    if (line.contains(transcriptQuery, ignoreCase = true)) result.add(row)
-                    if (result.size >= 10000) break
-                }
-                result
-            }
-        }
-        val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
-        fun goToMatch() {
-            if (matches.isNotEmpty()) {
-                val row = matches[position]
-                activeTerminalView?.let { view ->
-                    val visibleRows = emulator?.mRows ?: 1
-                    view.setTopRow((row - visibleRows / 2).coerceIn(
-                        -(screen?.activeTranscriptRows ?: 0), 0
-                    ))
-                    view.invalidate()
-                    view.requestFocus()
-                }
-            }
-        }
-        Surface(color = TerminalSurface, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedTextField(
-                        value = transcriptQuery,
-                        onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
-                        label = { Text("Find text") },
-                        singleLine = true
-                    )
-                    Text(
-                        if (transcriptQuery.isBlank()) "Enter text to search"
-                        else if (matches.isEmpty()) "No matches"
-                        else "Match ${position + 1} of ${matches.size}" +
-                            if (matches.size == 10000) " (first 10000)" else "",
-                        fontSize = 12.sp
-                    )
-                    if (matches.isNotEmpty()) {
-                        Row {
-                            TextButton(onClick = {
-                                searchIndex = (position - 1 + matches.size) % matches.size
-                            }) { Text("Previous") }
-                            TextButton(onClick = {
-                                searchIndex = (position + 1) % matches.size
-                            }) { Text("Next") }
-                            TextButton(onClick = { goToMatch() }) { Text("Go to line") }
-                        }
-                    }
-                    TextButton(onClick = { showTranscriptSearch = false }) { Text("Close search") }
-            }
-        }
-    }
-
-
         if (sessionFailureMessage != null) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -344,15 +278,6 @@ fun TerminalPane(
         AndroidView(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(session) {
-                    detectTransformGestures { _, _, zoom, _ ->
-                        pinchAccumulation *= zoom
-                        if (pinchAccumulation >= 1.12f || pinchAccumulation <= 0.89f) {
-                            terminalFontSize = (terminalFontSize * pinchAccumulation).coerceIn(9f, 24f)
-                            pinchAccumulation = 1f
-                        }
-                    }
-                }
                 .padding(horizontal = 12.dp),
             factory = { context ->
                 TerminalView(context, null).apply {
@@ -477,6 +402,78 @@ fun TerminalPane(
             },
             dismissButton = {
                 TextButton(onClick = { closeTarget = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showTranscriptSearch) {
+        val emulator = session.emulator
+        val screen = emulator?.screen
+        val matches = remember(screen, transcriptQuery) {
+            if (screen == null || transcriptQuery.isBlank()) emptyList<Int>()
+            else {
+                val result = mutableListOf<Int>()
+                val rows = screen.activeTranscriptRows
+                val columns = emulator?.mColumns ?: 0
+                for (row in -rows until (emulator?.mRows ?: 0)) {
+                    val line = screen.getSelectedText(0, row, columns, row, false)
+                    if (line.contains(transcriptQuery, ignoreCase = true)) result.add(row)
+                    if (result.size >= 10000) break
+                }
+                result
+            }
+        }
+        val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
+        fun goToMatch() {
+            if (matches.isNotEmpty()) {
+                val row = matches[position]
+                activeTerminalView?.let { view ->
+                    val visibleRows = emulator?.mRows ?: 1
+                    view.setTopRow((row - visibleRows / 2).coerceIn(
+                        -(screen?.activeTranscriptRows ?: 0), 0
+                    ))
+                    view.invalidate()
+                    view.requestFocus()
+                }
+            }
+        }
+        AlertDialog(
+            onDismissRequest = { showTranscriptSearch = false },
+            title = { Text("Search terminal transcript") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = transcriptQuery,
+                        onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
+                        label = { Text("Find text") },
+                        singleLine = true
+                    )
+                    Text(
+                        if (transcriptQuery.isBlank()) "Enter text to search"
+                        else if (matches.isEmpty()) "No matches"
+                        else "Match ${position + 1} of ${matches.size}",
+                        fontSize = 12.sp
+                    )
+                    if (matches.isNotEmpty()) {
+                        Row {
+                            TextButton(onClick = {
+                                searchIndex = (position - 1 + matches.size) % matches.size
+                            }) { Text("Previous") }
+                            TextButton(onClick = {
+                                searchIndex = (position + 1) % matches.size
+                            }) { Text("Next") }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    goToMatch()
+                    showTranscriptSearch = false
+                }, enabled = matches.isNotEmpty()) { Text("Go to line") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTranscriptSearch = false }) { Text("Cancel") }
             }
         )
     }
