@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.oryn.terminal.core.OrynPaths
 import java.io.File
 import java.io.FileOutputStream
+import java.io.FileInputStream
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -152,6 +153,35 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private val exportFileLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+            if (uri == null) return@registerForActivityResult
+            lifecycleScope.launch {
+                val outcome = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val root = OrynPaths(
+                            applicationContext.filesDir,
+                            File(applicationContext.applicationInfo.nativeLibraryDir)
+                        )
+                        val source = File(root.home, "imports/klyro-export.txt")
+                        if (!source.isFile) throw IOException("Create ~/imports/klyro-export.txt first")
+                        val stream = contentResolver.openOutputStream(uri, "w")
+                            ?: throw IOException("Unable to open destination")
+                        stream.use { output -> FileInputStream(source).use { it.copyTo(output) } }
+                    }
+                }
+                val message = outcome.fold(
+                    onSuccess = { "Export completed" },
+                    onFailure = { "Export failed: " + (it.message ?: "unknown error") }
+                )
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+            }
+        }
+
+    private fun chooseFileToExport() {
+        exportFileLauncher.launch("klyro-export.txt")
+    }
+
     private fun chooseFileToImport() {
         importFileLauncher.launch(arrayOf("*/*"))
     }
@@ -221,6 +251,7 @@ class MainActivity : ComponentActivity() {
                     onCloseTab = terminalState::closeTab,
                     onNewTab = ::launchBash,
                     onImportFile = ::chooseFileToImport,
+                    onExportFile = ::chooseFileToExport,
                     terminalTitle = terminalState.terminalTitle,
                     sessionClient = terminalState.sessionClient,
                     viewClient = terminalState.viewClient,
@@ -446,6 +477,7 @@ private fun OrynTerminalApp(
     onCloseTab: (Long) -> Unit,
     onNewTab: () -> Unit,
     onImportFile: () -> Unit,
+    onExportFile: () -> Unit,
     terminalTitle: String,
     sessionClient: OrynTerminalSessionClient?,
     viewClient: OrynTerminalViewClient?,
@@ -494,6 +526,7 @@ private fun OrynTerminalApp(
                 onCloseTab = onCloseTab,
                 onNewTab = onNewTab,
                 onImportFile = onImportFile,
+                onExportFile = onExportFile,
                 sessionClient = sessionClient,
                 viewClient = viewClient,
                 sessionFailureMessage = sessionFailureMessage,
