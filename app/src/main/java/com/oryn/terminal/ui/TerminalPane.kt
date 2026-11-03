@@ -77,6 +77,7 @@ fun TerminalPane(
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
     onNewTab: () -> Unit,
+    onImportFile: () -> Unit,
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
     sessionFailureMessage: String?,
@@ -130,6 +131,10 @@ fun TerminalPane(
                 Text("·", color = TerminalMuted)
                 Text("ARM64", color = TerminalMuted, fontSize = 11.sp)
             }
+            TextButton(
+                onClick = onImportFile,
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) { Text("Import", fontSize = 12.sp, color = TerminalAccent) }
             Button(
                 onClick = { showEndSessionConfirmation = true },
                 modifier = Modifier.heightIn(min = 48.dp),
