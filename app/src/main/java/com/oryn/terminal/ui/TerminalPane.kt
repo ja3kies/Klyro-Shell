@@ -28,8 +28,6 @@ import androidx.compose.material3.ButtonDefaults
 
 import androidx.compose.material3.Text
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.activity.compose.BackHandler
@@ -64,7 +62,6 @@ private val TerminalAccent = Color(0xFF00F0FF)
 private val TerminalText = Color(0xFFE2E8F0)
 private val TerminalMuted = Color(0xFF94A3B8)
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TerminalPane(
     session: TerminalSession,
@@ -151,12 +148,7 @@ fun TerminalPane(
             tabs.forEach { (id, tabTitle) ->
                 Button(
                     onClick = { onSelectTab(id) },
-                    modifier = Modifier.heightIn(min = 44.dp)
-                        .combinedClickable(
-                            onClick = { onSelectTab(id) },
-                            onLongClick = { renameTarget = id; renameValue = tabTitle }
-                        )
-                        .semantics { contentDescription = "Session $tabTitle; long press to rename" },
+                    modifier = Modifier.heightIn(min = 44.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (id == activeTabId) TerminalAccent.copy(alpha = 0.2f)
@@ -165,6 +157,9 @@ fun TerminalPane(
                     )
                 ) {
                     Text(tabTitle.take(18), fontSize = 12.sp)
+                    TextButton(onClick = { renameTarget = id; renameValue = tabTitle }) {
+                        Text("✎", fontSize = 14.sp)
+                    }
                     TextButton(onClick = { closeTarget = id }) {
                         Text("×", fontSize = 16.sp)
                     }
