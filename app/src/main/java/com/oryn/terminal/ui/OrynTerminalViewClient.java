@@ -38,7 +38,6 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
     public boolean isAltDown() { return altDown; }
 
     private int textSizePx = 0;
-    private float lastScale = 1.0f;
 
     @Override
     public float onScale(float scale) {
@@ -47,7 +46,7 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
             if (textSizePx == 0) {
                 textSizePx = Math.max(12, Math.round(14 * context.getResources().getDisplayMetrics().scaledDensity));
             }
-            float delta = scale / lastScale;
+            float delta = scale;
             if (Float.isFinite(delta) && delta > 0) {
                 int next = Math.round(textSizePx * delta);
                 int minimum = Math.round(9 * context.getResources().getDisplayMetrics().scaledDensity);
@@ -59,8 +58,7 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
                 }
             }
         }
-        lastScale = scale;
-        return scale;
+        return 1.0f;
     }
 
     @Override
