@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.provider.DocumentsContract
 import androidx.activity.result.contract.ActivityResultContracts
 import com.oryn.terminal.core.OrynPaths
 import java.io.File
@@ -111,6 +112,74 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this, "Storage permission denied: " + error.message, Toast.LENGTH_LONG).show()
             }
         }
+
+    private fun importFromAuthorizedFolder() {
+        val raw = getSharedPreferences("klyro_storage", MODE_PRIVATE).getString("tree_uri", null)
+        if (raw == null) {
+            Toast.makeText(this, "Choose a storage folder first", Toast.LENGTH_LONG).show()
+            chooseStorageFolder()
+            return
+        }
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val tree = Uri.parse(raw)
+                    val documentId = DocumentsContract.getTreeDocumentId(tree)
+                    val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, documentId)
+                    val paths = OrynPaths(applicationContext.filesDir,
+                        File(applicationContext.applicationInfo.nativeLibraryDir))
+                    val destination = File(paths.home, "storage-imports")
+                    if (!destination.isDirectory && !destination.mkdirs()) throw IOException("Cannot create destination")
+                    var imported = 0
+                    contentResolver.query(children, arrayOf(
+                        DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                        DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                        DocumentsContract.Document.COLUMN_MIME_TYPE,
+                        DocumentsContract.Document.COLUMN_SIZE
+                    ), null, null, null)?.use { cursor ->
+                        while (cursor.moveToNext() && imported < 30) {
+                            val mime = cursor.getString(2) ?: continue
+                            if (mime == DocumentsContract.Document.MIME_TYPE_DIR) continue
+                            val size = if (cursor.isNull(3)) -1L else cursor.getLong(3)
+                            if (size > 32L * 1024 * 1024) continue
+                            val name = (cursor.getString(1) ?: "file")
+                                .replace(Regex("[^a-zA-Z0-9._-]"), "_").trimStart('.')
+                                .take(80).ifBlank { "file" }
+                            val target = generateSequence(0) { it + 1 }
+                                .map { index -> File(destination, if (index == 0) name else "${index}_${name}") }
+                                .first { !it.exists() }
+                            val item = DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0))
+                            val temporary = File.createTempFile(".klyro-", ".tmp", destination)
+                            try {
+                                contentResolver.openInputStream(item)?.use { input ->
+                                    FileOutputStream(temporary).use { output ->
+                                        val buffer = ByteArray(8192)
+                                        var copied = 0L
+                                        while (true) {
+                                            val count = input.read(buffer)
+                                            if (count < 0) break
+                                            copied += count
+                                            if (copied > 32L * 1024 * 1024) throw IOException("File exceeds 32 MiB")
+                                            output.write(buffer, 0, count)
+                                        }
+                                    }
+                                } ?: continue
+                                if (!temporary.renameTo(target)) throw IOException("Cannot save file")
+                                imported++
+                            } finally {
+                                if (temporary.exists()) temporary.delete()
+                            }
+                        }
+                    } ?: throw IOException("Cannot read authorized folder")
+                    imported
+                }
+            }
+            Toast.makeText(this@MainActivity,
+                result.fold({ "Imported $it files to ~/storage-imports" },
+                    { "Storage import failed: " + (it.message ?: "unknown error") }),
+                Toast.LENGTH_LONG).show()
+        }
+    }
 
     private fun chooseStorageFolder() {
         storageFolderLauncher.launch(null)
@@ -274,6 +343,7 @@ class MainActivity : ComponentActivity() {
                     onImportFile = ::chooseFileToImport,
                     onExportFile = ::chooseFileToExport,
                     onSetupStorage = ::chooseStorageFolder,
+                    onImportStorageFolder = ::importFromAuthorizedFolder,
                     terminalTitle = terminalState.terminalTitle,
                     sessionClient = terminalState.sessionClient,
                     viewClient = terminalState.viewClient,
@@ -501,6 +571,7 @@ private fun OrynTerminalApp(
     onImportFile: () -> Unit,
     onExportFile: () -> Unit,
     onSetupStorage: () -> Unit,
+    onImportStorageFolder: () -> Unit,
     terminalTitle: String,
     sessionClient: OrynTerminalSessionClient?,
     viewClient: OrynTerminalViewClient?,
@@ -551,6 +622,7 @@ private fun OrynTerminalApp(
                 onImportFile = onImportFile,
                 onExportFile = onExportFile,
                 onSetupStorage = onSetupStorage,
+                onImportStorageFolder = onImportStorageFolder,
                 sessionClient = sessionClient,
                 viewClient = viewClient,
                 sessionFailureMessage = sessionFailureMessage,
