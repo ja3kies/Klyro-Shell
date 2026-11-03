@@ -217,6 +217,54 @@ fun TerminalPane(
             ) { Text("+", fontSize = 18.sp) }
         }
 
+    if (showTranscriptSearch) {
+        val transcript = session.emulator?.screen?.transcriptText.orEmpty()
+        val matches = remember(transcript, transcriptQuery) {
+            if (transcriptQuery.isBlank()) emptyList()
+            else Regex(Regex.escape(transcriptQuery), RegexOption.IGNORE_CASE)
+                .findAll(transcript).map { it.range.first }.take(10000).toList()
+        }
+        val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
+        Surface(color = TerminalSurface, modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    OutlinedTextField(
+                        value = transcriptQuery,
+                        onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
+                        label = { Text("Find text") },
+                        singleLine = true
+                    )
+                    Text(
+                        if (transcriptQuery.isBlank()) "Enter text to search"
+                        else if (matches.isEmpty()) "No matches"
+                        else "Match ${position + 1} of ${matches.size}" +
+                            if (matches.size == 10000) " (first 10000)" else "",
+                        fontSize = 12.sp
+                    )
+                    if (matches.isNotEmpty()) {
+                        val offset = matches[position]
+                        val start = (offset - 90).coerceAtLeast(0)
+                        val end = (offset + transcriptQuery.length + 90).coerceAtMost(transcript.length)
+                        Text(
+                            transcript.substring(start, end),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp
+                        )
+                        Row {
+                            TextButton(onClick = {
+                                searchIndex = (position - 1 + matches.size) % matches.size
+                            }) { Text("Previous") }
+                            TextButton(onClick = {
+                                searchIndex = (position + 1) % matches.size
+                            }) { Text("Next") }
+                        }
+                    }
+                }
+                TextButton(onClick = { showTranscriptSearch = false }) { Text("Close search") }
+            }
+        }
+    }
+
+
         if (sessionFailureMessage != null) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -406,58 +454,6 @@ fun TerminalPane(
             },
             dismissButton = {
                 TextButton(onClick = { closeTarget = null }) { Text("Cancel") }
-            }
-        )
-    }
-
-    if (showTranscriptSearch) {
-        val transcript = session.emulator?.screen?.transcriptText.orEmpty()
-        val matches = remember(transcript, transcriptQuery) {
-            if (transcriptQuery.isBlank()) emptyList()
-            else Regex(Regex.escape(transcriptQuery), RegexOption.IGNORE_CASE)
-                .findAll(transcript).map { it.range.first }.take(10000).toList()
-        }
-        val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
-        AlertDialog(
-            onDismissRequest = { showTranscriptSearch = false },
-            title = { Text("Search terminal transcript") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = transcriptQuery,
-                        onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
-                        label = { Text("Find text") },
-                        singleLine = true
-                    )
-                    Text(
-                        if (transcriptQuery.isBlank()) "Enter text to search"
-                        else if (matches.isEmpty()) "No matches"
-                        else "Match ${position + 1} of ${matches.size}" +
-                            if (matches.size == 10000) " (first 10000)" else "",
-                        fontSize = 12.sp
-                    )
-                    if (matches.isNotEmpty()) {
-                        val offset = matches[position]
-                        val start = (offset - 90).coerceAtLeast(0)
-                        val end = (offset + transcriptQuery.length + 90).coerceAtMost(transcript.length)
-                        Text(
-                            transcript.substring(start, end),
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp
-                        )
-                        Row {
-                            TextButton(onClick = {
-                                searchIndex = (position - 1 + matches.size) % matches.size
-                            }) { Text("Previous") }
-                            TextButton(onClick = {
-                                searchIndex = (position + 1) % matches.size
-                            }) { Text("Next") }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showTranscriptSearch = false }) { Text("Close") }
             }
         )
     }
