@@ -275,6 +275,7 @@ fun TerminalPane(
                 }
             },
             update = { view ->
+                view.setTextSize(terminalTextSizePx)
                 sessionClient.attachView(view)
                 viewClient.attachView(view)
                 if (view.getCurrentSession() !== session) {
