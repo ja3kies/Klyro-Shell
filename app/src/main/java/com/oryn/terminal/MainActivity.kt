@@ -3,6 +3,8 @@ package com.oryn.terminal
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.result.contract.ActivityResultContracts
 import com.oryn.terminal.core.OrynPaths
@@ -95,6 +97,25 @@ class MainActivity : ComponentActivity() {
     private val terminalState: TerminalSessionViewModel by lazy {
         ViewModelProvider(this)[TerminalSessionViewModel::class.java]
     }
+    private val storageFolderLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            if (uri == null) return@registerForActivityResult
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                getSharedPreferences("klyro_storage", MODE_PRIVATE)
+                    .edit().putString("tree_uri", uri.toString()).apply()
+                Toast.makeText(this, "Storage folder authorized for Klyro", Toast.LENGTH_LONG).show()
+            } catch (error: SecurityException) {
+                Toast.makeText(this, "Storage permission denied: " + error.message, Toast.LENGTH_LONG).show()
+            }
+        }
+
+    private fun chooseStorageFolder() {
+        storageFolderLauncher.launch(null)
+    }
+
     private val importFileLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@registerForActivityResult
@@ -252,6 +273,7 @@ class MainActivity : ComponentActivity() {
                     onNewTab = ::launchBash,
                     onImportFile = ::chooseFileToImport,
                     onExportFile = ::chooseFileToExport,
+                    onSetupStorage = ::chooseStorageFolder,
                     terminalTitle = terminalState.terminalTitle,
                     sessionClient = terminalState.sessionClient,
                     viewClient = terminalState.viewClient,
@@ -478,6 +500,7 @@ private fun OrynTerminalApp(
     onNewTab: () -> Unit,
     onImportFile: () -> Unit,
     onExportFile: () -> Unit,
+    onSetupStorage: () -> Unit,
     terminalTitle: String,
     sessionClient: OrynTerminalSessionClient?,
     viewClient: OrynTerminalViewClient?,
@@ -527,6 +550,7 @@ private fun OrynTerminalApp(
                 onNewTab = onNewTab,
                 onImportFile = onImportFile,
                 onExportFile = onExportFile,
+                onSetupStorage = onSetupStorage,
                 sessionClient = sessionClient,
                 viewClient = viewClient,
                 sessionFailureMessage = sessionFailureMessage,
