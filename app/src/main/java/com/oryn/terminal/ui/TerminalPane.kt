@@ -90,6 +90,9 @@ fun TerminalPane(
     val terminalTextSizePx = with(LocalDensity.current) { terminalFontSize.sp.roundToPx() }
     val context = LocalContext.current
     var showSelectAll by remember { mutableStateOf(false) }
+    var showTranscriptSearch by remember { mutableStateOf(false) }
+    var transcriptQuery by remember { mutableStateOf("") }
+    var searchIndex by remember { mutableStateOf(0) }
     var renameTarget by remember { mutableStateOf<Long?>(null) }
     var renameValue by remember { mutableStateOf("") }
     var closeTarget by remember { mutableStateOf<Long?>(null) }
@@ -329,6 +332,11 @@ fun TerminalPane(
                 TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
                 TerminalExtraKey("ALL", description = "Select all terminal text") { showSelectAll = true }
+                TerminalExtraKey("FIND", description = "Search terminal transcript") {
+                    transcriptQuery = ""
+                    searchIndex = 0
+                    showTranscriptSearch = true
+                }
                 TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
                     session.writeCodePoint(false, 12) // Ctrl+L redraws Bash prompt
                 }
@@ -377,6 +385,58 @@ fun TerminalPane(
             },
             dismissButton = {
                 TextButton(onClick = { closeTarget = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showTranscriptSearch) {
+        val transcript = session.emulator?.screen?.transcriptText.orEmpty()
+        val matches = remember(transcript, transcriptQuery) {
+            if (transcriptQuery.isBlank()) emptyList()
+            else Regex(Regex.escape(transcriptQuery), RegexOption.IGNORE_CASE)
+                .findAll(transcript).map { it.range.first }.take(10000).toList()
+        }
+        val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
+        AlertDialog(
+            onDismissRequest = { showTranscriptSearch = false },
+            title = { Text("Search terminal transcript") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = transcriptQuery,
+                        onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
+                        label = { Text("Find text") },
+                        singleLine = true
+                    )
+                    Text(
+                        if (transcriptQuery.isBlank()) "Enter text to search"
+                        else if (matches.isEmpty()) "No matches"
+                        else "Match ${position + 1} of ${matches.size}" +
+                            if (matches.size == 10000) " (first 10000)" else "",
+                        fontSize = 12.sp
+                    )
+                    if (matches.isNotEmpty()) {
+                        val offset = matches[position]
+                        val start = (offset - 90).coerceAtLeast(0)
+                        val end = (offset + transcriptQuery.length + 90).coerceAtMost(transcript.length)
+                        Text(
+                            transcript.substring(start, end),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp
+                        )
+                        Row {
+                            TextButton(onClick = {
+                                searchIndex = (position - 1 + matches.size) % matches.size
+                            }) { Text("Previous") }
+                            TextButton(onClick = {
+                                searchIndex = (position + 1) % matches.size
+                            }) { Text("Next") }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTranscriptSearch = false }) { Text("Close") }
             }
         )
     }
