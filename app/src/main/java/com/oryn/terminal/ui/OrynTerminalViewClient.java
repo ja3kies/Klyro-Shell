@@ -37,7 +37,31 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
     public boolean isControlDown() { return controlDown; }
     public boolean isAltDown() { return altDown; }
 
-    @Override public float onScale(float scale) { return 1.0f; }
+    private int textSizePx = 0;
+    private float lastScale = 1.0f;
+
+    @Override
+    public float onScale(float scale) {
+        View view = terminalView;
+        if (view instanceof com.termux.view.TerminalView) {
+            if (textSizePx == 0) {
+                textSizePx = Math.max(12, Math.round(14 * context.getResources().getDisplayMetrics().scaledDensity));
+            }
+            float delta = scale / lastScale;
+            if (Float.isFinite(delta) && delta > 0) {
+                int next = Math.round(textSizePx * delta);
+                int minimum = Math.round(9 * context.getResources().getDisplayMetrics().scaledDensity);
+                int maximum = Math.round(24 * context.getResources().getDisplayMetrics().scaledDensity);
+                next = Math.max(minimum, Math.min(maximum, next));
+                if (next != textSizePx) {
+                    textSizePx = next;
+                    ((com.termux.view.TerminalView) view).setTextSize(next);
+                }
+            }
+        }
+        lastScale = scale;
+        return scale;
+    }
 
     @Override
     public void onSingleTapUp(MotionEvent event) {
