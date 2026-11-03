@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -151,7 +153,8 @@ class MainActivity : ComponentActivity() {
                     sessionFailureMessage = terminalState.sessionFailureMessage,
                     onInstall = ::handlePrimaryAction,
                     onLaunch = ::launchBash,
-                    onClose = ::closeBash
+                    onClose = ::closeBash,
+                    onRecheck = ::verifyRuntime
                 )
             }
         }
@@ -187,7 +190,7 @@ class MainActivity : ComponentActivity() {
                 showTechnicalDetails = false
                 statusMessage = when {
                     runtimeVerified && cleanStderr -> "Environment ready · Bash, UID, APT and pkg verified."
-                    runtimeVerified -> "Ready with warnings · Bash, UID, APT and pkg passed; review the runtime warnings before relying on the session."
+                    runtimeVerified -> "Ready with warnings · Bash, UID, APT and pkg passed. Open the technical details to see the warnings."
                     bashStarted -> "Bash starts, but the environment is incomplete. Review diagnostics."
                     else -> "Bash startup failed. Review diagnostics."
                 }
@@ -358,8 +361,15 @@ private fun OrynTerminalApp(
     sessionFailureMessage: String?,
     onInstall: () -> Unit,
     onLaunch: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onRecheck: () -> Unit
 ) {
+    val warningLines = remember(technicalErrorDetails) {
+        technicalErrorDetails.orEmpty().lines()
+            .map { it.trim() }
+            .filter { it.startsWith("WARNING", ignoreCase = true) }
+            .distinct()
+    }
     val stateLabel = when {
         runtimeVerified && runtimeHasWarnings -> "READY WITH WARNINGS"
         runtimeVerified -> "ENVIRONMENT READY"
@@ -389,6 +399,7 @@ private fun OrynTerminalApp(
                 sessionClient = sessionClient,
                 viewClient = viewClient,
                 sessionFailureMessage = sessionFailureMessage,
+                runtimeHasWarnings = runtimeHasWarnings,
                 onClose = onClose
             )
         } else {
@@ -415,7 +426,7 @@ private fun OrynTerminalApp(
                     Column {
                         Text("KLYRO", color = TextPrimary, fontSize = 18.sp,
                             fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                        Text("SHELL", color = TextMuted, fontSize = 10.sp,
+                        Text("SHELL", color = TextMuted, fontSize = 11.sp,
                             letterSpacing = 2.5.sp)
                     }
                     Spacer(Modifier.weight(1f))
@@ -443,13 +454,13 @@ private fun OrynTerminalApp(
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("PRIVATE ENVIRONMENT", color = Cyan, fontSize = 10.sp,
+                            Text("PRIVATE ENVIRONMENT", color = Cyan, fontSize = 11.sp,
                                 letterSpacing = 1.3.sp)
                             Spacer(Modifier.weight(1f))
                             Text(
                                 stateLabel,
                                 color = stateColor,
-                                fontSize = 10.sp, letterSpacing = 0.8.sp
+                                fontSize = 11.sp, letterSpacing = 0.8.sp
                             )
                         }
                         Text(
@@ -458,24 +469,63 @@ private fun OrynTerminalApp(
                             fontSize = 13.sp,
                             lineHeight = 19.sp
                         )
+                        if (runtimeHasWarnings && warningLines.isNotEmpty()) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = Warning.copy(alpha = 0.10f),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        if (warningLines.size == 1) "1 distinct runtime warning"
+                                        else "${warningLines.size} distinct runtime warnings",
+                                        color = Warning, fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        warningLines.first(),
+                                        color = TextMuted, fontSize = 12.sp, lineHeight = 17.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        maxLines = 3
+                                    )
+                                }
+                            }
+                        }
                         if (technicalErrorDetails != null) {
-                            TextButton(onClick = onToggleTechnicalDetails) {
-                                Text(
-                                    if (showTechnicalDetails) "Hide technical details"
-                                    else "Show technical details",
-                                    color = Cyan,
-                                    fontSize = 12.sp
-                                )
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                TextButton(
+                                    onClick = onToggleTechnicalDetails,
+                                    modifier = Modifier.heightIn(min = 48.dp),
+                                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        if (showTechnicalDetails) "Hide technical details"
+                                        else "Show technical details",
+                                        color = Cyan,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                                if (showTechnicalDetails) {
+                                    TextButton(
+                                        onClick = onCopyTechnicalDetails,
+                                        modifier = Modifier.heightIn(min = 48.dp),
+                                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+                                    ) {
+                                        Text("Copy", color = Cyan, fontSize = 13.sp)
+                                    }
+                                }
                             }
                             if (showTechnicalDetails) {
                                 Surface(
-                                    modifier = Modifier.fillMaxWidth().height(160.dp),
+                                    modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
                                     color = Obsidian,
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxSize()
                                             .padding(10.dp)
                                             .verticalScroll(rememberScrollState())
                                     ) {
@@ -487,9 +537,6 @@ private fun OrynTerminalApp(
                                             fontFamily = FontFamily.Monospace
                                         )
                                     }
-                                }
-                                TextButton(onClick = onCopyTechnicalDetails) {
-                                    Text("Copy technical details", color = TextMuted, fontSize = 12.sp)
                                 }
                             }
                         }
@@ -544,6 +591,13 @@ private fun OrynTerminalApp(
                                 shape = RoundedCornerShape(13.dp)
                             ) {
                                 Text("Launch Bash", fontWeight = FontWeight.SemiBold)
+                            }
+                            TextButton(
+                                onClick = onRecheck,
+                                enabled = !verifyingRuntime && !installing,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                            ) {
+                                Text("Recheck environment", color = Cyan, fontSize = 13.sp)
                             }
                         }
                     }
