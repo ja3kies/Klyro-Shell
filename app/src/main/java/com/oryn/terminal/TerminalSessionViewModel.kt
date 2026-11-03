@@ -1,6 +1,7 @@
 package com.oryn.terminal
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -9,47 +10,90 @@ import com.oryn.terminal.ui.OrynTerminalViewClient
 import com.termux.terminal.TerminalSession
 
 /**
- * Retains the live PTY session across Activity recreation and owns its teardown.
- * The session client uses the application context and this ViewModel as its listener,
- * so callbacks never retain a destroyed Activity.
+ * Owns independent PTY sessions across Activity recreation.
+ * Session callbacks are bound to their originating session, never the selected tab.
  */
 class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener {
-    var activeSession by mutableStateOf<TerminalSession?>(null)
+    data class ShellTab(
+        val id: Long,
+        val session: TerminalSession,
+        val client: OrynTerminalSessionClient,
+        val viewClient: OrynTerminalViewClient,
+        val title: String = "Bash"
+    )
+
+    private val tabs = mutableStateListOf<ShellTab>()
+    val sessions: List<ShellTab> get() = tabs
+    private var nextId = 1L
+    var activeTabId by mutableStateOf<Long?>(null)
         private set
-    var terminalTitle by mutableStateOf("Bash")
-        private set
+
+    private val selected: ShellTab? get() = tabs.firstOrNull { it.id == activeTabId }
+    val activeSession: TerminalSession? get() = selected?.session
+    val sessionClient: OrynTerminalSessionClient? get() = selected?.client
+    val viewClient: OrynTerminalViewClient? get() = selected?.viewClient
+    val terminalTitle: String get() = selected?.title ?: "Bash"
+
     var sessionStatus by mutableStateOf("")
         private set
     var sessionFailureMessage by mutableStateOf<String?>(null)
         private set
 
-    var sessionClient: OrynTerminalSessionClient? = null
-        private set
-    var viewClient: OrynTerminalViewClient? = null
-        private set
+    fun listenerFor(tabId: Long): OrynTerminalSessionClient.Listener =
+        object : OrynTerminalSessionClient.Listener {
+            override fun onTitleChanged(title: String?) {
+                updateTitle(tabId, title)
+            }
+            override fun onSessionFinished(session: TerminalSession, exitStatus: Int) {
+                finishTab(tabId, session, exitStatus)
+            }
+            override fun onShellPid(pid: Int) {
+                if (activeTabId == tabId) sessionStatus = "Bash session started (PID $pid)."
+            }
+        }
+
+    fun reserveTabId(): Long = nextId++
 
     fun attachSession(
         session: TerminalSession,
         client: OrynTerminalSessionClient,
-        terminalViewClient: OrynTerminalViewClient
+        terminalViewClient: OrynTerminalViewClient,
+        tabId: Long = reserveTabId()
     ) {
-        activeSession = session
-        sessionClient = client
-        viewClient = terminalViewClient
-        terminalTitle = "Bash"
+        require(tabs.none { it.id == tabId }) { "Duplicate terminal tab ID" }
+        tabs.add(ShellTab(tabId, session, client, terminalViewClient))
+        selectTab(tabId)
         sessionStatus = "Starting private Bash session…"
         sessionFailureMessage = null
     }
 
+    fun selectTab(id: Long) {
+        if (activeTabId == id || tabs.none { it.id == id }) return
+        selected?.let {
+            it.client.attachView(null)
+            it.viewClient.attachView(null)
+        }
+        activeTabId = id
+        sessionFailureMessage = null
+        sessionStatus = ""
+    }
+
+    fun closeTab(id: Long) {
+        val index = tabs.indexOfFirst { it.id == id }
+        if (index < 0) return
+        val entry = tabs.removeAt(index)
+        entry.client.attachView(null)
+        entry.viewClient.attachView(null)
+        entry.session.finishIfRunning()
+        if (activeTabId == id) {
+            activeTabId = null
+            tabs.getOrNull(index.coerceAtMost(tabs.lastIndex))?.let { selectTab(it.id) }
+        }
+    }
+
     fun closeSession() {
-        activeSession?.finishIfRunning()
-        sessionClient?.attachView(null)
-        viewClient?.attachView(null)
-        activeSession = null
-        sessionClient = null
-        viewClient = null
-        terminalTitle = "Bash"
-        sessionStatus = sessionFailureMessage ?: ""
+        activeTabId?.let(::closeTab)
+        sessionStatus = "Bash session closed."
     }
 
     fun clearSessionFailure() {
@@ -57,32 +101,38 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         sessionStatus = ""
     }
 
+    private fun updateTitle(id: Long, title: String?) {
+        val index = tabs.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            tabs[index] = tabs[index].copy(title = title?.takeIf { it.isNotBlank() } ?: "Bash")
+        }
+    }
+
+    private fun finishTab(id: Long, session: TerminalSession, exitStatus: Int) {
+        val entry = tabs.firstOrNull { it.id == id } ?: return
+        if (entry.session !== session) return
+        val wasActive = activeTabId == id
+        closeTab(id)
+        if (wasActive) {
+            sessionFailureMessage = if (exitStatus == 0) null else
+                "Bash exited unexpectedly (code $exitStatus). Verify the runtime before starting another session."
+            sessionStatus = sessionFailureMessage ?: "Bash session ended."
+        }
+    }
+
+    // Legacy listener compatibility for existing single-session startup.
     override fun onTitleChanged(title: String?) {
-        terminalTitle = title?.takeIf { it.isNotBlank() } ?: "Bash"
+        activeTabId?.let { updateTitle(it, title) }
     }
-
     override fun onSessionFinished(session: TerminalSession, exitStatus: Int) {
-        if (activeSession !== session) return
-
-        sessionFailureMessage = if (exitStatus == 0) null else
-            "Bash exited unexpectedly (code $exitStatus). Verify the runtime before starting another session."
-        sessionStatus = sessionFailureMessage ?: "Bash session ended."
-
-        // Leave the terminal screen when its process exits; don't strand the user
-        // in a dead terminal view with no running shell.
-        activeSession = null
-        sessionClient?.attachView(null)
-        viewClient?.attachView(null)
-        sessionClient = null
-        viewClient = null
+        tabs.firstOrNull { it.session === session }?.let { finishTab(it.id, session, exitStatus) }
     }
-
     override fun onShellPid(pid: Int) {
         sessionStatus = "Bash session started (PID $pid)."
     }
 
     override fun onCleared() {
-        closeSession()
+        tabs.toList().forEach { closeTab(it.id) }
         super.onCleared()
     }
 }
