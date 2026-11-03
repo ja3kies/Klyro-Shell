@@ -19,7 +19,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         val session: TerminalSession,
         val client: OrynTerminalSessionClient,
         val viewClient: OrynTerminalViewClient,
-        val title: String = "Bash"
+        val title: String = "Bash",
+        val customTitle: String? = null
     )
 
     private val tabs = mutableStateListOf<ShellTab>()
@@ -32,7 +33,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     val activeSession: TerminalSession? get() = selected?.session
     val sessionClient: OrynTerminalSessionClient? get() = selected?.client
     val viewClient: OrynTerminalViewClient? get() = selected?.viewClient
-    val terminalTitle: String get() = selected?.title ?: "Bash"
+    val terminalTitle: String get() = selected?.let { it.customTitle ?: it.title } ?: "Bash"
 
     var sessionStatus by mutableStateOf("")
         private set
@@ -76,6 +77,13 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         activeTabId = id
         sessionFailureMessage = null
         sessionStatus = ""
+    }
+
+    fun renameTab(id: Long, rawName: String) {
+        val name = rawName.trim().take(32)
+        if (name.isBlank()) return
+        val index = tabs.indexOfFirst { it.id == id }
+        if (index >= 0) tabs[index] = tabs[index].copy(customTitle = name)
     }
 
     fun closeTab(id: Long) {
