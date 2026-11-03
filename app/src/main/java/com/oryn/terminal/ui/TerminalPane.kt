@@ -258,8 +258,7 @@ fun TerminalPane(
                             }) { Text("Next") }
                         }
                     }
-                }
-                TextButton(onClick = { showTranscriptSearch = false }) { Text("Close search") }
+                    TextButton(onClick = { showTranscriptSearch = false }) { Text("Close search") }
             }
         }
     }
