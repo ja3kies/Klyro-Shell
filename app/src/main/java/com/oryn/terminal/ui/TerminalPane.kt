@@ -7,6 +7,8 @@ import android.graphics.Color as AndroidColor
 import android.widget.EditText
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -60,6 +62,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -67,6 +72,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -78,12 +84,6 @@ import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import java.nio.charset.StandardCharsets
-
-private val TerminalBackground = Color(0xFF101719)
-private val TerminalSurface = Color(0xFF182528)
-private val TerminalAccent = Color(0xFFB9DAD4)
-private val TerminalText = Color(0xFFE3F1EA)
-private val TerminalMuted = Color(0xFF98B0A9)
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -130,14 +130,6 @@ fun TerminalPane(
     var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
-    LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId, renameDialogId, shellChooserSourceId) {
-        if (sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null) {
-            activeTerminalView?.let { view ->
-                view.isFocusableInTouchMode = true
-                view.requestFocus()
-            }
-        }
-    }
     val context = LocalContext.current
     val fontPreferences = remember(context) {
         context.getSharedPreferences("klyro_terminal_preferences", Context.MODE_PRIVATE)
@@ -197,6 +189,25 @@ fun TerminalPane(
     var showEndSessionConfirmation by remember { mutableStateOf(false) }
     var warningNoteDismissed by remember { mutableStateOf(false) }
 
+    // Only return focus to the PTY after all overlays have actually closed.
+    // This prevents terminal refocus from stealing FIND/rename or selection input.
+    LaunchedEffect(
+        activeTabId, activeTerminalView, sessionSheetId, renameDialogId,
+        shellChooserSourceId, showTranscriptSearch, showTerminalSettings,
+        selectedOutput, pendingMultilinePaste, showEndSessionConfirmation
+    ) {
+        if (sessionSheetId == null && renameDialogId == null &&
+            shellChooserSourceId == null && !showTranscriptSearch &&
+            !showTerminalSettings && selectedOutput == null &&
+            pendingMultilinePaste == null && !showEndSessionConfirmation
+        ) {
+            activeTerminalView?.let { view ->
+                view.isFocusableInTouchMode = true
+                view.requestFocus()
+            }
+        }
+    }
+
     BackHandler(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
@@ -212,14 +223,17 @@ fun TerminalPane(
     val keyWidth = ((maxWidth - 36.dp) / 7).coerceIn(36.dp, 56.dp)
     val toolsMenu: @Composable () -> Unit = {
             Box {
-                TextButton(onClick = { showToolsMenu = true }) {
+                TextButton(
+                    onClick = { showToolsMenu = true },
+                    modifier = Modifier.semantics { contentDescription = "More options" }
+                ) {
                     Text("⋮", color = TerminalAccent, fontSize = 22.sp)
                 }
                 DropdownMenu(
                     expanded = showToolsMenu,
                     onDismissRequest = { showToolsMenu = false },
                     modifier = Modifier.width(246.dp),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
+                    shape = KlyroShapes.actionGroup,
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     DropdownMenuItem(
@@ -534,10 +548,10 @@ fun TerminalPane(
         }
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = KlyroShapes.dialog,
             containerColor = ui.sheet,
             onDismissRequest = { closeSelection() },
-            title = { Text("Select terminal output") },
+            title = { Text("Select terminal output", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (truncated) {
@@ -646,10 +660,10 @@ fun TerminalPane(
     if (pendingMultilinePaste != null) {
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = KlyroShapes.dialog,
             containerColor = ui.sheet,
             onDismissRequest = { pendingMultilinePaste = null },
-            title = { Text("Paste multiple lines?") },
+            title = { Text("Paste multiple lines?", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Pasting multiple lines can execute commands. Review the clipboard content before continuing.")
@@ -731,6 +745,11 @@ fun TerminalPane(
     }
 
     if (showTranscriptSearch) {
+        val searchFocusRequester = remember { FocusRequester() }
+        LaunchedEffect(searchFocusRequester) {
+            searchFocusRequester.requestFocus()
+            keyboard?.show()
+        }
         val emulator = session.emulator
         val screen = emulator?.screen
         // Re-read the mutable buffer; a screen object keeps its identity as output arrives.
@@ -747,17 +766,26 @@ fun TerminalPane(
         }
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = KlyroShapes.dialog,
             containerColor = ui.sheet,
             onDismissRequest = { showTranscriptSearch = false },
-            title = { Text("Search terminal transcript") },
+            title = { Text("Search terminal transcript", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = transcriptQuery,
                         onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
+                        modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester),
                         label = { Text("Find text") },
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = {
+                            if (matches.isNotEmpty()) {
+                                pendingSearch = position
+                                keyboard?.hide()
+                                showTranscriptSearch = false
+                            }
+                        })
                     )
                     Text(
                         if (transcriptQuery.isBlank()) "Enter text to search"
@@ -837,16 +865,16 @@ fun TerminalPane(
     if (showEndSessionConfirmation) {
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = KlyroShapes.dialog,
             containerColor = ui.sheet,
             onDismissRequest = { showEndSessionConfirmation = false },
-            title = { Text("End Bash session?") },
+            title = { Text("End Bash session?", fontWeight = FontWeight.Bold) },
             text = { Text("This will stop the running shell and its child processes.") },
             confirmButton = {
                 TextButton(onClick = {
                     showEndSessionConfirmation = false
                     onClose()
-                }) { Text("End session") }
+                }) { Text("End session", color = ui.danger) }
             },
             dismissButton = {
                 TextButton(onClick = { showEndSessionConfirmation = false }) {
@@ -879,7 +907,14 @@ private fun TerminalExtraKey(
         modifier = Modifier
             .height(50.dp)
             .width(keyWidth)
-            .semantics { contentDescription = description ?: label },
+            .semantics {
+                contentDescription = description ?: label
+                if (label == "CTRL" || label == "ALT" ||
+                    label == "SHIFT" || label == "FN"
+                ) {
+                    stateDescription = if (active) "On" else "Off"
+                }
+            },
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
