@@ -53,6 +53,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.toArgb
+import com.oryn.terminal.ui.KlyroColors
+import com.oryn.terminal.ui.LocalKlyroColors
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -322,33 +326,56 @@ class MainActivity : ComponentActivity() {
                         ?.takeIf { it in setOf("system", "light", "dark") } ?: "system"
                 )
             }
+            var accentId by remember {
+                mutableStateOf(KlyroColors.normalizedAccent(
+                    themePreferences.getString("accent_id", "mint")
+                ))
+            }
             val darkTheme = themeMode == "dark" ||
                 (themeMode == "system" && isSystemInDarkTheme())
+            val palette = remember(darkTheme, accentId) {
+                KlyroColors.create(darkTheme, accentId)
+            }
             SideEffect {
+                // Status and gesture navigation bars remain transparent while
+                // their underlying window matches the visible Klyro chrome.
+                window.decorView.setBackgroundColor(palette.chrome.toArgb())
+                if (android.os.Build.VERSION.SDK_INT >= 29) {
+                    window.isNavigationBarContrastEnforced = false
+                    window.isStatusBarContrastEnforced = false
+                }
                 val controller = WindowInsetsControllerCompat(window, window.decorView)
                 controller.isAppearanceLightStatusBars = !darkTheme
                 controller.isAppearanceLightNavigationBars = !darkTheme
             }
-            MaterialTheme(
-                colorScheme = if (darkTheme) darkColorScheme(
-                    background = Obsidian,
-                    surface = SurfaceDark,
-                    primary = Cyan,
-                    secondary = Purple,
-                    onBackground = TextPrimary,
-                    onSurface = TextPrimary
-                ) else lightColorScheme(
-                    background = Color(0xFFDDEFEA),
-                    surface = Color(0xFFF8FBFA),
-                    primary = Color(0xFF244F43),
-                    secondary = Color(0xFFB9DAD4),
-                    onBackground = Color(0xFF18282B),
-                    onSurface = Color(0xFF18282B)
-                )
-            ) {
+            CompositionLocalProvider(LocalKlyroColors provides palette) {
+                MaterialTheme(
+                    colorScheme = if (darkTheme) darkColorScheme(
+                        background = palette.background,
+                        surface = palette.chrome,
+                        primary = palette.accent,
+                        onPrimary = palette.onAccent,
+                        secondary = palette.accent,
+                        onBackground = palette.foreground,
+                        onSurface = palette.foreground
+                    ) else lightColorScheme(
+                        background = palette.background,
+                        surface = palette.chrome,
+                        primary = palette.accent,
+                        onPrimary = palette.onAccent,
+                        secondary = palette.accent,
+                        onBackground = palette.foreground,
+                        onSurface = palette.foreground
+                    )
+                ) {
                 OrynTerminalApp(
                     darkChrome = darkTheme,
                     themeMode = themeMode,
+                    accentId = accentId,
+                    onAccentIdChange = { selected ->
+                        accentId = KlyroColors.normalizedAccent(selected)
+                        themePreferences.edit().putString("accent_id", accentId).apply()
+                    },
                     onThemeModeChange = { selected ->
                         if (selected in setOf("system", "light", "dark")) {
                             themeMode = selected
@@ -594,6 +621,8 @@ class MainActivity : ComponentActivity() {
 private fun OrynTerminalApp(
     darkChrome: Boolean,
     themeMode: String,
+    accentId: String,
+    onAccentIdChange: (String) -> Unit,
     onThemeModeChange: (String) -> Unit,
     progress: Int,
     installing: Boolean,
@@ -630,13 +659,14 @@ private fun OrynTerminalApp(
 ) {
     // Setup and terminal chrome share the same persisted appearance selection.
     // Each role keeps its contrast in both Klyro Soft Mint and Klyro Dark.
-    val Obsidian = if (darkChrome) Color(0xFF0B0F19) else Color(0xFFDDEFEA)
-    val SurfaceDark = if (darkChrome) Color(0xFF111827) else Color(0xFFF8FBFA)
-    val Elevated = if (darkChrome) Color(0xFF1E293B) else Color(0xFFCBDED6)
-    val TextPrimary = if (darkChrome) Color(0xFFE2E8F0) else Color(0xFF18282B)
-    val TextMuted = if (darkChrome) Color(0xFF94A3B8) else Color(0xFF557168)
-    val Cyan = if (darkChrome) Color(0xFF00F0FF) else Color(0xFF244F43)
-    val Purple = if (darkChrome) Color(0xFF8338EC) else Color(0xFF41675B)
+    val ui = LocalKlyroColors.current
+    val Obsidian = ui.background
+    val SurfaceDark = ui.chrome
+    val Elevated = ui.tile
+    val TextPrimary = ui.foreground
+    val TextMuted = ui.muted
+    val Cyan = ui.accent
+    val Purple = ui.accent
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
@@ -660,12 +690,7 @@ private fun OrynTerminalApp(
     }
 
     val isTerminalVisible = session != null && sessionClient != null && viewClient != null
-    val screenChrome = when {
-        isTerminalVisible && darkChrome -> Color(0xFF182528)
-        isTerminalVisible -> Color(0xFFDDEFEA)
-        darkChrome -> Obsidian
-        else -> Color(0xFFDDEFEA)
-    }
+    val screenChrome = ui.chrome
     Surface(
         // Paint before insets; the transparent status bar must show Klyro, not
         // Android's default gray window background.
@@ -680,6 +705,8 @@ private fun OrynTerminalApp(
                 session = session,
                 darkChrome = darkChrome,
                 themeMode = themeMode,
+                accentId = accentId,
+                onAccentIdChange = onAccentIdChange,
                 onThemeModeChange = onThemeModeChange,
                 title = terminalTitle,
                 tabs = tabs,
