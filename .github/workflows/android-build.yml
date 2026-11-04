@@ -140,7 +140,7 @@ jobs:
       - name: Run JVM and native alignment auditor unit tests
         run: |
           python3 -m unittest discover -s tools -p "test_*.py"
-          gradle :app:testDebugUnitTest
+          gradle :app:testDebugUnitTest :terminal-emulator:testDebugUnitTest
 
       - name: Android lint and UI accessibility checks
         run: gradle :app:lintDebug
