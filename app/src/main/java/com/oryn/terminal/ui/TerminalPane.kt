@@ -17,6 +17,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -89,6 +91,8 @@ fun TerminalPane(
     session: TerminalSession,
     darkChrome: Boolean,
     themeMode: String,
+    accentId: String,
+    onAccentIdChange: (String) -> Unit,
     onThemeModeChange: (String) -> Unit,
     title: String,
     tabs: List<Pair<Long, String>>,
@@ -108,13 +112,14 @@ fun TerminalPane(
     runtimeHasWarnings: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    // The PTY and TerminalView stay alive when the visual chrome changes.
-    val TerminalBackground = if (darkChrome) Color(0xFF101719) else Color(0xFFDDEFEA)
-    val TerminalSurface = if (darkChrome) Color(0xFF182528) else Color(0xFFF8FBFA)
-    val TerminalAccent = if (darkChrome) Color(0xFFB9DAD4) else Color(0xFF244F43)
-    val TerminalText = if (darkChrome) Color(0xFFE3F1EA) else Color(0xFF18282B)
-    val TerminalMuted = if (darkChrome) Color(0xFF98B0A9) else Color(0xFF557168)
-    val inactiveTabSurface = if (darkChrome) Color(0xFF28383A) else Color(0xFFDFECE7)
+    val ui = LocalKlyroColors.current
+    // TerminalView stays dark for ANSI contrast; only surrounding chrome changes.
+    val TerminalBackground = ui.background
+    val TerminalSurface = ui.chrome
+    val TerminalAccent = ui.accent
+    val TerminalText = ui.foreground
+    val TerminalMuted = ui.muted
+    val inactiveTabSurface = ui.key
     var showToolsMenu by remember { mutableStateOf(false) }
     var showTerminalSettings by remember { mutableStateOf(false) }
     var initialSettingsSection by remember { mutableStateOf("home") }
@@ -213,11 +218,17 @@ fun TerminalPane(
                 DropdownMenu(
                     expanded = showToolsMenu,
                     onDismissRequest = { showToolsMenu = false },
+                    modifier = Modifier.width(246.dp),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     DropdownMenuItem(
                         text = { Text("Settings", color = MaterialTheme.colorScheme.onSurface) },
+                        modifier = Modifier.heightIn(min = 56.dp),
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.hugeicons_settings_01),
+                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        },
                         onClick = {
                             showToolsMenu = false
                             initialSettingsSection = "home"
@@ -226,6 +237,11 @@ fun TerminalPane(
                     )
                     DropdownMenuItem(
                         text = { Text("Files & storage", color = MaterialTheme.colorScheme.onSurface) },
+                        modifier = Modifier.heightIn(min = 56.dp),
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.hugeicons_folder_01),
+                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        },
                         onClick = {
                             showToolsMenu = false
                             initialSettingsSection = "files"
@@ -234,6 +250,11 @@ fun TerminalPane(
                     )
                     DropdownMenuItem(
                         text = { Text("Paste", color = MaterialTheme.colorScheme.onSurface) },
+                        modifier = Modifier.heightIn(min = 56.dp),
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.hugeicons_clipboard_paste),
+                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        },
                         onClick = {
                             showToolsMenu = false
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -264,7 +285,7 @@ fun TerminalPane(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(TerminalSurface)
-                    .padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                    .padding(start = 14.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
@@ -293,16 +314,16 @@ fun TerminalPane(
             modifier = Modifier.fillMaxWidth()
                 .background(TerminalSurface)
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(horizontal = 10.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             if (compact) toolsMenu()
             tabs.forEach { (id, tabTitle) ->
                 val active = id == activeTabId
-                Surface(
+                Box(
                     modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .widthIn(max = 172.dp)
+                        .height(48.dp)
                         .combinedClickable(
                             onClickLabel = if (active) "Edit session" else "Switch session",
                             onLongClickLabel = "Edit session",
@@ -311,32 +332,44 @@ fun TerminalPane(
                             },
                             onLongClick = { openSessionSheet(id, tabTitle) }
                         )
-                        .semantics { contentDescription = "Session $tabTitle" },
-                    color = if (active) TerminalAccent else inactiveTabSurface,
-                    contentColor = if (active) TerminalBackground else TerminalText,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
+                        .semantics { contentDescription = "Session ${tabTitle.ifBlank { "Session" }}" },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        tabTitle.ifBlank { "Session" },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
-                        fontSize = 13.sp,
-                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+                    Surface(
+                        modifier = Modifier.height(36.dp).widthIn(max = 140.dp),
+                        color = if (active) TerminalAccent else inactiveTabSurface,
+                        contentColor = if (active) ui.onAccent else TerminalText,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(19.dp)
+                    ) {
+                        Text(
+                            tabTitle.ifBlank { "Session" },
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            fontSize = 12.sp,
+                            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
-            Button(
-                onClick = onNewTab,
-                enabled = tabs.size < 8,
-                modifier = Modifier.width(48.dp).height(48.dp),
-                shape = androidx.compose.foundation.shape.CircleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = TerminalAccent,
-                    contentColor = TerminalBackground
-                ),
-                contentPadding = PaddingValues(0.dp)
-            ) { Text("+", fontSize = 22.sp) }
+            Box(
+                modifier = Modifier.size(48.dp).semantics {
+                    contentDescription = "New terminal"
+                },
+                contentAlignment = Alignment.Center
+            ) {
+                Button(
+                    onClick = onNewTab,
+                    enabled = tabs.size < 8,
+                    modifier = Modifier.size(38.dp),
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TerminalAccent,
+                        contentColor = ui.onAccent
+                    ),
+                    contentPadding = PaddingValues(0.dp)
+                ) { Text("+", fontSize = 20.sp) }
+            }
         }
 
         if (sessionFailureMessage != null) {
@@ -391,20 +424,21 @@ fun TerminalPane(
         }
 
         Box(
+            // A single consistently clipped surface replaces the previous
+            // square AndroidView with misaligned decorative corner strips.
             modifier = Modifier.fillMaxWidth().weight(1f)
-                .background(Color(0xFF101719),
-                    androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
+                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                .background(ui.terminal)
         ) {
         key(session) {
         AndroidView(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxSize(),
             factory = { context ->
                 TerminalView(context, null).apply {
                     setTerminalViewClient(viewClient)
                     setTextSize(terminalTextSizePx)
-                    setBackgroundColor(AndroidColor.rgb(16, 23, 25))
+                    setBackgroundColor(AndroidColor.rgb(16, 22, 25))
                     isFocusable = true
                     isFocusableInTouchMode = true
                     sessionClient.attachView(this)
@@ -498,7 +532,10 @@ fun TerminalPane(
             outputSelectionView = null
             selectedOutput = null
         }
+        KlyroModalTheme {
         AlertDialog(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            containerColor = ui.sheet,
             onDismissRequest = { closeSelection() },
             title = { Text("Select terminal output") },
             text = {
@@ -566,6 +603,7 @@ fun TerminalPane(
                 TextButton(onClick = { closeSelection() }) { Text("Close") }
             }
         )
+        }
     }
 
     if (showTerminalSettings) {
@@ -573,6 +611,8 @@ fun TerminalPane(
             initialSection = initialSettingsSection,
             themeMode = themeMode,
             onThemeModeChange = onThemeModeChange,
+            accentId = accentId,
+            onAccentIdChange = onAccentIdChange,
             fontSizeSp = terminalFontSp,
             onFontChange = ::changeTerminalFont,
             onResetFont = {
@@ -604,7 +644,10 @@ fun TerminalPane(
     }
 
     if (pendingMultilinePaste != null) {
+        KlyroModalTheme {
         AlertDialog(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            containerColor = ui.sheet,
             onDismissRequest = { pendingMultilinePaste = null },
             title = { Text("Paste multiple lines?") },
             text = {
@@ -631,6 +674,7 @@ fun TerminalPane(
                 TextButton(onClick = { pendingMultilinePaste = null }) { Text("Cancel") }
             }
         )
+        }
     }
 
     sessionSheetId?.let { id ->
@@ -701,7 +745,10 @@ fun TerminalPane(
                 }
             }
         }
+        KlyroModalTheme {
         AlertDialog(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            containerColor = ui.sheet,
             onDismissRequest = { showTranscriptSearch = false },
             title = { Text("Search terminal transcript") },
             text = {
@@ -745,7 +792,7 @@ fun TerminalPane(
                         }
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.small
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
                         ) {
                             Text(
                                 text = preview,
@@ -770,20 +817,28 @@ fun TerminalPane(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    pendingSearch = position
-                    keyboard?.hide()
-                    showTranscriptSearch = false
-                }, enabled = matches.isNotEmpty()) { Text("Go to line") }
+                Button(
+                    onClick = {
+                        pendingSearch = position
+                        keyboard?.hide()
+                        showTranscriptSearch = false
+                    },
+                    enabled = matches.isNotEmpty(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+                ) { Text("Go to line") }
             },
             dismissButton = {
                 TextButton(onClick = { showTranscriptSearch = false }) { Text("Cancel") }
             }
         )
+        }
     }
 
     if (showEndSessionConfirmation) {
+        KlyroModalTheme {
         AlertDialog(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            containerColor = ui.sheet,
             onDismissRequest = { showEndSessionConfirmation = false },
             title = { Text("End Bash session?") },
             text = { Text("This will stop the running shell and its child processes.") },
@@ -799,6 +854,7 @@ fun TerminalPane(
                 }
             }
         )
+        }
     }
 }
 
@@ -814,9 +870,10 @@ private fun TerminalExtraKey(
     darkChrome: Boolean = true,
     onClick: () -> Unit
 ) {
-    val accentTint = if (darkChrome) Color(0xFFB9DAD4) else Color(0xFF244F43)
-    val inkTint = if (darkChrome) Color(0xFFE3F1EA) else Color(0xFF18282B)
-    val backgroundTint = if (darkChrome) Color(0xFF28383A) else Color(0xFFDFECE7)
+    val colors = LocalKlyroColors.current
+    val accentTint = colors.accent
+    val inkTint = colors.foreground
+    val backgroundTint = colors.key
     Button(
         onClick = onClick,
         modifier = Modifier
