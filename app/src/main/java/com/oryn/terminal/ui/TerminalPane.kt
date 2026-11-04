@@ -218,11 +218,17 @@ fun TerminalPane(
                 DropdownMenu(
                     expanded = showToolsMenu,
                     onDismissRequest = { showToolsMenu = false },
+                    modifier = Modifier.width(246.dp),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     DropdownMenuItem(
                         text = { Text("Settings", color = MaterialTheme.colorScheme.onSurface) },
+                        modifier = Modifier.heightIn(min = 56.dp),
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.hugeicons_settings_01),
+                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        },
                         onClick = {
                             showToolsMenu = false
                             initialSettingsSection = "home"
@@ -231,6 +237,11 @@ fun TerminalPane(
                     )
                     DropdownMenuItem(
                         text = { Text("Files & storage", color = MaterialTheme.colorScheme.onSurface) },
+                        modifier = Modifier.heightIn(min = 56.dp),
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.hugeicons_folder_01),
+                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        },
                         onClick = {
                             showToolsMenu = false
                             initialSettingsSection = "files"
@@ -239,6 +250,11 @@ fun TerminalPane(
                     )
                     DropdownMenuItem(
                         text = { Text("Paste", color = MaterialTheme.colorScheme.onSurface) },
+                        modifier = Modifier.heightIn(min = 56.dp),
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.hugeicons_clipboard_paste),
+                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        },
                         onClick = {
                             showToolsMenu = false
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
