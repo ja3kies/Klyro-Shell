@@ -406,6 +406,18 @@ fun TerminalPane(
                     controlActive = !controlActive
                     viewClient.setControlDown(controlActive)
                 }
+                TerminalExtraKey("ALT", active = altActive) {
+                    altActive = !altActive
+                    viewClient.setAltDown(altActive)
+                }
+                TerminalExtraKey("SHIFT", active = shiftActive) {
+                    shiftActive = !shiftActive
+                    viewClient.setShiftDown(shiftActive)
+                }
+                TerminalExtraKey("FN", active = fnActive) {
+                    fnActive = !fnActive
+                    viewClient.setFnDown(fnActive)
+                }
                 TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
                 TerminalExtraKey("↑", description = "Up arrow", labelSize = 18.sp) { write(session, "\u001B[A") }
                 TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
