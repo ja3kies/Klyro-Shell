@@ -17,3 +17,6 @@
 
 ## Release gates
 Tests: every accent must change every surface role; WCAG readability of foreground/muted on key/chrome/tile and terminal; font selection normalization. CI compiles app and terminal-emulator JVM tests, lint, signed ARM64 APK and strict 16KiB check; no claim of on-device validation until Pixel 9 testing.
+
+## Follow-up root cause: truecolor prompt
+The existing generated `~/.bashrc` used `ESC[38;2;0;240;255m` (always neon cyan), even in light mode. Merely recoloring the terminal's default indexed slots could not change this truecolor output. New and Klyro-generated legacy profiles now use ANSI 36, whose palette index 6 follows the selected accent. The migration touches **only** the exact legacy Klyro/Oryn PS1 line, backs up the original private `~/.bashrc` to `.bashrc.klyro-before-color.bak` before the first change, then atomically replaces the file. User-customized prompt lines are left intact. Already-running Bash prompts will take effect on the next shell start; they are never silently injected into live processes.

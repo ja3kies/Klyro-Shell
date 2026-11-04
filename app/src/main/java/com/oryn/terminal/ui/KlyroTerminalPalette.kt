@@ -30,6 +30,9 @@ object KlyroTerminalPalette {
             "#3566AC", "#815BA9", "#197B85", "#17262D"
         )
         ansi.forEachIndexed { i, value -> setProperty("color$i", value) }
+        // Bash uses ANSI 36 (palette color6) for the prompt; selected
+        // accent remains readable on both light and dark terminal canvases.
+        setProperty("color6", rgb(colors.accent))
     }
 
     fun apply(colors: KlyroColors, sessions: Iterable<TerminalSession> = emptyList()) {

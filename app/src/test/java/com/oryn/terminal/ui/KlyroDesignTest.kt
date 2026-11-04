@@ -81,8 +81,9 @@ class KlyroDesignTest {
                 assertEquals("native terminal background $id/$dark", expectedBg,
                     native.getProperty("background"))
                 assertEquals("ANSI palette completeness", 19, native.size)
-                assertTrue("light cyan must not be neon on pale terminal",
-                    dark || native.getProperty("color6") == "#14717D")
+                assertEquals("native prompt should follow selected accent",
+                    "#%06X".format(colors.accent.toArgb() and 0xFFFFFF),
+                    native.getProperty("color6"))
             }
         }
     }
