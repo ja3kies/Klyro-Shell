@@ -109,12 +109,14 @@ fun TerminalPane(
     var showTerminalSettings by remember { mutableStateOf(false) }
     var initialSettingsSection by remember { mutableStateOf("home") }
     var sessionSheetId by remember { mutableStateOf<Long?>(null) }
+    var renameDialogId by remember { mutableStateOf<Long?>(null) }
+    var shellChooserSourceId by remember { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
-    LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId) {
-        if (sessionSheetId == null) {
+    LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId, renameDialogId, shellChooserSourceId) {
+        if (sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null) {
             activeTerminalView?.let { view ->
                 view.isFocusableInTouchMode = true
                 view.requestFocus()
@@ -168,12 +170,10 @@ fun TerminalPane(
         view.requestFocus()
         pendingSearch = null
     }
-    var confirmSessionClose by remember { mutableStateOf(false) }
-    var renameValue by remember { mutableStateOf("") }
     fun openSessionSheet(id: Long, name: String) {
-        renameValue = name
-        confirmSessionClose = false
-        sessionSheetId = id
+        if (tabs.any { it.first == id }) {
+            sessionSheetId = id
+        }
     }
     var controlActive by remember(viewClient) { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
@@ -186,7 +186,7 @@ fun TerminalPane(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
             pendingMultilinePaste == null && selectedOutput == null &&
-            sessionSheetId == null
+            sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null
     ) {
         showEndSessionConfirmation = true
     }
@@ -618,108 +618,56 @@ fun TerminalPane(
     }
 
     sessionSheetId?.let { id ->
-        val originalName = tabs.firstOrNull { it.first == id }?.second
-        if (originalName != null) {
-            MaterialTheme(
-                colorScheme = lightColorScheme(
-                    primary = Color(0xFF244F43),
-                    onPrimary = Color.White,
-                    surface = Color(0xFFF8FBFA),
-                    onSurface = Color(0xFF18282B),
-                    surfaceVariant = Color(0xFFDDEFEA),
-                    onSurfaceVariant = Color(0xFF49645A),
-                    outline = Color(0xFF87A99D)
-                )
-            ) {
-                ModalBottomSheet(
-                    onDismissRequest = {
-                        sessionSheetId = null
-                        confirmSessionClose = false
-                    },
-                    containerColor = Color(0xFFF8FBFA),
-                    contentColor = Color(0xFF18282B),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                        topStart = 30.dp, topEnd = 30.dp
-                    ),
-                    dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF8DAAA2)) }
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
-                            .padding(bottom = 28.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text("Session", style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold)
-                        Text("Rename or manage this shell session.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF49645A))
-                        OutlinedTextField(
-                            value = renameValue,
-                            onValueChange = { renameValue = it.replace("\n", "").replace("\r", "").take(32) },
-                            label = { Text("Session name") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextButton(onClick = { sessionSheetId = null }) {
-                                Text("Cancel")
-                            }
-                            Button(
-                                onClick = {
-                                    onRenameTab(id, renameValue.trim())
-                                    sessionSheetId = null
-                                },
-                                enabled = renameValue.isNotBlank() &&
-                                    renameValue.trim() != originalName,
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
-                            ) { Text("Save name") }
-                        }
-                        if (id != activeTabId) {
-                            TextButton(onClick = {
-                                sessionSheetId = null
-                                onSelectTab(id)
-                            }) { Text("Switch to session") }
-                        }
-                        if (!confirmSessionClose) {
-                            TextButton(
-                                onClick = { confirmSessionClose = true },
-                                modifier = Modifier.heightIn(min = 48.dp)
-                            ) { Text("Close session", color = Color(0xFF9F3234)) }
-                        } else {
-                            Surface(
-                                color = Color(0xFFFFE8E7),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth().padding(14.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text("Close this session?",
-                                        color = Color(0xFF82292A), fontWeight = FontWeight.Bold)
-                                    Text("Its shell and child processes will be stopped.",
-                                        color = Color(0xFF82292A),
-                                        style = MaterialTheme.typography.bodyMedium)
-                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        TextButton(onClick = { confirmSessionClose = false }) {
-                                            Text("Keep session")
-                                        }
-                                        TextButton(onClick = {
-                                            sessionSheetId = null
-                                            confirmSessionClose = false
-                                            onCloseTab(id)
-                                        }) { Text("Close session", color = Color(0xFF9F3234)) }
-                                    }
-                                }
-                            }
-                        }
-                    }
+        val name = tabs.firstOrNull { it.first == id }?.second
+        if (name != null) {
+            KlyroSessionSheet(
+                sessionName = name,
+                isActive = id == activeTabId,
+                onDismiss = { sessionSheetId = null },
+                onRename = {
+                    sessionSheetId = null
+                    renameDialogId = id
+                },
+                onChooseShell = {
+                    sessionSheetId = null
+                    shellChooserSourceId = id
+                },
+                onActivate = {
+                    sessionSheetId = null
+                    onSelectTab(id)
+                },
+                onCloseSession = {
+                    sessionSheetId = null
+                    onCloseTab(id)
                 }
-            }
+            )
         }
+    }
+    renameDialogId?.let { id ->
+        val name = tabs.firstOrNull { it.first == id }?.second
+        if (name != null) {
+            KlyroRenameSessionDialog(
+                name = name,
+                onSave = { newName ->
+                    onRenameTab(id, newName)
+                    renameDialogId = null
+                },
+                onDismiss = { renameDialogId = null }
+            )
+        }
+    }
+    shellChooserSourceId?.let { sourceId ->
+        KlyroChooseShellSheet(
+            onDismiss = { shellChooserSourceId = null },
+            onBack = {
+                shellChooserSourceId = null
+                sessionSheetId = sourceId
+            },
+            onNewBash = {
+                shellChooserSourceId = null
+                onNewTab()
+            }
+        )
     }
 
     if (showTranscriptSearch) {
