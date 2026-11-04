@@ -25,7 +25,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,20 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 
-private val MintInk = Color(0xFF18282B)
-private val MintMuted = Color(0xFF557168)
-private val MintSheet = Color(0xFFF8FBFA)
-private val MintTile = Color(0xFFEAF3EF)
-private val MintAccent = Color(0xFFB9DAD4)
-private val MintTheme = lightColorScheme(
-    primary = Color(0xFF244F43),
-    onPrimary = Color.White,
-    surface = MintSheet,
-    onSurface = MintInk,
-    surfaceVariant = Color(0xFFDDEFEA),
-    onSurfaceVariant = MintMuted
-)
-
 /**
  * A settings sheet deliberately isolated from TerminalView: it never restarts
  * the shell and all file actions remain delegated to Android's SAF handlers.
@@ -66,6 +51,8 @@ internal fun KlyroSettingsSheet(
     initialSection: String,
     themeMode: String,
     onThemeModeChange: (String) -> Unit,
+    accentId: String,
+    onAccentIdChange: (String) -> Unit,
     fontSizeSp: Float,
     onFontChange: (Float) -> Unit,
     onResetFont: () -> Unit,
@@ -80,19 +67,20 @@ internal fun KlyroSettingsSheet(
     onDismiss: () -> Unit
 ) {
     var section by remember(initialSection) { mutableStateOf(initialSection) }
+    val colors = LocalKlyroColors.current
     val context = LocalContext.current
     val version = remember(context) {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
             .getOrNull() ?: "development"
     }
 
-    MaterialTheme(colorScheme = MintTheme) {
+    KlyroModalTheme {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
-            containerColor = MintSheet,
-            contentColor = MintInk,
+            containerColor = colors.sheet,
+            contentColor = colors.foreground,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF8DAAA2)) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -118,7 +106,7 @@ internal fun KlyroSettingsSheet(
                 when (section) {
                     "home" -> {
                         Text("Make Klyro yours",
-                            style = MaterialTheme.typography.bodyMedium, color = MintMuted)
+                            style = MaterialTheme.typography.bodyMedium, color = colors.muted)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             SettingsTile("Appearance", "Terminal font & size", "Aa",
                                 Modifier.weight(1f)) { section = "appearance" }
@@ -140,7 +128,7 @@ internal fun KlyroSettingsSheet(
                     }
                     "appearance" -> {
                         SectionHeading("Appearance", "Select a theme or follow Android's appearance.")
-                        Surface(shape = RoundedCornerShape(26.dp), color = MintTile) {
+                        Surface(shape = RoundedCornerShape(26.dp), color = colors.tile) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -158,9 +146,9 @@ internal fun KlyroSettingsSheet(
                                             shape = RoundedCornerShape(14.dp),
                                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                                 containerColor = if (themeMode == mode)
-                                                    Color(0xFF244F43) else Color(0xFFDDEFEA),
+                                                    colors.accent else colors.key,
                                                 contentColor = if (themeMode == mode)
-                                                    Color.White else MintInk
+                                                    colors.onAccent else colors.foreground
                                             ),
                                             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                                                 horizontal = 1.dp, vertical = 4.dp
@@ -168,17 +156,42 @@ internal fun KlyroSettingsSheet(
                                         ) { Text(label, fontSize = 12.sp) }
                                     }
                                 }
+                                Text("Accent preset", fontWeight = FontWeight.SemiBold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    KlyroColors.accents.forEach { key ->
+                                        val name = key.replaceFirstChar { it.uppercase() }
+                                        val swatch = KlyroColors.create(colors.dark, key)
+                                        Button(
+                                            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                            onClick = { onAccentIdChange(key) },
+                                            shape = RoundedCornerShape(14.dp),
+                                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                                containerColor = swatch.accent,
+                                                contentColor = swatch.onAccent
+                                            ),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                                horizontal = 2.dp, vertical = 4.dp
+                                            ),
+                                            border = if (accentId == key)
+                                                androidx.compose.foundation.BorderStroke(2.dp, colors.foreground)
+                                                else null
+                                        ) { Text(name, fontSize = 11.sp) }
+                                    }
+                                }
+                                Text("Mint · Teal · classic Cyan · classic Violet",
+                                    color = colors.muted,
+                                    style = MaterialTheme.typography.bodySmall)
                                 Text("Saved automatically; shell sessions keep running.",
-                                    style = MaterialTheme.typography.bodySmall, color = MintMuted)
+                                    style = MaterialTheme.typography.bodySmall, color = colors.muted)
                             }
                         }
-                        Surface(shape = RoundedCornerShape(26.dp), color = MintTile) {
+                        Surface(shape = RoundedCornerShape(26.dp), color = colors.tile) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(18.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Text("Terminal font size", fontWeight = FontWeight.SemiBold)
-                                Text("${fontSizeSp.toInt()} sp", color = MintMuted)
+                                Text("${fontSizeSp.toInt()} sp", color = colors.muted)
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -190,7 +203,7 @@ internal fun KlyroSettingsSheet(
                                     TextButton(onClick = onResetFont,
                                         enabled = fontSizeSp != 13.5f) { Text("Reset") }
                                 }
-                                Text("Changes are saved automatically.", color = MintMuted,
+                                Text("Changes are saved automatically.", color = colors.muted,
                                     style = MaterialTheme.typography.bodySmall)
                             }
                         }
@@ -202,7 +215,7 @@ internal fun KlyroSettingsSheet(
                             subtitle = "Turn off CTRL, ALT, SHIFT and FN if a key stays active."
                         ) { onResetModifiers() }
                         Text("Shortcut keys are always visible; there are no hidden horizontal pages.",
-                            style = MaterialTheme.typography.bodySmall, color = MintMuted)
+                            style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "sessions" -> {
                         SectionHeading("Sessions", "${tabs.size} active shell session(s).")
@@ -238,11 +251,11 @@ internal fun KlyroSettingsSheet(
                         }
                         Text("Multi-line clipboard commands require confirmation before execution. " +
                             "Copying terminal output may include secrets.",
-                            style = MaterialTheme.typography.bodySmall, color = MintMuted)
+                            style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "about" -> {
                         SectionHeading("About Klyro Shell", "Private terminal environment for Android.")
-                        Surface(shape = RoundedCornerShape(26.dp), color = MintTile) {
+                        Surface(shape = RoundedCornerShape(26.dp), color = colors.tile) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(18.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -250,7 +263,7 @@ internal fun KlyroSettingsSheet(
                                 Text("Version $version", fontWeight = FontWeight.SemiBold)
                                 Text("Terminal engine: Termux TerminalView / TerminalSession",
                                     style = MaterialTheme.typography.bodyMedium)
-                                Text("Linux runtime: isolated ARM64 environment", color = MintMuted,
+                                Text("Linux runtime: isolated ARM64 environment", color = colors.muted,
                                     style = MaterialTheme.typography.bodySmall)
                             }
                         }
@@ -269,10 +282,11 @@ private fun SettingsTile(
     modifier: Modifier,
     onClick: () -> Unit
 ) {
+    val colors = LocalKlyroColors.current
     Surface(
         modifier = modifier.heightIn(min = 140.dp)
             .clickable(onClickLabel = "Open $title settings", onClick = onClick),
-        color = MintTile,
+        color = colors.tile,
         shape = RoundedCornerShape(26.dp)
     ) {
         Column(
@@ -281,12 +295,12 @@ private fun SettingsTile(
         ) {
             Box(
                 modifier = Modifier.size(42.dp)
-                    .background(MintAccent, RoundedCornerShape(24.dp)),
+                    .background(colors.accent, RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center
-            ) { Text(symbol, color = MintInk, fontSize = 19.sp) }
-            Text(title, color = MintInk, fontWeight = FontWeight.SemiBold,
+            ) { Text(symbol, color = colors.onAccent, fontSize = 19.sp) }
+            Text(title, color = colors.foreground, fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(subtitle, color = MintMuted, fontSize = 11.sp,
+            Text(subtitle, color = colors.muted, fontSize = 11.sp,
                 maxLines = 2, lineHeight = 15.sp)
         }
     }
@@ -294,26 +308,28 @@ private fun SettingsTile(
 
 @Composable
 private fun SectionHeading(title: String, subtitle: String) {
+    val colors = LocalKlyroColors.current
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text(subtitle, color = MintMuted, style = MaterialTheme.typography.bodyMedium)
+        Text(subtitle, color = colors.muted, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
 @Composable
 private fun ActionTile(title: String, subtitle: String, onClick: () -> Unit) {
+    val colors = LocalKlyroColors.current
     Surface(
         modifier = Modifier.fillMaxWidth()
             .clickable(onClickLabel = title, onClick = onClick),
-        color = MintTile,
+        color = colors.tile,
         shape = RoundedCornerShape(26.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(17.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(title, fontWeight = FontWeight.SemiBold, color = MintInk)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MintMuted)
+            Text(title, fontWeight = FontWeight.SemiBold, color = colors.foreground)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.muted)
         }
     }
 }
