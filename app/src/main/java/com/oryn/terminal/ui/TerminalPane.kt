@@ -417,9 +417,12 @@ fun TerminalPane(
                 }
             },
             update = { view ->
-                if (activeTerminalView !== view) activeTerminalView = view
-                sessionClient.attachView(view)
-                viewClient.attachView(view)
+                // Avoid redundant client attachments on every Compose recomposition.
+                if (activeTerminalView !== view) {
+                    activeTerminalView = view
+                    sessionClient.attachView(view)
+                    viewClient.attachView(view)
+                }
                 if (view.getCurrentSession() !== session) {
                     view.attachSession(session)
                 }
