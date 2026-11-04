@@ -132,13 +132,15 @@ fun TerminalPane(
     val keyboard = LocalSoftwareKeyboardController.current
     val ime = WindowInsets.ime
     val density = LocalDensity.current
-    LaunchedEffect(pendingSearch, session) {
+    LaunchedEffect(pendingSearch, session, activeTerminalView) {
         val index = pendingSearch ?: return@LaunchedEffect
         val view = activeTerminalView ?: return@LaunchedEffect
         // Dialog dismissal and IME animation resize the PTY and reset TerminalView's top row.
         var stableFrames = 0
         var lastHeight = -1
-        while (stableFrames < 3) {
+        // Do not hang indefinitely if the keyboard remains open or the view keeps resizing.
+        var framesWaited = 0
+        while (stableFrames < 3 && framesWaited++ < 120 && view.isAttachedToWindow) {
             withFrameNanos { }
             stableFrames = if (ime.getBottom(density) == 0 && view.height == lastHeight) stableFrames + 1 else 0
             lastHeight = view.height
@@ -165,7 +167,7 @@ fun TerminalPane(
     var warningNoteDismissed by remember { mutableStateOf(false) }
 
     BackHandler(
-        enabled = !showEndSessionConfirmation &&
+        enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
             pendingMultilinePaste == null && renameTarget == null && closeTarget == null
     ) {
