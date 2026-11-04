@@ -100,6 +100,7 @@ fun TerminalPane(
     modifier: Modifier = Modifier
 ) {
     var showToolsMenu by remember { mutableStateOf(false) }
+    var showTerminalSettings by remember { mutableStateOf(false) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
     LaunchedEffect(activeTabId, activeTerminalView) {
@@ -171,6 +172,9 @@ fun TerminalPane(
                     Text("⋮", color = TerminalAccent, fontSize = 22.sp)
                 }
                 DropdownMenu(expanded = showToolsMenu, onDismissRequest = { showToolsMenu = false }) {
+                    DropdownMenuItem(text = { Text("Settings") }, onClick = {
+                        showToolsMenu = false; showTerminalSettings = true
+                    })
                     DropdownMenuItem(text = { Text("Set up storage folder") }, onClick = {
                         showToolsMenu = false; onSetupStorage()
                     })
@@ -364,12 +368,6 @@ fun TerminalPane(
                 TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
                 TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
-                TerminalExtraKey("A−", description = "Decrease terminal font size") {
-                    changeTerminalFont(-1f)
-                }
-                TerminalExtraKey("A+", description = "Increase terminal font size") {
-                    changeTerminalFont(1f)
-                }
                 TerminalExtraKey("PASTE", description = "Paste clipboard into terminal") {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val pasted = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
@@ -435,6 +433,40 @@ fun TerminalPane(
         }
     }
 
+    }
+
+    if (showTerminalSettings) {
+        AlertDialog(
+            onDismissRequest = { showTerminalSettings = false },
+            title = { Text("Terminal settings") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Font size", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "${terminalFontSp.toInt()} sp",
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = { changeTerminalFont(-1f) },
+                            enabled = terminalFontSp > 9f
+                        ) { Text("A−", modifier = Modifier.semantics { contentDescription = "Decrease font size" }) }
+                        TextButton(
+                            onClick = { changeTerminalFont(1f) },
+                            enabled = terminalFontSp < 24f
+                        ) { Text("A+", modifier = Modifier.semantics { contentDescription = "Increase font size" }) }
+                    }
+                    Text("Saved automatically", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTerminalSettings = false }) { Text("Done") }
+            }
+        )
     }
 
     if (pendingMultilinePaste != null) {
