@@ -474,6 +474,13 @@ fun TerminalPane(
                             enabled = terminalFontSp < 24f
                         ) { Text("A+", modifier = Modifier.semantics { contentDescription = "Increase font size" }) }
                     }
+                    TextButton(
+                        onClick = {
+                            terminalFontSp = 13.5f
+                            fontPreferences.edit().remove("font_size_sp").apply()
+                        },
+                        enabled = terminalFontSp != 13.5f
+                    ) { Text("Restore default size") }
                     Text("Saved automatically", style = MaterialTheme.typography.bodySmall)
                 }
             },
