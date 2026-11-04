@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color as AndroidColor
+import android.graphics.Typeface
 import android.widget.EditText
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
@@ -62,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -148,10 +150,24 @@ fun TerminalPane(
     var terminalFontSp by remember {
         mutableStateOf(fontPreferences.getFloat("font_size_sp", 13.5f).coerceIn(9f, 24f))
     }
+    var terminalFontId by remember {
+        mutableStateOf(KlyroTerminalFonts.normalize(fontPreferences.getString("font_family", "system")))
+    }
+    val terminalTypeface = remember(context, terminalFontId) {
+        KlyroTerminalFonts.load(context, terminalFontId)
+    }
     val terminalTextSizePx = with(LocalDensity.current) { terminalFontSp.sp.roundToPx() }
-    // Apply only when the preference changes: avoid resetting pinch-to-zoom on recomposition.
+    // Avoid resetting pinch-to-zoom during unrelated Compose recomposition.
     LaunchedEffect(terminalTextSizePx, activeTerminalView) {
+        viewClient.setBaseTextSizePx(terminalTextSizePx)
         activeTerminalView?.setTextSize(terminalTextSizePx)
+    }
+    LaunchedEffect(terminalTypeface, activeTerminalView) {
+        activeTerminalView?.setTypeface(terminalTypeface)
+    }
+    LaunchedEffect(ui.terminal, activeTerminalView) {
+        activeTerminalView?.setBackgroundColor(ui.terminal.toArgb())
+        activeTerminalView?.invalidate()
     }
     fun changeTerminalFont(delta: Float) {
         terminalFontSp = (terminalFontSp + delta).coerceIn(9f, 24f)
@@ -376,9 +392,13 @@ fun TerminalPane(
             ) {
                 Surface(
                     modifier = Modifier.size(38.dp),
-                    color = if (tabs.size < 8) TerminalAccent else inactiveTabSurface,
-                    contentColor = if (tabs.size < 8) ui.onAccent else TerminalMuted,
-                    shape = androidx.compose.foundation.shape.CircleShape
+                    // A translucent affordance, distinct from the active tab.
+                    color = if (tabs.size < 8) TerminalAccent.copy(alpha = 0.14f) else inactiveTabSurface,
+                    contentColor = if (tabs.size < 8) TerminalAccent else TerminalMuted,
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    border = if (tabs.size < 8) androidx.compose.foundation.BorderStroke(
+                        1.dp, TerminalAccent.copy(alpha = 0.25f)
+                    ) else null
                 ) {
                     Box(contentAlignment = Alignment.Center) { Text("+", fontSize = 20.sp) }
                 }
@@ -452,7 +472,8 @@ fun TerminalPane(
                 TerminalView(context, null).apply {
                     setTerminalViewClient(viewClient)
                     setTextSize(terminalTextSizePx)
-                    setBackgroundColor(AndroidColor.rgb(16, 22, 25))
+                    setTypeface(terminalTypeface)
+                    setBackgroundColor(ui.terminal.toArgb())
                     isFocusable = true
                     isFocusableInTouchMode = true
                     sessionClient.attachView(this)
@@ -636,6 +657,11 @@ fun TerminalPane(
             accentId = accentId,
             onAccentIdChange = onAccentIdChange,
             fontSizeSp = terminalFontSp,
+            fontFamilyId = terminalFontId,
+            onFontFamilyChange = { id ->
+                terminalFontId = KlyroTerminalFonts.normalize(id)
+                fontPreferences.edit().putString("font_family", terminalFontId).apply()
+            },
             onFontChange = ::changeTerminalFont,
             onResetFont = {
                 terminalFontSp = 13.5f

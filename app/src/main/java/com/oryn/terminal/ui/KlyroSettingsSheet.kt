@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +59,8 @@ internal fun KlyroSettingsSheet(
     accentId: String,
     onAccentIdChange: (String) -> Unit,
     fontSizeSp: Float,
+    fontFamilyId: String,
+    onFontFamilyChange: (String) -> Unit,
     onFontChange: (Float) -> Unit,
     onResetFont: () -> Unit,
     tabs: List<Pair<Long, String>>,
@@ -71,6 +74,7 @@ internal fun KlyroSettingsSheet(
     onDismiss: () -> Unit
 ) {
     var section by remember(initialSection) { mutableStateOf(initialSection) }
+    var showFontLicense by remember { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     val version = remember(context) {
@@ -201,8 +205,32 @@ internal fun KlyroSettingsSheet(
                                 modifier = Modifier.fillMaxWidth().padding(18.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                Text("Terminal font", fontWeight = FontWeight.SemiBold)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    KlyroTerminalFonts.options.forEach { choice ->
+                                        Button(
+                                            onClick = { onFontFamilyChange(choice.id) },
+                                            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                                .semantics { selected = fontFamilyId == choice.id },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (fontFamilyId == choice.id) colors.accent else colors.key,
+                                                contentColor = if (fontFamilyId == choice.id) colors.onAccent else colors.foreground
+                                            ),
+                                            shape = RoundedCornerShape(14.dp),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                                horizontal = 6.dp, vertical = 6.dp
+                                            )
+                                        ) { Text(choice.label, fontSize = 12.sp, maxLines = 2, lineHeight = 15.sp) }
+                                    }
+                                }
+                                Text("DSH Go uses JetBrains Mono; Android monospace is the fallback.",
+                                    style = MaterialTheme.typography.bodySmall, color = colors.muted)
                                 Text("Terminal font size", fontWeight = FontWeight.SemiBold)
-                                Text("${fontSizeSp.toInt()} sp", color = colors.muted)
+                                Text(if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
+                                    color = colors.muted)
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -280,9 +308,35 @@ internal fun KlyroSettingsSheet(
                                     style = MaterialTheme.typography.bodySmall)
                             }
                         }
+                        ActionTile(
+                            "JetBrains Mono licence",
+                            "SIL Open Font License 1.1 · included in this APK"
+                        ) { showFontLicense = true }
                     }
                 }
             }
+        }
+        if (showFontLicense) {
+            val licence = remember(context) {
+                runCatching {
+                    context.assets.open("fonts/OFL.txt").bufferedReader().use { it.readText() }
+                }.getOrElse { "Licence unavailable in this build." }
+            }
+            AlertDialog(
+                onDismissRequest = { showFontLicense = false },
+                containerColor = colors.sheet,
+                shape = RoundedCornerShape(28.dp),
+                title = { Text("JetBrains Mono · OFL 1.1") },
+                text = {
+                    Column(
+                        modifier = Modifier.heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) { Text(licence, style = MaterialTheme.typography.bodySmall) }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showFontLicense = false }) { Text("Close") }
+                }
+            )
         }
     }
 }

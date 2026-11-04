@@ -39,6 +39,11 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
 
     private int textSizePx = 0;
 
+    /** Anchor pinch zoom to the currently configured font size. */
+    public void setBaseTextSizePx(int pixels) {
+        if (pixels > 0) textSizePx = pixels;
+    }
+
     @Override
     public float onScale(float scale) {
         View view = terminalView;
