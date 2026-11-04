@@ -516,7 +516,10 @@ fun TerminalPane(
             outputSelectionView = null
             selectedOutput = null
         }
+        KlyroModalTheme {
         AlertDialog(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            containerColor = ui.sheet,
             onDismissRequest = { closeSelection() },
             title = { Text("Select terminal output") },
             text = {
@@ -584,6 +587,7 @@ fun TerminalPane(
                 TextButton(onClick = { closeSelection() }) { Text("Close") }
             }
         )
+        }
     }
 
     if (showTerminalSettings) {
@@ -624,7 +628,10 @@ fun TerminalPane(
     }
 
     if (pendingMultilinePaste != null) {
+        KlyroModalTheme {
         AlertDialog(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            containerColor = ui.sheet,
             onDismissRequest = { pendingMultilinePaste = null },
             title = { Text("Paste multiple lines?") },
             text = {
@@ -651,6 +658,7 @@ fun TerminalPane(
                 TextButton(onClick = { pendingMultilinePaste = null }) { Text("Cancel") }
             }
         )
+        }
     }
 
     sessionSheetId?.let { id ->
@@ -721,7 +729,10 @@ fun TerminalPane(
                 }
             }
         }
+        KlyroModalTheme {
         AlertDialog(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            containerColor = ui.sheet,
             onDismissRequest = { showTranscriptSearch = false },
             title = { Text("Search terminal transcript") },
             text = {
@@ -765,7 +776,7 @@ fun TerminalPane(
                         }
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.small
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
                         ) {
                             Text(
                                 text = preview,
@@ -790,20 +801,28 @@ fun TerminalPane(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    pendingSearch = position
-                    keyboard?.hide()
-                    showTranscriptSearch = false
-                }, enabled = matches.isNotEmpty()) { Text("Go to line") }
+                Button(
+                    onClick = {
+                        pendingSearch = position
+                        keyboard?.hide()
+                        showTranscriptSearch = false
+                    },
+                    enabled = matches.isNotEmpty(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+                ) { Text("Go to line") }
             },
             dismissButton = {
                 TextButton(onClick = { showTranscriptSearch = false }) { Text("Cancel") }
             }
         )
+        }
     }
 
     if (showEndSessionConfirmation) {
+        KlyroModalTheme {
         AlertDialog(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            containerColor = ui.sheet,
             onDismissRequest = { showEndSessionConfirmation = false },
             title = { Text("End Bash session?") },
             text = { Text("This will stop the running shell and its child processes.") },
@@ -819,6 +838,7 @@ fun TerminalPane(
                 }
             }
         )
+        }
     }
 }
 
