@@ -155,13 +155,16 @@ jobs:
             echo "KLYRO_SIGNING_AVAILABLE=true" >> "$GITHUB_ENV"
           else
             echo "KLYRO_SIGNING_AVAILABLE=false" >> "$GITHUB_ENV"
-            echo "Signing credentials unavailable; unsigned debug APK retained for CI."
+            echo "Signing credentials unavailable; standard Android debug-key APK retained for CI."
           fi
 
-      - name: Upload unsigned debug APK for CI validation
+      - name: Verify standard debug APK signature
+        run: "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload debug-key APK for CI validation
         uses: actions/upload-artifact@v4
         with:
-          name: klyro-shell-debug-unsigned
+          name: klyro-shell-debug-key
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
