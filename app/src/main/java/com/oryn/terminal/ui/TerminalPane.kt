@@ -108,8 +108,18 @@ fun TerminalPane(
             view.requestFocus()
         }
     }
-    val terminalTextSizePx = with(LocalDensity.current) { 13.5.sp.roundToPx() }
     val context = LocalContext.current
+    val fontPreferences = remember(context) {
+        context.getSharedPreferences("klyro_terminal_preferences", Context.MODE_PRIVATE)
+    }
+    var terminalFontSp by remember {
+        mutableStateOf(fontPreferences.getFloat("font_size_sp", 13.5f).coerceIn(9f, 24f))
+    }
+    val terminalTextSizePx = with(LocalDensity.current) { terminalFontSp.sp.roundToPx() }
+    fun changeTerminalFont(delta: Float) {
+        terminalFontSp = (terminalFontSp + delta).coerceIn(9f, 24f)
+        fontPreferences.edit().putFloat("font_size_sp", terminalFontSp).apply()
+    }
     var showTranscriptSearch by remember { mutableStateOf(false) }
     var transcriptQuery by remember { mutableStateOf("") }
     var searchIndex by remember(session) { mutableStateOf(0) }
@@ -339,6 +349,7 @@ fun TerminalPane(
                 if (activeTerminalView !== view) activeTerminalView = view
                 sessionClient.attachView(view)
                 viewClient.attachView(view)
+                view.setTextSize(terminalTextSizePx)
                 if (view.getCurrentSession() !== session) {
                     view.attachSession(session)
                 }
@@ -353,6 +364,12 @@ fun TerminalPane(
                 TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
                 TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
+                TerminalExtraKey("A−", description = "Decrease terminal font size") {
+                    changeTerminalFont(-1f)
+                }
+                TerminalExtraKey("A+", description = "Increase terminal font size") {
+                    changeTerminalFont(1f)
+                }
                 TerminalExtraKey("PASTE", description = "Paste clipboard into terminal") {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val pasted = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
