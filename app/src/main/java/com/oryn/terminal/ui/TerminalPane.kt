@@ -193,7 +193,7 @@ fun TerminalPane(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
     val compact = maxHeight < 300.dp
     // Fit seven 48dp+ touch targets across a Pixel-width screen; scroll on narrower devices.
-    val keyWidth = ((maxWidth - 36.dp) / 7).coerceIn(48.dp, 56.dp)
+    val keyWidth = ((maxWidth - 36.dp) / 7).coerceIn(36.dp, 56.dp)
     val toolsMenu: @Composable () -> Unit = {
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
@@ -240,7 +240,7 @@ fun TerminalPane(
                             }
                         }
                     )
-                }}
+                }
             }
     }
     Column(
@@ -303,7 +303,7 @@ fun TerminalPane(
                         .semantics { contentDescription = "Session $tabTitle" },
                     color = if (active) TerminalAccent else Color(0xFF28383A),
                     contentColor = if (active) TerminalBackground else TerminalText,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
                 ) {
                     Text(
                         tabTitle.ifBlank { "Session" },
@@ -413,8 +413,7 @@ fun TerminalPane(
         }
         }
 
-        // Two slim rows in portrait, one horizontally scrollable row in short landscape.
-        // Keep every key accessible without covering more of the terminal than needed.
+        // Seven visible keys per row: no horizontal gesture or hidden actions.
         val firstRow: @Composable () -> Unit = {
             TerminalExtraKey("ESC", keyWidth = keyWidth) { session.writeCodePoint(false, 27) }
             TerminalExtraKey("TAB", keyWidth = keyWidth) { session.writeCodePoint(false, 9) }
@@ -461,24 +460,14 @@ fun TerminalPane(
                 .padding(horizontal = 6.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            if (compact) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    firstRow()
-                    secondRow()
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) { firstRow() }
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) { secondRow() }
-            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) { firstRow() }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) { secondRow() }
         }
     }
 
@@ -693,7 +682,7 @@ fun TerminalPane(
                                 },
                                 enabled = renameValue.isNotBlank() &&
                                     renameValue.trim() != originalName,
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
                             ) { Text("Save name") }
                         }
                         if (id != activeTabId) {
@@ -710,7 +699,7 @@ fun TerminalPane(
                         } else {
                             Surface(
                                 color = Color(0xFFFFE8E7),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
                             ) {
                                 Column(
                                     modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -873,7 +862,7 @@ private fun TerminalExtraKey(
             .height(50.dp)
             .width(keyWidth)
             .semantics { contentDescription = description ?: label },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
