@@ -9,6 +9,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
@@ -77,7 +81,7 @@ private val TerminalAccent = Color(0xFFB9DAD4)
 private val TerminalText = Color(0xFFE3F1EA)
 private val TerminalMuted = Color(0xFF98B0A9)
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalPane(
     session: TerminalSession,
@@ -159,12 +163,13 @@ fun TerminalPane(
         pendingSearch = null
     }
     var sessionSheetId by remember { mutableStateOf<Long?>(null) }
+    var confirmSessionClose by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf("") }
     fun openSessionSheet(id: Long, name: String) {
         renameValue = name
+        confirmSessionClose = false
         sessionSheetId = id
     }
-    var closeTarget by remember { mutableStateOf<Long?>(null) }
     var controlActive by remember(viewClient) { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
     var shiftActive by remember(viewClient) { mutableStateOf(false) }
@@ -176,7 +181,7 @@ fun TerminalPane(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
             pendingMultilinePaste == null && selectedOutput == null &&
-            sessionSheetId == null && closeTarget == null
+            sessionSheetId == null
     ) {
         showEndSessionConfirmation = true
     }
@@ -636,48 +641,109 @@ fun TerminalPane(
         )
     }
 
-    if (renameTarget != null) {
-        AlertDialog(
-            onDismissRequest = { renameTarget = null },
-            title = { Text("Rename session") },
-            text = {
-                OutlinedTextField(
-                    value = renameValue,
-                    onValueChange = { renameValue = it.take(32) },
-                    label = { Text("Session name") },
-                    singleLine = true
+    sessionSheetId?.let { id ->
+        val originalName = tabs.firstOrNull { it.first == id }?.second
+        if (originalName != null) {
+            MaterialTheme(
+                colorScheme = lightColorScheme(
+                    primary = Color(0xFF244F43),
+                    onPrimary = Color.White,
+                    surface = Color(0xFFF8FBFA),
+                    onSurface = Color(0xFF18282B),
+                    surfaceVariant = Color(0xFFDDEFEA),
+                    onSurfaceVariant = Color(0xFF49645A),
+                    outline = Color(0xFF87A99D)
                 )
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = renameValue.isNotBlank(),
-                    onClick = {
-                        renameTarget?.let { onRenameTab(it, renameValue) }
-                        renameTarget = null
+            ) {
+                ModalBottomSheet(
+                    onDismissRequest = {
+                        sessionSheetId = null
+                        confirmSessionClose = false
+                    },
+                    containerColor = Color(0xFFF8FBFA),
+                    contentColor = Color(0xFF18282B),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        topStart = 30.dp, topEnd = 30.dp
+                    ),
+                    dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF8DAAA2)) }
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                            .padding(bottom = 28.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text("Session", style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold)
+                        Text("Rename or manage this shell session.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF49645A))
+                        OutlinedTextField(
+                            value = renameValue,
+                            onValueChange = { renameValue = it.replace("\n", "").replace("\r", "").take(32) },
+                            label = { Text("Session name") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(onClick = { sessionSheetId = null }) {
+                                Text("Cancel")
+                            }
+                            Button(
+                                onClick = {
+                                    onRenameTab(id, renameValue.trim())
+                                    sessionSheetId = null
+                                },
+                                enabled = renameValue.isNotBlank() &&
+                                    renameValue.trim() != originalName,
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                            ) { Text("Save name") }
+                        }
+                        if (id != activeTabId) {
+                            TextButton(onClick = {
+                                sessionSheetId = null
+                                onSelectTab(id)
+                            }) { Text("Switch to session") }
+                        }
+                        if (!confirmSessionClose) {
+                            TextButton(
+                                onClick = { confirmSessionClose = true },
+                                modifier = Modifier.heightIn(min = 48.dp)
+                            ) { Text("Close session", color = Color(0xFF9F3234)) }
+                        } else {
+                            Surface(
+                                color = Color(0xFFFFE8E7),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("Close this session?",
+                                        color = Color(0xFF82292A), fontWeight = FontWeight.Bold)
+                                    Text("Its shell and child processes will be stopped.",
+                                        color = Color(0xFF82292A),
+                                        style = MaterialTheme.typography.bodyMedium)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        TextButton(onClick = { confirmSessionClose = false }) {
+                                            Text("Keep session")
+                                        }
+                                        TextButton(onClick = {
+                                            sessionSheetId = null
+                                            confirmSessionClose = false
+                                            onCloseTab(id)
+                                        }) { Text("Close session", color = Color(0xFF9F3234)) }
+                                    }
+                                }
+                            }
+                        }
                     }
-                ) { Text("Save") }
-            },
-            dismissButton = {
-                TextButton(onClick = { renameTarget = null }) { Text("Cancel") }
+                }
             }
-        )
-    }
-
-    if (closeTarget != null) {
-        AlertDialog(
-            onDismissRequest = { closeTarget = null },
-            title = { Text("Close session?") },
-            text = { Text("The shell process in this tab will be stopped.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    closeTarget?.let(onCloseTab)
-                    closeTarget = null
-                }) { Text("Close session") }
-            },
-            dismissButton = {
-                TextButton(onClick = { closeTarget = null }) { Text("Cancel") }
-            }
-        )
+        }
     }
 
     if (showTranscriptSearch) {
