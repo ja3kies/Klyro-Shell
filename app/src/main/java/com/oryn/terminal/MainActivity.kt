@@ -424,6 +424,7 @@ class MainActivity : ComponentActivity() {
                     onClose = ::closeBash,
                     onRecheck = ::verifyRuntime
                 )
+                }
             }
         }
         // Re-verify packaged hashes and refresh private SONAME copies after APK updates.
