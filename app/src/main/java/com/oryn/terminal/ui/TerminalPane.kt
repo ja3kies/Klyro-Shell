@@ -105,14 +105,17 @@ fun TerminalPane(
 ) {
     var showToolsMenu by remember { mutableStateOf(false) }
     var showTerminalSettings by remember { mutableStateOf(false) }
+    var sessionSheetId by remember { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
-    LaunchedEffect(activeTabId, activeTerminalView) {
-        activeTerminalView?.let { view ->
-            view.isFocusableInTouchMode = true
-            view.requestFocus()
+    LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId) {
+        if (sessionSheetId == null) {
+            activeTerminalView?.let { view ->
+                view.isFocusableInTouchMode = true
+                view.requestFocus()
+            }
         }
     }
     val context = LocalContext.current
@@ -162,7 +165,6 @@ fun TerminalPane(
         view.requestFocus()
         pendingSearch = null
     }
-    var sessionSheetId by remember { mutableStateOf<Long?>(null) }
     var confirmSessionClose by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf("") }
     fun openSessionSheet(id: Long, name: String) {
