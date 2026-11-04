@@ -11,6 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.oryn.terminal.R
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -18,7 +21,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,20 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 
-private val SheetBackground = Color(0xFFF1F7FA)
-private val CardBackground = Color(0xFFFBFEFC)
-private val SheetInk = Color(0xFF18282B)
-private val SecondaryInk = Color(0xFF516C66)
-private val DestructiveInk = Color(0xFF943F43)
-private val SheetScheme = lightColorScheme(
-    primary = Color(0xFF266B7A),
-    onPrimary = Color.White,
-    background = SheetBackground,
-    surface = SheetBackground,
-    onSurface = SheetInk,
-    outline = Color(0xFF91B5BB)
-)
-
 /** Session management follows the compact dsh-Go pattern: actions first, form on demand. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,11 +51,12 @@ internal fun KlyroSessionSheet(
     onCloseSession: () -> Unit
 ) {
     var confirmClose by remember(sessionName) { mutableStateOf(false) }
-    MaterialTheme(colorScheme = SheetScheme) {
+    val colors = LocalKlyroColors.current
+    KlyroModalTheme {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
-            containerColor = SheetBackground,
-            contentColor = SheetInk,
+            containerColor = colors.sheet,
+            contentColor = colors.foreground,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFB5C3C9)) }
         ) {
@@ -79,14 +68,14 @@ internal fun KlyroSessionSheet(
                 Text(sessionName.ifBlank { "Session" },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold)
-                Surface(color = CardBackground, shape = RoundedCornerShape(26.dp)) {
+                Surface(color = colors.tile, shape = RoundedCornerShape(26.dp)) {
                     Column {
-                        SheetAction("✎", "Rename", onRename)
+                        SheetAction("", "Rename", onRename, icon = R.drawable.hugeicons_pen_01)
                         SheetAction("+", "New terminal", onChooseShell, trailing = "›")
                         if (!isActive) SheetAction("↗", "Switch to session", onActivate)
                     }
                 }
-                Surface(color = CardBackground, shape = RoundedCornerShape(26.dp)) {
+                Surface(color = colors.tile, shape = RoundedCornerShape(26.dp)) {
                     Column {
                         SheetAction("×", "Close terminal", onClick = {
                             confirmClose = true
@@ -97,7 +86,7 @@ internal fun KlyroSessionSheet(
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text("Stop this session and its child processes?",
-                                    color = DestructiveInk,
+                                    color = colors.danger,
                                     style = MaterialTheme.typography.bodyMedium)
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -107,7 +96,7 @@ internal fun KlyroSessionSheet(
                                         Text("Keep session")
                                     }
                                     TextButton(onClick = onCloseSession) {
-                                        Text("Close session", color = DestructiveInk)
+                                        Text("Close session", color = colors.danger)
                                     }
                                 }
                             }
@@ -125,8 +114,10 @@ private fun SheetAction(
     label: String,
     onClick: () -> Unit,
     trailing: String? = null,
-    destructive: Boolean = false
+    destructive: Boolean = false,
+    icon: Int? = null
 ) {
+    val colors = LocalKlyroColors.current
     Row(
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
             .clickable(onClickLabel = label, onClick = onClick)
@@ -134,11 +125,20 @@ private fun SheetAction(
         horizontalArrangement = Arrangement.spacedBy(18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(symbol, color = if (destructive) DestructiveInk else SecondaryInk,
-            style = MaterialTheme.typography.titleLarge)
-        Text(label, color = if (destructive) DestructiveInk else SheetInk,
+        if (icon != null) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                tint = if (destructive) colors.danger else colors.muted,
+                modifier = Modifier.padding(2.dp)
+            )
+        } else {
+            Text(symbol, color = if (destructive) colors.danger else colors.muted,
+                style = MaterialTheme.typography.titleLarge)
+        }
+        Text(label, color = if (destructive) colors.danger else colors.foreground,
             style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        if (trailing != null) Text(trailing, color = SecondaryInk,
+        if (trailing != null) Text(trailing, color = colors.muted,
             style = MaterialTheme.typography.titleLarge)
     }
 }
@@ -155,11 +155,12 @@ internal fun KlyroRenameSessionDialog(
     }
     val requester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    MaterialTheme(colorScheme = SheetScheme) {
+    val colors = LocalKlyroColors.current
+    KlyroModalTheme {
         AlertDialog(
             onDismissRequest = onDismiss,
             shape = RoundedCornerShape(28.dp),
-            containerColor = SheetBackground,
+            containerColor = colors.sheet,
             title = { Text("Rename terminal", fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
@@ -204,8 +205,8 @@ internal fun KlyroChooseShellSheet(
     MaterialTheme(colorScheme = SheetScheme) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
-            containerColor = SheetBackground,
-            contentColor = SheetInk,
+            containerColor = colors.sheet,
+            contentColor = colors.foreground,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFB5C3C9)) }
         ) {
@@ -222,7 +223,7 @@ internal fun KlyroChooseShellSheet(
                     Text("Choose shell", style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold)
                 }
-                Surface(color = CardBackground, shape = RoundedCornerShape(26.dp)) {
+                Surface(color = colors.tile, shape = RoundedCornerShape(26.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable(
                             onClickLabel = "Start a Bash terminal", onClick = onNewBash
@@ -230,11 +231,11 @@ internal fun KlyroChooseShellSheet(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("⌘", color = SecondaryInk,
+                        Text("⌘", color = colors.muted,
                             style = MaterialTheme.typography.headlineSmall)
                         Column {
                             Text("bash", fontWeight = FontWeight.SemiBold)
-                            Text("/bin/bash", color = SecondaryInk,
+                            Text("/bin/bash", color = colors.muted,
                                 style = MaterialTheme.typography.bodySmall)
                         }
                     }
