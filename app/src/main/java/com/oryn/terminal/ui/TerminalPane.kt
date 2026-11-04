@@ -554,43 +554,35 @@ fun TerminalPane(
     }
 
     if (showTerminalSettings) {
-        AlertDialog(
-            onDismissRequest = { showTerminalSettings = false },
-            title = { Text("Terminal settings") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Font size", style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        "${terminalFontSp.toInt()} sp",
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(
-                            onClick = { changeTerminalFont(-1f) },
-                            enabled = terminalFontSp > 9f
-                        ) { Text("A−", modifier = Modifier.semantics { contentDescription = "Decrease font size" }) }
-                        TextButton(
-                            onClick = { changeTerminalFont(1f) },
-                            enabled = terminalFontSp < 24f
-                        ) { Text("A+", modifier = Modifier.semantics { contentDescription = "Increase font size" }) }
-                    }
-                    TextButton(
-                        onClick = {
-                            terminalFontSp = 13.5f
-                            fontPreferences.edit().remove("font_size_sp").apply()
-                        },
-                        enabled = terminalFontSp != 13.5f
-                    ) { Text("Restore default size") }
-                    Text("Saved automatically", style = MaterialTheme.typography.bodySmall)
-                }
+        KlyroSettingsSheet(
+            initialSection = initialSettingsSection,
+            fontSizeSp = terminalFontSp,
+            onFontChange = ::changeTerminalFont,
+            onResetFont = {
+                terminalFontSp = 13.5f
+                fontPreferences.edit().remove("font_size_sp").apply()
             },
-            confirmButton = {
-                TextButton(onClick = { showTerminalSettings = false }) { Text("Done") }
-            }
+            tabs = tabs,
+            onEditSession = ::openSessionSheet,
+            onResetModifiers = {
+                controlActive = false
+                altActive = false
+                shiftActive = false
+                fnActive = false
+                viewClient.setControlDown(false)
+                viewClient.setAltDown(false)
+                viewClient.setShiftDown(false)
+                viewClient.setFnDown(false)
+            },
+            onSetupStorage = onSetupStorage,
+            onImportStorageFolder = onImportStorageFolder,
+            onImportFile = onImportFile,
+            onExportFile = onExportFile,
+            onSelectOutput = {
+                outputSelectionView = null
+                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
+            },
+            onDismiss = { showTerminalSettings = false }
         )
     }
 
