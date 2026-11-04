@@ -57,6 +57,23 @@ public class TranscriptSearchTest {
         assertEquals(Integer.valueOf(ROWS - 2), matches.get(matches.size() - 1));
     }
 
+    @Test public void caseInsensitiveSearchFindsEachOccurrence() {
+        TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
+        write(screen, 0, "Git GIT git");
+        assertEquals(Arrays.asList(0, 0, 0),
+            TranscriptSearch.findRows(screen, COLUMNS, ROWS, "gIt"));
+    }
+
+    @Test public void searchDoesNotMutateTerminalBuffer() {
+        TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
+        write(screen, 1, "immutable output");
+        String before = screen.getSelectedText(0, 1, COLUMNS - 1, 1, false, false);
+        assertEquals(Arrays.asList(1),
+            TranscriptSearch.findRows(screen, COLUMNS, ROWS, "output"));
+        assertEquals(before,
+            screen.getSelectedText(0, 1, COLUMNS - 1, 1, false, false));
+    }
+
     @Test public void navigationWrapsAndScrollClampsAtBothEnds() {
         assertEquals(2, TranscriptSearch.nextIndex(0, -1, 3));
         assertEquals(0, TranscriptSearch.nextIndex(2, 1, 3));
