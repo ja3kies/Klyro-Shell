@@ -382,7 +382,7 @@ fun TerminalPane(
                     val pasted = runCatching {
                         clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
                     }.getOrNull()
-                    if (!pasted.isNullOrEmpty()) {
+                    if (!pasted.isNullOrEmpty() && pasted.length <= 65536) {
                         if (pasted.contains('\n') || pasted.contains('\r')) {
                             pendingMultilinePaste = pasted
                         } else {
@@ -494,7 +494,20 @@ fun TerminalPane(
         AlertDialog(
             onDismissRequest = { pendingMultilinePaste = null },
             title = { Text("Paste multiple lines?") },
-            text = { Text("Pasting multiple lines can execute commands in the terminal. Continue only if you trust the clipboard contents.") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Pasting multiple lines can execute commands. Review the clipboard content before continuing.")
+                    Text(
+                        pendingMultilinePaste.orEmpty().take(500),
+                        fontFamily = FontFamily.Monospace,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 8
+                    )
+                    if ((pendingMultilinePaste?.length ?: 0) > 500) {
+                        Text("Preview truncated; cancel if the remaining content is unknown.")
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     pendingMultilinePaste?.let { write(session, it) }
