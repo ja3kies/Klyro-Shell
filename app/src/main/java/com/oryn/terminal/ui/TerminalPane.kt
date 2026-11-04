@@ -100,6 +100,7 @@ fun TerminalPane(
     modifier: Modifier = Modifier
 ) {
     var showToolsMenu by remember { mutableStateOf(false) }
+    var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
     LaunchedEffect(activeTabId, activeTerminalView) {
         activeTerminalView?.let { view ->
@@ -356,7 +357,11 @@ fun TerminalPane(
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val pasted = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
                     if (!pasted.isNullOrEmpty()) {
-                        write(session, pasted)
+                        if (pasted.contains('\n') || pasted.contains('\r')) {
+                            pendingMultilinePaste = pasted
+                        } else {
+                            write(session, pasted)
+                        }
                     }
                 }
                 TerminalExtraKey("ALL", description = "Copy all terminal text") {
@@ -413,6 +418,23 @@ fun TerminalPane(
         }
     }
 
+    }
+
+    if (pendingMultilinePaste != null) {
+        AlertDialog(
+            onDismissRequest = { pendingMultilinePaste = null },
+            title = { Text("Paste multiple lines?") },
+            text = { Text("Pasting multiple lines can execute commands in the terminal. Continue only if you trust the clipboard contents.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingMultilinePaste?.let { write(session, it) }
+                    pendingMultilinePaste = null
+                }) { Text("Paste") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingMultilinePaste = null }) { Text("Cancel") }
+            }
+        )
     }
 
     if (renameTarget != null) {
