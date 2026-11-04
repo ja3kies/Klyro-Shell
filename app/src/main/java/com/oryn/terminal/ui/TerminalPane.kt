@@ -117,6 +117,10 @@ fun TerminalPane(
         mutableStateOf(fontPreferences.getFloat("font_size_sp", 13.5f).coerceIn(9f, 24f))
     }
     val terminalTextSizePx = with(LocalDensity.current) { terminalFontSp.sp.roundToPx() }
+    // Apply only when the preference changes: avoid resetting pinch-to-zoom on recomposition.
+    LaunchedEffect(terminalTextSizePx, activeTerminalView) {
+        activeTerminalView?.setTextSize(terminalTextSizePx)
+    }
     fun changeTerminalFont(delta: Float) {
         terminalFontSp = (terminalFontSp + delta).coerceIn(9f, 24f)
         fontPreferences.edit().putFloat("font_size_sp", terminalFontSp).apply()
@@ -160,7 +164,11 @@ fun TerminalPane(
     var showEndSessionConfirmation by remember { mutableStateOf(false) }
     var warningNoteDismissed by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = !showEndSessionConfirmation) {
+    BackHandler(
+        enabled = !showEndSessionConfirmation &&
+            !showTerminalSettings && !showTranscriptSearch &&
+            pendingMultilinePaste == null && renameTarget == null && closeTarget == null
+    ) {
         showEndSessionConfirmation = true
     }
 
@@ -353,7 +361,6 @@ fun TerminalPane(
                 if (activeTerminalView !== view) activeTerminalView = view
                 sessionClient.attachView(view)
                 viewClient.attachView(view)
-                view.setTextSize(terminalTextSizePx)
                 if (view.getCurrentSession() !== session) {
                     view.attachSession(session)
                 }
