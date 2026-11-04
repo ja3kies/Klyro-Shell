@@ -13,8 +13,7 @@ class KlyroDesignTest {
             val x = value.toDouble()
             return if (x <= 0.04045) x / 12.92 else ((x + 0.055) / 1.055).pow(2.4)
         }
-        return color.red * 0.0 + // keep JVM/Compose color component access explicit
-            0.2126 * channel(color.red) +
+        return 0.2126 * channel(color.red) +
             0.7152 * channel(color.green) +
             0.0722 * channel(color.blue)
     }
