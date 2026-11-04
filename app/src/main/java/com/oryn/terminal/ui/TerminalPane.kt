@@ -71,11 +71,11 @@ import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import java.nio.charset.StandardCharsets
 
-private val TerminalBackground = Color(0xFF0B0F19)
-private val TerminalSurface = Color(0xFF111827)
-private val TerminalAccent = Color(0xFF00F0FF)
-private val TerminalText = Color(0xFFE2E8F0)
-private val TerminalMuted = Color(0xFF94A3B8)
+private val TerminalBackground = Color(0xFF101719)
+private val TerminalSurface = Color(0xFF182528)
+private val TerminalAccent = Color(0xFFB9DAD4)
+private val TerminalText = Color(0xFFE3F1EA)
+private val TerminalMuted = Color(0xFF98B0A9)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -305,7 +305,7 @@ fun TerminalPane(
                             }
                         ),
                     color = if (id == activeTabId) TerminalAccent.copy(alpha = 0.2f)
-                        else Color(0xFF1E293B),
+                        else Color(0xFF28383A),
                     contentColor = if (id == activeTabId) TerminalAccent else TerminalText,
                     shape = MaterialTheme.shapes.extraLarge
                 ) {
@@ -389,7 +389,7 @@ fun TerminalPane(
                 TerminalView(context, null).apply {
                     setTerminalViewClient(viewClient)
                     setTextSize(terminalTextSizePx)
-                    setBackgroundColor(AndroidColor.rgb(11, 15, 25))
+                    setBackgroundColor(AndroidColor.rgb(16, 23, 25))
                     isFocusable = true
                     isFocusableInTouchMode = true
                     sessionClient.attachView(this)
@@ -455,8 +455,8 @@ fun TerminalPane(
         }
         Column(
             modifier = Modifier.fillMaxWidth().background(TerminalSurface)
-                .padding(horizontal = 6.dp, vertical = 3.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             if (compact) {
                 Row(
@@ -515,7 +515,7 @@ fun TerminalPane(
                                     setHorizontallyScrolling(false)
                                     setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
                                     setTextColor(AndroidColor.WHITE)
-                                    setBackgroundColor(AndroidColor.rgb(11, 15, 25))
+                                    setBackgroundColor(AndroidColor.rgb(16, 23, 25))
                                     typeface = android.graphics.Typeface.MONOSPACE
                                     setPadding(12, 8, 12, 8)
                                     outputSelectionView = this
@@ -807,7 +807,7 @@ private fun TerminalExtraKey(
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
-                else Color(0xFF1E293B),
+                else Color(0xFF28383A),
             contentColor = if (active) TerminalAccent else TerminalText
         )
     ) {
@@ -821,9 +821,9 @@ private fun TerminalExtraKey(
                     lineTo(size.width * 0.31f, size.height * 0.88f)
                     close()
                 }
-                drawPath(outline, color = Color(0xFFE2E8F0), style = Stroke(width = 2.5.dp.toPx()))
+                drawPath(outline, color = Color(0xFFE3F1EA), style = Stroke(width = 2.5.dp.toPx()))
                 drawLine(
-                    color = Color(0xFFE2E8F0),
+                    color = Color(0xFFE3F1EA),
                     start = androidx.compose.ui.geometry.Offset(size.width * 0.40f, size.height * 0.37f),
                     end = androidx.compose.ui.geometry.Offset(size.width * 0.70f, size.height * 0.67f),
                     strokeWidth = 2.dp.toPx()
