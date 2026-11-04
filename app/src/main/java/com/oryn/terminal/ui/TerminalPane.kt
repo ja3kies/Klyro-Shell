@@ -190,6 +190,8 @@ fun TerminalPane(
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
     val compact = maxHeight < 300.dp
+    // Fit seven 48dp+ touch targets across a Pixel-width screen; scroll on narrower devices.
+    val keyWidth = ((maxWidth - 36.dp) / 7).coerceIn(48.dp, 56.dp)
     val toolsMenu: @Composable () -> Unit = {
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
@@ -429,43 +431,43 @@ fun TerminalPane(
         // Two slim rows in portrait, one horizontally scrollable row in short landscape.
         // Keep every key accessible without covering more of the terminal than needed.
         val firstRow: @Composable () -> Unit = {
-            TerminalExtraKey("ESC") { session.writeCodePoint(false, 27) }
-            TerminalExtraKey("TAB") { session.writeCodePoint(false, 9) }
-            TerminalExtraKey("CTRL", active = controlActive) {
+            TerminalExtraKey("ESC", keyWidth = keyWidth) { session.writeCodePoint(false, 27) }
+            TerminalExtraKey("TAB", keyWidth = keyWidth) { session.writeCodePoint(false, 9) }
+            TerminalExtraKey("CTRL", active = controlActive, keyWidth = keyWidth) {
                 controlActive = !controlActive
                 viewClient.setControlDown(controlActive)
             }
-            TerminalExtraKey("ALT", active = altActive) {
+            TerminalExtraKey("ALT", active = altActive, keyWidth = keyWidth) {
                 altActive = !altActive
                 viewClient.setAltDown(altActive)
             }
-            TerminalExtraKey("SHIFT", active = shiftActive) {
+            TerminalExtraKey("SHIFT", active = shiftActive, keyWidth = keyWidth) {
                 shiftActive = !shiftActive
                 viewClient.setShiftDown(shiftActive)
             }
-            TerminalExtraKey("FN", active = fnActive) {
+            TerminalExtraKey("FN", active = fnActive, keyWidth = keyWidth) {
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
-            TerminalExtraKey("FIND", description = "Find in terminal output") {
+            TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth) {
                 transcriptQuery = ""
                 searchIndex = 0
                 showTranscriptSearch = true
             }
         }
         val secondRow: @Composable () -> Unit = {
-            TerminalExtraKey("←", description = "Left arrow", arrow = "left") { write(session, "\u001B[D") }
-            TerminalExtraKey("↑", description = "Up arrow", arrow = "up") { write(session, "\u001B[A") }
-            TerminalExtraKey("↓", description = "Down arrow", arrow = "down") { write(session, "\u001B[B") }
-            TerminalExtraKey("→", description = "Right arrow", arrow = "right") { write(session, "\u001B[C") }
-            TerminalExtraKey("ALL", description = "Select all terminal output") {
+            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth) { write(session, "\u001B[D") }
+            TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth) { write(session, "\u001B[A") }
+            TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth) { write(session, "\u001B[B") }
+            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth) { write(session, "\u001B[C") }
+            TerminalExtraKey("ALL", description = "Select all terminal output", keyWidth = keyWidth) {
                 outputSelectionView = null
                 selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
             }
-            TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
+            TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true, keyWidth = keyWidth) {
                 session.writeCodePoint(false, 12) // Ctrl+L: redraw without erasing scrollback.
             }
-            TerminalExtraKey("END", description = "Move cursor to end of line") {
+            TerminalExtraKey("END", description = "Move cursor to end of line", keyWidth = keyWidth) {
                 write(session, "\u001B[F")
             }
         }
@@ -872,13 +874,14 @@ private fun TerminalExtraKey(
     labelSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     eraserIcon: Boolean = false,
     arrow: String? = null,
+    keyWidth: androidx.compose.ui.unit.Dp = 52.dp,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
         modifier = Modifier
             .height(50.dp)
-            .width(52.dp)
+            .width(keyWidth)
             .semantics { contentDescription = description ?: label },
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
