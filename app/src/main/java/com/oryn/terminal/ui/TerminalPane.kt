@@ -377,7 +377,9 @@ fun TerminalPane(
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
                 TerminalExtraKey("PASTE", description = "Paste clipboard into terminal") {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val pasted = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                    val pasted = runCatching {
+                        clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                    }.getOrNull()
                     if (!pasted.isNullOrEmpty()) {
                         if (pasted.contains('\n') || pasted.contains('\r')) {
                             pendingMultilinePaste = pasted
@@ -389,7 +391,10 @@ fun TerminalPane(
                 TerminalExtraKey("ALL", description = "Copy all terminal text") {
                     val transcript = session.emulator?.screen?.transcriptText.orEmpty()
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", transcript))
+                    // Avoid placing unexpectedly large scrollback in Android's clipboard.
+                    clipboard.setPrimaryClip(ClipData.newPlainText(
+                        "Klyro terminal", transcript.takeLast(256 * 1024)
+                    ))
                 }
                 TerminalExtraKey("FIND", description = "Search terminal transcript") {
                     transcriptQuery = ""
