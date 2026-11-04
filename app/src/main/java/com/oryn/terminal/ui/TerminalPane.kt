@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.widget.EditText
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.DropdownMenu
@@ -241,12 +242,18 @@ fun TerminalPane(
 
                     val transcript = session.emulator?.screen?.transcriptText.orEmpty()
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    // Avoid placing unexpectedly large scrollback in Android's clipboard.
-                    runCatching {
+                    // Limit clipboard payload and explicitly disclose truncation.
+                    val copied = runCatching {
                         clipboard.setPrimaryClip(ClipData.newPlainText(
                             "Klyro terminal", transcript.takeLast(256 * 1024)
                         ))
+                    }.isSuccess
+                    val message = when {
+                        !copied -> "Clipboard unavailable"
+                        transcript.length > 256 * 1024 -> "Copied latest 256 KiB of terminal output"
+                        else -> "Terminal output copied"
                     }
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                     })
                     DropdownMenuItem(text = { Text("Find") }, onClick = {
                         showToolsMenu = false
@@ -563,11 +570,16 @@ fun TerminalPane(
                             val right = view.selectionEnd.coerceIn(0, value.length)
                             val selection = if (left < right) value.substring(left, right) else value
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            runCatching {
+                            val copied = runCatching {
                                 clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", selection))
-                            }
+                            }.isSuccess
+                            Toast.makeText(
+                                context,
+                                if (copied) "Selection copied" else "Clipboard unavailable",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            if (copied) closeSelection()
                         }
-                        closeSelection()
                     }
                 ) { Text("Copy selection") }
             },
