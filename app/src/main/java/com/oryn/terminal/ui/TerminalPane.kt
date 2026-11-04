@@ -101,6 +101,8 @@ fun TerminalPane(
 ) {
     var showToolsMenu by remember { mutableStateOf(false) }
     var showTerminalSettings by remember { mutableStateOf(false) }
+    var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
+    var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
     LaunchedEffect(activeTabId, activeTerminalView) {
@@ -169,7 +171,8 @@ fun TerminalPane(
     BackHandler(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
-            pendingMultilinePaste == null && renameTarget == null && closeTarget == null
+            pendingMultilinePaste == null && selectedOutput == null &&
+            renameTarget == null && closeTarget == null
     ) {
         showEndSessionConfirmation = true
     }
@@ -407,41 +410,142 @@ fun TerminalPane(
         }
         }
 
+        // Two slim rows in portrait, one horizontally scrollable row in short landscape.
+        // Keep every key accessible without covering more of the terminal than needed.
+        val firstRow: @Composable () -> Unit = {
+            TerminalExtraKey("ESC") { session.writeCodePoint(false, 27) }
+            TerminalExtraKey("TAB") { session.writeCodePoint(false, 9) }
+            TerminalExtraKey("CTRL", active = controlActive) {
+                controlActive = !controlActive
+                viewClient.setControlDown(controlActive)
+            }
+            TerminalExtraKey("ALT", active = altActive) {
+                altActive = !altActive
+                viewClient.setAltDown(altActive)
+            }
+            TerminalExtraKey("SHIFT", active = shiftActive) {
+                shiftActive = !shiftActive
+                viewClient.setShiftDown(shiftActive)
+            }
+            TerminalExtraKey("FN", active = fnActive) {
+                fnActive = !fnActive
+                viewClient.setFnDown(fnActive)
+            }
+        }
+        val secondRow: @Composable () -> Unit = {
+            TerminalExtraKey("←", description = "Left arrow", arrow = "left") { write(session, "\u001B[D") }
+            TerminalExtraKey("↑", description = "Up arrow", arrow = "up") { write(session, "\u001B[A") }
+            TerminalExtraKey("↓", description = "Down arrow", arrow = "down") { write(session, "\u001B[B") }
+            TerminalExtraKey("→", description = "Right arrow", arrow = "right") { write(session, "\u001B[C") }
+            TerminalExtraKey("ALL", description = "Select all terminal output") {
+                outputSelectionView = null
+                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
+            }
+            TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
+                session.writeCodePoint(false, 12) // Ctrl+L: redraw without erasing scrollback.
+            }
+        }
         Column(
             modifier = Modifier.fillMaxWidth().background(TerminalSurface)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                TerminalExtraKey("ESC") { session.writeCodePoint(false, 27) }
-                TerminalExtraKey("TAB") { session.writeCodePoint(false, 9) }
-                TerminalExtraKey("CTRL", active = controlActive) {
-                    controlActive = !controlActive
-                    viewClient.setControlDown(controlActive)
+            if (compact) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    firstRow()
+                    secondRow()
                 }
-                TerminalExtraKey("ALT", active = altActive) {
-                    altActive = !altActive
-                    viewClient.setAltDown(altActive)
-                }
-                TerminalExtraKey("SHIFT", active = shiftActive) {
-                    shiftActive = !shiftActive
-                    viewClient.setShiftDown(shiftActive)
-                }
-                TerminalExtraKey("FN", active = fnActive) {
-                    fnActive = !fnActive
-                    viewClient.setFnDown(fnActive)
-                }
-                TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
-                TerminalExtraKey("↑", description = "Up arrow", labelSize = 18.sp) { write(session, "\u001B[A") }
-                TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
-                TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) { firstRow() }
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) { secondRow() }
             }
         }
     }
 
+    }
+
+    // TerminalView does not expose programmatic select-all. Use a read-only native
+    // selection surface, with the whole available snapshot selected on opening.
+    selectedOutput?.let { output ->
+        val selectionLimit = 256 * 1024
+        val truncated = output.length > selectionLimit
+        val visibleOutput = output.takeLast(selectionLimit)
+        fun closeSelection() {
+            outputSelectionView = null
+            selectedOutput = null
+        }
+        AlertDialog(
+            onDismissRequest = { closeSelection() },
+            title = { Text("Select terminal output") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (truncated) {
+                        Text(
+                            "Only the latest 256 KiB are selectable; earlier output is omitted.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    if (visibleOutput.isEmpty()) {
+                        Text("No output available to select.")
+                    } else {
+                        AndroidView(
+                            modifier = Modifier.fillMaxWidth().height(244.dp),
+                            factory = { activityContext ->
+                                EditText(activityContext).apply {
+                                    setText(visibleOutput)
+                                    setTextIsSelectable(true)
+                                    setShowSoftInputOnFocus(false)
+                                    setHorizontallyScrolling(false)
+                                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
+                                    setTextColor(AndroidColor.WHITE)
+                                    setBackgroundColor(AndroidColor.rgb(11, 15, 25))
+                                    typeface = android.graphics.Typeface.MONOSPACE
+                                    setPadding(12, 8, 12, 8)
+                                    outputSelectionView = this
+                                    post {
+                                        if (isAttachedToWindow) {
+                                            requestFocus()
+                                            selectAll()
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = visibleOutput.isNotEmpty(),
+                    onClick = {
+                        val view = outputSelectionView
+                        if (view != null) {
+                            val value = view.text.toString()
+                            val left = view.selectionStart.coerceIn(0, value.length)
+                            val right = view.selectionEnd.coerceIn(0, value.length)
+                            val selection = if (left < right) value.substring(left, right) else value
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            runCatching {
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", selection))
+                            }
+                        }
+                        closeSelection()
+                    }
+                ) { Text("Copy selection") }
+            },
+            dismissButton = {
+                TextButton(onClick = { closeSelection() }) { Text("Close") }
+            }
+        )
     }
 
     if (showTerminalSettings) {
@@ -680,17 +784,19 @@ private fun TerminalExtraKey(
     label: String,
     active: Boolean = false,
     description: String? = null,
-    labelSize: androidx.compose.ui.unit.TextUnit = 12.sp,
+    labelSize: androidx.compose.ui.unit.TextUnit = 11.sp,
     eraserIcon: Boolean = false,
+    arrow: String? = null,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
         modifier = Modifier
-            .heightIn(min = 48.dp)
-            .width(54.dp)
+            .height(40.dp)
+            .width(49.dp)
             .semantics { contentDescription = description ?: label },
-        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+        contentPadding = PaddingValues(horizontal = 1.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
                 else Color(0xFF1E293B),
@@ -698,7 +804,7 @@ private fun TerminalExtraKey(
         )
     ) {
         if (eraserIcon) {
-            Canvas(modifier = Modifier.width(24.dp).height(24.dp)) {
+            Canvas(modifier = Modifier.width(20.dp).height(20.dp)) {
                 val outline = Path().apply {
                     moveTo(size.width * 0.15f, size.height * 0.62f)
                     lineTo(size.width * 0.57f, size.height * 0.15f)
@@ -714,6 +820,43 @@ private fun TerminalExtraKey(
                     end = androidx.compose.ui.geometry.Offset(size.width * 0.70f, size.height * 0.67f),
                     strokeWidth = 2.dp.toPx()
                 )
+            }
+        } else if (arrow != null) {
+            // Thin chevrons, inspired by the reference terminal keyboard.
+            Canvas(modifier = Modifier.width(19.dp).height(19.dp)) {
+                val w = size.width
+                val h = size.height
+                val tip = when (arrow) {
+                    "left" -> androidx.compose.ui.geometry.Offset(w * .32f, h * .50f)
+                    "right" -> androidx.compose.ui.geometry.Offset(w * .68f, h * .50f)
+                    "up" -> androidx.compose.ui.geometry.Offset(w * .50f, h * .32f)
+                    else -> androidx.compose.ui.geometry.Offset(w * .50f, h * .68f)
+                }
+                val ends = when (arrow) {
+                    "left" -> listOf(
+                        androidx.compose.ui.geometry.Offset(w * .63f, h * .20f),
+                        androidx.compose.ui.geometry.Offset(w * .63f, h * .80f)
+                    )
+                    "right" -> listOf(
+                        androidx.compose.ui.geometry.Offset(w * .37f, h * .20f),
+                        androidx.compose.ui.geometry.Offset(w * .37f, h * .80f)
+                    )
+                    "up" -> listOf(
+                        androidx.compose.ui.geometry.Offset(w * .20f, h * .63f),
+                        androidx.compose.ui.geometry.Offset(w * .80f, h * .63f)
+                    )
+                    else -> listOf(
+                        androidx.compose.ui.geometry.Offset(w * .20f, h * .37f),
+                        androidx.compose.ui.geometry.Offset(w * .80f, h * .37f)
+                    )
+                }
+                ends.forEach { end ->
+                    drawLine(
+                        color = TerminalText, start = end, end = tip,
+                        strokeWidth = 1.75.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                }
             }
         } else {
             Text(label, fontSize = labelSize, fontFamily = FontFamily.Monospace)
