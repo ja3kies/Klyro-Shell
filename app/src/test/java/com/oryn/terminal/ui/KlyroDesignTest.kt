@@ -1,6 +1,7 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -75,7 +76,7 @@ class KlyroDesignTest {
                 val colors = KlyroColors.create(dark, id)
                 val native = KlyroTerminalPalette.properties(colors)
                 val expectedBg = "#%06X".format(
-                    androidx.compose.ui.graphics.toArgb(colors.terminal) and 0xFFFFFF
+                    colors.terminal.toArgb() and 0xFFFFFF
                 )
                 assertEquals("native terminal background $id/$dark", expectedBg,
                     native.getProperty("background"))
