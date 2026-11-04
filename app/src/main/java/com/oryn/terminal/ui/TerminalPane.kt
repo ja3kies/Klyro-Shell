@@ -87,6 +87,9 @@ private val TerminalMuted = Color(0xFF98B0A9)
 @Composable
 fun TerminalPane(
     session: TerminalSession,
+    darkChrome: Boolean,
+    themeMode: String,
+    onThemeModeChange: (String) -> Unit,
     title: String,
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
@@ -105,6 +108,13 @@ fun TerminalPane(
     runtimeHasWarnings: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    // The PTY and TerminalView stay alive when the visual chrome changes.
+    val TerminalBackground = if (darkChrome) Color(0xFF101719) else Color(0xFFDDEFEA)
+    val TerminalSurface = if (darkChrome) Color(0xFF182528) else Color(0xFFF8FBFA)
+    val TerminalAccent = if (darkChrome) Color(0xFFB9DAD4) else Color(0xFF244F43)
+    val TerminalText = if (darkChrome) Color(0xFFE3F1EA) else Color(0xFF18282B)
+    val TerminalMuted = if (darkChrome) Color(0xFF98B0A9) else Color(0xFF557168)
+    val inactiveTabSurface = if (darkChrome) Color(0xFF28383A) else Color(0xFFDFECE7)
     var showToolsMenu by remember { mutableStateOf(false) }
     var showTerminalSettings by remember { mutableStateOf(false) }
     var initialSettingsSection by remember { mutableStateOf("home") }
@@ -204,10 +214,10 @@ fun TerminalPane(
                     expanded = showToolsMenu,
                     onDismissRequest = { showToolsMenu = false },
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
-                    containerColor = Color(0xFFF8FBFA)
+                    containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Settings", color = Color(0xFF18282B)) },
+                        text = { Text("Settings", color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
                             showToolsMenu = false
                             initialSettingsSection = "home"
@@ -215,7 +225,7 @@ fun TerminalPane(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Files & storage", color = Color(0xFF18282B)) },
+                        text = { Text("Files & storage", color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
                             showToolsMenu = false
                             initialSettingsSection = "files"
@@ -223,7 +233,7 @@ fun TerminalPane(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Paste", color = Color(0xFF18282B)) },
+                        text = { Text("Paste", color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
                             showToolsMenu = false
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -302,7 +312,7 @@ fun TerminalPane(
                             onLongClick = { openSessionSheet(id, tabTitle) }
                         )
                         .semantics { contentDescription = "Session $tabTitle" },
-                    color = if (active) TerminalAccent else Color(0xFF28383A),
+                    color = if (active) TerminalAccent else inactiveTabSurface,
                     contentColor = if (active) TerminalBackground else TerminalText,
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
                 ) {
@@ -380,7 +390,11 @@ fun TerminalPane(
             }
         }
 
-        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+        Box(
+            modifier = Modifier.fillMaxWidth().weight(1f)
+                .background(Color(0xFF101719),
+                    androidx.compose.foundation.shape.RoundedCornerShape(26.dp))
+        ) {
         key(session) {
         AndroidView(
             modifier = Modifier
@@ -416,43 +430,43 @@ fun TerminalPane(
 
         // Seven visible keys per row: no horizontal gesture or hidden actions.
         val firstRow: @Composable () -> Unit = {
-            TerminalExtraKey("ESC", keyWidth = keyWidth) { session.writeCodePoint(false, 27) }
-            TerminalExtraKey("TAB", keyWidth = keyWidth) { session.writeCodePoint(false, 9) }
-            TerminalExtraKey("CTRL", active = controlActive, keyWidth = keyWidth) {
+            TerminalExtraKey("ESC", keyWidth = keyWidth, darkChrome = darkChrome) { session.writeCodePoint(false, 27) }
+            TerminalExtraKey("TAB", keyWidth = keyWidth, darkChrome = darkChrome) { session.writeCodePoint(false, 9) }
+            TerminalExtraKey("CTRL", active = controlActive, keyWidth = keyWidth, darkChrome = darkChrome) {
                 controlActive = !controlActive
                 viewClient.setControlDown(controlActive)
             }
-            TerminalExtraKey("ALT", active = altActive, keyWidth = keyWidth) {
+            TerminalExtraKey("ALT", active = altActive, keyWidth = keyWidth, darkChrome = darkChrome) {
                 altActive = !altActive
                 viewClient.setAltDown(altActive)
             }
-            TerminalExtraKey("SHIFT", active = shiftActive, keyWidth = keyWidth) {
+            TerminalExtraKey("SHIFT", active = shiftActive, keyWidth = keyWidth, darkChrome = darkChrome) {
                 shiftActive = !shiftActive
                 viewClient.setShiftDown(shiftActive)
             }
-            TerminalExtraKey("FN", active = fnActive, keyWidth = keyWidth) {
+            TerminalExtraKey("FN", active = fnActive, keyWidth = keyWidth, darkChrome = darkChrome) {
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
-            TerminalExtraKey("ALL", description = "Select all terminal output", glyph = R.drawable.hugeicons_clipboard_list, keyWidth = keyWidth) {
+            TerminalExtraKey("ALL", description = "Select all terminal output", glyph = R.drawable.hugeicons_clipboard_list, keyWidth = keyWidth, darkChrome = darkChrome) {
                 outputSelectionView = null
                 selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
             }
         }
         val secondRow: @Composable () -> Unit = {
-            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth) { write(session, "\u001B[D") }
-            TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth) { write(session, "\u001B[A") }
-            TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth) { write(session, "\u001B[B") }
-            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth) { write(session, "\u001B[C") }
-            TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth) {
+            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, "\u001B[D") }
+            TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, "\u001B[A") }
+            TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, "\u001B[B") }
+            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, "\u001B[C") }
+            TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth, darkChrome = darkChrome) {
                 transcriptQuery = ""
                 searchIndex = 0
                 showTranscriptSearch = true
             }
-            TerminalExtraKey("END", description = "Move cursor to end of line", keyWidth = keyWidth) {
+            TerminalExtraKey("END", description = "Move cursor to end of line", keyWidth = keyWidth, darkChrome = darkChrome) {
                 write(session, "\u001B[F")
             }
-            TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser, keyWidth = keyWidth) {
+            TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser, keyWidth = keyWidth, darkChrome = darkChrome) {
                 session.writeCodePoint(false, 12) // Ctrl+L; keep scrollback.
             }
         }
@@ -557,6 +571,8 @@ fun TerminalPane(
     if (showTerminalSettings) {
         KlyroSettingsSheet(
             initialSection = initialSettingsSection,
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
             fontSizeSp = terminalFontSp,
             onFontChange = ::changeTerminalFont,
             onResetFont = {
@@ -795,8 +811,12 @@ private fun TerminalExtraKey(
     glyph: Int? = null,
     arrow: String? = null,
     keyWidth: androidx.compose.ui.unit.Dp = 52.dp,
+    darkChrome: Boolean = true,
     onClick: () -> Unit
 ) {
+    val accentTint = if (darkChrome) Color(0xFFB9DAD4) else Color(0xFF244F43)
+    val inkTint = if (darkChrome) Color(0xFFE3F1EA) else Color(0xFF18282B)
+    val backgroundTint = if (darkChrome) Color(0xFF28383A) else Color(0xFFDFECE7)
     Button(
         onClick = onClick,
         modifier = Modifier
@@ -806,9 +826,9 @@ private fun TerminalExtraKey(
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
-                else Color(0xFF28383A),
-            contentColor = if (active) TerminalAccent else TerminalText
+            containerColor = if (active) accentTint.copy(alpha = 0.18f)
+                else backgroundTint,
+            contentColor = if (active) accentTint else inkTint
         )
     ) {
         if (glyph != null) {
@@ -816,7 +836,7 @@ private fun TerminalExtraKey(
                 painter = painterResource(glyph),
                 contentDescription = null,
                 modifier = Modifier.width(24.dp).height(24.dp),
-                tint = if (active) TerminalAccent else TerminalText
+                tint = if (active) accentTint else inkTint
             )
         } else if (arrow != null) {
             // Thin chevrons, inspired by the reference terminal keyboard.
@@ -849,7 +869,7 @@ private fun TerminalExtraKey(
                 }
                 ends.forEach { end ->
                     drawLine(
-                        color = TerminalText, start = end, end = tip,
+                        color = inkTint, start = end, end = tip,
                         strokeWidth = 1.75.dp.toPx(),
                         cap = androidx.compose.ui.graphics.StrokeCap.Round
                     )
