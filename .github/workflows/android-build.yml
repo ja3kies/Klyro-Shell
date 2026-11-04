@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110]
   pull_request:
-    branches: [main]
+    branches: [main, feat/klyro-0110]
   workflow_dispatch:
 
 concurrency:
