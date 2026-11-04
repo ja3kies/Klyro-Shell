@@ -69,6 +69,23 @@ class KlyroDesignTest {
         }
     }
 
+    @Test fun nativeTerminalSchemeTracksComposeDefaultsAndLightAnsiContrast() {
+        for (dark in listOf(false, true)) {
+            for (id in KlyroColors.accents) {
+                val colors = KlyroColors.create(dark, id)
+                val native = KlyroTerminalPalette.properties(colors)
+                val expectedBg = "#%06X".format(
+                    androidx.compose.ui.graphics.toArgb(colors.terminal) and 0xFFFFFF
+                )
+                assertEquals("native terminal background $id/$dark", expectedBg,
+                    native.getProperty("background"))
+                assertEquals("ANSI palette completeness", 19, native.size)
+                assertTrue("light cyan must not be neon on pale terminal",
+                    dark || native.getProperty("color6") == "#14717D")
+            }
+        }
+    }
+
     @Test fun typefaceSelectionHasSafeFallback() {
         assertEquals("system", KlyroTerminalFonts.normalize(null))
         assertEquals("system", KlyroTerminalFonts.normalize("invalid"))
