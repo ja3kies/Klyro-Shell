@@ -291,6 +291,9 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
+        // The bars are transparent; draw a matching fallback behind system insets.
+        // The Compose root paints the actual active-screen color edge to edge.
+        window.decorView.setBackgroundColor(android.graphics.Color.rgb(24, 37, 40))
 
         try {
             installer = TermuxBootstrapInstaller(this)
@@ -609,11 +612,16 @@ private fun OrynTerminalApp(
         else -> Cyan
     }
 
+    val isTerminalVisible = session != null && sessionClient != null && viewClient != null
+    val screenChrome = if (isTerminalVisible) Color(0xFF182528) else Obsidian
     Surface(
+        // Paint before insets; the transparent status bar must show Klyro, not
+        // Android's default gray window background.
         modifier = Modifier.fillMaxSize()
+            .background(screenChrome)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .imePadding(),
-        color = Obsidian
+        color = screenChrome
     ) {
         if (session != null && sessionClient != null && viewClient != null) {
             TerminalPane(

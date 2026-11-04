@@ -41,6 +41,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.oryn.terminal.R
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
@@ -55,8 +58,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.onLongClick
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -108,12 +109,14 @@ fun TerminalPane(
     var showTerminalSettings by remember { mutableStateOf(false) }
     var initialSettingsSection by remember { mutableStateOf("home") }
     var sessionSheetId by remember { mutableStateOf<Long?>(null) }
+    var renameDialogId by remember { mutableStateOf<Long?>(null) }
+    var shellChooserSourceId by remember { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
-    LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId) {
-        if (sessionSheetId == null) {
+    LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId, renameDialogId, shellChooserSourceId) {
+        if (sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null) {
             activeTerminalView?.let { view ->
                 view.isFocusableInTouchMode = true
                 view.requestFocus()
@@ -167,12 +170,10 @@ fun TerminalPane(
         view.requestFocus()
         pendingSearch = null
     }
-    var confirmSessionClose by remember { mutableStateOf(false) }
-    var renameValue by remember { mutableStateOf("") }
     fun openSessionSheet(id: Long, name: String) {
-        renameValue = name
-        confirmSessionClose = false
-        sessionSheetId = id
+        if (tabs.any { it.first == id }) {
+            sessionSheetId = id
+        }
     }
     var controlActive by remember(viewClient) { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
@@ -185,7 +186,7 @@ fun TerminalPane(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
             pendingMultilinePaste == null && selectedOutput == null &&
-            sessionSheetId == null
+            sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null
     ) {
         showEndSessionConfirmation = true
     }
@@ -433,10 +434,9 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
-            TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth) {
-                transcriptQuery = ""
-                searchIndex = 0
-                showTranscriptSearch = true
+            TerminalExtraKey("ALL", description = "Select all terminal output", glyph = R.drawable.hugeicons_clipboard_list, keyWidth = keyWidth) {
+                outputSelectionView = null
+                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
             }
         }
         val secondRow: @Composable () -> Unit = {
@@ -444,15 +444,16 @@ fun TerminalPane(
             TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth) { write(session, "\u001B[A") }
             TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth) { write(session, "\u001B[B") }
             TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth) { write(session, "\u001B[C") }
-            TerminalExtraKey("ALL", description = "Select all terminal output", keyWidth = keyWidth) {
-                outputSelectionView = null
-                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
-            }
-            TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true, keyWidth = keyWidth) {
-                session.writeCodePoint(false, 12) // Ctrl+L: redraw without erasing scrollback.
+            TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth) {
+                transcriptQuery = ""
+                searchIndex = 0
+                showTranscriptSearch = true
             }
             TerminalExtraKey("END", description = "Move cursor to end of line", keyWidth = keyWidth) {
                 write(session, "\u001B[F")
+            }
+            TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser, keyWidth = keyWidth) {
+                session.writeCodePoint(false, 12) // Ctrl+L; keep scrollback.
             }
         }
         Column(
@@ -617,108 +618,56 @@ fun TerminalPane(
     }
 
     sessionSheetId?.let { id ->
-        val originalName = tabs.firstOrNull { it.first == id }?.second
-        if (originalName != null) {
-            MaterialTheme(
-                colorScheme = lightColorScheme(
-                    primary = Color(0xFF244F43),
-                    onPrimary = Color.White,
-                    surface = Color(0xFFF8FBFA),
-                    onSurface = Color(0xFF18282B),
-                    surfaceVariant = Color(0xFFDDEFEA),
-                    onSurfaceVariant = Color(0xFF49645A),
-                    outline = Color(0xFF87A99D)
-                )
-            ) {
-                ModalBottomSheet(
-                    onDismissRequest = {
-                        sessionSheetId = null
-                        confirmSessionClose = false
-                    },
-                    containerColor = Color(0xFFF8FBFA),
-                    contentColor = Color(0xFF18282B),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                        topStart = 30.dp, topEnd = 30.dp
-                    ),
-                    dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF8DAAA2)) }
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
-                            .padding(bottom = 28.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text("Session", style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold)
-                        Text("Rename or manage this shell session.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF49645A))
-                        OutlinedTextField(
-                            value = renameValue,
-                            onValueChange = { renameValue = it.replace("\n", "").replace("\r", "").take(32) },
-                            label = { Text("Session name") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextButton(onClick = { sessionSheetId = null }) {
-                                Text("Cancel")
-                            }
-                            Button(
-                                onClick = {
-                                    onRenameTab(id, renameValue.trim())
-                                    sessionSheetId = null
-                                },
-                                enabled = renameValue.isNotBlank() &&
-                                    renameValue.trim() != originalName,
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
-                            ) { Text("Save name") }
-                        }
-                        if (id != activeTabId) {
-                            TextButton(onClick = {
-                                sessionSheetId = null
-                                onSelectTab(id)
-                            }) { Text("Switch to session") }
-                        }
-                        if (!confirmSessionClose) {
-                            TextButton(
-                                onClick = { confirmSessionClose = true },
-                                modifier = Modifier.heightIn(min = 48.dp)
-                            ) { Text("Close session", color = Color(0xFF9F3234)) }
-                        } else {
-                            Surface(
-                                color = Color(0xFFFFE8E7),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth().padding(14.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text("Close this session?",
-                                        color = Color(0xFF82292A), fontWeight = FontWeight.Bold)
-                                    Text("Its shell and child processes will be stopped.",
-                                        color = Color(0xFF82292A),
-                                        style = MaterialTheme.typography.bodyMedium)
-                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        TextButton(onClick = { confirmSessionClose = false }) {
-                                            Text("Keep session")
-                                        }
-                                        TextButton(onClick = {
-                                            sessionSheetId = null
-                                            confirmSessionClose = false
-                                            onCloseTab(id)
-                                        }) { Text("Close session", color = Color(0xFF9F3234)) }
-                                    }
-                                }
-                            }
-                        }
-                    }
+        val name = tabs.firstOrNull { it.first == id }?.second
+        if (name != null) {
+            KlyroSessionSheet(
+                sessionName = name,
+                isActive = id == activeTabId,
+                onDismiss = { sessionSheetId = null },
+                onRename = {
+                    sessionSheetId = null
+                    renameDialogId = id
+                },
+                onChooseShell = {
+                    sessionSheetId = null
+                    shellChooserSourceId = id
+                },
+                onActivate = {
+                    sessionSheetId = null
+                    onSelectTab(id)
+                },
+                onCloseSession = {
+                    sessionSheetId = null
+                    onCloseTab(id)
                 }
-            }
+            )
         }
+    }
+    renameDialogId?.let { id ->
+        val name = tabs.firstOrNull { it.first == id }?.second
+        if (name != null) {
+            KlyroRenameSessionDialog(
+                name = name,
+                onSave = { newName ->
+                    onRenameTab(id, newName)
+                    renameDialogId = null
+                },
+                onDismiss = { renameDialogId = null }
+            )
+        }
+    }
+    shellChooserSourceId?.let { sourceId ->
+        KlyroChooseShellSheet(
+            onDismiss = { shellChooserSourceId = null },
+            onBack = {
+                shellChooserSourceId = null
+                sessionSheetId = sourceId
+            },
+            onNewBash = {
+                shellChooserSourceId = null
+                onNewTab()
+            }
+        )
     }
 
     if (showTranscriptSearch) {
@@ -843,7 +792,7 @@ private fun TerminalExtraKey(
     active: Boolean = false,
     description: String? = null,
     labelSize: androidx.compose.ui.unit.TextUnit = 12.sp,
-    eraserIcon: Boolean = false,
+    glyph: Int? = null,
     arrow: String? = null,
     keyWidth: androidx.compose.ui.unit.Dp = 52.dp,
     onClick: () -> Unit
@@ -854,7 +803,7 @@ private fun TerminalExtraKey(
             .height(50.dp)
             .width(keyWidth)
             .semantics { contentDescription = description ?: label },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
@@ -862,24 +811,13 @@ private fun TerminalExtraKey(
             contentColor = if (active) TerminalAccent else TerminalText
         )
     ) {
-        if (eraserIcon) {
-            Canvas(modifier = Modifier.width(22.dp).height(22.dp)) {
-                val outline = Path().apply {
-                    moveTo(size.width * 0.15f, size.height * 0.62f)
-                    lineTo(size.width * 0.57f, size.height * 0.15f)
-                    lineTo(size.width * 0.88f, size.height * 0.44f)
-                    lineTo(size.width * 0.47f, size.height * 0.88f)
-                    lineTo(size.width * 0.31f, size.height * 0.88f)
-                    close()
-                }
-                drawPath(outline, color = Color(0xFFE3F1EA), style = Stroke(width = 2.5.dp.toPx()))
-                drawLine(
-                    color = Color(0xFFE3F1EA),
-                    start = androidx.compose.ui.geometry.Offset(size.width * 0.40f, size.height * 0.37f),
-                    end = androidx.compose.ui.geometry.Offset(size.width * 0.70f, size.height * 0.67f),
-                    strokeWidth = 2.dp.toPx()
-                )
-            }
+        if (glyph != null) {
+            Icon(
+                painter = painterResource(glyph),
+                contentDescription = null,
+                modifier = Modifier.width(24.dp).height(24.dp),
+                tint = if (active) TerminalAccent else TerminalText
+            )
         } else if (arrow != null) {
             // Thin chevrons, inspired by the reference terminal keyboard.
             Canvas(modifier = Modifier.width(22.dp).height(22.dp)) {
