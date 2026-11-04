@@ -220,9 +220,11 @@ fun TerminalPane(
                     val transcript = session.emulator?.screen?.transcriptText.orEmpty()
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     // Avoid placing unexpectedly large scrollback in Android's clipboard.
-                    clipboard.setPrimaryClip(ClipData.newPlainText(
-                        "Klyro terminal", transcript.takeLast(256 * 1024)
-                    ))
+                    runCatching {
+                        clipboard.setPrimaryClip(ClipData.newPlainText(
+                            "Klyro terminal", transcript.takeLast(256 * 1024)
+                        ))
+                    }
                                     })
                     DropdownMenuItem(text = { Text("Find") }, onClick = {
                         showToolsMenu = false
