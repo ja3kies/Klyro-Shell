@@ -74,6 +74,23 @@ public class TranscriptSearchTest {
             screen.getSelectedText(0, 1, COLUMNS - 1, 1, false, false));
     }
 
+    @Test public void searchIsCaseInsensitiveButDoesNotMatchPartialDifferentWords() {
+        TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
+        write(screen, 0, "alpha beta ALPHA");
+        assertEquals(Arrays.asList(0, 0),
+            TranscriptSearch.findRows(screen, COLUMNS, ROWS, "alpha"));
+        assertTrue(TranscriptSearch.findRows(screen, COLUMNS, ROWS, "gamma").isEmpty());
+    }
+
+    @Test public void searchHandlesUnicodeAndAdjacentOccurrences() {
+        TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
+        write(screen, 0, "界界 testtest");
+        assertEquals(Arrays.asList(0, 0),
+            TranscriptSearch.findRows(screen, COLUMNS, ROWS, "test"));
+        assertEquals(Arrays.asList(0, 0),
+            TranscriptSearch.findRows(screen, COLUMNS, ROWS, "界"));
+    }
+
     @Test public void navigationWrapsAndScrollClampsAtBothEnds() {
         assertEquals(2, TranscriptSearch.nextIndex(0, -1, 3));
         assertEquals(0, TranscriptSearch.nextIndex(2, 1, 3));
