@@ -149,9 +149,22 @@ jobs:
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -E "^package:|^sdkVersion:|^targetSdkVersion:"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "targetSdkVersion:'36'"
-          unzip -Z1 "$APK" | grep -q '^lib/arm64-v8a/'
+          PACKAGE_INFO="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
+          printf '%s\n' "$PACKAGE_INFO" | grep -E "^package:|^sdkVersion:|^targetSdkVersion:"
+          grep -Fq "name='com.klyro.shell'" <<< "$PACKAGE_INFO"
+          grep -Fq "targetSdkVersion:'36'" <<< "$PACKAGE_INFO"
+          APK_ENTRIES="$(unzip -Z1 "$APK")"
+          for entry in \
+            lib/arm64-v8a/libproot.so \
+            lib/arm64-v8a/libproot-loader.so \
+            lib/arm64-v8a/libtalloc.so \
+            lib/arm64-v8a/libandroid-shmem.so \
+            assets/proot/runtime-manifest.txt; do
+            grep -Fxq "$entry" <<< "$APK_ENTRIES" || {
+              echo "Required runtime file missing from APK: $entry" >&2
+              exit 1
+            }
+          done
           test -s app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 
       - name: Detect optional signing credentials
@@ -170,7 +183,8 @@ jobs:
           fi
 
       - name: Verify standard debug APK signature
-        run: "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload debug-key APK for CI validation
         uses: actions/upload-artifact@v4
