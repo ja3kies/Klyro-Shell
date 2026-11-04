@@ -41,6 +41,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.oryn.terminal.R
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
@@ -55,8 +58,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.onLongClick
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -433,10 +434,9 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
-            TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth) {
-                transcriptQuery = ""
-                searchIndex = 0
-                showTranscriptSearch = true
+            TerminalExtraKey("ALL", description = "Select all terminal output", glyph = R.drawable.hugeicons_clipboard_list, keyWidth = keyWidth) {
+                outputSelectionView = null
+                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
             }
         }
         val secondRow: @Composable () -> Unit = {
@@ -444,15 +444,16 @@ fun TerminalPane(
             TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth) { write(session, "\u001B[A") }
             TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth) { write(session, "\u001B[B") }
             TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth) { write(session, "\u001B[C") }
-            TerminalExtraKey("ALL", description = "Select all terminal output", keyWidth = keyWidth) {
-                outputSelectionView = null
-                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
-            }
-            TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true, keyWidth = keyWidth) {
-                session.writeCodePoint(false, 12) // Ctrl+L: redraw without erasing scrollback.
+            TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth) {
+                transcriptQuery = ""
+                searchIndex = 0
+                showTranscriptSearch = true
             }
             TerminalExtraKey("END", description = "Move cursor to end of line", keyWidth = keyWidth) {
                 write(session, "\u001B[F")
+            }
+            TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser, keyWidth = keyWidth) {
+                session.writeCodePoint(false, 12) // Ctrl+L; keep scrollback.
             }
         }
         Column(
@@ -843,7 +844,7 @@ private fun TerminalExtraKey(
     active: Boolean = false,
     description: String? = null,
     labelSize: androidx.compose.ui.unit.TextUnit = 12.sp,
-    eraserIcon: Boolean = false,
+    glyph: Int? = null,
     arrow: String? = null,
     keyWidth: androidx.compose.ui.unit.Dp = 52.dp,
     onClick: () -> Unit
@@ -854,7 +855,7 @@ private fun TerminalExtraKey(
             .height(50.dp)
             .width(keyWidth)
             .semantics { contentDescription = description ?: label },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
@@ -862,24 +863,13 @@ private fun TerminalExtraKey(
             contentColor = if (active) TerminalAccent else TerminalText
         )
     ) {
-        if (eraserIcon) {
-            Canvas(modifier = Modifier.width(22.dp).height(22.dp)) {
-                val outline = Path().apply {
-                    moveTo(size.width * 0.15f, size.height * 0.62f)
-                    lineTo(size.width * 0.57f, size.height * 0.15f)
-                    lineTo(size.width * 0.88f, size.height * 0.44f)
-                    lineTo(size.width * 0.47f, size.height * 0.88f)
-                    lineTo(size.width * 0.31f, size.height * 0.88f)
-                    close()
-                }
-                drawPath(outline, color = Color(0xFFE3F1EA), style = Stroke(width = 2.5.dp.toPx()))
-                drawLine(
-                    color = Color(0xFFE3F1EA),
-                    start = androidx.compose.ui.geometry.Offset(size.width * 0.40f, size.height * 0.37f),
-                    end = androidx.compose.ui.geometry.Offset(size.width * 0.70f, size.height * 0.67f),
-                    strokeWidth = 2.dp.toPx()
-                )
-            }
+        if (glyph != null) {
+            Icon(
+                painter = painterResource(glyph),
+                contentDescription = null,
+                modifier = Modifier.width(24.dp).height(24.dp),
+                tint = if (active) TerminalAccent else TerminalText
+            )
         } else if (arrow != null) {
             // Thin chevrons, inspired by the reference terminal keyboard.
             Canvas(modifier = Modifier.width(22.dp).height(22.dp)) {
