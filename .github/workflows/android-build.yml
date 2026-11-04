@@ -137,8 +137,10 @@ jobs:
           echo "Verified APK-native proot runtime files:"
           cat "$ASSET_ROOT/runtime-manifest.txt"
 
-      - name: Run JVM unit tests
-        run: gradle :app:testDebugUnitTest
+      - name: Run JVM and native alignment auditor unit tests
+        run: |
+          python3 -m unittest discover -s tools -p "test_*.py"
+          gradle :app:testDebugUnitTest
 
       - name: Build ARM64 debug APK and instrumented test APK
         run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
@@ -166,6 +168,20 @@ jobs:
             }
           done
           test -s app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+
+      - name: Audit 16 KiB native page alignment
+        run: |
+          python3 tools/audit_apk_16k.py \
+            app/build/outputs/apk/debug/app-debug.apk \
+            --report "$RUNNER_TEMP/native-16kb.md"
+
+      - name: Upload native page-size audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-16kb-audit
+          path: ${{ runner.temp }}/native-16kb.md
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Detect optional signing credentials
         shell: bash
