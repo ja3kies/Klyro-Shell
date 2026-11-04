@@ -1,12 +1,13 @@
 package com.oryn.terminal.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 /**
  * Klyro-only visual tokens. One source of truth for the status/navigation bars,
@@ -73,6 +74,13 @@ data class KlyroColors(
             )
         }
     }
+}
+
+/** Shared Klyro geometry: one dialog/sheet/action-group radius across screens. */
+internal object KlyroShapes {
+    val dialog = RoundedCornerShape(28.dp)
+    val sheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val actionGroup = RoundedCornerShape(26.dp)
 }
 
 val LocalKlyroColors = compositionLocalOf { KlyroColors.create(true, "mint") }
