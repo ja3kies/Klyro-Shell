@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
@@ -525,8 +526,14 @@ public final class TermuxBootstrapInstaller {
         Path staging = Files.createTempFile(file.getParentFile().toPath(), ".klyro-ps1-", ".tmp");
         try {
             Files.write(staging, migrated.getBytes(StandardCharsets.UTF_8));
-            Files.move(staging, file.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            try {
+                Files.move(staging, file.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException unsupported) {
+                // Private FS should support atomic rename; preserve functionality
+                // on unusual Android vendors without deleting the backup.
+                Files.move(staging, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
         } finally {
             Files.deleteIfExists(staging);
         }
