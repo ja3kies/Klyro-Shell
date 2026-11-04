@@ -124,6 +124,12 @@ class MainActivity : ComponentActivity() {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val tree = Uri.parse(raw)
+                    val authorized = contentResolver.persistedUriPermissions.any { permission ->
+                        permission.uri == tree && permission.isReadPermission
+                    }
+                    if (!authorized) {
+                        throw SecurityException("Storage folder permission expired; authorize the folder again")
+                    }
                     val documentId = DocumentsContract.getTreeDocumentId(tree)
                     val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, documentId)
                     val paths = OrynPaths(applicationContext.filesDir,
