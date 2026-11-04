@@ -352,6 +352,13 @@ fun TerminalPane(
                 TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
                 TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
                 TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
+                TerminalExtraKey("PASTE", description = "Paste clipboard into terminal") {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val pasted = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                    if (!pasted.isNullOrEmpty()) {
+                        write(session, pasted)
+                    }
+                }
                 TerminalExtraKey("ALL", description = "Copy all terminal text") {
                     val transcript = session.emulator?.screen?.transcriptText.orEmpty()
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
