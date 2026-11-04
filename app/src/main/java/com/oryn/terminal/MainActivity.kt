@@ -628,6 +628,15 @@ private fun OrynTerminalApp(
     onClose: () -> Unit,
     onRecheck: () -> Unit
 ) {
+    // Setup and terminal chrome share the same persisted appearance selection.
+    // Each role keeps its contrast in both Klyro Soft Mint and Klyro Dark.
+    val Obsidian = if (darkChrome) Color(0xFF0B0F19) else Color(0xFFDDEFEA)
+    val SurfaceDark = if (darkChrome) Color(0xFF111827) else Color(0xFFF8FBFA)
+    val Elevated = if (darkChrome) Color(0xFF1E293B) else Color(0xFFCBDED6)
+    val TextPrimary = if (darkChrome) Color(0xFFE2E8F0) else Color(0xFF18282B)
+    val TextMuted = if (darkChrome) Color(0xFF94A3B8) else Color(0xFF557168)
+    val Cyan = if (darkChrome) Color(0xFF00F0FF) else Color(0xFF244F43)
+    val Purple = if (darkChrome) Color(0xFF8338EC) else Color(0xFF41675B)
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
