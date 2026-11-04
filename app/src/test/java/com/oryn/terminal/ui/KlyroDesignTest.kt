@@ -31,6 +31,8 @@ class KlyroDesignTest {
                 assertTrue("$id/$dark foreground", contrast(colors.foreground, colors.chrome) >= 4.5)
                 assertTrue("$id/$dark selected text", contrast(colors.onAccent, colors.accent) >= 4.5)
                 assertTrue("$id/$dark keys", contrast(colors.foreground, colors.key) >= 4.5)
+                assertTrue("$id/$dark secondary text", contrast(colors.muted, colors.tile) >= 4.5)
+                assertTrue("$id/$dark destructive action", contrast(colors.danger, colors.sheet) >= 4.5)
             }
         }
     }
