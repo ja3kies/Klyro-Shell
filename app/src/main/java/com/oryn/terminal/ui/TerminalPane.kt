@@ -106,6 +106,7 @@ fun TerminalPane(
 ) {
     var showToolsMenu by remember { mutableStateOf(false) }
     var showTerminalSettings by remember { mutableStateOf(false) }
+    var initialSettingsSection by remember { mutableStateOf("home") }
     var sessionSheetId by remember { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
@@ -198,74 +199,48 @@ fun TerminalPane(
                 TextButton(onClick = { showToolsMenu = true }) {
                     Text("⋮", color = TerminalAccent, fontSize = 22.sp)
                 }
-                DropdownMenu(expanded = showToolsMenu, onDismissRequest = { showToolsMenu = false }) {
-                    DropdownMenuItem(text = { Text("Edit session") }, onClick = {
-                        showToolsMenu = false
-                        activeTabId?.let { id ->
-                            openSessionSheet(id, tabs.firstOrNull { it.first == id }?.second.orEmpty())
+                DropdownMenu(
+                    expanded = showToolsMenu,
+                    onDismissRequest = { showToolsMenu = false },
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
+                    containerColor = Color(0xFFF8FBFA)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Settings", color = Color(0xFF18282B)) },
+                        onClick = {
+                            showToolsMenu = false
+                            initialSettingsSection = "home"
+                            showTerminalSettings = true
                         }
-                    })
-                    DropdownMenuItem(text = { Text("Settings") }, onClick = {
-                        showToolsMenu = false; showTerminalSettings = true
-                    })
-                    DropdownMenuItem(text = { Text("Set up storage folder") }, onClick = {
-                        showToolsMenu = false; onSetupStorage()
-                    })
-                    DropdownMenuItem(text = { Text("Import from authorized folder") }, onClick = {
-                        showToolsMenu = false; onImportStorageFolder()
-                    })
-                    DropdownMenuItem(text = { Text("Import file") }, onClick = {
-                        showToolsMenu = false; onImportFile()
-                    })
-                    DropdownMenuItem(text = { Text("Export file") }, onClick = {
-                        showToolsMenu = false; onExportFile()
-                    })
-                    DropdownMenuItem(text = { Text("Paste") }, onClick = {
-                        showToolsMenu = false
-
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val pasted = runCatching {
-                        clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
-                    }.getOrNull()
-                    pasted?.let { text ->
-                        if (ClipboardPastePolicy.canPaste(text)) {
-                            if (ClipboardPastePolicy.requiresConfirmation(text)) {
-                                pendingMultilinePaste = text
-                            } else {
-                                write(session, text)
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Files & storage", color = Color(0xFF18282B)) },
+                        onClick = {
+                            showToolsMenu = false
+                            initialSettingsSection = "files"
+                            showTerminalSettings = true
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Paste", color = Color(0xFF18282B)) },
+                        onClick = {
+                            showToolsMenu = false
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val pasted = runCatching {
+                                clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                            }.getOrNull()
+                            pasted?.let { value ->
+                                if (ClipboardPastePolicy.canPaste(value)) {
+                                    if (ClipboardPastePolicy.requiresConfirmation(value)) {
+                                        pendingMultilinePaste = value
+                                    } else {
+                                        write(session, value)
+                                    }
+                                }
                             }
                         }
-                    }
-                                    })
-                    DropdownMenuItem(text = { Text("Copy transcript") }, onClick = {
-                        showToolsMenu = false
-
-                    val transcript = session.emulator?.screen?.transcriptText.orEmpty()
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    // Limit clipboard payload and explicitly disclose truncation.
-                    val copied = runCatching {
-                        clipboard.setPrimaryClip(ClipData.newPlainText(
-                            "Klyro terminal", transcript.takeLast(256 * 1024)
-                        ))
-                    }.isSuccess
-                    val message = when {
-                        !copied -> "Clipboard unavailable"
-                        transcript.length > 256 * 1024 -> "Copied latest 256 KiB of terminal output"
-                        else -> "Terminal output copied"
-                    }
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                                    })
-                    DropdownMenuItem(text = { Text("Find") }, onClick = {
-                        showToolsMenu = false
-
-                    transcriptQuery = ""
-                    searchIndex = 0
-                    showTranscriptSearch = true
-                                    })
-                    DropdownMenuItem(text = { Text("End session") }, onClick = {
-                        showToolsMenu = false; showEndSessionConfirmation = true
-                    })
-                }
+                    )
+                }}
             }
     }
     Column(
