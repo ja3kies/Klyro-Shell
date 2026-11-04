@@ -64,6 +64,8 @@ private val MintTheme = lightColorScheme(
 @Composable
 internal fun KlyroSettingsSheet(
     initialSection: String,
+    themeMode: String,
+    onThemeModeChange: (String) -> Unit,
     fontSizeSp: Float,
     onFontChange: (Float) -> Unit,
     onResetFont: () -> Unit,
@@ -137,7 +139,39 @@ internal fun KlyroSettingsSheet(
                         }
                     }
                     "appearance" -> {
-                        SectionHeading("Appearance", "Adjust the terminal, not the keyboard toolbar.")
+                        SectionHeading("Appearance", "Select a theme or follow Android's appearance.")
+                        Surface(shape = RoundedCornerShape(26.dp), color = MintTile) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text("App theme", fontWeight = FontWeight.SemiBold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf(
+                                        "system" to "System",
+                                        "light" to "Light",
+                                        "dark" to "Dark"
+                                    ).forEach { (mode, label) ->
+                                        Button(
+                                            onClick = { onThemeModeChange(mode) },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(14.dp),
+                                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                                containerColor = if (themeMode == mode)
+                                                    Color(0xFF244F43) else Color(0xFFDDEFEA),
+                                                contentColor = if (themeMode == mode)
+                                                    Color.White else MintInk
+                                            ),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                                horizontal = 1.dp, vertical = 4.dp
+                                            )
+                                        ) { Text(label, fontSize = 12.sp) }
+                                    }
+                                }
+                                Text("Saved automatically; shell sessions keep running.",
+                                    style = MaterialTheme.typography.bodySmall, color = MintMuted)
+                            }
+                        }
                         Surface(shape = RoundedCornerShape(26.dp), color = MintTile) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(18.dp),
