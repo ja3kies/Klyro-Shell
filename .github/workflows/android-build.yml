@@ -137,6 +137,25 @@ jobs:
           echo "Verified APK-native proot runtime files:"
           cat "$ASSET_ROOT/runtime-manifest.txt"
 
+      # A pinned and verified open-font licence asset; no remote typography
+      # package or UI code is imported from DSH Go.
+      - name: Prepare verified JetBrains Mono terminal font
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="20447ce63b9ce38ab1757d14137467f7d268224a"
+          FONT_DIR="app/src/main/assets/fonts"
+          mkdir -p "$FONT_DIR"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/ccch1mneyyy/dsh-Go/$SOURCE_COMMIT/app/assets/fonts/JetBrainsMono-Regular.ttf" \
+            --output "$FONT_DIR/JetBrainsMono-Regular.ttf"
+          test "$(git hash-object "$FONT_DIR/JetBrainsMono-Regular.ttf")" = \
+            "dff66cc50702c75abd025dcf49f62a4dcc2d72de"
+          test "$(git hash-object "$FONT_DIR/OFL.txt")" = \
+            "8bee4148c1d54dbf5dae6d6c117fc80414266abb"
+          test "$(wc -c < "$FONT_DIR/JetBrainsMono-Regular.ttf")" -eq 273900
+          echo "PASS: verified JetBrains Mono and OFL licence"
+
       - name: Run JVM and native alignment auditor unit tests
         run: |
           python3 -m unittest discover -s tools -p "test_*.py"
@@ -173,7 +192,9 @@ jobs:
             lib/arm64-v8a/libproot-loader.so \
             lib/arm64-v8a/libtalloc.so \
             lib/arm64-v8a/libandroid-shmem.so \
-            assets/proot/runtime-manifest.txt; do
+            assets/proot/runtime-manifest.txt \
+            assets/fonts/JetBrainsMono-Regular.ttf \
+            assets/fonts/OFL.txt; do
             grep -Fxq "$entry" <<< "$APK_ENTRIES" || {
               echo "Required runtime file missing from APK: $entry" >&2
               exit 1

@@ -75,7 +75,7 @@ import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.session.TerminalSessionManager
 import com.oryn.terminal.termux.ProotRuntimeInstaller
 import com.oryn.terminal.termux.TermuxBootstrapInstaller
-import com.oryn.terminal.ui.OrynTerminalPalette
+import com.oryn.terminal.ui.KlyroTerminalPalette
 import com.oryn.terminal.ui.OrynTerminalViewClient
 import com.oryn.terminal.ui.TerminalPane
 import com.termux.terminal.TerminalSession
@@ -92,6 +92,8 @@ private val Warning = Color(0xFFFFC857)
 private val Success = Color(0xFF4DFF9A)
 
 class MainActivity : ComponentActivity() {
+    private var activePalette: KlyroColors = KlyroColors.create(false, "mint")
+    private var appliedTerminalPalette: KlyroColors? = null
     private var installProgress by mutableIntStateOf(0)
     private var isInstalling by mutableStateOf(false)
     private var statusMessage by mutableStateOf("Checking Klyro's private environment…")
@@ -337,6 +339,13 @@ class MainActivity : ComponentActivity() {
                 KlyroColors.create(darkTheme, accentId)
             }
             SideEffect {
+                activePalette = palette
+                // Compose chrome and native Termux ANSI colors must update together.
+                if (appliedTerminalPalette != palette) {
+                    KlyroTerminalPalette.apply(palette, terminalState.sessions.map { it.session })
+                    terminalState.viewClient?.invalidateTerminal()
+                    appliedTerminalPalette = palette
+                }
                 // Status and gesture navigation bars remain transparent while
                 // their underlying window matches the visible Klyro chrome.
                 window.decorView.setBackgroundColor(palette.chrome.toArgb())
@@ -573,7 +582,7 @@ class MainActivity : ComponentActivity() {
     private fun launchBash() {
         if (terminalState.sessions.size >= 8) return
         try {
-            OrynTerminalPalette.apply()
+            KlyroTerminalPalette.apply(activePalette, terminalState.sessions.map { it.session })
             val manager = TerminalSessionManager(this)
             val tabId = terminalState.reserveTabId()
             val newSessionClient = OrynTerminalSessionClient(applicationContext, terminalState.listenerFor(tabId))

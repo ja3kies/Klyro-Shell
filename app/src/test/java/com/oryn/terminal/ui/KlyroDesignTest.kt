@@ -43,11 +43,36 @@ class KlyroDesignTest {
         assertEquals(KlyroColors.accents.toSet().size, KlyroColors.accents.size)
     }
 
-    @Test fun darkTerminalRetainsLegibleBaseAcrossAllThemes() {
+    @Test fun terminalSurfaceTracksThemeAndKeepsContrast() {
         for (dark in listOf(false, true)) {
             for (id in KlyroColors.accents) {
-                assertEquals(Color(0xFF101619), KlyroColors.create(dark, id).terminal)
+                val c = KlyroColors.create(dark, id)
+                assertTrue("$id/$dark terminal foreground", contrast(c.foreground, c.terminal) >= 7.0)
+                assertTrue("$id/$dark muted on chrome", contrast(c.muted, c.chrome) >= 4.5)
+                assertTrue("$id/$dark muted on tile", contrast(c.muted, c.tile) >= 4.5)
+                assertTrue("$id/$dark terminal luminance",
+                    if (dark) luminance(c.terminal) < 0.08 else luminance(c.terminal) > 0.65)
             }
         }
+    }
+
+    @Test fun selectedAccentChangesAllSurfaceRoles() {
+        for (dark in listOf(false, true)) {
+            val a = KlyroColors.create(dark, "mint")
+            val b = KlyroColors.create(dark, "violet")
+            assertTrue(a.background != b.background)
+            assertTrue(a.chrome != b.chrome)
+            assertTrue(a.terminal != b.terminal)
+            assertTrue(a.key != b.key)
+            assertTrue(a.sheet != b.sheet)
+            assertTrue(a.tile != b.tile)
+        }
+    }
+
+    @Test fun typefaceSelectionHasSafeFallback() {
+        assertEquals("system", KlyroTerminalFonts.normalize(null))
+        assertEquals("system", KlyroTerminalFonts.normalize("invalid"))
+        assertEquals("jetbrains", KlyroTerminalFonts.normalize("jetbrains"))
+        assertEquals(2, KlyroTerminalFonts.options.size)
     }
 }

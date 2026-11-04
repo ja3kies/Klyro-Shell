@@ -7,6 +7,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 
 /**
  * Klyro-only visual tokens. One source of truth for the status/navigation bars,
@@ -44,29 +45,31 @@ data class KlyroColors(
                 "violet" -> if (dark) Color(0xFFC7B1FC) else Color(0xFF6543A6)
                 else -> if (dark) Color(0xFFB9DAD4) else Color(0xFF24584B)
             }
+            // Every surface carries a restrained accent tint, rather than
+            // recoloring only selected pills. Keep text roles neutral for AA.
             return if (dark) KlyroColors(
                 dark = true, accentId = id,
-                background = Color(0xFF101719),
-                chrome = Color(0xFF182528),
-                terminal = Color(0xFF101619),
-                key = Color(0xFF28383A),
-                sheet = Color(0xFF1D2B2E),
-                tile = Color(0xFF293A3D),
-                foreground = Color(0xFFE3F1EA),
-                muted = Color(0xFFABC2BB),
+                background = lerp(Color(0xFF11191D), accent, 0.055f),
+                chrome = lerp(Color(0xFF192327), accent, 0.065f),
+                terminal = lerp(Color(0xFF121A1E), accent, 0.035f),
+                key = lerp(Color(0xFF29383C), accent, 0.085f),
+                sheet = lerp(Color(0xFF202A2F), accent, 0.055f),
+                tile = lerp(Color(0xFF2B393D), accent, 0.09f),
+                foreground = Color(0xFFE9F1F2),
+                muted = Color(0xFFB4C4C7),
                 accent = accent,
                 onAccent = Color(0xFF101719),
                 danger = Color(0xFFFFB5BA)
             ) else KlyroColors(
                 dark = false, accentId = id,
-                background = Color(0xFFDDEFEA),
-                chrome = Color(0xFFF8FBFA),
-                terminal = Color(0xFF101619),
-                key = Color(0xFFDDEBE6),
-                sheet = Color(0xFFF8FBFA),
-                tile = Color(0xFFE8F2EE),
-                foreground = Color(0xFF18282B),
-                muted = Color(0xFF526D64),
+                background = lerp(Color(0xFFF2F7F5), accent, 0.055f),
+                chrome = lerp(Color(0xFFFDFEFC), accent, 0.025f),
+                terminal = lerp(Color(0xFFF1F7F4), accent, 0.07f),
+                key = lerp(Color(0xFFE6EFEB), accent, 0.115f),
+                sheet = lerp(Color(0xFFFDFEFC), accent, 0.025f),
+                tile = lerp(Color(0xFFECF3EF), accent, 0.11f),
+                foreground = Color(0xFF1B2B31),
+                muted = Color(0xFF50616B),
                 accent = accent,
                 onAccent = Color.White,
                 danger = Color(0xFF90343B)
