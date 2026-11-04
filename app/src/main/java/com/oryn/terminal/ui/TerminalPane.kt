@@ -197,6 +197,38 @@ fun TerminalPane(
                     DropdownMenuItem(text = { Text("Export file") }, onClick = {
                         showToolsMenu = false; onExportFile()
                     })
+                    DropdownMenuItem(text = { Text("Paste") }, onClick = {
+                        showToolsMenu = false
+
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val pasted = runCatching {
+                        clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                    }.getOrNull()
+                    if (!pasted.isNullOrEmpty() && pasted.length <= 65536) {
+                        if (pasted.contains('\n') || pasted.contains('\r')) {
+                            pendingMultilinePaste = pasted
+                        } else {
+                            write(session, pasted)
+                        }
+                    }
+                                    })
+                    DropdownMenuItem(text = { Text("Copy transcript") }, onClick = {
+                        showToolsMenu = false
+
+                    val transcript = session.emulator?.screen?.transcriptText.orEmpty()
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    // Avoid placing unexpectedly large scrollback in Android's clipboard.
+                    clipboard.setPrimaryClip(ClipData.newPlainText(
+                        "Klyro terminal", transcript.takeLast(256 * 1024)
+                    ))
+                                    })
+                    DropdownMenuItem(text = { Text("Find") }, onClick = {
+                        showToolsMenu = false
+
+                    transcriptQuery = ""
+                    searchIndex = 0
+                    showTranscriptSearch = true
+                                    })
                     DropdownMenuItem(text = { Text("End session") }, onClick = {
                         showToolsMenu = false; showEndSessionConfirmation = true
                     })
@@ -325,60 +357,7 @@ fun TerminalPane(
                 ) {
                     Text(
                         "The environment check reported warnings. Messages above the prompt may relate to them.",
-                        color = Color(0xFFFFC857),
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(
-                        onClick = { warningNoteDismissed = true },
-                        modifier = Modifier.heightIn(min = 48.dp)
-                    ) {
-                        Text("Dismiss", color = TerminalAccent, fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-
-        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-        key(session) {
-        AndroidView(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp),
-            factory = { context ->
-                TerminalView(context, null).apply {
-                    setTerminalViewClient(viewClient)
-                    setTextSize(terminalTextSizePx)
-                    setBackgroundColor(AndroidColor.rgb(11, 15, 25))
-                    isFocusable = true
-                    isFocusableInTouchMode = true
-                    sessionClient.attachView(this)
-                    viewClient.attachView(this)
-                    attachSession(session)
-                    activeTerminalView = this
-                }
-            },
-            update = { view ->
-                if (activeTerminalView !== view) activeTerminalView = view
-                sessionClient.attachView(view)
-                viewClient.attachView(view)
-                if (view.getCurrentSession() !== session) {
-                    view.attachSession(session)
-                }
-            }
-        )
-        }
-        }
-
-        val secondaryKeys: @Composable () -> Unit = {
-                TerminalExtraKey("HOME") { write(session, "\u001B[H") }
-                TerminalExtraKey("DEL") { session.writeCodePoint(false, 127) }
-                TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
-                TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
-                TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
-                TerminalExtraKey("PASTE", description = "Paste clipboard into terminal") {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val pasted = runCatching {
                         clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
                     }.getOrNull()
@@ -423,26 +402,10 @@ fun TerminalPane(
                     controlActive = !controlActive
                     viewClient.setControlDown(controlActive)
                 }
+                TerminalExtraKey("←", description = "Left arrow", labelSize = 18.sp) { write(session, "\u001B[D") }
                 TerminalExtraKey("↑", description = "Up arrow", labelSize = 18.sp) { write(session, "\u001B[A") }
-                TerminalExtraKey("ALT", active = altActive) {
-                    altActive = !altActive
-                    viewClient.setAltDown(altActive)
-                }
-                TerminalExtraKey("SHIFT", active = shiftActive) {
-                    shiftActive = !shiftActive
-                    viewClient.setShiftDown(shiftActive)
-                }
-                TerminalExtraKey("FN", active = fnActive) {
-                    fnActive = !fnActive
-                    viewClient.setFnDown(fnActive)
-                }
-                if (compact) secondaryKeys()
-            }
-            if (!compact) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) { secondaryKeys() }
+                TerminalExtraKey("↓", description = "Down arrow", labelSize = 18.sp) { write(session, "\u001B[B") }
+                TerminalExtraKey("→", description = "Right arrow", labelSize = 18.sp) { write(session, "\u001B[C") }
             }
         }
     }
