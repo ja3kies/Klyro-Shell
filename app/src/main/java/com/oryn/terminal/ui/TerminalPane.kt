@@ -204,11 +204,13 @@ fun TerminalPane(
                     val pasted = runCatching {
                         clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
                     }.getOrNull()
-                    if (ClipboardPastePolicy.canPaste(pasted)) {
-                        if (ClipboardPastePolicy.requiresConfirmation(pasted)) {
-                            pendingMultilinePaste = pasted
-                        } else {
-                            write(session, pasted)
+                    pasted?.let { text ->
+                        if (ClipboardPastePolicy.canPaste(text)) {
+                            if (ClipboardPastePolicy.requiresConfirmation(text)) {
+                                pendingMultilinePaste = text
+                            } else {
+                                write(session, text)
+                            }
                         }
                     }
                                     })
