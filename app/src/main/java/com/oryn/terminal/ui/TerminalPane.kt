@@ -158,8 +158,12 @@ fun TerminalPane(
         view.requestFocus()
         pendingSearch = null
     }
-    var renameTarget by remember { mutableStateOf<Long?>(null) }
+    var sessionSheetId by remember { mutableStateOf<Long?>(null) }
     var renameValue by remember { mutableStateOf("") }
+    fun openSessionSheet(id: Long, name: String) {
+        renameValue = name
+        sessionSheetId = id
+    }
     var closeTarget by remember { mutableStateOf<Long?>(null) }
     var controlActive by remember(viewClient) { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
@@ -172,7 +176,7 @@ fun TerminalPane(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
             pendingMultilinePaste == null && selectedOutput == null &&
-            renameTarget == null && closeTarget == null
+            sessionSheetId == null && closeTarget == null
     ) {
         showEndSessionConfirmation = true
     }
@@ -185,6 +189,12 @@ fun TerminalPane(
                     Text("⋮", color = TerminalAccent, fontSize = 22.sp)
                 }
                 DropdownMenu(expanded = showToolsMenu, onDismissRequest = { showToolsMenu = false }) {
+                    DropdownMenuItem(text = { Text("Edit session") }, onClick = {
+                        showToolsMenu = false
+                        activeTabId?.let { id ->
+                            openSessionSheet(id, tabs.firstOrNull { it.first == id }?.second.orEmpty())
+                        }
+                    })
                     DropdownMenuItem(text = { Text("Settings") }, onClick = {
                         showToolsMenu = false; showTerminalSettings = true
                     })
@@ -286,46 +296,45 @@ fun TerminalPane(
         ) {
             if (compact) toolsMenu()
             tabs.forEach { (id, tabTitle) ->
+                val active = id == activeTabId
                 Surface(
                     modifier = Modifier
                         .heightIn(min = 48.dp)
-                        .semantics {
-                            contentDescription = "Session $tabTitle"
-                            onLongClick("Renommer la session") {
-                                renameTarget = id
-                                renameValue = tabTitle
-                                true
-                            }
-                        }
+                        .widthIn(max = 172.dp)
                         .combinedClickable(
-                            onClick = { onSelectTab(id) },
-                            onLongClick = {
-                                renameTarget = id
-                                renameValue = tabTitle
-                            }
-                        ),
-                    color = if (id == activeTabId) TerminalAccent.copy(alpha = 0.2f)
-                        else Color(0xFF28383A),
-                    contentColor = if (id == activeTabId) TerminalAccent else TerminalText,
-                    shape = MaterialTheme.shapes.extraLarge
+                            onClickLabel = if (active) "Edit session" else "Switch session",
+                            onLongClickLabel = "Edit session",
+                            onClick = {
+                                if (active) openSessionSheet(id, tabTitle) else onSelectTab(id)
+                            },
+                            onLongClick = { openSessionSheet(id, tabTitle) }
+                        )
+                        .semantics { contentDescription = "Session $tabTitle" },
+                    color = if (active) TerminalAccent else Color(0xFF28383A),
+                    contentColor = if (active) TerminalBackground else TerminalText,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(tabTitle.take(18), fontSize = 12.sp)
-                        TextButton(onClick = { closeTarget = id }) {
-                            Text("×", fontSize = 16.sp)
-                        }
-                    }
+                    Text(
+                        tabTitle.ifBlank { "Session" },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                        fontSize = 13.sp,
+                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
                 }
             }
             Button(
                 onClick = onNewTab,
                 enabled = tabs.size < 8,
-                modifier = Modifier.heightIn(min = 44.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-            ) { Text("+", fontSize = 18.sp) }
+                modifier = Modifier.width(48.dp).height(48.dp),
+                shape = androidx.compose.foundation.shape.CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = TerminalAccent,
+                    contentColor = TerminalBackground
+                ),
+                contentPadding = PaddingValues(0.dp)
+            ) { Text("+", fontSize = 22.sp) }
         }
 
         if (sessionFailureMessage != null) {
