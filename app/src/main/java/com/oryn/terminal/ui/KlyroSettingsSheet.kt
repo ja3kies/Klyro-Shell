@@ -21,6 +21,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.oryn.terminal.R
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -108,21 +111,26 @@ internal fun KlyroSettingsSheet(
                         Text("Make Klyro yours",
                             style = MaterialTheme.typography.bodyMedium, color = colors.muted)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            SettingsTile("Appearance", "Terminal font & size", "Aa",
-                                Modifier.weight(1f)) { section = "appearance" }
-                            SettingsTile("Keyboard", "Extra keys & modifiers", "⌨",
+                            SettingsTile("Appearance", "Themes & typography", null,
+                                Modifier.weight(1f), fallbackGlyph = "Aa") { section = "appearance" }
+                            SettingsTile("Keyboard", "Extra keys & modifiers",
+                                R.drawable.hugeicons_keyboard,
                                 Modifier.weight(1f)) { section = "keyboard" }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            SettingsTile("Sessions", "Switch, edit & manage", "▣",
+                            SettingsTile("Sessions", "Switch, edit & manage",
+                                R.drawable.hugeicons_terminal,
                                 Modifier.weight(1f)) { section = "sessions" }
-                            SettingsTile("Files", "Android storage access", "▤",
+                            SettingsTile("Files", "Android storage access",
+                                R.drawable.hugeicons_folder_01,
                                 Modifier.weight(1f)) { section = "files" }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            SettingsTile("Privacy", "Clipboard & data", "◇",
+                            SettingsTile("Privacy", "Clipboard & data",
+                                R.drawable.hugeicons_shield_01,
                                 Modifier.weight(1f)) { section = "privacy" }
-                            SettingsTile("About", "Build & terminal engine", "ⓘ",
+                            SettingsTile("About", "Build & terminal engine",
+                                R.drawable.hugeicons_information_square,
                                 Modifier.weight(1f)) { section = "about" }
                         }
                     }
@@ -278,8 +286,9 @@ internal fun KlyroSettingsSheet(
 private fun SettingsTile(
     title: String,
     subtitle: String,
-    symbol: String,
+    icon: Int?,
     modifier: Modifier,
+    fallbackGlyph: String = "Aa",
     onClick: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
@@ -297,7 +306,18 @@ private fun SettingsTile(
                 modifier = Modifier.size(42.dp)
                     .background(colors.accent, RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center
-            ) { Text(symbol, color = colors.onAccent, fontSize = 19.sp) }
+            ) {
+                if (icon == null) {
+                    Text(fallbackGlyph, color = colors.onAccent, fontSize = 19.sp)
+                } else {
+                    Icon(
+                        painter = painterResource(icon),
+                        tint = colors.onAccent,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
             Text(title, color = colors.foreground, fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(subtitle, color = colors.muted, fontSize = 11.sp,
