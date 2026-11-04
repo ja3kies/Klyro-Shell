@@ -431,6 +431,11 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
+            TerminalExtraKey("FIND", description = "Find in terminal output") {
+                transcriptQuery = ""
+                searchIndex = 0
+                showTranscriptSearch = true
+            }
         }
         val secondRow: @Composable () -> Unit = {
             TerminalExtraKey("←", description = "Left arrow", arrow = "left") { write(session, "\u001B[D") }
@@ -443,6 +448,9 @@ fun TerminalPane(
             }
             TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
                 session.writeCodePoint(false, 12) // Ctrl+L: redraw without erasing scrollback.
+            }
+            TerminalExtraKey("END", description = "Move cursor to end of line") {
+                write(session, "\u001B[F")
             }
         }
         Column(
@@ -784,7 +792,7 @@ private fun TerminalExtraKey(
     label: String,
     active: Boolean = false,
     description: String? = null,
-    labelSize: androidx.compose.ui.unit.TextUnit = 11.sp,
+    labelSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     eraserIcon: Boolean = false,
     arrow: String? = null,
     onClick: () -> Unit
@@ -792,11 +800,11 @@ private fun TerminalExtraKey(
     Button(
         onClick = onClick,
         modifier = Modifier
-            .height(40.dp)
-            .width(49.dp)
+            .height(50.dp)
+            .width(52.dp)
             .semantics { contentDescription = description ?: label },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-        contentPadding = PaddingValues(horizontal = 1.dp, vertical = 4.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) TerminalAccent.copy(alpha = 0.18f)
                 else Color(0xFF1E293B),
@@ -804,7 +812,7 @@ private fun TerminalExtraKey(
         )
     ) {
         if (eraserIcon) {
-            Canvas(modifier = Modifier.width(20.dp).height(20.dp)) {
+            Canvas(modifier = Modifier.width(22.dp).height(22.dp)) {
                 val outline = Path().apply {
                     moveTo(size.width * 0.15f, size.height * 0.62f)
                     lineTo(size.width * 0.57f, size.height * 0.15f)
@@ -823,7 +831,7 @@ private fun TerminalExtraKey(
             }
         } else if (arrow != null) {
             // Thin chevrons, inspired by the reference terminal keyboard.
-            Canvas(modifier = Modifier.width(19.dp).height(19.dp)) {
+            Canvas(modifier = Modifier.width(22.dp).height(22.dp)) {
                 val w = size.width
                 val h = size.height
                 val tip = when (arrow) {
