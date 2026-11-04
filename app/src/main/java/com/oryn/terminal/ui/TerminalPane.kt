@@ -102,6 +102,7 @@ fun TerminalPane(
     var showToolsMenu by remember { mutableStateOf(false) }
     var showTerminalSettings by remember { mutableStateOf(false) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
+    var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
     LaunchedEffect(activeTabId, activeTerminalView) {
@@ -170,7 +171,8 @@ fun TerminalPane(
     BackHandler(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
-            pendingMultilinePaste == null && renameTarget == null && closeTarget == null
+            pendingMultilinePaste == null && selectedOutput == null &&
+            renameTarget == null && closeTarget == null
     ) {
         showEndSessionConfirmation = true
     }
@@ -436,6 +438,7 @@ fun TerminalPane(
             TerminalExtraKey("↓", description = "Down arrow", arrow = "down") { write(session, "\u001B[B") }
             TerminalExtraKey("→", description = "Right arrow", arrow = "right") { write(session, "\u001B[C") }
             TerminalExtraKey("ALL", description = "Select all terminal output") {
+                outputSelectionView = null
                 selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
             }
             TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
@@ -468,6 +471,81 @@ fun TerminalPane(
         }
     }
 
+    }
+
+    // TerminalView does not expose programmatic select-all. Use a read-only native
+    // selection surface, with the whole available snapshot selected on opening.
+    selectedOutput?.let { output ->
+        val selectionLimit = 256 * 1024
+        val truncated = output.length > selectionLimit
+        val visibleOutput = output.takeLast(selectionLimit)
+        fun closeSelection() {
+            outputSelectionView = null
+            selectedOutput = null
+        }
+        AlertDialog(
+            onDismissRequest = { closeSelection() },
+            title = { Text("Select terminal output") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (truncated) {
+                        Text(
+                            "Only the latest 256 KiB are selectable; earlier output is omitted.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    if (visibleOutput.isEmpty()) {
+                        Text("No output available to select.")
+                    } else {
+                        AndroidView(
+                            modifier = Modifier.fillMaxWidth().height(244.dp),
+                            factory = { activityContext ->
+                                EditText(activityContext).apply {
+                                    setText(visibleOutput)
+                                    setTextIsSelectable(true)
+                                    setShowSoftInputOnFocus(false)
+                                    setHorizontallyScrolling(false)
+                                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
+                                    setTextColor(AndroidColor.WHITE)
+                                    setBackgroundColor(AndroidColor.rgb(11, 15, 25))
+                                    typeface = android.graphics.Typeface.MONOSPACE
+                                    setPadding(12, 8, 12, 8)
+                                    outputSelectionView = this
+                                    post {
+                                        if (isAttachedToWindow) {
+                                            requestFocus()
+                                            selectAll()
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = visibleOutput.isNotEmpty(),
+                    onClick = {
+                        val view = outputSelectionView
+                        if (view != null) {
+                            val value = view.text.toString()
+                            val left = view.selectionStart.coerceIn(0, value.length)
+                            val right = view.selectionEnd.coerceIn(0, value.length)
+                            val selection = if (left < right) value.substring(left, right) else value
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            runCatching {
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", selection))
+                            }
+                        }
+                        closeSelection()
+                    }
+                ) { Text("Copy selection") }
+            },
+            dismissButton = {
+                TextButton(onClick = { closeSelection() }) { Text("Close") }
+            }
+        )
     }
 
     if (showTerminalSettings) {
