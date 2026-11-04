@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,7 +88,7 @@ internal fun KlyroSettingsSheet(
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth()
-                    .heightIn(max = 660.dp)
+                    .heightIn(max = 600.dp)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 28.dp),
@@ -150,7 +151,8 @@ internal fun KlyroSettingsSheet(
                                     ).forEach { (mode, label) ->
                                         Button(
                                             onClick = { onThemeModeChange(mode) },
-                                            modifier = Modifier.weight(1f),
+                                            modifier = Modifier.weight(1f)
+                                                .semantics { selected = themeMode == mode },
                                             shape = RoundedCornerShape(14.dp),
                                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                                 containerColor = if (themeMode == mode)
@@ -170,7 +172,11 @@ internal fun KlyroSettingsSheet(
                                         val name = key.replaceFirstChar { it.uppercase() }
                                         val swatch = KlyroColors.create(colors.dark, key)
                                         Button(
-                                            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                                .semantics {
+                                                    selected = accentId == key
+                                                    contentDescription = "$name accent"
+                                                },
                                             onClick = { onAccentIdChange(key) },
                                             shape = RoundedCornerShape(14.dp),
                                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
@@ -186,10 +192,7 @@ internal fun KlyroSettingsSheet(
                                         ) { Text(name, fontSize = 11.sp) }
                                     }
                                 }
-                                Text("Mint · Teal · classic Cyan · classic Violet",
-                                    color = colors.muted,
-                                    style = MaterialTheme.typography.bodySmall)
-                                Text("Saved automatically; shell sessions keep running.",
+                                Text("Saved automatically; terminal sessions keep running.",
                                     style = MaterialTheme.typography.bodySmall, color = colors.muted)
                             }
                         }
@@ -205,8 +208,10 @@ internal fun KlyroSettingsSheet(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Button(onClick = { onFontChange(-1f) }, enabled = fontSizeSp > 9f,
+                                        modifier = Modifier.semantics { contentDescription = "Decrease terminal font size" },
                                         shape = RoundedCornerShape(25.dp)) { Text("A−") }
                                     Button(onClick = { onFontChange(1f) }, enabled = fontSizeSp < 24f,
+                                        modifier = Modifier.semantics { contentDescription = "Increase terminal font size" },
                                         shape = RoundedCornerShape(25.dp)) { Text("A+") }
                                     TextButton(onClick = onResetFont,
                                         enabled = fontSizeSp != 13.5f) { Text("Reset") }
@@ -217,12 +222,12 @@ internal fun KlyroSettingsSheet(
                         }
                     }
                     "keyboard" -> {
-                        SectionHeading("Keyboard", "Two fixed rows of terminal shortcuts.")
+                        SectionHeading("Keyboard", "Two rows in portrait; one scrollable row when space is limited.")
                         ActionTile(
                             title = "Release modifiers",
                             subtitle = "Turn off CTRL, ALT, SHIFT and FN if a key stays active."
                         ) { onResetModifiers() }
-                        Text("Shortcut keys are always visible; there are no hidden horizontal pages.",
+                        Text("In compact windows, swipe the shortcut row to reach the remaining keys.",
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "sessions" -> {

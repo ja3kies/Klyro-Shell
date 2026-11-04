@@ -58,7 +58,7 @@ internal fun KlyroSessionSheet(
             containerColor = colors.sheet,
             contentColor = colors.foreground,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFB5C3C9)) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
@@ -209,7 +209,7 @@ internal fun KlyroChooseShellSheet(
             containerColor = colors.sheet,
             contentColor = colors.foreground,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFB5C3C9)) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)

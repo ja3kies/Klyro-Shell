@@ -15,6 +15,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
@@ -65,6 +66,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -209,11 +212,12 @@ fun TerminalPane(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
     val compact = maxHeight < 300.dp
     // Fit seven 48dp+ touch targets across a Pixel-width screen; scroll on narrower devices.
-    val keyWidth = ((maxWidth - 36.dp) / 7).coerceIn(36.dp, 56.dp)
+    val keyWidth = if (compact) 48.dp else ((maxWidth - 36.dp) / 7).coerceIn(40.dp, 56.dp)
     val toolsMenu: @Composable () -> Unit = {
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
-                    Text("⋮", color = TerminalAccent, fontSize = 22.sp)
+                    Text("⋮", color = TerminalAccent, fontSize = 22.sp,
+                        modifier = Modifier.semantics { contentDescription = "More actions" })
                 }
                 DropdownMenu(
                     expanded = showToolsMenu,
@@ -261,14 +265,17 @@ fun TerminalPane(
                             val pasted = runCatching {
                                 clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
                             }.getOrNull()
-                            pasted?.let { value ->
-                                if (ClipboardPastePolicy.canPaste(value)) {
-                                    if (ClipboardPastePolicy.requiresConfirmation(value)) {
-                                        pendingMultilinePaste = value
-                                    } else {
-                                        write(session, value)
-                                    }
-                                }
+                            when {
+                                pasted.isNullOrEmpty() -> Toast.makeText(
+                                    context, "Clipboard is empty", Toast.LENGTH_SHORT
+                                ).show()
+                                !ClipboardPastePolicy.canPaste(pasted) -> Toast.makeText(
+                                    context, "Clipboard text is too long or contains unsupported controls.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                ClipboardPastePolicy.requiresConfirmation(pasted) ->
+                                    pendingMultilinePaste = pasted
+                                else -> write(session, pasted)
                             }
                         }
                     )
@@ -332,7 +339,10 @@ fun TerminalPane(
                             },
                             onLongClick = { openSessionSheet(id, tabTitle) }
                         )
-                        .semantics { contentDescription = "Session ${tabTitle.ifBlank { "Session" }}" },
+                        .semantics {
+                            contentDescription = tabTitle.ifBlank { "Session" }
+                            stateDescription = if (active) "Active session" else "Inactive session"
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Surface(
@@ -353,22 +363,25 @@ fun TerminalPane(
                 }
             }
             Box(
-                modifier = Modifier.size(48.dp).semantics {
-                    contentDescription = "New terminal"
-                },
+                modifier = Modifier
+                    .size(48.dp)
+                    .clickable(
+                        enabled = tabs.size < 8,
+                        role = Role.Button,
+                        onClickLabel = "New terminal",
+                        onClick = onNewTab
+                    )
+                    .semantics { contentDescription = "New terminal" },
                 contentAlignment = Alignment.Center
             ) {
-                Button(
-                    onClick = onNewTab,
-                    enabled = tabs.size < 8,
+                Surface(
                     modifier = Modifier.size(38.dp),
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = TerminalAccent,
-                        contentColor = ui.onAccent
-                    ),
-                    contentPadding = PaddingValues(0.dp)
-                ) { Text("+", fontSize = 20.sp) }
+                    color = if (tabs.size < 8) TerminalAccent else inactiveTabSurface,
+                    contentColor = if (tabs.size < 8) ui.onAccent else TerminalMuted,
+                    shape = androidx.compose.foundation.shape.CircleShape
+                ) {
+                    Box(contentAlignment = Alignment.Center) { Text("+", fontSize = 20.sp) }
+                }
             }
         }
 
@@ -433,7 +446,8 @@ fun TerminalPane(
         ) {
         key(session) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            // Inset real terminal glyphs inside the clipped rounded viewport.
+            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 6.dp),
             factory = { context ->
                 TerminalView(context, null).apply {
                     setTerminalViewClient(viewClient)
@@ -462,7 +476,7 @@ fun TerminalPane(
         }
         }
 
-        // Seven visible keys per row: no horizontal gesture or hidden actions.
+        // Portrait: two fixed rows; compact height: one scrollable row to preserve PTY height.
         val firstRow: @Composable () -> Unit = {
             TerminalExtraKey("ESC", keyWidth = keyWidth, darkChrome = darkChrome) { session.writeCodePoint(false, 27) }
             TerminalExtraKey("TAB", keyWidth = keyWidth, darkChrome = darkChrome) { session.writeCodePoint(false, 9) }
@@ -504,19 +518,27 @@ fun TerminalPane(
                 session.writeCodePoint(false, 12) // Ctrl+L; keep scrollback.
             }
         }
-        Column(
-            modifier = Modifier.fillMaxWidth().background(TerminalSurface)
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+        if (compact) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().background(TerminalSurface)
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) { firstRow() }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) { secondRow() }
+            ) {
+                firstRow()
+                secondRow()
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth().background(TerminalSurface)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) { firstRow() }
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) { secondRow() }
+            }
         }
     }
 
@@ -750,13 +772,14 @@ fun TerminalPane(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
             containerColor = ui.sheet,
             onDismissRequest = { showTranscriptSearch = false },
-            title = { Text("Search terminal transcript") },
+            title = { Text("Find in terminal", style = MaterialTheme.typography.titleLarge, maxLines = 1) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = transcriptQuery,
                         onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
                         label = { Text("Find text") },
+                        modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
                     Text(
@@ -798,6 +821,8 @@ fun TerminalPane(
                                 text = preview,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
+                                maxLines = 2,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 modifier = Modifier.fillMaxWidth().padding(10.dp)
                             )
                         }
