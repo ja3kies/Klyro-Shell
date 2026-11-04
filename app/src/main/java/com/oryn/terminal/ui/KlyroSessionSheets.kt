@@ -202,7 +202,8 @@ internal fun KlyroChooseShellSheet(
     onBack: () -> Unit,
     onNewBash: () -> Unit
 ) {
-    MaterialTheme(colorScheme = SheetScheme) {
+    val colors = LocalKlyroColors.current
+    KlyroModalTheme {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             containerColor = colors.sheet,
