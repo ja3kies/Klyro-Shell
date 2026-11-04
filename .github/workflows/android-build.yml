@@ -140,8 +140,19 @@ jobs:
       - name: Run JVM unit tests
         run: gradle :app:testDebugUnitTest
 
-      - name: Build ARM64 debug APK
-        run: gradle :app:assembleDebug
+      - name: Build ARM64 debug APK and instrumented test APK
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
+
+      - name: Verify packaged APK metadata and native runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -E "^package:|^sdkVersion:|^targetSdkVersion:"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "targetSdkVersion:'36'"
+          unzip -Z1 "$APK" | grep -q '^lib/arm64-v8a/'
+          test -s app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 
       - name: Detect optional signing credentials
         shell: bash
