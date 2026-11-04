@@ -45,16 +45,23 @@ data class KlyroColors(
                 "violet" -> if (dark) Color(0xFFC7B1FC) else Color(0xFF6543A6)
                 else -> if (dark) Color(0xFFB9DAD4) else Color(0xFF24584B)
             }
-            // Every surface carries a restrained accent tint, rather than
-            // recoloring only selected pills. Keep text roles neutral for AA.
+            // Accent is deliberately adjusted for high-contrast controls.
+            // The deeper seed gives the same hue to every tonal surface;
+            // mixing pale accents directly into dark chrome was imperceptible.
+            val seed = when (id) {
+                "teal" -> Color(0xFF008679)
+                "cyan" -> Color(0xFF006FA6)
+                "violet" -> Color(0xFF7049B1)
+                else -> Color(0xFF218D6F)
+            }
             return if (dark) KlyroColors(
                 dark = true, accentId = id,
-                background = lerp(Color(0xFF11191D), accent, 0.055f),
-                chrome = lerp(Color(0xFF192327), accent, 0.065f),
-                terminal = lerp(Color(0xFF121A1E), accent, 0.035f),
-                key = lerp(Color(0xFF29383C), accent, 0.085f),
-                sheet = lerp(Color(0xFF202A2F), accent, 0.055f),
-                tile = lerp(Color(0xFF2B393D), accent, 0.09f),
+                background = lerp(Color(0xFF11191D), seed, 0.15f),
+                chrome = lerp(Color(0xFF192327), seed, 0.12f),
+                terminal = lerp(Color(0xFF121A1E), seed, 0.12f),
+                key = lerp(Color(0xFF29383C), seed, 0.18f),
+                sheet = lerp(Color(0xFF202A2F), seed, 0.12f),
+                tile = lerp(Color(0xFF2B393D), seed, 0.18f),
                 foreground = Color(0xFFE9F1F2),
                 muted = Color(0xFFB4C4C7),
                 accent = accent,
@@ -62,12 +69,12 @@ data class KlyroColors(
                 danger = Color(0xFFFFB5BA)
             ) else KlyroColors(
                 dark = false, accentId = id,
-                background = lerp(Color(0xFFF2F7F5), accent, 0.055f),
-                chrome = lerp(Color(0xFFFDFEFC), accent, 0.025f),
-                terminal = lerp(Color(0xFFF1F7F4), accent, 0.07f),
-                key = lerp(Color(0xFFE6EFEB), accent, 0.115f),
-                sheet = lerp(Color(0xFFFDFEFC), accent, 0.025f),
-                tile = lerp(Color(0xFFECF3EF), accent, 0.11f),
+                background = lerp(Color(0xFFF2F7F5), seed, 0.12f),
+                chrome = lerp(Color(0xFFFDFEFC), seed, 0.055f),
+                terminal = lerp(Color(0xFFF1F7F4), seed, 0.115f),
+                key = lerp(Color(0xFFE6EFEB), seed, 0.19f),
+                sheet = lerp(Color(0xFFFDFEFC), seed, 0.065f),
+                tile = lerp(Color(0xFFECF3EF), seed, 0.18f),
                 foreground = Color(0xFF1B2B31),
                 muted = Color(0xFF50616B),
                 accent = accent,
