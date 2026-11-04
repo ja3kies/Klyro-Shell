@@ -204,8 +204,8 @@ fun TerminalPane(
                     val pasted = runCatching {
                         clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
                     }.getOrNull()
-                    if (!pasted.isNullOrEmpty() && pasted.length <= 65536) {
-                        if (pasted.contains('\n') || pasted.contains('\r')) {
+                    if (ClipboardPastePolicy.canPaste(pasted)) {
+                        if (ClipboardPastePolicy.requiresConfirmation(pasted)) {
                             pendingMultilinePaste = pasted
                         } else {
                             write(session, pasted)
