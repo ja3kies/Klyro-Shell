@@ -76,7 +76,7 @@ data class KlyroColors(
                 sheet = lerp(Color(0xFFFDFEFC), seed, 0.065f),
                 tile = lerp(Color(0xFFECF3EF), seed, 0.18f),
                 foreground = Color(0xFF1B2B31),
-                muted = Color(0xFF50616B),
+                muted = Color(0xFF455962),
                 accent = accent,
                 onAccent = Color.White,
                 danger = Color(0xFF90343B)
