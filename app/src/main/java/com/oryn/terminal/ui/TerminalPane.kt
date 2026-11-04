@@ -361,36 +361,52 @@ fun TerminalPane(
                 ) {
                     Text(
                         "The environment check reported warnings. Messages above the prompt may relate to them.",
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val pasted = runCatching {
-                        clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
-                    }.getOrNull()
-                    if (!pasted.isNullOrEmpty() && pasted.length <= 65536) {
-                        if (pasted.contains('\n') || pasted.contains('\r')) {
-                            pendingMultilinePaste = pasted
-                        } else {
-                            write(session, pasted)
-                        }
+                        color = Color(0xFFFFC857),
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        onClick = { warningNoteDismissed = true },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
+                        Text("Dismiss", color = TerminalAccent, fontSize = 12.sp)
                     }
                 }
-                TerminalExtraKey("ALL", description = "Copy all terminal text") {
-                    val transcript = session.emulator?.screen?.transcriptText.orEmpty()
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    // Avoid placing unexpectedly large scrollback in Android's clipboard.
-                    clipboard.setPrimaryClip(ClipData.newPlainText(
-                        "Klyro terminal", transcript.takeLast(256 * 1024)
-                    ))
-                }
-                TerminalExtraKey("FIND", description = "Search terminal transcript") {
-                    transcriptQuery = ""
-                    searchIndex = 0
-                    showTranscriptSearch = true
-                }
-                TerminalExtraKey("CLEAR", description = "Clear terminal display", eraserIcon = true) {
-                    session.writeCodePoint(false, 12) // Ctrl+L redraws Bash prompt
-                }
-                TerminalExtraKey("END") { write(session, "\u001B[F") }
+            }
         }
+
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+        key(session) {
+        AndroidView(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
+            factory = { context ->
+                TerminalView(context, null).apply {
+                    setTerminalViewClient(viewClient)
+                    setTextSize(terminalTextSizePx)
+                    setBackgroundColor(AndroidColor.rgb(11, 15, 25))
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    sessionClient.attachView(this)
+                    viewClient.attachView(this)
+                    attachSession(session)
+                    activeTerminalView = this
+                }
+            },
+            update = { view ->
+                if (activeTerminalView !== view) activeTerminalView = view
+                sessionClient.attachView(view)
+                viewClient.attachView(view)
+                if (view.getCurrentSession() !== session) {
+                    view.attachSession(session)
+                }
+            }
+        )
+        }
+        }
+
         Column(
             modifier = Modifier.fillMaxWidth().background(TerminalSurface)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
