@@ -82,7 +82,7 @@ internal fun KlyroSettingsSheet(
             onDismissRequest = onDismiss,
             containerColor = colors.sheet,
             contentColor = colors.foreground,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            shape = KlyroShapes.sheet,
             dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
@@ -136,7 +136,7 @@ internal fun KlyroSettingsSheet(
                     }
                     "appearance" -> {
                         SectionHeading("Appearance", "Select a theme or follow Android's appearance.")
-                        Surface(shape = RoundedCornerShape(26.dp), color = colors.tile) {
+                        Surface(shape = KlyroShapes.actionGroup, color = colors.tile) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -150,7 +150,7 @@ internal fun KlyroSettingsSheet(
                                     ).forEach { (mode, label) ->
                                         Button(
                                             onClick = { onThemeModeChange(mode) },
-                                            modifier = Modifier.weight(1f),
+                                            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                                             shape = RoundedCornerShape(14.dp),
                                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                                 containerColor = if (themeMode == mode)
@@ -183,7 +183,7 @@ internal fun KlyroSettingsSheet(
                                             border = if (accentId == key)
                                                 androidx.compose.foundation.BorderStroke(2.dp, colors.foreground)
                                                 else null
-                                        ) { Text(name, fontSize = 11.sp) }
+                                        ) { Text(name, fontSize = 12.sp) }
                                     }
                                 }
                                 Text("Mint · Teal · classic Cyan · classic Violet",
@@ -193,7 +193,7 @@ internal fun KlyroSettingsSheet(
                                     style = MaterialTheme.typography.bodySmall, color = colors.muted)
                             }
                         }
-                        Surface(shape = RoundedCornerShape(26.dp), color = colors.tile) {
+                        Surface(shape = KlyroShapes.actionGroup, color = colors.tile) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(18.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -263,7 +263,7 @@ internal fun KlyroSettingsSheet(
                     }
                     "about" -> {
                         SectionHeading("About Klyro Shell", "Private terminal environment for Android.")
-                        Surface(shape = RoundedCornerShape(26.dp), color = colors.tile) {
+                        Surface(shape = KlyroShapes.actionGroup, color = colors.tile) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(18.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -296,7 +296,7 @@ private fun SettingsTile(
         modifier = modifier.heightIn(min = 140.dp)
             .clickable(onClickLabel = "Open $title settings", onClick = onClick),
         color = colors.tile,
-        shape = RoundedCornerShape(26.dp)
+        shape = KlyroShapes.actionGroup
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -320,8 +320,8 @@ private fun SettingsTile(
             }
             Text(title, color = colors.foreground, fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(subtitle, color = colors.muted, fontSize = 11.sp,
-                maxLines = 2, lineHeight = 15.sp)
+            Text(subtitle, color = colors.muted, fontSize = 12.sp,
+                maxLines = 2, lineHeight = 16.sp)
         }
     }
 }
@@ -342,7 +342,7 @@ private fun ActionTile(title: String, subtitle: String, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth()
             .clickable(onClickLabel = title, onClick = onClick),
         color = colors.tile,
-        shape = RoundedCornerShape(26.dp)
+        shape = KlyroShapes.actionGroup
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(17.dp),

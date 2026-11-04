@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -57,8 +56,8 @@ internal fun KlyroSessionSheet(
             onDismissRequest = onDismiss,
             containerColor = colors.sheet,
             contentColor = colors.foreground,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFB5C3C9)) }
+            shape = KlyroShapes.sheet,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
@@ -68,14 +67,15 @@ internal fun KlyroSessionSheet(
                 Text(sessionName.ifBlank { "Session" },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold)
-                Surface(color = colors.tile, shape = RoundedCornerShape(26.dp)) {
+                Surface(color = colors.tile, shape = KlyroShapes.actionGroup) {
                     Column {
                         SheetAction("", "Rename", onRename, icon = R.drawable.hugeicons_pen_01)
-                        SheetAction("+", "New terminal", onChooseShell, trailing = "›")
+                        SheetAction("", "New terminal", onChooseShell, trailing = "›",
+                            icon = R.drawable.hugeicons_terminal)
                         if (!isActive) SheetAction("↗", "Switch to session", onActivate)
                     }
                 }
-                Surface(color = colors.tile, shape = RoundedCornerShape(26.dp)) {
+                Surface(color = colors.tile, shape = KlyroShapes.actionGroup) {
                     Column {
                         SheetAction("×", "Close terminal", onClick = {
                             confirmClose = true
@@ -159,7 +159,7 @@ internal fun KlyroRenameSessionDialog(
     KlyroModalTheme {
         AlertDialog(
             onDismissRequest = onDismiss,
-            shape = RoundedCornerShape(28.dp),
+            shape = KlyroShapes.dialog,
             containerColor = colors.sheet,
             title = { Text("Rename terminal", fontWeight = FontWeight.Bold) },
             text = {
@@ -208,8 +208,8 @@ internal fun KlyroChooseShellSheet(
             onDismissRequest = onDismiss,
             containerColor = colors.sheet,
             contentColor = colors.foreground,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFB5C3C9)) }
+            shape = KlyroShapes.sheet,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
@@ -224,7 +224,7 @@ internal fun KlyroChooseShellSheet(
                     Text("Choose shell", style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold)
                 }
-                Surface(color = colors.tile, shape = RoundedCornerShape(26.dp)) {
+                Surface(color = colors.tile, shape = KlyroShapes.actionGroup) {
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable(
                             onClickLabel = "Start a Bash terminal", onClick = onNewBash
@@ -232,8 +232,12 @@ internal fun KlyroChooseShellSheet(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("⌘", color = colors.muted,
-                            style = MaterialTheme.typography.headlineSmall)
+                        Icon(
+                            painter = painterResource(R.drawable.hugeicons_terminal),
+                            contentDescription = null,
+                            tint = colors.muted,
+                            modifier = Modifier.padding(4.dp)
+                        )
                         Column {
                             Text("bash", fontWeight = FontWeight.SemiBold)
                             Text("/bin/bash", color = colors.muted,

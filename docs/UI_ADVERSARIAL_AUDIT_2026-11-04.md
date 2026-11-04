@@ -41,3 +41,26 @@ Replace modal FIND with an *inline find bar* pinned to the terminal (like a brow
 ## Rollback
 
 One feature PR into `feat/klyro-0110`; rollback by reverting its squash commit on integration. `main` and `fix/proot-5.1.107.102` remain unchanged.
+
+
+## Residual UI/UX pass after the signed v4 baseline
+
+**Baseline checked:** `cda9f5c5f0683ae84ad286a5bcfa2576a7379d1f`, Android CI 41919608530 (success).
+This is an additional source audit; the prior pass already implemented 36dp session pills, 246dp dropdown, Hugeicons pen-01 and four persisted accent presets.
+
+| Source-observed residual | Targeted correction | Verification |
+| --- | --- | --- |
+| FIND input was not automatically focused, had no explicit full width and lacked a Search IME action | FocusRequester, full-width field, Search keyboard action while keeping Go to line | Compile/JVM + Pixel 9 IME tests |
+| TerminalView could be refocused while an overlay was displayed | Gate restoration on *all* dialogs/sheets, then refocus only after dismissal | Pixel 9 TalkBack/keyboard tests |
+| Modal title weight and shape literals were scattered | Shared `KlyroShapes` and consistent bold modal titles | Source audit + compilation |
+| Muted sheet handle was hardcoded independently of theme; session shell entry used a typographic pseudo-icon | Use `colors.muted` and bundled MIT Hugeicons terminal icon | Both light/dark/preset checks |
+| Modifier keys exposed no selected/latched state to accessibility services; overflow icon had no action name | State descriptions (On/Off) and “More options” label | Pixel 9 TalkBack tests |
+| Secondary tile text was 11sp, theme options did not explicitly guarantee 48dp height | 12sp subtitles/swatches and >=48dp theme buttons | Font scaling, narrow widths |
+| Danger action did not look destructive on the End Bash confirmation | Danger-colored confirm text; extended contrast tests for muted and destructive roles | JVM contrast + user acceptance |
+
+### Acceptance not yet claimed
+
+- CI must run on the exact final polish SHA: unit tests, debug APK build, instrumentation APK compilation, signature and native 16KiB alignment checks.
+- A passing compile is **not** a Pixel 9 UI or PTY/runtime pass. Verify status/navigation regions with the software keyboard visible and hidden, FIND/Rename, compact landscape, session transitions and colour accents in light/dark/system.
+- Alternative component requiring product approval: *inline FIND toolbar* (terminal stays visible but loses vertical space). Kept out of this patch intentionally.
+- Branch is isolated; neither `main` nor the known stable integration baseline is updated by the proposed patch.
