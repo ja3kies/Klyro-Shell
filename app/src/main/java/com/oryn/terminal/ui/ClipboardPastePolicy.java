@@ -6,8 +6,14 @@ public final class ClipboardPastePolicy {
     private ClipboardPastePolicy() {}
 
     public static boolean canPaste(String value) {
-        return value != null && !value.isEmpty() && value.length() <= MAX_CHARS
-            && value.indexOf('\u0000') < 0;
+        if (value == null || value.isEmpty() || value.length() > MAX_CHARS) return false;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            // Reject terminal control sequences; allow tabs and line endings.
+            if (c < 0x20 && c != '\n' && c != '\r' && c != '\t') return false;
+            if (c == 0x7f) return false;
+        }
+        return true;
     }
 
     public static boolean requiresConfirmation(String value) {
