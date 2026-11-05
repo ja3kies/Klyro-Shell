@@ -102,8 +102,10 @@ class KlyroBrandGeometryTest(unittest.TestCase):
                              gradient.attrib[ANDROID+"startColor"])
             self.assertEqual(stops[-1].attrib["stop-color"],
                              gradient.attrib[ANDROID+"endColor"])
-        self.assertEqual(self.native_paths["k-highlight"].attrib[ANDROID+"fillAlpha"],
-                         self.svg_paths["k-highlight"].attrib["opacity"])
+        self.assertAlmostEqual(
+            float(self.native_paths["k-highlight"].attrib[ANDROID+"fillAlpha"]),
+            float(self.svg_paths["k-highlight"].attrib["opacity"])
+        )
 
     def test_safe_art_and_k_panel_gap(self):
         root = ET.parse(self.master).getroot()
