@@ -598,7 +598,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchBash() {
-        if (terminalState.sessions.size >= 8) return
+        if (terminalState.sessions.size >= 8) {
+            statusMessage = "Eight sessions already running. Close a session before opening another."
+            Toast.makeText(this, "Maximum of 8 sessions. Close one to continue.",
+                Toast.LENGTH_SHORT).show()
+            return
+        }
         try {
             KlyroTerminalPalette.apply(activePalette, terminalState.sessions.map { it.session })
             val manager = TerminalSessionManager(this)
