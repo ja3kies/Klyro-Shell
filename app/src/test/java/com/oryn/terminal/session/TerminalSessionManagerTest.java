@@ -91,6 +91,9 @@ public class TerminalSessionManagerTest {
         assertTrue(!cleaned.contains(String.valueOf((char) 27)));
         assertTrue(!TerminalSessionManager.safeDiagnostics("x" + (char) 0x85 + "y").contains(String.valueOf((char) 0x85)));
         assertEquals("(empty)", TerminalSessionManager.safeDiagnostics(null));
+        assertTrue(!TerminalSessionManager.safeDiagnostics(
+                "failure at /data/data/com.klyro.shell/files/private.txt")
+                .contains("private.txt"));
     }
 
     @Test

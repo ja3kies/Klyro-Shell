@@ -3,6 +3,7 @@ package com.oryn.terminal.session;
 import android.content.Context;
 
 import com.oryn.terminal.core.OrynPaths;
+import com.oryn.terminal.core.KlyroDiagnostics;
 import com.oryn.terminal.termux.TermuxBootstrapInstaller;
 
 import java.io.ByteArrayOutputStream;
@@ -88,7 +89,15 @@ public final class TerminalSessionManager {
             throw new IOException("Klyro's private bootstrap and APK-native PRoot runtime are required.");
         }
         File stdoutFile = File.createTempFile("klyro-check-out-", ".log", paths.getTmp());
-        File stderrFile = File.createTempFile("klyro-check-err-", ".log", paths.getTmp());
+        File stderrFile;
+        try {
+            stderrFile = File.createTempFile("klyro-check-err-", ".log", paths.getTmp());
+        } catch (IOException error) {
+            if (!stdoutFile.delete()) {
+                android.util.Log.w("KlyroVerify", "Cannot clear first temporary probe log");
+            }
+            throw error;
+        }
         Process process = null;
         String nonce = freshVerificationMarker();
         try {
@@ -175,7 +184,7 @@ public final class TerminalSessionManager {
             }
         }
         if (raw.length() > MAX_DIAGNOSTIC_BYTES) cleaned.append("\n[output truncated]");
-        return cleaned.toString();
+        return KlyroDiagnostics.sanitize(cleaned.toString());
     }
 
     private static String diagnostics(File stdout, File stderr, int exitCode) throws IOException {
