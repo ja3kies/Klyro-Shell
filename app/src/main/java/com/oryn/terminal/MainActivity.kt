@@ -48,6 +48,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +59,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.toArgb
 import com.oryn.terminal.ui.KlyroColors
+import com.oryn.terminal.ui.KlyroUiMetrics
 import com.oryn.terminal.ui.LocalKlyroColors
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.Composable
@@ -83,20 +85,6 @@ import com.oryn.terminal.ui.OrynTerminalViewClient
 import com.oryn.terminal.ui.TerminalPane
 import com.termux.terminal.TerminalSession
 import java.io.IOException
-
-private val Obsidian = Color(0xFF0B0F19)
-private val SurfaceDark = Color(0xFF111827)
-private val Elevated = Color(0xFF1E293B)
-private val TextPrimary = Color(0xFFE2E8F0)
-private val TextMuted = Color(0xFF94A3B8)
-private val Cyan = Color(0xFF00F0FF)
-private val Purple = Color(0xFF8338EC)
-private val Warning = Color(0xFFFFC857)
-internal fun klyroReadyInk(dark: Boolean): Color =
-    if (dark) Color(0xFFACF3BE) else Color(0xFF12603E)
-
-internal fun klyroWarningInk(dark: Boolean): Color =
-    if (dark) Color(0xFFF2CD8F) else Color(0xFF885017)
 
 class MainActivity : ComponentActivity() {
     private var activePalette: KlyroColors = KlyroColors.create(false, "lime")
@@ -681,13 +669,7 @@ private fun OrynTerminalApp(
     // Setup and terminal chrome share the same persisted appearance selection.
     // Each role keeps its contrast in both Klyro Soft Mint and Klyro Dark.
     val ui = LocalKlyroColors.current
-    val Obsidian = ui.background
-    val SurfaceDark = ui.chrome
-    val Elevated = ui.tile
-    val TextPrimary = ui.foreground
-    val TextMuted = ui.muted
-    val Cyan = ui.accent
-    val Purple = ui.accent
+    val ui.accent = ui.accent
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
@@ -698,17 +680,17 @@ private fun OrynTerminalApp(
         runtimeVerified && runtimeHasWarnings -> "READY WITH WARNINGS"
         runtimeVerified -> "ENVIRONMENT READY"
         verifyingRuntime -> "CHECKING ENVIRONMENT"
-        bashStarted -> "BASH STARTS"
+        bashStarted -> "BASH STARTING"
         runtimeInstalled -> "NOT VERIFIED"
-        bootstrapInstalled -> "RUNTIME INSTALLED"
+        bootstrapInstalled -> "BOOTSTRAP INSTALLED"
         else -> "SETUP"
     }
     val stateColor = when {
-        runtimeVerified && runtimeHasWarnings -> klyroWarningInk(ui.dark)
-        runtimeVerified -> klyroReadyInk(ui.dark)
+        runtimeVerified && runtimeHasWarnings -> ui.warningInk
+        runtimeVerified -> ui.readyInk
         verifyingRuntime || bashStarted || runtimeInstalled || bootstrapInstalled ->
-            klyroWarningInk(ui.dark)
-        else -> Cyan
+            ui.warningInk
+        else -> ui.accent
     }
 
     val isTerminalVisible = session != null && sessionClient != null && viewClient != null
@@ -765,20 +747,20 @@ private fun OrynTerminalApp(
                 ) {
                     Box(
                         modifier = Modifier.size(44.dp)
-                            .background(Cyan.copy(alpha = .10f), RoundedCornerShape(14.dp)),
+                            .background(ui.accent.copy(alpha = .10f), RoundedCornerShape(14.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_klyro_mark_monochrome),
                             contentDescription = "Klyro Shell",
-                            tint = Cyan,
+                            tint = ui.accent,
                             modifier = Modifier.size(36.dp)
                         )
                     }
                     Column {
-                        Text("KLYRO", color = TextPrimary, fontSize = 18.sp,
+                        Text("KLYRO", color = ui.foreground, fontSize = 18.sp,
                             fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                        Text("SHELL", color = TextMuted, fontSize = 11.sp,
+                        Text("SHELL", color = ui.muted, fontSize = 11.sp,
                             letterSpacing = 2.5.sp)
                     }
                     Spacer(Modifier.weight(1f))
@@ -787,22 +769,22 @@ private fun OrynTerminalApp(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         "Your shell.\nYour own space.",
-                        color = TextPrimary, fontSize = 28.sp, lineHeight = 34.sp,
+                        color = ui.foreground, fontSize = 28.sp, lineHeight = 34.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         "A standalone Android shell with its own private environment — separate from Termux.",
-                        color = TextMuted, fontSize = 14.sp, lineHeight = 21.sp
+                        color = ui.muted, fontSize = 14.sp, lineHeight = 21.sp
                     )
                 }
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = SurfaceDark,
-                    shape = RoundedCornerShape(22.dp)
+                    color = ui.chrome,
+                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(KlyroUiMetrics.cardPadding),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Row(
@@ -810,7 +792,7 @@ private fun OrynTerminalApp(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("PRIVATE ENVIRONMENT", color = TextMuted,
+                            Text("PRIVATE ENVIRONMENT", color = ui.muted,
                                 style = MaterialTheme.typography.labelSmall,
                                 letterSpacing = .6.sp)
                             Surface(
@@ -830,17 +812,17 @@ private fun OrynTerminalApp(
                         }
                         Text(
                             status,
-                            color = if (runtimeHasWarnings) klyroWarningInk(ui.dark)
+                            color = if (runtimeHasWarnings) ui.warningInk
                                 else if (technicalErrorDetails != null || sessionFailureMessage != null)
                                     (if (ui.dark) Color(0xFFFFB3BE) else Color(0xFF9A2940))
-                                else TextPrimary,
+                                else ui.foreground,
                             fontSize = 13.sp,
                             lineHeight = 19.sp
                         )
                         if (runtimeHasWarnings && warningLines.isNotEmpty()) {
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
-                                color = Warning.copy(alpha = 0.10f),
+                                color = ui.warningContainer,
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Column(
@@ -850,12 +832,12 @@ private fun OrynTerminalApp(
                                     Text(
                                         if (warningLines.size == 1) "1 distinct runtime warning"
                                         else "${warningLines.size} distinct runtime warnings",
-                                        color = Warning, fontSize = 12.sp,
+                                        color = ui.warningInk, fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
                                         warningLines.first(),
-                                        color = TextMuted, fontSize = 12.sp, lineHeight = 17.sp,
+                                        color = ui.muted, fontSize = 12.sp, lineHeight = 17.sp,
                                         fontFamily = FontFamily.Monospace,
                                         maxLines = 3
                                     )
@@ -872,7 +854,7 @@ private fun OrynTerminalApp(
                                     Text(
                                         if (showTechnicalDetails) "Hide technical details"
                                         else "Show technical details",
-                                        color = Cyan,
+                                        color = ui.accent,
                                         fontSize = 13.sp
                                     )
                                 }
@@ -882,14 +864,14 @@ private fun OrynTerminalApp(
                                         modifier = Modifier.heightIn(min = 48.dp),
                                         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
                                     ) {
-                                        Text("Copy", color = Cyan, fontSize = 13.sp)
+                                        Text("Copy", color = ui.accent, fontSize = 13.sp)
                                     }
                                 }
                             }
                             if (showTechnicalDetails) {
                                 Surface(
                                     modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
-                                    color = Obsidian,
+                                    color = ui.background,
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Box(
@@ -899,7 +881,7 @@ private fun OrynTerminalApp(
                                     ) {
                                         Text(
                                             technicalErrorDetails,
-                                            color = TextMuted,
+                                            color = ui.muted,
                                             fontSize = 12.sp,
                                             lineHeight = 17.sp,
                                             fontFamily = FontFamily.Monospace
@@ -909,16 +891,13 @@ private fun OrynTerminalApp(
                             }
                         }
                         if (installing) {
-                            Box(
-                                Modifier.fillMaxWidth().height(5.dp)
-                                    .background(Elevated, CircleShape)
-                            ) {
-                                Box(
-                                    Modifier.fillMaxWidth(progress / 100f).height(5.dp)
-                                        .background(Cyan, CircleShape)
-                                )
-                            }
-                            Text("$progress%", color = Cyan, fontSize = 11.sp,
+                            LinearProgressIndicator(
+                                progress = { (progress / 100f).coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth().height(6.dp),
+                                color = ui.accent,
+                                trackColor = ui.tile
+                            )
+                            Text("$progress%", color = ui.accent, fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace)
                         }
                         if (!runtimeVerified) {
@@ -927,12 +906,12 @@ private fun OrynTerminalApp(
                                 enabled = !installing && !verifyingRuntime,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Cyan,
+                                    containerColor = ui.accent,
                                     contentColor = ui.onAccent,
-                                    disabledContainerColor = Elevated,
-                                    disabledContentColor = TextMuted
+                                    disabledContainerColor = ui.tile,
+                                    disabledContentColor = ui.muted
                                 ),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
                                 Text(
                                     when {
@@ -953,10 +932,10 @@ private fun OrynTerminalApp(
                                 onClick = onLaunch,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Cyan,
+                                    containerColor = ui.accent,
                                     contentColor = ui.onAccent
                                 ),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
                                 Text(if (hasRunningSessions) "Return to terminal" else "Launch Bash",
                                     fontWeight = FontWeight.SemiBold)
@@ -966,7 +945,7 @@ private fun OrynTerminalApp(
                                 enabled = !verifyingRuntime && !installing,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                             ) {
-                                Text("Recheck environment", color = Cyan, fontSize = 13.sp)
+                                Text("Recheck environment", color = ui.accent, fontSize = 13.sp)
                             }
                         }
                     }

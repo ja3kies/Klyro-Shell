@@ -3,8 +3,6 @@ package com.oryn.terminal.ui
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import org.junit.Assert.assertEquals
-import com.oryn.terminal.klyroReadyInk
-import com.oryn.terminal.klyroWarningInk
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
@@ -30,8 +28,20 @@ class KlyroDesignTest {
     @Test fun runtimeReadinessAndWarningInkRemainReadableOnBothThemes() {
         for (dark in listOf(false, true)) {
             val surface = KlyroColors.create(dark, "lime").chrome
-            assertTrue("ready status dark=$dark", contrast(klyroReadyInk(dark), surface) >= 4.5)
-            assertTrue("warning status dark=$dark", contrast(klyroWarningInk(dark), surface) >= 4.5)
+            assertTrue("ready status dark=$dark", contrast(KlyroColors.create(dark, "lime").readyInk, surface) >= 4.5)
+            assertTrue("warning status dark=$dark", contrast(KlyroColors.create(dark, "lime").warningInk, surface) >= 4.5)
+        }
+    }
+
+    @Test fun statusBannersStayReadableOnMatchingSemanticSurfaces() {
+        for (dark in listOf(false, true)) {
+            for (id in KlyroColors.accents) {
+                val c = KlyroColors.create(dark, id)
+                assertTrue("warning $id/$dark",
+                    contrast(c.warningInk, c.warningContainer) >= 4.5)
+                assertTrue("danger $id/$dark",
+                    contrast(c.danger, c.dangerContainer) >= 4.5)
+            }
         }
     }
 

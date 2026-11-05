@@ -404,7 +404,7 @@ fun TerminalPane(
         if (sessionFailureMessage != null) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                color = Color(0xFF2A1B25),
+                color = ui.dangerContainer,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -413,13 +413,13 @@ fun TerminalPane(
                 ) {
                     Text(
                         sessionFailureMessage,
-                        color = Color(0xFFFFB4C0),
+                        color = ui.danger,
                         fontSize = 12.sp,
                         lineHeight = 17.sp,
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = onClose) {
-                        Text("Back to setup", color = TerminalAccent, fontSize = 12.sp)
+                    TextButton(onClick = onReturnHome) {
+                        Text("Home", color = TerminalAccent, fontSize = 12.sp)
                     }
                 }
             }
@@ -428,7 +428,7 @@ fun TerminalPane(
         if (runtimeHasWarnings && sessionFailureMessage == null && !warningNoteDismissed) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                color = Color(0xFF2B2415),
+                color = ui.warningContainer,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -437,7 +437,7 @@ fun TerminalPane(
                 ) {
                     Text(
                         "The environment check reported warnings. Messages above the prompt may relate to them.",
-                        color = Color(0xFFFFC857),
+                        color = ui.warningInk,
                         fontSize = 12.sp,
                         lineHeight = 17.sp,
                         modifier = Modifier.weight(1f)
@@ -585,7 +585,7 @@ fun TerminalPane(
         }
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { closeSelection() },
             title = { Text("Select terminal output") },
@@ -704,7 +704,7 @@ fun TerminalPane(
     if (pendingMultilinePaste != null) {
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { pendingMultilinePaste = null },
             title = { Text("Paste multiple lines?") },
@@ -805,7 +805,7 @@ fun TerminalPane(
         }
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { showTranscriptSearch = false },
             title = { Text("Find in terminal", style = MaterialTheme.typography.titleLarge, maxLines = 1) },
@@ -885,7 +885,7 @@ fun TerminalPane(
                         showTranscriptSearch = false
                     },
                     enabled = matches.isNotEmpty(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
                 ) { Text("Go to line") }
             },
             dismissButton = {
@@ -898,7 +898,7 @@ fun TerminalPane(
     if (showEndSessionConfirmation) {
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { showEndSessionConfirmation = false },
             title = { Text("End Bash session?") },
@@ -907,7 +907,7 @@ fun TerminalPane(
                 TextButton(onClick = {
                     showEndSessionConfirmation = false
                     onClose()
-                }) { Text("End session") }
+                }) { Text("End session", color = ui.danger, fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
                 TextButton(onClick = { showEndSessionConfirmation = false }) {
@@ -941,7 +941,7 @@ private fun TerminalExtraKey(
             .height(50.dp)
             .width(keyWidth)
             .semantics { contentDescription = description ?: label },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) accentTint.copy(alpha = 0.18f)

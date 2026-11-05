@@ -33,6 +33,12 @@ data class KlyroColors(
     val onAccent: Color,
     val danger: Color
 ) {
+    // Semantic statuses used by every screen, regardless of current accent.
+    val readyInk: Color get() = if (dark) Color(0xFFACF3BE) else Color(0xFF12603E)
+    val warningInk: Color get() = if (dark) Color(0xFFF2CD8F) else Color(0xFF885017)
+    val warningContainer: Color get() = lerp(sheet, warningInk, .12f)
+    val dangerContainer: Color get() = lerp(sheet, danger, .12f)
+
     companion object {
         /** Distinct primary hues and intentionally darker light-mode counterparts. */
         data class AccentOption(

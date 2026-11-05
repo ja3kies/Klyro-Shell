@@ -9,6 +9,7 @@ import android.util.TypedValue
 import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -445,7 +446,7 @@ internal fun KlyroSettingsSheet(
             AlertDialog(
                 onDismissRequest = { showFontLicense = false },
                 containerColor = colors.sheet,
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 title = { Text("JetBrains Mono · OFL 1.1") },
                 text = {
                     Column(
@@ -473,7 +474,7 @@ private fun SettingsTile(
     val colors = LocalKlyroColors.current
     Surface(
         modifier = modifier.heightIn(min = 116.dp)
-            .clickable(onClickLabel = "Open $title settings", onClick = onClick),
+            .clickable(role = Role.Button, onClickLabel = "Open $title settings", onClick = onClick),
         color = colors.tile,
         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
     ) {
@@ -519,7 +520,7 @@ private fun ActionTile(title: String, subtitle: String, onClick: () -> Unit) {
     val colors = LocalKlyroColors.current
     Surface(
         modifier = Modifier.fillMaxWidth()
-            .clickable(onClickLabel = title, onClick = onClick),
+            .clickable(role = Role.Button, onClickLabel = title, onClick = onClick),
         color = colors.tile,
         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
     ) {
