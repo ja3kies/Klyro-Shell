@@ -30,3 +30,8 @@
   is informative, **not equivalent** to a physical launcher test.
 - Rollback: revert specific commits on isolated draft PR branch only. Do not
   force-update main or wipe user data.
+
+## Monochrome micro-detail
+The themed-icon K incorporates transparent cutouts forming the `>_` terminal
+prompt inside its lower dark-arm silhouette. A single opaque fill is used.
+The holes are tested using the Android vector `evenOdd` fill rule.

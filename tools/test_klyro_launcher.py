@@ -56,6 +56,35 @@ class KlyroLauncherIdentityTest(unittest.TestCase):
         self.assertFalse(root.findall(".//" + AAPT + "attr"))
         self.assertEqual(root.findall("path")[0].attrib[ANDROID + "fillColor"], "#FFFFFFFF")
 
+    def test_reference_terminal_prompt_in_normal_and_themed_icons(self):
+        foreground = ET.parse(
+            RES / "drawable/ic_klyro_launcher_foreground.xml"
+        ).getroot()
+        strokes = [p for p in foreground.findall("path")
+                   if p.attrib.get(ANDROID + "strokeWidth")]
+        self.assertEqual(len(strokes), 2)
+        self.assertTrue(all(float(p.attrib[ANDROID + "strokeWidth"]) >= 3.0
+                            for p in strokes))
+        mono = ET.parse(
+            RES / "drawable/ic_klyro_mark_monochrome.xml"
+        ).getroot()
+        self.assertEqual(mono.findall("path")[1].attrib[ANDROID + "fillType"],
+                         "evenOdd")
+        self.assertTrue((ROOT / "design/klyro-brand-mark.svg").is_file())
+        source = ET.parse(ROOT / "design/klyro-brand-mark.svg").getroot()
+        self.assertEqual(source.attrib["viewBox"], "0 0 108 108")
+
+    def test_compact_picker_preset_position_and_menu_order(self):
+        ui = ROOT / "app/src/main/java/com/oryn/terminal/ui"
+        picker = (ui / "KlyroColorPickerDialog.kt").read_text()
+        terminal = (ui / "TerminalPane.kt").read_text()
+        self.assertLess(picker.index('Text("Hue ·'), picker.index('Text("Presets"'))
+        self.assertNotIn('Text("Saturation ·', picker)
+        self.assertNotIn('Text("Brightness ·', picker)
+        self.assertNotIn('Text("Paste", color = MaterialTheme.colorScheme.onSurface)', terminal)
+        self.assertLess(terminal.index('Text("Files & storage"'),
+                        terminal.index('Text("Home"'))
+
 
 if __name__ == "__main__":
     unittest.main()
