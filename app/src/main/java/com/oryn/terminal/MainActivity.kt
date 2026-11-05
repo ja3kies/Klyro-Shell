@@ -669,7 +669,6 @@ private fun OrynTerminalApp(
     // Setup and terminal chrome share the same persisted appearance selection.
     // Each role keeps its contrast in both Klyro Soft Mint and Klyro Dark.
     val ui = LocalKlyroColors.current
-    val ui.accent = ui.accent
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
@@ -693,7 +692,6 @@ private fun OrynTerminalApp(
         else -> ui.accent
     }
 
-    val isTerminalVisible = session != null && sessionClient != null && viewClient != null
     val screenChrome = ui.chrome
     Surface(
         // Paint before insets; the transparent status bar must show Klyro, not
