@@ -346,7 +346,7 @@ internal fun KlyroSettingsSheet(
         if (showColorPicker) {
             val initialColor = remember(accentId) {
                 val hex = if (accentId.startsWith("custom:#")) accentId.removePrefix("custom:")
-                    else (KlyroColors.selectedOption(accentId)?.darkHex ?: "#BDCC64")
+                    else (KlyroColors.selectedOption(accentId)?.sourceHex ?: "#BDCC64")
                 AndroidColor.parseColor(hex)
             }
             KlyroColorPickerDialog(

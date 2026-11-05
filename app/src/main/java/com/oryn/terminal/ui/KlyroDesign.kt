@@ -39,7 +39,8 @@ data class KlyroColors(
             val label: String,
             val darkHex: String,
             val lightHex: String,
-            val seedHex: String
+            val seedHex: String,
+            val sourceHex: String = darkHex
         )
 
         val primary = listOf(
@@ -49,9 +50,9 @@ data class KlyroColors(
             AccentOption("orchid", "Orchid", "#CA5DEC", "#77349B", "#8745AD")
         )
         val extended = listOf(
-            AccentOption("wine", "Wine", "#FF7894", "#8D0826", "#8D0826"),
+            AccentOption("wine", "Wine", "#FF7894", "#8D0826", "#8D0826", "#8D0826"),
             AccentOption("citron", "Citron", "#EBEF7E", "#626900", "#939B31"),
-            AccentOption("berry", "Berry", "#FF73B1", "#A40052", "#B50B65")
+            AccentOption("berry", "Berry", "#FF73B1", "#A40052", "#B50B65", "#DB0A71")
         )
         val accents: List<String> = primary.map { it.id } + extended.map { it.id }
         private val all = primary + extended

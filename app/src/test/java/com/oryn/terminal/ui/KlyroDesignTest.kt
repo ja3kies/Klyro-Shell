@@ -55,11 +55,9 @@ class KlyroDesignTest {
         assertEquals(listOf("#BDCC64", "#00F0FF", "#F57C41", "#CA5DEC"),
             KlyroColors.primary.map { it.darkHex })
         assertEquals(listOf("#8D0826", "#EBEF7E", "#DB0A71"),
-            KlyroColors.extended.map { it.lightHex }.mapIndexed { index, value ->
-                if (index == 0) "#8D0826"
-                else if (index == 1) "#EBEF7E"
-                else "#DB0A71"
-            })
+            KlyroColors.extended.map { it.sourceHex })
+        assertEquals(listOf("#56620C", "#006779", "#A33C11", "#77349B"),
+            KlyroColors.primary.map { it.lightHex })
     }
 
     @Test fun customColorIsPersistentAndAlwaysReadable() {
