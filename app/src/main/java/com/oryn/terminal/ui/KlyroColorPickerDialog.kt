@@ -1,6 +1,8 @@
 package com.oryn.terminal.ui
 
 import android.graphics.Color as AndroidColor
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,6 +65,19 @@ internal fun KlyroColorPickerDialog(
     onDismiss: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences("klyro_ui_theme", Context.MODE_PRIVATE)
+    }
+    var favorites by remember(context) {
+        mutableStateOf(KlyroFavoriteColors.decode(prefs.getString("custom_favorites", "")))
+    }
+    var favoriteName by remember { mutableStateOf("Custom") }
+    var pendingFavoriteDeletion by remember { mutableStateOf<KlyroFavoriteColors.Favorite?>(null) }
+    fun saveFavorites(value: List<KlyroFavoriteColors.Favorite>) {
+        favorites = value
+        prefs.edit().putString("custom_favorites", KlyroFavoriteColors.encode(value)).apply()
+    }
     val initialHsv = remember(initialArgb) {
         FloatArray(3).also { AndroidColor.colorToHSV(initialArgb or -0x1000000, it) }
     }
@@ -286,6 +301,59 @@ internal fun KlyroColorPickerDialog(
                             "#8D0826 · #EBEF7E · #DB0A71 (source colors)",
                             style = MaterialTheme.typography.bodySmall, color = colors.muted
                         )
+                        Text("My colors", style = MaterialTheme.typography.titleSmall)
+                        OutlinedTextField(
+                            value = favoriteName,
+                            onValueChange = { favoriteName = it.take(22) },
+                            label = { Text("Color name") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Button(
+                            onClick = {
+                                saveFavorites(KlyroFavoriteColors.save(
+                                    favorites, "#%08X".format(argb()), favoriteName
+                                ))
+                            },
+                            enabled = hexInput.length == 7,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Save current color") }
+                        favorites.forEach { favorite ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    modifier = Modifier.size(24.dp),
+                                    color = Color(AndroidColor.parseColor(favorite.hex)),
+                                    shape = CircleShape
+                                ) {}
+                                Text(
+                                    favorite.label,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                TextButton(onClick = {
+                                    favoriteName = favorite.label
+                                    val favArgb = AndroidColor.parseColor(favorite.hex)
+                                    val hsv = FloatArray(3)
+                                    AndroidColor.colorToHSV(favArgb or -0x1000000, hsv)
+                                    hue = hsv[0]
+                                    saturation = hsv[1]
+                                    brightness = hsv[2]
+                                    alpha = (favArgb ushr 24) / 255f
+                                    hexInput = "#%06X".format(favArgb and 0xFFFFFF)
+                                }) { Text("Edit") }
+                                TextButton(onClick = {
+                                    onApply("custom:" + favorite.hex)
+                                }) { Text("Use") }
+                                TextButton(onClick = {
+                                    pendingFavoriteDeletion = favorite
+                                }) { Text("Remove") }
+                            }
+                        }
                     }
                 }
             },
@@ -300,5 +368,21 @@ internal fun KlyroColorPickerDialog(
                 TextButton(onClick = onDismiss) { Text("Cancel") }
             }
         )
+        pendingFavoriteDeletion?.let { favorite ->
+            AlertDialog(
+                onDismissRequest = { pendingFavoriteDeletion = null },
+                title = { Text("Remove saved color?") },
+                text = { Text("Remove \"${favorite.label}\" from your saved colors?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        saveFavorites(favorites.filterNot { it.hex == favorite.hex })
+                        pendingFavoriteDeletion = null
+                    }) { Text("Remove") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingFavoriteDeletion = null }) { Text("Cancel") }
+                }
+            )
+        }
     }
 }
