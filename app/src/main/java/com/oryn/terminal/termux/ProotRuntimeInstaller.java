@@ -3,6 +3,7 @@ package com.oryn.terminal.termux;
 import android.content.Context;
 
 import com.oryn.terminal.core.OrynPaths;
+import com.oryn.terminal.core.KlyroDiagnostics;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -33,7 +34,8 @@ public final class ProotRuntimeInstaller {
 
     private final Context context;
     private final OrynPaths paths;
-    private final AtomicBoolean installing = new AtomicBoolean(false);
+    // Serialise verification/copy work across Activity recreations.
+    private static final AtomicBoolean installing = new AtomicBoolean(false);
     private volatile String lastErrorDetails;
 
     public String getLastErrorDetails() {
@@ -60,7 +62,7 @@ public final class ProotRuntimeInstaller {
                 complete(listener, true,
                         "Verified ARM64 PRoot runtime from Klyro's APK-native storage.");
             } catch (Exception error) {
-                lastErrorDetails = diagnosticDetails(error);
+                lastErrorDetails = KlyroDiagnostics.summarize(error);
                 complete(listener, false,
                         "Klyro couldn't verify its packaged ARM64 runtime. Reinstall the current APK and retry.");
             } finally {

@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.session.TerminalSessionManager
+import com.oryn.terminal.core.KlyroDiagnostics
 import com.oryn.terminal.termux.ProotRuntimeInstaller
 import com.oryn.terminal.termux.TermuxBootstrapInstaller
 import com.oryn.terminal.ui.KlyroTerminalPalette
@@ -288,7 +289,7 @@ class MainActivity : ComponentActivity() {
             runtimeInstalled = manager.isRuntimeInstalled()
             if (bootstrapInstalled) installer?.migrateShellProfile()
         } catch (error: IOException) {
-            technicalErrorDetails = error.stackTraceToString()
+            technicalErrorDetails = KlyroDiagnostics.summarize(error)
             statusMessage = "Klyro couldn't verify its private environment."
         }
 
@@ -430,11 +431,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handlePrimaryAction() {
+        if (isInstalling || isVerifyingRuntime) return
         if (runtimeInstalled) verifyRuntime() else installEnvironment()
     }
 
     private fun verifyRuntime() {
-        if (isVerifyingRuntime || !runtimeInstalled) return
+        if (isVerifyingRuntime || isInstalling || !runtimeInstalled) return
         terminalState.clearSessionFailure()
         isVerifyingRuntime = true
         runtimeVerified = false
@@ -474,7 +476,7 @@ class MainActivity : ComponentActivity() {
                 runtimeVerified = false
                 runtimeHasWarnings = false
                 bashStarted = false
-                technicalErrorDetails = error.stackTraceToString()
+                technicalErrorDetails = KlyroDiagnostics.summarize(error)
                 showTechnicalDetails = false
                 statusMessage = "Klyro couldn't complete the environment check. Review diagnostics."
             }
@@ -482,7 +484,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun installEnvironment() {
-        if (isInstalling) return
+        if (isInstalling || isVerifyingRuntime) return
         if (bootstrapInstalled) {
             installProotRuntime()
             return
@@ -528,6 +530,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun installProotRuntime() {
+        if (isVerifyingRuntime) return
         val activeInstaller = runtimeInstaller ?: run {
             isInstalling = false
             statusMessage = "Proot installer is unavailable. Restart Klyro and try again."
@@ -588,7 +591,7 @@ class MainActivity : ComponentActivity() {
         } catch (error: Exception) {
             runtimeVerified = false
             bashStarted = false
-            technicalErrorDetails = error.stackTraceToString()
+            technicalErrorDetails = KlyroDiagnostics.summarize(error)
             showTechnicalDetails = false
             statusMessage = "Klyro couldn't start Bash. Check the technical details."
         }
@@ -613,8 +616,9 @@ class MainActivity : ComponentActivity() {
                 statusMessage = manager.getReadinessMessage()
             }
         } catch (error: IOException) {
+            bootstrapInstalled = false
             runtimeInstalled = false
-            technicalErrorDetails = error.stackTraceToString()
+            technicalErrorDetails = KlyroDiagnostics.summarize(error)
             showTechnicalDetails = false
             statusMessage = "Klyro couldn't validate its private environment."
         }

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Build;
 
 import com.oryn.terminal.core.OrynPaths;
+import com.oryn.terminal.core.KlyroDiagnostics;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -51,7 +52,9 @@ public final class TermuxBootstrapInstaller {
     private static final int MAX_ENTRIES = 150000;
 
     private final OrynPaths paths;
-    private final AtomicBoolean installing = new AtomicBoolean(false);
+    // Process-wide guard survives Activity recreation and prevents two writers
+    // replacing the same bootstrap staging directory concurrently.
+    private static final AtomicBoolean installing = new AtomicBoolean(false);
     private volatile String lastErrorDetails;
 
     public String getLastErrorDetails() {
@@ -92,7 +95,7 @@ public final class TermuxBootstrapInstaller {
             try {
                 installInternal(listener);
             } catch (Exception error) {
-                lastErrorDetails = diagnosticDetails(error);
+                lastErrorDetails = KlyroDiagnostics.summarize(error);
                 complete(listener, false,
                         "Klyro couldn't finish setting up its private environment. "
                         + "Your existing Termux installation was not modified. You can retry.");
