@@ -19,6 +19,8 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Verifies PRoot binaries embedded in the APK native-library directory. */
@@ -86,6 +88,9 @@ public final class ProotRuntimeInstaller {
 
         int index = 0;
         for (ManifestEntry entry : entries) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new IOException("PRoot verification was interrupted.");
+            }
             index++;
             File packagedFile = resolvePackagedFile(entry.path);
             verifyFile(entry, packagedFile);
@@ -159,11 +164,15 @@ public final class ProotRuntimeInstaller {
 
     private List<ManifestEntry> readManifest() throws IOException {
         List<ManifestEntry> entries = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
         try (InputStream in = context.getAssets().open(MANIFEST);
              BufferedReader reader = new BufferedReader(
                      new InputStreamReader(in, StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
+                if (line.length() > 512) {
+                    throw new IOException("Runtime manifest line is too long.");
+                }
                 line = line.trim();
                 if (line.isEmpty() || line.startsWith("#")) continue;
                 String[] parts = line.split("\\s+", 2);
@@ -174,6 +183,9 @@ public final class ProotRuntimeInstaller {
                 if (!isAllowedAssetPath(path)) {
                     throw new IOException("Rejected runtime manifest path: " + path);
                 }
+                if (!seen.add(path)) {
+                    throw new IOException("Duplicate runtime manifest path: " + path);
+                }
                 entries.add(new ManifestEntry(path, parts[0].toLowerCase(Locale.US)));
                 if (entries.size() > MAX_FILES) {
                     throw new IOException("Runtime manifest has too many files.");
@@ -183,7 +195,7 @@ public final class ProotRuntimeInstaller {
         return entries;
     }
 
-    private static boolean isAllowedAssetPath(String path) {
+    static boolean isAllowedAssetPath(String path) {
         if (path.startsWith("/") || path.contains("..") || path.contains("\\")
                 || path.contains(":")) return false;
         if ("loader".equals(path) || "bin/proot".equals(path)) return true;
@@ -198,7 +210,12 @@ public final class ProotRuntimeInstaller {
         try (InputStream in = new FileInputStream(file)) {
             byte[] buffer = new byte[32768];
             int count;
-            while ((count = in.read(buffer)) != -1) digest.update(buffer, 0, count);
+            while ((count = in.read(buffer)) != -1) {
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new IOException("PRoot hash verification interrupted.");
+                }
+                digest.update(buffer, 0, count);
+            }
         }
         String actual = toHex(digest.digest());
         if (!entry.sha256.equals(actual)) {

@@ -50,6 +50,8 @@ public final class TermuxBootstrapInstaller {
     private static final long MAX_ARCHIVE_BYTES = 80L * 1024L * 1024L;
     private static final long MAX_EXTRACTED_BYTES = 700L * 1024L * 1024L;
     private static final int MAX_ENTRIES = 150000;
+    private static final long DOWNLOAD_DEADLINE_NANOS = java.util.concurrent.TimeUnit.MINUTES.toNanos(4);
+    private static final long EXTRACTION_DEADLINE_NANOS = java.util.concurrent.TimeUnit.MINUTES.toNanos(8);
 
     private final OrynPaths paths;
     // Process-wide guard survives Activity recreation and prevents two writers
@@ -305,7 +307,17 @@ public final class TermuxBootstrapInstaller {
                 && BOOTSTRAP_SHA256.equals(sha256(file));
     }
 
+    static void ensureWorkAllowed(long started, long limitNanos) throws IOException {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new IOException("Bootstrap operation was interrupted; retry from Klyro.");
+        }
+        if (System.nanoTime() - started > limitNanos) {
+            throw new IOException("Bootstrap operation exceeded its time limit; check storage and retry.");
+        }
+    }
+
     private void download(String url, File destination, Listener listener) throws IOException {
+        final long started = System.nanoTime();
         HttpURLConnection connection = null;
         try {
             connection = (HttpURLConnection) new URL(url).openConnection();
@@ -314,18 +326,22 @@ public final class TermuxBootstrapInstaller {
             connection.setUseCaches(false);
             connection.setInstanceFollowRedirects(true);
             connection.setRequestProperty("User-Agent", "KlyroShell/0.1");
+            ensureWorkAllowed(started, DOWNLOAD_DEADLINE_NANOS);
             int status = connection.getResponseCode();
             if (status != HttpURLConnection.HTTP_OK) {
                 throw new IOException("Bootstrap download returned HTTP " + status);
             }
             long expected = connection.getContentLengthLong();
-            if (expected > MAX_ARCHIVE_BYTES) throw new IOException("Bootstrap archive is too large.");
+            if (expected == 0 || expected > MAX_ARCHIVE_BYTES) {
+                throw new IOException("Bootstrap archive content length is invalid.");
+            }
             try (InputStream in = new BufferedInputStream(connection.getInputStream());
                  OutputStream out = new FileOutputStream(destination)) {
                 byte[] buffer = new byte[65536];
                 long total = 0;
                 int count;
                 while ((count = in.read(buffer)) != -1) {
+                    ensureWorkAllowed(started, DOWNLOAD_DEADLINE_NANOS);
                     total += count;
                     if (total > MAX_ARCHIVE_BYTES) throw new IOException("Bootstrap archive limit exceeded.");
                     out.write(buffer, 0, count);
@@ -343,6 +359,7 @@ public final class TermuxBootstrapInstaller {
     }
 
     private int extractArchive(File archive, File destination) throws IOException {
+        final long started = System.nanoTime();
         int count = 0;
         long totalBytes = 0;
         byte[] buffer = new byte[65536];
@@ -352,6 +369,7 @@ public final class TermuxBootstrapInstaller {
                 new BufferedInputStream(new FileInputStream(archive)))) {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
+                ensureWorkAllowed(started, EXTRACTION_DEADLINE_NANOS);
                 if (++count > MAX_ENTRIES) throw new IOException("Too many archive entries.");
                 String name = safeEntryName(entry.getName());
                 if (name.isEmpty()) {
@@ -375,6 +393,7 @@ public final class TermuxBootstrapInstaller {
                     try (OutputStream out = new FileOutputStream(target)) {
                         int n;
                         while ((n = zip.read(buffer)) != -1) {
+                            ensureWorkAllowed(started, EXTRACTION_DEADLINE_NANOS);
                             totalBytes += n;
                             if (totalBytes > MAX_EXTRACTED_BYTES) {
                                 throw new IOException("Extracted archive size limit exceeded.");
