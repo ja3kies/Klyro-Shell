@@ -20,6 +20,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
@@ -102,6 +103,7 @@ class MainActivity : ComponentActivity() {
     private var bashStarted by mutableStateOf(false)
     private var showWelcomeScreen by mutableStateOf(false)
     private var isVerifyingRuntime by mutableStateOf(false)
+    private var observingPreviousInstall = false
     private val terminalState: TerminalSessionViewModel by lazy {
         ViewModelProvider(this)[TerminalSessionViewModel::class.java]
     }
@@ -422,12 +424,47 @@ class MainActivity : ComponentActivity() {
             }
         }
         // Re-verify packaged hashes and refresh private SONAME copies after APK updates.
-        if (bootstrapInstalled) installProotRuntime()
+        if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
+            observePreviousInstall()
+        } else if (bootstrapInstalled) {
+            installProotRuntime()
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("klyro_show_welcome", showWelcomeScreen)
         super.onSaveInstanceState(outState)
+    }
+
+    /**
+     * On rotation, background workers keep their app-context and static gate.
+     * The new Activity observes the old operation rather than starting a
+     * competing installer. All UI updates run in lifecycleScope (main thread).
+     */
+    private fun observePreviousInstall() {
+        if (observingPreviousInstall) return
+        observingPreviousInstall = true
+        isInstalling = true
+        statusMessage = "Finishing previous environment setup…"
+        lifecycleScope.launch {
+            val started = android.os.SystemClock.elapsedRealtime()
+            while ((TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy())
+                    && android.os.SystemClock.elapsedRealtime() - started < 360_000L) {
+                delay(1000L)
+            }
+            observingPreviousInstall = false
+            isInstalling = false
+            if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
+                statusMessage = "Setup is still running. Reopen Klyro to check its result."
+            } else {
+                refreshReadiness()
+                when {
+                    bootstrapInstalled && !runtimeInstalled -> installProotRuntime()
+                    runtimeInstalled -> verifyRuntime()
+                    else -> statusMessage = "Setup stopped before completion. Retry installation."
+                }
+            }
+        }
     }
 
     private fun handlePrimaryAction() {
@@ -485,6 +522,10 @@ class MainActivity : ComponentActivity() {
 
     private fun installEnvironment() {
         if (isInstalling || isVerifyingRuntime) return
+        if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
+            observePreviousInstall()
+            return
+        }
         if (bootstrapInstalled) {
             installProotRuntime()
             return
@@ -506,6 +547,7 @@ class MainActivity : ComponentActivity() {
         activeInstaller.install(object : TermuxBootstrapInstaller.Listener {
             override fun onProgress(stage: String, percent: Int) {
                 runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
                     installProgress = percent.coerceIn(0, 100)
                     statusMessage = stage
                 }
@@ -513,6 +555,7 @@ class MainActivity : ComponentActivity() {
 
             override fun onComplete(success: Boolean, message: String) {
                 runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
                     bootstrapInstalled = success
                     statusMessage = message
                     if (success) {
@@ -531,6 +574,10 @@ class MainActivity : ComponentActivity() {
 
     private fun installProotRuntime() {
         if (isVerifyingRuntime) return
+        if (ProotRuntimeInstaller.isBusy()) {
+            observePreviousInstall()
+            return
+        }
         val activeInstaller = runtimeInstaller ?: run {
             isInstalling = false
             statusMessage = "Proot installer is unavailable. Restart Klyro and try again."
@@ -548,6 +595,7 @@ class MainActivity : ComponentActivity() {
         activeInstaller.install(object : ProotRuntimeInstaller.Listener {
             override fun onProgress(stage: String, percent: Int) {
                 runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
                     installProgress = percent.coerceIn(0, 100)
                     statusMessage = stage
                 }
@@ -555,6 +603,7 @@ class MainActivity : ComponentActivity() {
 
             override fun onComplete(success: Boolean, message: String) {
                 runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
                     isInstalling = false
                     refreshReadiness()
                     if (!success) {

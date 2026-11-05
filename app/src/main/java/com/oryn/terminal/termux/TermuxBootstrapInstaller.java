@@ -59,6 +59,8 @@ public final class TermuxBootstrapInstaller {
     private static final AtomicBoolean installing = new AtomicBoolean(false);
     private volatile String lastErrorDetails;
 
+    public static boolean isBusy() { return installing.get(); }
+
     public String getLastErrorDetails() {
         return lastErrorDetails;
     }
