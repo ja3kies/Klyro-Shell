@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -54,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 
 /**
  * A settings sheet deliberately isolated from TerminalView: it never restarts
@@ -87,6 +90,10 @@ internal fun KlyroSettingsSheet(
     var showColorPicker by remember { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val previewTypeface = remember(context, fontFamilyId) {
+        KlyroTerminalFonts.load(context, fontFamilyId)
+    }
     val version = remember(context) {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
             .getOrNull() ?: "development"
@@ -186,7 +193,8 @@ internal fun KlyroSettingsSheet(
                                             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                                                 horizontal = 1.dp, vertical = 4.dp
                                             )
-                                        ) { Text(label, fontSize = 12.sp) }
+                                        ) { Text((if (themeMode == mode) "✓ " else "") + label,
+                                            fontSize = 12.sp, maxLines = 1) }
                                     }
                                 }
                                 Text("Accent preset", fontWeight = FontWeight.SemiBold)
@@ -214,7 +222,10 @@ internal fun KlyroSettingsSheet(
                                             border = if (accentId == preset.id)
                                                 androidx.compose.foundation.BorderStroke(2.dp, colors.foreground)
                                                 else null
-                                        ) { Text(preset.label, fontSize = 11.sp, maxLines = 1) }
+                                        ) { Text(
+                                            (if (accentId == preset.id) "✓ " else "") + preset.label,
+                                            fontSize = 11.sp, maxLines = 1
+                                        ) }
                                     }
                                     Button(
                                         onClick = { showColorPicker = true },
@@ -267,7 +278,10 @@ internal fun KlyroSettingsSheet(
                                             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                                                 horizontal = 6.dp, vertical = 6.dp
                                             )
-                                        ) { Text(choice.label, fontSize = 12.sp, maxLines = 2, lineHeight = 15.sp) }
+                                        ) { Text(
+                                            (if (fontFamilyId == choice.id) "✓ " else "") + choice.label,
+                                            fontSize = 12.sp, maxLines = 2, lineHeight = 15.sp
+                                        ) }
                                     }
                                 }
                                 Text("DSH Go uses JetBrains Mono; Android monospace is the fallback.",
@@ -297,7 +311,7 @@ internal fun KlyroSettingsSheet(
                                                 }
                                                 view.text = styled
                                                 view.setTextColor(colors.foreground.toArgb())
-                                                view.typeface = KlyroTerminalFonts.load(context, fontFamilyId)
+                                                view.typeface = previewTypeface
                                                 view.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp)
                                                 view.contentDescription = "Terminal font preview: $preview"
                                             }
@@ -389,6 +403,15 @@ internal fun KlyroSettingsSheet(
                                     style = MaterialTheme.typography.bodyMedium)
                                 Text("Linux runtime: isolated ARM64 environment", color = colors.muted,
                                     style = MaterialTheme.typography.bodySmall)
+                                if (context.resources.getBoolean(R.bool.klyro_experimental_bento)) {
+                                    // Read-only inset telemetry; do not remove camera/status
+                                    // protection without evidence from the user's device.
+                                    Text(
+                                        "Display safe inset · top: ${WindowInsets.safeDrawing.getTop(density)} px",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colors.muted
+                                    )
+                                }
                             }
                         }
                         ActionTile(
