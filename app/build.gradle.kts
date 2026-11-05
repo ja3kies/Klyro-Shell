@@ -28,7 +28,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Bento stays in experimental test APK only; release UI stays stable.
+            resValue("bool", "klyro_experimental_bento", "true")
+        }
         release {
+            resValue("bool", "klyro_experimental_bento", "false")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
