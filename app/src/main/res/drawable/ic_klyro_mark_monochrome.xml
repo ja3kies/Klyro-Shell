@@ -2,16 +2,13 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- Themed icons are one solid shape; avoid gradients and decorative cutouts. -->
+    <!-- Pure single-tone K, no background, gradients or misleading 3D shadows. -->
     <path android:fillColor="#FFFFFFFF"
-        android:pathData="M23,42 Q23,34 30,31 L41,23
-            Q46,20 46,28 L46,78 Q46,85 41,85 L28,77
-            Q23,74 23,68 Z
-            M44,66 Q43,63 46,61 L61,54 L81,68
-            Q86,72 85,78 L85,80 Q84,86 77,85 L48,69
-            Q45,68 44,66 Z
-            M23,57 Q23,52 29,49 L75,25 Q84,20 85,29
-            L85,36 Q85,41 79,45 L47,65 Q43,68 43,73
-            L43,57 Q43,53 39,53 Q36,53 36,57 L36,75
-            L27,79 Q23,76 23,70 Z"/>
+        android:pathData="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24
+            L46,81.5 Q46,85.5 43,84 L29,76 Q24,73 24,67 Z
+            M44,58 L60,49 L79.5,61 Q84.5,64 84.5,70
+            L84.5,78 Q84.5,84.5 77,84.5 L45,84.5 Q43.5,82.5 44,77 Z
+            M24,56 Q24,51.5 28.5,49 L80,22 Q84.5,19.5 84.5,24.5
+            L84.5,33 Q84.5,38 80,41 L47.5,63 Q46,64.5 46,68
+            L46,82 Q46,85 43.5,84 L29,76 Q24,73 24,67 Z" />
 </vector>
