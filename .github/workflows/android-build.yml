@@ -158,6 +158,7 @@ jobs:
 
       - name: Run JVM and native alignment auditor unit tests
         run: |
+          bash -n scripts/klyro-operational-gate.sh
           python3 -m unittest discover -s tools -p "test_*.py"
           gradle :app:testDebugUnitTest :terminal-emulator:testDebugUnitTest
 
