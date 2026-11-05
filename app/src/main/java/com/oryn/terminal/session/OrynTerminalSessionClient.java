@@ -31,6 +31,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private final Context context;
     private final Listener listener;
     private volatile TerminalView terminalView;
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     public OrynTerminalSessionClient(Context context, Listener listener) {
         this.context = context.getApplicationContext();
@@ -49,14 +50,20 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
 
     @Override
     public void onTitleChanged(@NonNull com.termux.terminal.TerminalSession session) {
-        if (listener != null) listener.onTitleChanged(session.getTitle());
+        if (listener != null) {
+            String title = session.getTitle();
+            uiHandler.post(() -> listener.onTitleChanged(title));
+        }
     }
 
     @Override
     public void onSessionFinished(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.postInvalidate();
-        if (listener != null) listener.onSessionFinished(session, session.getExitStatus());
+        if (listener != null) {
+            int status = session.getExitStatus();
+            uiHandler.post(() -> listener.onSessionFinished(session, status));
+        }
     }
 
     @Override
@@ -80,14 +87,14 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         if (text == null) return;
         String pasted = text.toString();
         if (!ClipboardPastePolicy.canPaste(pasted)) {
-            new Handler(Looper.getMainLooper()).post(() ->
+            uiHandler.post(() ->
                 Toast.makeText(context, "Clipboard text is unsupported or too long.",
                     Toast.LENGTH_SHORT).show());
             return;
         }
         if (ClipboardPastePolicy.requiresConfirmation(pasted)) {
             if (listener != null) {
-                new Handler(Looper.getMainLooper()).post(() ->
+                uiHandler.post(() ->
                     listener.onNativePasteRequiresConfirmation(pasted));
             }
             return;
