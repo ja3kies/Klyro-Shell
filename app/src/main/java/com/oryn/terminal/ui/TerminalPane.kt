@@ -133,6 +133,7 @@ fun TerminalPane(
     var renameDialogId by remember { mutableStateOf<Long?>(null) }
     var shellChooserSourceId by remember { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
+    var showNativeSelectionMore by remember(session) { mutableStateOf(false) }
     var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
@@ -483,7 +484,14 @@ fun TerminalPane(
             // Inset real terminal glyphs inside the clipped rounded viewport.
             modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 6.dp),
             factory = { context ->
-                TerminalView(context, null).apply {
+                object : TerminalView(context, null) {
+                    // Termux's native floating selection mode sends "More"
+                    // to showContextMenu; expose a real action.
+                    override fun showContextMenu(): Boolean {
+                        showNativeSelectionMore = true
+                        return true
+                    }
+                }.apply {
                     setTerminalViewClient(viewClient)
                     setTextSize(terminalTextSizePx)
                     setTypeface(terminalTypeface)
@@ -579,10 +587,32 @@ fun TerminalPane(
 
     }
 
-    // TerminalView does not expose programmatic select-all. Use a read-only native
-    // selection surface, with the whole available snapshot selected on opening.
+    // The native More item opens this in-app Select all action.
+    if (showNativeSelectionMore) {
+        KlyroModalTheme {
+            AlertDialog(
+                onDismissRequest = { showNativeSelectionMore = false },
+                containerColor = ui.sheet,
+                title = { Text("Selection actions") },
+                text = { Text("Select the terminal transcript, including available scrollback.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showNativeSelectionMore = false
+                        outputSelectionView = null
+                        selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
+                    }) { Text("Select all") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNativeSelectionMore = false }) { Text("Cancel") }
+                }
+            )
+        }
+    }
+
+    // Selection is performed on a native read-only text surface, without
+    // accidentally sending selected content to the running Bash session.
     selectedOutput?.let { output ->
-        val selectionLimit = 256 * 1024
+        val selectionLimit = 2 * 1024 * 1024
         val truncated = output.length > selectionLimit
         val visibleOutput = output.takeLast(selectionLimit)
         fun closeSelection() {
@@ -599,7 +629,7 @@ fun TerminalPane(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (truncated) {
                         Text(
-                            "Only the latest 256 KiB are selectable; earlier output is omitted.",
+                            "Only the latest 2 MiB are selectable; older output is omitted for memory safety.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
