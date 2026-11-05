@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 class KlyroOperationalReadinessTest(unittest.TestCase):
     def test_version_bumped_and_debug_bento_remains_gated(self):
         gradle = (ROOT / "app/build.gradle.kts").read_text()
-        self.assertIn('versionCode = 8', gradle)
-        self.assertIn('versionName = "0.4.1-dev"', gradle)
+        self.assertIn('versionCode = 9', gradle)
+        self.assertIn('versionName = "0.4.2-dev"', gradle)
         self.assertIn('resValue("bool", "klyro_experimental_bento", "true")', gradle)
         self.assertIn('resValue("bool", "klyro_experimental_bento", "false")', gradle)
 

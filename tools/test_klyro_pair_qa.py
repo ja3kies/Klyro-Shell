@@ -45,8 +45,8 @@ class KlyroPairQaTest(unittest.TestCase):
 
     def test_version_and_qa_document_present(self):
         gradle = (ROOT / "app/build.gradle.kts").read_text()
-        self.assertIn('versionCode = 8', gradle)
-        self.assertIn('versionName = "0.4.1-dev"', gradle)
+        self.assertIn('versionCode = 9', gradle)
+        self.assertIn('versionName = "0.4.2-dev"', gradle)
         self.assertTrue((ROOT / "docs/QA_PIXEL9_0_4_1_DEV.md").is_file())
         self.assertTrue((ROOT / "docs/OBJECTIVES_D_E_2026-11-05.md").is_file())
 
