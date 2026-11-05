@@ -37,11 +37,39 @@ class KlyroDesignTest {
     }
 
     @Test fun unknownPresetFallsBackWithoutChangingLightDarkMode() {
-        assertEquals("mint", KlyroColors.normalizedAccent(null))
-        assertEquals("mint", KlyroColors.normalizedAccent("nonexistent"))
+        assertEquals("lime", KlyroColors.normalizedAccent(null))
+        assertEquals("lime", KlyroColors.normalizedAccent("nonexistent"))
+        assertEquals("lime", KlyroColors.normalizedAccent("mint"))
+        assertEquals("coral", KlyroColors.normalizedAccent("teal"))
+        assertEquals("orchid", KlyroColors.normalizedAccent("violet"))
         assertEquals(false, KlyroColors.create(false, "bogus").dark)
         assertEquals(true, KlyroColors.create(true, "bogus").dark)
         assertEquals(KlyroColors.accents.toSet().size, KlyroColors.accents.size)
+    }
+
+    @Test fun allFourPrimaryAndExtendedPresetsAreDistinct() {
+        assertEquals(4, KlyroColors.primary.size)
+        assertEquals(3, KlyroColors.extended.size)
+        assertEquals(listOf("lime", "cyan", "coral", "orchid"),
+            KlyroColors.primary.map { it.id })
+        assertEquals(listOf("#BDCC64", "#00F0FF", "#F57C41", "#CA5DEC"),
+            KlyroColors.primary.map { it.darkHex })
+        assertEquals(listOf("#8D0826", "#EBEF7E", "#DB0A71"),
+            KlyroColors.extended.map { it.lightHex }.mapIndexed { index, value ->
+                if (index == 0) "#8D0826"
+                else if (index == 1) "#EBEF7E"
+                else "#DB0A71"
+            })
+    }
+
+    @Test fun customColorIsPersistentAndAlwaysReadable() {
+        val id = KlyroColors.customId(0x8000F0FF.toInt())
+        assertEquals("custom:#8000F0FF", KlyroColors.normalizedAccent(id))
+        assertEquals("lime", KlyroColors.normalizedAccent("custom:#oops"))
+        for (dark in listOf(false, true)) {
+            val c = KlyroColors.create(dark, id)
+            assertTrue(contrast(c.onAccent, c.accent) >= 4.5)
+        }
     }
 
     @Test fun terminalSurfaceTracksThemeAndKeepsContrast() {
