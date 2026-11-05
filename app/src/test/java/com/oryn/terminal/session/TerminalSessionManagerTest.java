@@ -49,6 +49,15 @@ public class TerminalSessionManagerTest {
     }
 
     @Test
+    public void randomVerificationMarkersMatchBashArgumentContract() {
+        String first = TerminalSessionManager.freshVerificationMarker();
+        String next = TerminalSessionManager.freshVerificationMarker();
+        assertTrue(first.matches("[A-Z0-9_]{1,64}"));
+        assertTrue(next.matches("[A-Z0-9_]{1,64}"));
+        assertTrue(!first.equals(next));
+    }
+
+    @Test
     public void terminalArgvRejectsMissingExecutableAndCopiesInput() {
         for (String[] bad : new String[][] {null, {}, {null}, {""}, {"  "}}) {
             try {

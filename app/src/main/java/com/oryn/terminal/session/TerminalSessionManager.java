@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -89,7 +90,7 @@ public final class TerminalSessionManager {
         File stdoutFile = File.createTempFile("klyro-check-out-", ".log", paths.getTmp());
         File stderrFile = File.createTempFile("klyro-check-err-", ".log", paths.getTmp());
         Process process = null;
-        String nonce = VERIFY_MARKER + UUID.randomUUID().toString().replace("-", "");
+        String nonce = freshVerificationMarker();
         try {
             ProcessBuilder builder = new ProcessBuilder(
                     bootstrap.buildVerificationCommand(nonce));
@@ -140,6 +141,12 @@ public final class TerminalSessionManager {
                 android.util.Log.w("KlyroVerify", "Cannot clear stderr probe log");
             }
         }
+    }
+
+    /** Must satisfy bootstrap's [A-Z0-9_] validation, even for hex UUID a-f. */
+    static String freshVerificationMarker() {
+        return VERIFY_MARKER + UUID.randomUUID().toString()
+                .replace("-", "").toUpperCase(Locale.ROOT);
     }
 
     /** Prevent partial diagnostic text from being mistaken for a successful probe. */
