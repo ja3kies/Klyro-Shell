@@ -9,7 +9,9 @@ K silhouette and lime-to-olive gradients rather than claiming an exact trace.
   launcher aliases (API minSdk 26); OEM masks own circle/squircle shape.
 - Foreground/background authored as independent 108×108dp VectorDrawable layers.
   Glyph designed inside the safe x=21..87/y=21..87 region: actual bounds
-  x=27..84 and y=23..85; no glyph clipping, no background-baked rounded square.
+  approximately x=23..86 and y=22..85; control points may extend
+  marginally but the Bézier outline stays within the safe area.
+  No background-baked rounded square.
 - Native separate solid monochrome K, used by Android themed icons and the
   app's welcome header. No bitmap scaling artifacts, text, icon shadows or
   tiny unresolvable details.
@@ -19,3 +21,9 @@ K silhouette and lime-to-olive gradients rather than claiming an exact trace.
 - All source paths remain in the repo for further designer iteration.
 - `main` and integration branch untouched. Rollback is a commit revert.
 - Reference: https://developer.android.com/develop/ui/compose/system/icon_design_adaptive
+
+- Supplied brand-sheet comparison prompted a second vector pass with a broader
+  diagonal ribbon, tucked lower arm and rectangular terminal-negative-space slit.
+- Local SVG rendering was inspected at 24, 48, 108 and 256px before commit.
+  The size review is a geometry check, **not** a physical Android launcher test.
+- Editable original: `design/klyro-brand-mark.svg`.
