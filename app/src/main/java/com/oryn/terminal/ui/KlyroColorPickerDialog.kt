@@ -3,11 +3,13 @@ package com.oryn.terminal.ui
 import android.graphics.Color as AndroidColor
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -52,7 +54,10 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
@@ -92,6 +97,9 @@ internal fun KlyroColorPickerDialog(
         mutableFloatStateOf((initialArgb ushr 24) / 255f)
     }
     var showAdvanced by remember { mutableStateOf(false) }
+    // Preset buttons preview an intent. Only Apply changes the app theme.
+    var pendingPreset by remember(initialArgb) { mutableStateOf<String?>(null) }
+    val smallWindow = LocalConfiguration.current.screenHeightDp < 680
     var hexInput by remember(initialArgb) {
         mutableStateOf("#%06X".format(initialArgb and 0xFFFFFF))
     }
@@ -99,6 +107,7 @@ internal fun KlyroColorPickerDialog(
     fun argb(): Int =
         ((alpha * 255f).roundToInt().coerceIn(0, 255) shl 24) or (rgb() and 0xFFFFFF)
     fun position(x: Float, y: Float, w: Int, h: Int) {
+        pendingPreset = null
         if (w <= 0 || h <= 0) return
         saturation = (x / w).coerceIn(0f, 1f)
         brightness = (1f - y / h).coerceIn(0f, 1f)
@@ -106,14 +115,16 @@ internal fun KlyroColorPickerDialog(
     }
 
     KlyroModalTheme {
-        AlertDialog(
+        if (!showAdvanced && pendingFavoriteDeletion == null) AlertDialog(
             onDismissRequest = onDismiss,
             containerColor = colors.sheet,
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             title = { Text("Custom accent", style = MaterialTheme.typography.titleLarge) },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = if (smallWindow) Modifier.fillMaxWidth()
+                        .heightIn(max = 360.dp).verticalScroll(rememberScrollState())
+                        else Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text("Pick a shade or select a preset.",
@@ -140,6 +151,7 @@ internal fun KlyroColorPickerDialog(
                                 BasicTextField(
                                     value = hexInput,
                                     onValueChange = { input ->
+                                        pendingPreset = null
                                                                     val cleaned = input.removePrefix("#")
                                                                         .filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
                                                                         .take(6)
@@ -155,6 +167,10 @@ internal fun KlyroColorPickerDialog(
                                                                     }
                                                                 },
                                     singleLine = true,
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Ascii,
+                                        imeAction = ImeAction.Done
+                                    ),
                                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                                         fontFamily = FontFamily.Monospace,
                                         color = colors.foreground
@@ -172,6 +188,11 @@ internal fun KlyroColorPickerDialog(
                             shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
                         ) {}
+                    }
+                    if (hexInput.length != 7) {
+                        Text("Enter six hexadecimal digits (0–9, A–F).",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.danger)
                     }
                     // Native HSV area: white/saturated along X, black/bright along Y.
                     Box(
@@ -215,13 +236,18 @@ internal fun KlyroColorPickerDialog(
                                 size = size
                             )
                             drawCircle(
-                                color = Color.White,
-                                radius = 8.dp.toPx(),
+                                color = Color.Black,
+                                radius = 10.dp.toPx(),
                                 center = Offset(saturation * size.width, (1f - brightness) * size.height)
                             )
                             drawCircle(
-                                color = Color.Black,
-                                radius = 5.dp.toPx(),
+                                color = Color.White,
+                                radius = 7.dp.toPx(),
+                                center = Offset(saturation * size.width, (1f - brightness) * size.height)
+                            )
+                            drawCircle(
+                                color = if (brightness > .55f) Color.Black else Color.White,
+                                radius = 4.dp.toPx(),
                                 center = Offset(saturation * size.width, (1f - brightness) * size.height)
                             )
                         }
@@ -231,20 +257,21 @@ internal fun KlyroColorPickerDialog(
                     // Material3 default accent track gives no hue feedback.
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Canvas(Modifier.fillMaxWidth().height(36.dp)) {
-                            val steps = 60
-                            val width = size.width / steps
-                            for (i in 0 until steps) {
-                                drawRect(
-                                    color = Color(AndroidColor.HSVToColor(
-                                        floatArrayOf(i * 360f / steps, 1f, 1f))),
-                                    topLeft = Offset(i * width, size.height * .36f),
-                                    size = Size(width + 1f, size.height * .28f)
-                                )
-                            }
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    listOf(
+                                        Color.Red, Color.Yellow, Color.Green,
+                                        Color.Cyan, Color.Blue, Color.Magenta, Color.Red
+                                    )
+                                ),
+                                topLeft = Offset(0f, size.height * .36f),
+                                size = Size(size.width, size.height * .28f)
+                            )
                         }
                         Slider(
                             value = hue,
                             onValueChange = {
+                                pendingPreset = null
                                 hue = it
                                 hexInput = "#%06X".format(rgb() and 0xFFFFFF)
                             },
@@ -264,10 +291,26 @@ internal fun KlyroColorPickerDialog(
                         KlyroColors.extended.forEach { preset ->
                             val swatch = KlyroColors.create(colors.dark, preset.id)
                             Button(
-                                onClick = { onApply(preset.id) },
-                                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
-                                    .semantics { contentDescription = "Use ${preset.label} preset" },
-                                shape = RoundedCornerShape(14.dp),
+                                onClick = {
+                                    val hsv = FloatArray(3)
+                                    val source = AndroidColor.parseColor(preset.sourceHex)
+                                    AndroidColor.colorToHSV(source or -0x1000000, hsv)
+                                    hue = hsv[0]
+                                    saturation = hsv[1]
+                                    brightness = hsv[2]
+                                    alpha = 1f
+                                    hexInput = "#%06X".format(source and 0xFFFFFF)
+                                    pendingPreset = preset.id
+                                },
+                                modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch)
+                                    .semantics {
+                                        selected = pendingPreset == preset.id
+                                        contentDescription = "Preview ${preset.label} preset"
+                                    },
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                border = if (pendingPreset == preset.id)
+                                    androidx.compose.foundation.BorderStroke(2.dp, colors.foreground)
+                                else null,
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(3.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = swatch.accent,
@@ -285,20 +328,20 @@ internal fun KlyroColorPickerDialog(
             },
             confirmButton = {
                 Button(
-                    enabled = hexInput.length == 7,
-                    onClick = { onApply(KlyroColors.customId(argb())) },
-                    shape = RoundedCornerShape(14.dp)
+                    enabled = pendingPreset != null || hexInput.length == 7,
+                    onClick = { onApply(pendingPreset ?: KlyroColors.customId(argb())) },
+                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                 ) { Text("Apply") }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text("Cancel") }
             }
         )
-        if (showAdvanced) {
+        if (showAdvanced && pendingFavoriteDeletion == null) {
             AlertDialog(
                 onDismissRequest = { showAdvanced = false },
                 containerColor = colors.sheet,
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 title = { Text("Opacity & saved colors") },
                 text = {
                     Column(
@@ -358,10 +401,21 @@ internal fun KlyroColorPickerDialog(
                                     brightness = hsv[2]
                                     alpha = (favArgb ushr 24) / 255f
                                     hexInput = "#%06X".format(favArgb and 0xFFFFFF)
+                                    pendingPreset = null
+                                    showAdvanced = false
                                 }) { Text("Edit") }
                                 TextButton(onClick = {
-                                    onApply("custom:" + favorite.hex)
-                                }) { Text("Use") }
+                                    val favArgb = AndroidColor.parseColor(favorite.hex)
+                                    val hsv = FloatArray(3)
+                                    AndroidColor.colorToHSV(favArgb or -0x1000000, hsv)
+                                    hue = hsv[0]
+                                    saturation = hsv[1]
+                                    brightness = hsv[2]
+                                    alpha = (favArgb ushr 24) / 255f
+                                    hexInput = "#%06X".format(favArgb and 0xFFFFFF)
+                                    pendingPreset = null
+                                    showAdvanced = false
+                                }) { Text("Preview") }
                                 TextButton(onClick = {
                                     pendingFavoriteDeletion = favorite
                                 }) { Text("Remove") }
@@ -378,13 +432,15 @@ internal fun KlyroColorPickerDialog(
         pendingFavoriteDeletion?.let { favorite ->
             AlertDialog(
                 onDismissRequest = { pendingFavoriteDeletion = null },
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+                containerColor = colors.sheet,
                 title = { Text("Remove saved color?") },
                 text = { Text("Remove \"${favorite.label}\" from your saved colors?") },
                 confirmButton = {
                     TextButton(onClick = {
                         saveFavorites(favorites.filterNot { it.hex == favorite.hex })
                         pendingFavoriteDeletion = null
-                    }) { Text("Remove") }
+                    }) { Text("Remove", color = colors.danger) }
                 },
                 dismissButton = {
                     TextButton(onClick = { pendingFavoriteDeletion = null }) { Text("Cancel") }
