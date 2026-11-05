@@ -2,6 +2,11 @@ package com.oryn.terminal.ui
 
 import android.content.Context
 import android.graphics.Color as AndroidColor
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.util.TypedValue
+import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +43,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -274,11 +281,27 @@ internal fun KlyroSettingsSheet(
                                         modifier = Modifier.padding(14.dp),
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Text("klyro ~ $", color = colors.accent,
-                                            fontFamily = FontFamily.Monospace, fontSize = fontSizeSp.sp)
-                                        Text("echo \"Ready.\"", color = colors.foreground,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = fontSizeSp.sp)
+                                        // Native TextView uses the exact bundled font loaded
+                                        // by TerminalView, not Compose's system monospace.
+                                        AndroidView(
+                                            factory = { ctx -> TextView(ctx) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            update = { view ->
+                                                val preview = "klyro ~ $ echo \"Ready.\""
+                                                val styled = SpannableString(preview).apply {
+                                                    setSpan(
+                                                        ForegroundColorSpan(colors.accent.toArgb()),
+                                                        0, "klyro ~ $".length,
+                                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                                    )
+                                                }
+                                                view.text = styled
+                                                view.setTextColor(colors.foreground.toArgb())
+                                                view.typeface = KlyroTerminalFonts.load(context, fontFamilyId)
+                                                view.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp)
+                                                view.contentDescription = "Terminal font preview: $preview"
+                                            }
+                                        )
                                         Text(
                                             "Preview: ${KlyroTerminalFonts.options.firstOrNull {
                                                 it.id == fontFamilyId
