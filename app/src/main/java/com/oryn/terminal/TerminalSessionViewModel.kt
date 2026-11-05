@@ -47,6 +47,14 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     var sessionFailureMessage by mutableStateOf<String?>(null)
         private set
 
+    data class NativePasteRequest(val tabId: Long, val text: String)
+    var pendingNativePaste by mutableStateOf<NativePasteRequest?>(null)
+        private set
+
+    fun clearNativePaste(tabId: Long) {
+        if (pendingNativePaste?.tabId == tabId) pendingNativePaste = null
+    }
+
     fun listenerFor(tabId: Long): OrynTerminalSessionClient.Listener =
         object : OrynTerminalSessionClient.Listener {
             override fun onTitleChanged(title: String?) {
@@ -54,6 +62,11 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             }
             override fun onSessionFinished(session: TerminalSession, exitStatus: Int) {
                 finishTab(tabId, session, exitStatus)
+            }
+            override fun onNativePasteRequiresConfirmation(text: String) {
+                if (tabs.any { it.id == tabId } && activeTabId == tabId) {
+                    pendingNativePaste = NativePasteRequest(tabId, text)
+                }
             }
             override fun onShellPid(pid: Int) {
                 if (activeTabId == tabId) sessionStatus = "Bash session started (PID $pid)."
@@ -96,6 +109,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     fun closeTab(id: Long) {
         val index = tabs.indexOfFirst { it.id == id }
         if (index < 0) return
+        if (pendingNativePaste?.tabId == id) pendingNativePaste = null
         val entry = tabs.removeAt(index)
         entry.client.attachView(null)
         entry.viewClient.attachView(null)

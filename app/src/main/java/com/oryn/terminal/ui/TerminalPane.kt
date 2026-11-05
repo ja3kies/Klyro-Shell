@@ -114,6 +114,8 @@ fun TerminalPane(
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
     sessionFailureMessage: String?,
+    nativePasteRequest: String?,
+    onNativePasteConsumed: () -> Unit,
     onClose: () -> Unit,
     runtimeHasWarnings: Boolean = false,
     modifier: Modifier = Modifier
@@ -135,6 +137,12 @@ fun TerminalPane(
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(nativePasteRequest, session) {
+        if (nativePasteRequest != null) {
+            pendingMultilinePaste = nativePasteRequest
+            onNativePasteConsumed()
+        }
+    }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
     LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId, renameDialogId, shellChooserSourceId) {
         if (sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null) {

@@ -4,6 +4,10 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Toast;
+import com.oryn.terminal.ui.ClipboardPastePolicy;
 import android.view.HapticFeedbackConstants;
 
 import androidx.annotation.NonNull;
@@ -21,6 +25,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         void onTitleChanged(String title);
         void onSessionFinished(com.termux.terminal.TerminalSession session, int exitStatus);
         void onShellPid(int pid);
+        void onNativePasteRequiresConfirmation(String text);
     }
 
     private final Context context;
@@ -73,7 +78,21 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         if (clip == null || clip.getItemCount() == 0) return;
         CharSequence text = clip.getItemAt(0).coerceToText(context);
         if (text == null) return;
-        byte[] bytes = text.toString().getBytes(StandardCharsets.UTF_8);
+        String pasted = text.toString();
+        if (!ClipboardPastePolicy.canPaste(pasted)) {
+            new Handler(Looper.getMainLooper()).post(() ->
+                Toast.makeText(context, "Clipboard text is unsupported or too long.",
+                    Toast.LENGTH_SHORT).show());
+            return;
+        }
+        if (ClipboardPastePolicy.requiresConfirmation(pasted)) {
+            if (listener != null) {
+                new Handler(Looper.getMainLooper()).post(() ->
+                    listener.onNativePasteRequiresConfirmation(pasted));
+            }
+            return;
+        }
+        byte[] bytes = pasted.getBytes(StandardCharsets.UTF_8);
         session.write(bytes, 0, bytes.length);
     }
 
