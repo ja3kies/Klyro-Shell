@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
@@ -120,9 +122,49 @@ internal fun KlyroColorPickerDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.muted
                     )
+                    // Hex entry and alpha preview remain visible without scrolling.
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = hexInput,
+                            onValueChange = { input ->
+                                val cleaned = input.removePrefix("#")
+                                    .filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
+                                    .take(6)
+                                hexInput = "#" + cleaned.uppercase()
+                                if (cleaned.length == 6) {
+                                    val hsv = FloatArray(3)
+                                    AndroidColor.colorToHSV(
+                                        cleaned.toInt(16) or -0x1000000, hsv
+                                    )
+                                    hue = hsv[0]
+                                    saturation = hsv[1]
+                                    brightness = hsv[2]
+                                }
+                            },
+                            label = { Text("Hex") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+                        )
+                        Surface(
+                            modifier = Modifier.size(52.dp),
+                            color = androidx.compose.ui.graphics.lerp(
+                                colors.sheet,
+                                Color(argb()).copy(alpha = 1f),
+                                alpha
+                            ),
+                            shape = RoundedCornerShape(16.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
+                        ) {}
+                    }
                     // Native HSV area: white/saturated along X, black/bright along Y.
                     Box(
                         modifier = Modifier.fillMaxWidth().height(140.dp)
+                            .clip(RoundedCornerShape(14.dp))
                             .semantics { contentDescription = "Saturation and brightness area, drag to choose" }
                     ) {
                         Canvas(
@@ -144,21 +186,22 @@ internal fun KlyroColorPickerDialog(
                                     )
                                 }
                         ) {
-                            val cols = 28
-                            val rows = 20
-                            val tw = size.width / cols
-                            val th = size.height / rows
-                            for (iy in 0 until rows) {
-                                for (ix in 0 until cols) {
-                                    val sat = (ix + .5f) / cols
-                                    val value = 1f - (iy + .5f) / rows
-                                    drawRect(
-                                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, value))),
-                                        topLeft = Offset(ix * tw, iy * th),
-                                        size = Size(tw + .5f, th + .5f)
-                                    )
-                                }
-                            }
+                            // Smooth GPU gradients: white→hue horizontally,
+                            // clear→black vertically. No visible 28×20 tile grid.
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    listOf(Color.White, Color(AndroidColor.HSVToColor(
+                                        floatArrayOf(hue, 1f, 1f)
+                                    )))
+                                ),
+                                size = size
+                            )
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    listOf(Color.Transparent, Color.Black)
+                                ),
+                                size = size
+                            )
                             drawCircle(
                                 color = Color.White,
                                 radius = 8.dp.toPx(),
@@ -229,44 +272,6 @@ internal fun KlyroColorPickerDialog(
                         valueRange = 0f..1f,
                         modifier = Modifier.semantics { contentDescription = "Opacity" }
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = hexInput,
-                            onValueChange = { input ->
-                                val cleaned = input.removePrefix("#")
-                                    .filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
-                                    .take(6)
-                                hexInput = "#" + cleaned.uppercase()
-                                if (cleaned.length == 6) {
-                                    val hsv = FloatArray(3)
-                                    AndroidColor.colorToHSV(
-                                        cleaned.toInt(16) or -0x1000000, hsv
-                                    )
-                                    hue = hsv[0]
-                                    saturation = hsv[1]
-                                    brightness = hsv[2]
-                                }
-                            },
-                            label = { Text("Hex") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
-                        )
-                        Surface(
-                            modifier = Modifier.size(52.dp),
-                            color = androidx.compose.ui.graphics.lerp(
-                                colors.sheet,
-                                Color(argb()).copy(alpha = 1f),
-                                alpha
-                            ),
-                            shape = RoundedCornerShape(16.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
-                        ) {}
-                    }
                     TextButton(onClick = { showExtended = !showExtended }) {
                         Text(if (showExtended) "Hide extended presets" else "Show extended presets")
                     }
