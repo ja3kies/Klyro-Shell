@@ -305,6 +305,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Navigation is Activity UI state, independent of live PTY ownership.
+        showWelcomeScreen = savedInstanceState?.getBoolean("klyro_show_welcome", false) ?: false
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
@@ -456,6 +458,11 @@ class MainActivity : ComponentActivity() {
         }
         // Re-verify packaged hashes and refresh private SONAME copies after APK updates.
         if (bootstrapInstalled) installProotRuntime()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("klyro_show_welcome", showWelcomeScreen)
+        super.onSaveInstanceState(outState)
     }
 
     private fun handlePrimaryAction() {

@@ -131,19 +131,19 @@ fun TerminalPane(
     var showToolsMenu by remember { mutableStateOf(false) }
     var showTerminalSettings by remember { mutableStateOf(false) }
     var initialSettingsSection by remember { mutableStateOf("home") }
-    var sessionSheetId by remember { mutableStateOf<Long?>(null) }
-    var renameDialogId by remember { mutableStateOf<Long?>(null) }
-    var shellChooserSourceId by remember { mutableStateOf<Long?>(null) }
+    var sessionSheetId by remember(session) { mutableStateOf<Long?>(null) }
+    var renameDialogId by remember(session) { mutableStateOf<Long?>(null) }
+    var shellChooserSourceId by remember(session) { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
-    var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
-    var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
+    var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
+    var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
     LaunchedEffect(nativePasteRequest, session) {
         if (nativePasteRequest != null) {
             pendingMultilinePaste = nativePasteRequest
             onNativePasteConsumed()
         }
     }
-    var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
+    var activeTerminalView by remember(session) { mutableStateOf<TerminalView?>(null) }
     LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId, renameDialogId, shellChooserSourceId) {
         if (sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null) {
             activeTerminalView?.let { view ->
@@ -182,8 +182,8 @@ fun TerminalPane(
         terminalFontSp = (terminalFontSp + delta).coerceIn(9f, 24f)
         fontPreferences.edit().putFloat("font_size_sp", terminalFontSp).apply()
     }
-    var showTranscriptSearch by remember { mutableStateOf(false) }
-    var transcriptQuery by remember { mutableStateOf("") }
+    var showTranscriptSearch by remember(session) { mutableStateOf(false) }
+    var transcriptQuery by remember(session) { mutableStateOf("") }
     var searchIndex by remember(session) { mutableStateOf(0) }
     var pendingSearch by remember(session) { mutableStateOf<Int?>(null) }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -222,7 +222,7 @@ fun TerminalPane(
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
     var shiftActive by remember(viewClient) { mutableStateOf(false) }
     var fnActive by remember(viewClient) { mutableStateOf(false) }
-    var showEndSessionConfirmation by remember { mutableStateOf(false) }
+    var showEndSessionConfirmation by remember(session) { mutableStateOf(false) }
     var warningNoteDismissed by remember { mutableStateOf(false) }
 
     BackHandler(

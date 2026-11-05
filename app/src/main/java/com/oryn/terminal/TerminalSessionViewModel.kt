@@ -55,6 +55,9 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (pendingNativePaste?.tabId == tabId) pendingNativePaste = null
     }
 
+    fun isSessionActive(id: Long): Boolean =
+        activeTabId == id && tabs.any { it.id == id }
+
     fun listenerFor(tabId: Long): OrynTerminalSessionClient.Listener =
         object : OrynTerminalSessionClient.Listener {
             override fun onTitleChanged(title: String?) {
@@ -64,7 +67,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
                 finishTab(tabId, session, exitStatus)
             }
             override fun onNativePasteRequiresConfirmation(text: String) {
-                if (tabs.any { it.id == tabId } && activeTabId == tabId) {
+                if (isSessionActive(tabId)) {
                     pendingNativePaste = NativePasteRequest(tabId, text)
                 }
             }
@@ -90,6 +93,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
 
     fun selectTab(id: Long) {
         if (activeTabId == id || tabs.none { it.id == id }) return
+        // Never confirm an old tab's multiline clipboard payload on a new tab.
+        pendingNativePaste = null
         selected?.let {
             it.client.attachView(null)
             it.viewClient.attachView(null)
