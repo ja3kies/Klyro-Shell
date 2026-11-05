@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Build;
 
 import com.oryn.terminal.core.OrynPaths;
+import com.oryn.terminal.core.KlyroDiagnostics;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -16,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
@@ -48,10 +50,16 @@ public final class TermuxBootstrapInstaller {
     private static final long MAX_ARCHIVE_BYTES = 80L * 1024L * 1024L;
     private static final long MAX_EXTRACTED_BYTES = 700L * 1024L * 1024L;
     private static final int MAX_ENTRIES = 150000;
+    private static final long DOWNLOAD_DEADLINE_NANOS = java.util.concurrent.TimeUnit.MINUTES.toNanos(4);
+    private static final long EXTRACTION_DEADLINE_NANOS = java.util.concurrent.TimeUnit.MINUTES.toNanos(8);
 
     private final OrynPaths paths;
-    private final AtomicBoolean installing = new AtomicBoolean(false);
+    // Process-wide guard survives Activity recreation and prevents two writers
+    // replacing the same bootstrap staging directory concurrently.
+    private static final AtomicBoolean installing = new AtomicBoolean(false);
     private volatile String lastErrorDetails;
+
+    public static boolean isBusy() { return installing.get(); }
 
     public String getLastErrorDetails() {
         return lastErrorDetails;
@@ -91,7 +99,7 @@ public final class TermuxBootstrapInstaller {
             try {
                 installInternal(listener);
             } catch (Exception error) {
-                lastErrorDetails = diagnosticDetails(error);
+                lastErrorDetails = KlyroDiagnostics.summarize(error);
                 complete(listener, false,
                         "Klyro couldn't finish setting up its private environment. "
                         + "Your existing Termux installation was not modified. You can retry.");
@@ -255,8 +263,15 @@ public final class TermuxBootstrapInstaller {
         if (verificationMarker != null) {
             args.add("-c");
             args.add("printf '%s\\n' '" + verificationMarker + "'; "
+                    + "if [[ \"$HOME\" == '" + home + "' && \"$PREFIX\" == '" + prefix + "' "
+                    + "&& \"$TMPDIR\" == '" + prefix + "/tmp' "
+                    + "&& -d \"$HOME\" && -d \"$PREFIX/bin\" && -d \"$TMPDIR\" "
+                    + "&& -x '" + prefix + "/bin/bash' ]]; "
+                    + "then printf '%s\\n' 'KLYRO_PATHS_OK'; "
+                    + "else printf '%s\\n' 'KLYRO_PATHS_INVALID'; exit 24; fi; "
                     + "uid=\"$(id -u)\"; "
-                    + "if [[ \"$uid\" =~ ^[0-9]+$ ]]; then printf '%s\\n' 'KLYRO_UID_OK'; "
+                    + "if [[ \"$uid\" =~ ^[0-9]+$ ]] && [ \"$uid\" -ne 0 ]; "
+                    + "then printf '%s\\n' 'KLYRO_UID_OK'; "
                     + "else printf 'KLYRO_UID_INVALID=%s\\n' \"$uid\"; exit 21; fi; "
                     + "if apt --version >/dev/null 2>&1; then printf '%s\\n' 'KLYRO_APT_OK'; "
                     + "else printf '%s\\n' 'KLYRO_APT_FAILED'; exit 22; fi; "
@@ -294,26 +309,41 @@ public final class TermuxBootstrapInstaller {
                 && BOOTSTRAP_SHA256.equals(sha256(file));
     }
 
+    static void ensureWorkAllowed(long started, long limitNanos) throws IOException {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new IOException("Bootstrap operation was interrupted; retry from Klyro.");
+        }
+        if (System.nanoTime() - started > limitNanos) {
+            throw new IOException("Bootstrap operation exceeded its time limit; check storage and retry.");
+        }
+    }
+
     private void download(String url, File destination, Listener listener) throws IOException {
+        final long started = System.nanoTime();
         HttpURLConnection connection = null;
         try {
             connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setConnectTimeout(20000);
             connection.setReadTimeout(45000);
+            connection.setUseCaches(false);
             connection.setInstanceFollowRedirects(true);
             connection.setRequestProperty("User-Agent", "KlyroShell/0.1");
+            ensureWorkAllowed(started, DOWNLOAD_DEADLINE_NANOS);
             int status = connection.getResponseCode();
             if (status != HttpURLConnection.HTTP_OK) {
                 throw new IOException("Bootstrap download returned HTTP " + status);
             }
             long expected = connection.getContentLengthLong();
-            if (expected > MAX_ARCHIVE_BYTES) throw new IOException("Bootstrap archive is too large.");
+            if (expected == 0 || expected > MAX_ARCHIVE_BYTES) {
+                throw new IOException("Bootstrap archive content length is invalid.");
+            }
             try (InputStream in = new BufferedInputStream(connection.getInputStream());
                  OutputStream out = new FileOutputStream(destination)) {
                 byte[] buffer = new byte[65536];
                 long total = 0;
                 int count;
                 while ((count = in.read(buffer)) != -1) {
+                    ensureWorkAllowed(started, DOWNLOAD_DEADLINE_NANOS);
                     total += count;
                     if (total > MAX_ARCHIVE_BYTES) throw new IOException("Bootstrap archive limit exceeded.");
                     out.write(buffer, 0, count);
@@ -331,6 +361,7 @@ public final class TermuxBootstrapInstaller {
     }
 
     private int extractArchive(File archive, File destination) throws IOException {
+        final long started = System.nanoTime();
         int count = 0;
         long totalBytes = 0;
         byte[] buffer = new byte[65536];
@@ -340,6 +371,7 @@ public final class TermuxBootstrapInstaller {
                 new BufferedInputStream(new FileInputStream(archive)))) {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
+                ensureWorkAllowed(started, EXTRACTION_DEADLINE_NANOS);
                 if (++count > MAX_ENTRIES) throw new IOException("Too many archive entries.");
                 String name = safeEntryName(entry.getName());
                 if (name.isEmpty()) {
@@ -363,6 +395,7 @@ public final class TermuxBootstrapInstaller {
                     try (OutputStream out = new FileOutputStream(target)) {
                         int n;
                         while ((n = zip.read(buffer)) != -1) {
+                            ensureWorkAllowed(started, EXTRACTION_DEADLINE_NANOS);
                             totalBytes += n;
                             if (totalBytes > MAX_EXTRACTED_BYTES) {
                                 throw new IOException("Extracted archive size limit exceeded.");
@@ -489,11 +522,25 @@ public final class TermuxBootstrapInstaller {
     }
 
 
-    /** Creates the Klyro prompt and migrates only our exact legacy Oryn prompt. */
+    /** Theme-aware ANSI prompt: never hardcode neon truecolor on a light canvas. */
+    private static final String THEMED_PROMPT =
+            "export PS1='\\[\\e[36m\\]klyro\\[\\e[0m\\] \\w $ '";
+
+    /** Replace only prompts generated by older Klyro/Oryn builds; leave custom PS1 intact. */
+    static String migrateGeneratedPrompt(String content) {
+        String legacyOryn =
+                "export PS1='\\[\\e[38;2;0;240;255m\\]oryn\\[\\e[0m\\] \\w $ '";
+        String legacyKlyro =
+                "export PS1='\\[\\e[38;2;0;240;255m\\]klyro\\[\\e[0m\\] \\w $ '";
+        return content.replace(legacyOryn, THEMED_PROMPT)
+                .replace(legacyKlyro, THEMED_PROMPT);
+    }
+
+    /** Backup before a tightly scoped, atomic update of a generated prompt. */
     private static void writeKlyroBashProfile(File file) throws IOException {
         String defaultProfile =
                 "# Klyro Shell profile\n"
-                + "export PS1='\\[\\e[38;2;0;240;255m\\]klyro\\[\\e[0m\\] \\w $ '\n"
+                + THEMED_PROMPT + "\n"
                 + "export EDITOR=nano\nexport PAGER=less\n"
                 + "alias ll='ls -lah'\nalias la='ls -A'\n";
         if (!file.isFile()) {
@@ -501,14 +548,26 @@ public final class TermuxBootstrapInstaller {
             return;
         }
 
-        String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-        String legacyPrompt =
-                "export PS1='\\[\\e[38;2;0;240;255m\\]oryn\\[\\e[0m\\] \\w $ '";
-        String klyroPrompt =
-                "export PS1='\\[\\e[38;2;0;240;255m\\]klyro\\[\\e[0m\\] \\w $ '";
-        if (content.contains(legacyPrompt)) {
-            Files.write(file.toPath(),
-                    content.replace(legacyPrompt, klyroPrompt).getBytes(StandardCharsets.UTF_8));
+        String existing = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+        String migrated = migrateGeneratedPrompt(existing);
+        if (existing.equals(migrated)) return;
+
+        File backup = new File(file.getParentFile(), ".bashrc.klyro-before-color.bak");
+        if (!backup.exists()) Files.copy(file.toPath(), backup.toPath());
+
+        Path staging = Files.createTempFile(file.getParentFile().toPath(), ".klyro-ps1-", ".tmp");
+        try {
+            Files.write(staging, migrated.getBytes(StandardCharsets.UTF_8));
+            try {
+                Files.move(staging, file.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException unsupported) {
+                // Private FS should support atomic rename; preserve functionality
+                // on unusual Android vendors without deleting the backup.
+                Files.move(staging, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(staging);
         }
     }
 

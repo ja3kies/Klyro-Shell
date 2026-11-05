@@ -24,6 +24,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     )
 
     private val tabs = mutableStateListOf<ShellTab>()
+    private val invalidTitleCharacters = Regex("[\\p{Cntrl}]")
     val sessions: List<ShellTab> get() = tabs
     private var nextId = 1L
     var activeTabId by mutableStateOf<Long?>(null)
@@ -33,12 +34,30 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     val activeSession: TerminalSession? get() = selected?.session
     val sessionClient: OrynTerminalSessionClient? get() = selected?.client
     val viewClient: OrynTerminalViewClient? get() = selected?.viewClient
-    val terminalTitle: String get() = selected?.let { it.customTitle ?: it.title } ?: "Bash"
+    val terminalTitle: String get() = selected?.let { displayName(it.id) } ?: "Bash"
+
+    // Stable PTY identifiers never change; user-facing default numbering stays dense.
+    fun displayName(id: Long): String? =
+        displayTabs.firstOrNull { it.first == id }?.second
+
+    val displayTabs: List<Pair<Long, String>>
+        get() = KlyroSessionNames.display(tabs.map { it.id to it.customTitle })
 
     var sessionStatus by mutableStateOf("")
         private set
     var sessionFailureMessage by mutableStateOf<String?>(null)
         private set
+
+    data class NativePasteRequest(val tabId: Long, val text: String)
+    var pendingNativePaste by mutableStateOf<NativePasteRequest?>(null)
+        private set
+
+    fun clearNativePaste(tabId: Long) {
+        if (pendingNativePaste?.tabId == tabId) pendingNativePaste = null
+    }
+
+    fun isSessionActive(id: Long): Boolean =
+        activeTabId == id && tabs.any { it.id == id }
 
     fun listenerFor(tabId: Long): OrynTerminalSessionClient.Listener =
         object : OrynTerminalSessionClient.Listener {
@@ -47,6 +66,11 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             }
             override fun onSessionFinished(session: TerminalSession, exitStatus: Int) {
                 finishTab(tabId, session, exitStatus)
+            }
+            override fun onNativePasteRequiresConfirmation(text: String) {
+                if (isSessionActive(tabId)) {
+                    pendingNativePaste = NativePasteRequest(tabId, text)
+                }
             }
             override fun onShellPid(pid: Int) {
                 if (activeTabId == tabId) sessionStatus = "Bash session started (PID $pid)."
@@ -70,6 +94,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
 
     fun selectTab(id: Long) {
         if (activeTabId == id || tabs.none { it.id == id }) return
+        // Never confirm an old tab's multiline clipboard payload on a new tab.
+        pendingNativePaste = null
         selected?.let {
             it.client.attachView(null)
             it.viewClient.attachView(null)
@@ -80,15 +106,18 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     fun renameTab(id: Long, rawName: String) {
-        val name = rawName.trim().replace(Regex("[\\p{Cntrl}]"), "").take(32)
+        val name = rawName.trim().replace(invalidTitleCharacters, "").take(32)
         if (name.isBlank()) return
         val index = tabs.indexOfFirst { it.id == id }
-        if (index >= 0) tabs[index] = tabs[index].copy(customTitle = name)
+        if (index >= 0 && tabs[index].customTitle != name) {
+            tabs[index] = tabs[index].copy(customTitle = name)
+        }
     }
 
     fun closeTab(id: Long) {
         val index = tabs.indexOfFirst { it.id == id }
         if (index < 0) return
+        if (pendingNativePaste?.tabId == id) pendingNativePaste = null
         val entry = tabs.removeAt(index)
         entry.client.attachView(null)
         entry.viewClient.attachView(null)
@@ -112,7 +141,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     private fun updateTitle(id: Long, title: String?) {
         val index = tabs.indexOfFirst { it.id == id }
         if (index >= 0) {
-            tabs[index] = tabs[index].copy(title = title?.takeIf { it.isNotBlank() } ?: "Bash")
+            val next = title?.takeIf { it.isNotBlank() } ?: "Bash"
+            if (tabs[index].title != next) tabs[index] = tabs[index].copy(title = next)
         }
     }
 
@@ -125,6 +155,16 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             sessionFailureMessage = if (exitStatus == 0) null else
                 "Bash exited unexpectedly (code $exitStatus). Verify the runtime before starting another session."
             sessionStatus = sessionFailureMessage ?: "Bash session ended."
+        }
+    }
+
+    // Legacy interface compatibility; normal sessions use listenerFor(tabId)
+    // so each native paste is routed to its owning tab.
+    override fun onNativePasteRequiresConfirmation(text: String) {
+        activeTabId?.let { id ->
+            if (tabs.any { it.id == id }) {
+                pendingNativePaste = NativePasteRequest(id, text)
+            }
         }
     }
 

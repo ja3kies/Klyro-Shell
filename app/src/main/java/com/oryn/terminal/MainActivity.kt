@@ -20,6 +20,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,7 +47,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +60,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.toArgb
 import com.oryn.terminal.ui.KlyroColors
+import com.oryn.terminal.ui.KlyroUiMetrics
 import com.oryn.terminal.ui.LocalKlyroColors
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.Composable
@@ -67,31 +72,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.session.TerminalSessionManager
+import com.oryn.terminal.core.KlyroDiagnostics
 import com.oryn.terminal.termux.ProotRuntimeInstaller
 import com.oryn.terminal.termux.TermuxBootstrapInstaller
-import com.oryn.terminal.ui.OrynTerminalPalette
+import com.oryn.terminal.ui.KlyroTerminalPalette
 import com.oryn.terminal.ui.OrynTerminalViewClient
 import com.oryn.terminal.ui.TerminalPane
 import com.termux.terminal.TerminalSession
 import java.io.IOException
 
-private val Obsidian = Color(0xFF0B0F19)
-private val SurfaceDark = Color(0xFF111827)
-private val Elevated = Color(0xFF1E293B)
-private val TextPrimary = Color(0xFFE2E8F0)
-private val TextMuted = Color(0xFF94A3B8)
-private val Cyan = Color(0xFF00F0FF)
-private val Purple = Color(0xFF8338EC)
-private val Warning = Color(0xFFFFC857)
-private val Success = Color(0xFF4DFF9A)
-
 class MainActivity : ComponentActivity() {
+    private var activePalette: KlyroColors = KlyroColors.create(false, "lime")
+    private var appliedTerminalPalette: KlyroColors? = null
     private var installProgress by mutableIntStateOf(0)
     private var isInstalling by mutableStateOf(false)
     private var statusMessage by mutableStateOf("Checking Klyro's private environment…")
@@ -102,7 +101,9 @@ class MainActivity : ComponentActivity() {
     private var runtimeVerified by mutableStateOf(false)
     private var runtimeHasWarnings by mutableStateOf(false)
     private var bashStarted by mutableStateOf(false)
+    private var showWelcomeScreen by mutableStateOf(false)
     private var isVerifyingRuntime by mutableStateOf(false)
+    private var observingPreviousInstall = false
     private val terminalState: TerminalSessionViewModel by lazy {
         ViewModelProvider(this)[TerminalSessionViewModel::class.java]
     }
@@ -143,7 +144,7 @@ class MainActivity : ComponentActivity() {
                     val paths = OrynPaths(applicationContext.filesDir,
                         File(applicationContext.applicationInfo.nativeLibraryDir))
                     val destination = File(paths.home, "storage-imports")
-                    if (!destination.isDirectory && !destination.mkdirs()) throw IOException("Cannot create destination")
+                    KlyroFileSafety.verifyDestination(destination)
                     var imported = 0
                     contentResolver.query(children, arrayOf(
                         DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -155,30 +156,18 @@ class MainActivity : ComponentActivity() {
                             val mime = cursor.getString(2) ?: continue
                             if (mime == DocumentsContract.Document.MIME_TYPE_DIR) continue
                             val size = if (cursor.isNull(3)) -1L else cursor.getLong(3)
-                            if (size > 32L * 1024 * 1024) continue
-                            val name = (cursor.getString(1) ?: "file")
-                                .replace(Regex("[^a-zA-Z0-9._-]"), "_").trimStart('.')
-                                .take(80).ifBlank { "file" }
-                            val target = generateSequence(0) { it + 1 }
-                                .map { index -> File(destination, if (index == 0) name else "${index}_${name}") }
-                                .first { !it.exists() }
+                            if (size > KlyroFileSafety.MAX_FILE_BYTES) continue
+                            val name = KlyroFileSafety.safeName(cursor.getString(1), "file")
+                            val target = KlyroFileSafety.availableName(destination, name)
                             val item = DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0))
                             val temporary = File.createTempFile(".klyro-", ".tmp", destination)
                             try {
                                 contentResolver.openInputStream(item)?.use { input ->
                                     FileOutputStream(temporary).use { output ->
-                                        val buffer = ByteArray(8192)
-                                        var copied = 0L
-                                        while (true) {
-                                            val count = input.read(buffer)
-                                            if (count < 0) break
-                                            copied += count
-                                            if (copied > 32L * 1024 * 1024) throw IOException("File exceeds 32 MiB")
-                                            output.write(buffer, 0, count)
-                                        }
+                                        KlyroFileSafety.copyLimited(input, output)
                                     }
                                 } ?: continue
-                                if (!temporary.renameTo(target)) throw IOException("Cannot save file")
+                                java.nio.file.Files.move(temporary.toPath(), target.toPath())
                                 imported++
                             } finally {
                                 if (temporary.exists()) temporary.delete()
@@ -210,39 +199,23 @@ class MainActivity : ComponentActivity() {
                             File(applicationContext.applicationInfo.nativeLibraryDir)
                         )
                         val destinationDir = File(paths.home, "imports")
-                        if (!destinationDir.isDirectory && !destinationDir.mkdirs()) {
-                            throw IOException("Cannot create imports directory")
-                        }
+                        KlyroFileSafety.verifyDestination(destinationDir)
                         var sourceName = "imported-file"
                         contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
                             if (cursor.moveToFirst()) {
                                 sourceName = cursor.getString(0) ?: sourceName
                             }
                         }
-                        val safeName = sourceName.substringAfterLast('/').substringAfterLast('\\')
-                            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
-                            .trimStart('.').take(80).ifBlank { "imported-file" }
-                        val target = generateSequence(0) { it + 1 }
-                            .map { n -> File(destinationDir, if (n == 0) safeName else n.toString() + "_" + safeName) }
-                            .first { !it.exists() }
+                        val safeName = KlyroFileSafety.safeName(sourceName)
+                        val target = KlyroFileSafety.availableName(destinationDir, safeName)
                         val temporary = File.createTempFile(".klyro-import-", ".tmp", destinationDir)
                         try {
                             contentResolver.openInputStream(uri)?.use { input ->
                                 FileOutputStream(temporary).use { output ->
-                                    val buffer = ByteArray(8192)
-                                    var total = 0L
-                                    while (true) {
-                                        val count = input.read(buffer)
-                                        if (count < 0) break
-                                        total += count
-                                        if (total > 32L * 1024 * 1024) {
-                                            throw IOException("Import limited to 32 MiB")
-                                        }
-                                        output.write(buffer, 0, count)
-                                    }
+                                    KlyroFileSafety.copyLimited(input, output)
                                 }
                             } ?: throw IOException("Cannot open selected file")
-                            if (!temporary.renameTo(target)) throw IOException("Cannot finalize import")
+                            java.nio.file.Files.move(temporary.toPath(), target.toPath())
                         } finally {
                             if (temporary.exists()) temporary.delete()
                         }
@@ -268,10 +241,14 @@ class MainActivity : ComponentActivity() {
                             File(applicationContext.applicationInfo.nativeLibraryDir)
                         )
                         val source = File(root.home, "imports/klyro-export.txt")
-                        if (!source.isFile) throw IOException("Create ~/imports/klyro-export.txt first")
+                        KlyroFileSafety.verifyExportSource(root.home, source)
                         val stream = contentResolver.openOutputStream(uri, "w")
                             ?: throw IOException("Unable to open destination")
-                        stream.use { output -> FileInputStream(source).use { it.copyTo(output) } }
+                        stream.use { output ->
+                            FileInputStream(source).use { input ->
+                                KlyroFileSafety.copyLimited(input, output)
+                            }
+                        }
                     }
                 }
                 val message = outcome.fold(
@@ -295,6 +272,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Navigation is Activity UI state, independent of live PTY ownership.
+        showWelcomeScreen = savedInstanceState?.getBoolean("klyro_show_welcome", false) ?: false
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
@@ -312,7 +291,7 @@ class MainActivity : ComponentActivity() {
             runtimeInstalled = manager.isRuntimeInstalled()
             if (bootstrapInstalled) installer?.migrateShellProfile()
         } catch (error: IOException) {
-            technicalErrorDetails = error.stackTraceToString()
+            technicalErrorDetails = KlyroDiagnostics.summarize(error)
             statusMessage = "Klyro couldn't verify its private environment."
         }
 
@@ -337,6 +316,13 @@ class MainActivity : ComponentActivity() {
                 KlyroColors.create(darkTheme, accentId)
             }
             SideEffect {
+                activePalette = palette
+                // Compose chrome and native Termux ANSI colors must update together.
+                if (appliedTerminalPalette != palette) {
+                    KlyroTerminalPalette.apply(palette, terminalState.sessions.map { it.session })
+                    terminalState.viewClient?.invalidateTerminal()
+                    appliedTerminalPalette = palette
+                }
                 // Status and gesture navigation bars remain transparent while
                 // their underlying window matches the visible Klyro chrome.
                 window.decorView.setBackgroundColor(palette.chrome.toArgb())
@@ -404,13 +390,15 @@ class MainActivity : ComponentActivity() {
                     },
                     bootstrapInstalled = bootstrapInstalled,
                     runtimeInstalled = runtimeInstalled,
-                    session = terminalState.activeSession,
-                    tabs = terminalState.sessions.map { it.id to (it.customTitle ?: it.title) },
+                    session = if (showWelcomeScreen) null else terminalState.activeSession,
+                    hasRunningSessions = terminalState.sessions.isNotEmpty(),
+                    tabs = terminalState.displayTabs,
                     activeTabId = terminalState.activeTabId,
                     onSelectTab = terminalState::selectTab,
                     onRenameTab = terminalState::renameTab,
                     onCloseTab = terminalState::closeTab,
                     onNewTab = ::launchBash,
+                    onReturnHome = { showWelcomeScreen = true },
                     onImportFile = ::chooseFileToImport,
                     onExportFile = ::chooseFileToExport,
                     onSetupStorage = ::chooseStorageFolder,
@@ -419,8 +407,16 @@ class MainActivity : ComponentActivity() {
                     sessionClient = terminalState.sessionClient,
                     viewClient = terminalState.viewClient,
                     sessionFailureMessage = terminalState.sessionFailureMessage,
+                    nativePasteRequest = terminalState.pendingNativePaste
+                        ?.takeIf { it.tabId == terminalState.activeTabId }?.text,
+                    onNativePasteConsumed = {
+                        terminalState.activeTabId?.let(terminalState::clearNativePaste)
+                    },
                     onInstall = ::handlePrimaryAction,
-                    onLaunch = ::launchBash,
+                    onLaunch = {
+                        if (terminalState.sessions.isNotEmpty()) showWelcomeScreen = false
+                        else launchBash()
+                    },
                     onClose = ::closeBash,
                     onRecheck = ::verifyRuntime
                 )
@@ -428,15 +424,56 @@ class MainActivity : ComponentActivity() {
             }
         }
         // Re-verify packaged hashes and refresh private SONAME copies after APK updates.
-        if (bootstrapInstalled) installProotRuntime()
+        if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
+            observePreviousInstall()
+        } else if (bootstrapInstalled) {
+            installProotRuntime()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("klyro_show_welcome", showWelcomeScreen)
+        super.onSaveInstanceState(outState)
+    }
+
+    /**
+     * On rotation, background workers keep their app-context and static gate.
+     * The new Activity observes the old operation rather than starting a
+     * competing installer. All UI updates run in lifecycleScope (main thread).
+     */
+    private fun observePreviousInstall() {
+        if (observingPreviousInstall) return
+        observingPreviousInstall = true
+        isInstalling = true
+        statusMessage = "Finishing previous environment setup…"
+        lifecycleScope.launch {
+            val started = android.os.SystemClock.elapsedRealtime()
+            while ((TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy())
+                    && android.os.SystemClock.elapsedRealtime() - started < 360_000L) {
+                delay(1000L)
+            }
+            observingPreviousInstall = false
+            isInstalling = false
+            if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
+                statusMessage = "Setup is still running. Reopen Klyro to check its result."
+            } else {
+                refreshReadiness()
+                when {
+                    bootstrapInstalled && !runtimeInstalled -> installProotRuntime()
+                    runtimeInstalled -> verifyRuntime()
+                    else -> statusMessage = "Setup stopped before completion. Retry installation."
+                }
+            }
+        }
     }
 
     private fun handlePrimaryAction() {
+        if (isInstalling || isVerifyingRuntime) return
         if (runtimeInstalled) verifyRuntime() else installEnvironment()
     }
 
     private fun verifyRuntime() {
-        if (isVerifyingRuntime || !runtimeInstalled) return
+        if (isVerifyingRuntime || isInstalling || !runtimeInstalled) return
         terminalState.clearSessionFailure()
         isVerifyingRuntime = true
         runtimeVerified = false
@@ -476,7 +513,7 @@ class MainActivity : ComponentActivity() {
                 runtimeVerified = false
                 runtimeHasWarnings = false
                 bashStarted = false
-                technicalErrorDetails = error.stackTraceToString()
+                technicalErrorDetails = KlyroDiagnostics.summarize(error)
                 showTechnicalDetails = false
                 statusMessage = "Klyro couldn't complete the environment check. Review diagnostics."
             }
@@ -484,7 +521,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun installEnvironment() {
-        if (isInstalling) return
+        if (isInstalling || isVerifyingRuntime) return
+        if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
+            observePreviousInstall()
+            return
+        }
         if (bootstrapInstalled) {
             installProotRuntime()
             return
@@ -506,6 +547,7 @@ class MainActivity : ComponentActivity() {
         activeInstaller.install(object : TermuxBootstrapInstaller.Listener {
             override fun onProgress(stage: String, percent: Int) {
                 runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
                     installProgress = percent.coerceIn(0, 100)
                     statusMessage = stage
                 }
@@ -513,6 +555,7 @@ class MainActivity : ComponentActivity() {
 
             override fun onComplete(success: Boolean, message: String) {
                 runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
                     bootstrapInstalled = success
                     statusMessage = message
                     if (success) {
@@ -530,6 +573,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun installProotRuntime() {
+        if (isVerifyingRuntime) return
+        if (ProotRuntimeInstaller.isBusy()) {
+            observePreviousInstall()
+            return
+        }
         val activeInstaller = runtimeInstaller ?: run {
             isInstalling = false
             statusMessage = "Proot installer is unavailable. Restart Klyro and try again."
@@ -547,6 +595,7 @@ class MainActivity : ComponentActivity() {
         activeInstaller.install(object : ProotRuntimeInstaller.Listener {
             override fun onProgress(stage: String, percent: Int) {
                 runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
                     installProgress = percent.coerceIn(0, 100)
                     statusMessage = stage
                 }
@@ -554,6 +603,7 @@ class MainActivity : ComponentActivity() {
 
             override fun onComplete(success: Boolean, message: String) {
                 runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
                     isInstalling = false
                     refreshReadiness()
                     if (!success) {
@@ -571,20 +621,26 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchBash() {
-        if (terminalState.sessions.size >= 8) return
+        if (terminalState.sessions.size >= 8) {
+            statusMessage = "Eight sessions already running. Close a session before opening another."
+            Toast.makeText(this, "Maximum of 8 sessions. Close one to continue.",
+                Toast.LENGTH_SHORT).show()
+            return
+        }
         try {
-            OrynTerminalPalette.apply()
+            KlyroTerminalPalette.apply(activePalette, terminalState.sessions.map { it.session })
             val manager = TerminalSessionManager(this)
             val tabId = terminalState.reserveTabId()
             val newSessionClient = OrynTerminalSessionClient(applicationContext, terminalState.listenerFor(tabId))
             val newViewClient = OrynTerminalViewClient(applicationContext)
             val newSession = manager.startBash("Bash", newSessionClient)
             terminalState.attachSession(newSession, newSessionClient, newViewClient, tabId)
+            showWelcomeScreen = false
             statusMessage = "Starting private Bash session…"
         } catch (error: Exception) {
             runtimeVerified = false
             bashStarted = false
-            technicalErrorDetails = error.stackTraceToString()
+            technicalErrorDetails = KlyroDiagnostics.summarize(error)
             showTechnicalDetails = false
             statusMessage = "Klyro couldn't start Bash. Check the technical details."
         }
@@ -609,8 +665,9 @@ class MainActivity : ComponentActivity() {
                 statusMessage = manager.getReadinessMessage()
             }
         } catch (error: IOException) {
+            bootstrapInstalled = false
             runtimeInstalled = false
-            technicalErrorDetails = error.stackTraceToString()
+            technicalErrorDetails = KlyroDiagnostics.summarize(error)
             showTechnicalDetails = false
             statusMessage = "Klyro couldn't validate its private environment."
         }
@@ -639,12 +696,14 @@ private fun OrynTerminalApp(
     bootstrapInstalled: Boolean,
     runtimeInstalled: Boolean,
     session: TerminalSession?,
+    hasRunningSessions: Boolean,
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
     onSelectTab: (Long) -> Unit,
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
     onNewTab: () -> Unit,
+    onReturnHome: () -> Unit,
     onImportFile: () -> Unit,
     onExportFile: () -> Unit,
     onSetupStorage: () -> Unit,
@@ -653,6 +712,8 @@ private fun OrynTerminalApp(
     sessionClient: OrynTerminalSessionClient?,
     viewClient: OrynTerminalViewClient?,
     sessionFailureMessage: String?,
+    nativePasteRequest: String?,
+    onNativePasteConsumed: () -> Unit,
     onInstall: () -> Unit,
     onLaunch: () -> Unit,
     onClose: () -> Unit,
@@ -661,13 +722,6 @@ private fun OrynTerminalApp(
     // Setup and terminal chrome share the same persisted appearance selection.
     // Each role keeps its contrast in both Klyro Soft Mint and Klyro Dark.
     val ui = LocalKlyroColors.current
-    val Obsidian = ui.background
-    val SurfaceDark = ui.chrome
-    val Elevated = ui.tile
-    val TextPrimary = ui.foreground
-    val TextMuted = ui.muted
-    val Cyan = ui.accent
-    val Purple = ui.accent
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
@@ -678,19 +732,19 @@ private fun OrynTerminalApp(
         runtimeVerified && runtimeHasWarnings -> "READY WITH WARNINGS"
         runtimeVerified -> "ENVIRONMENT READY"
         verifyingRuntime -> "CHECKING ENVIRONMENT"
-        bashStarted -> "BASH STARTS"
+        bashStarted -> "BASH STARTING"
         runtimeInstalled -> "NOT VERIFIED"
-        bootstrapInstalled -> "RUNTIME INSTALLED"
+        bootstrapInstalled -> "BOOTSTRAP INSTALLED"
         else -> "SETUP"
     }
     val stateColor = when {
-        runtimeVerified && runtimeHasWarnings -> Warning
-        runtimeVerified -> Success
-        verifyingRuntime || bashStarted || runtimeInstalled || bootstrapInstalled -> Warning
-        else -> Cyan
+        runtimeVerified && runtimeHasWarnings -> ui.warningInk
+        runtimeVerified -> ui.readyInk
+        verifyingRuntime || bashStarted || runtimeInstalled || bootstrapInstalled ->
+            ui.warningInk
+        else -> ui.accent
     }
 
-    val isTerminalVisible = session != null && sessionClient != null && viewClient != null
     val screenChrome = ui.chrome
     Surface(
         // Paint before insets; the transparent status bar must show Klyro, not
@@ -716,6 +770,7 @@ private fun OrynTerminalApp(
                 onRenameTab = onRenameTab,
                 onCloseTab = onCloseTab,
                 onNewTab = onNewTab,
+                onReturnHome = onReturnHome,
                 onImportFile = onImportFile,
                 onExportFile = onExportFile,
                 onSetupStorage = onSetupStorage,
@@ -723,6 +778,8 @@ private fun OrynTerminalApp(
                 sessionClient = sessionClient,
                 viewClient = viewClient,
                 sessionFailureMessage = sessionFailureMessage,
+                nativePasteRequest = nativePasteRequest,
+                onNativePasteConsumed = onNativePasteConsumed,
                 runtimeHasWarnings = runtimeHasWarnings,
                 onClose = onClose
             )
@@ -731,8 +788,8 @@ private fun OrynTerminalApp(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 22.dp, vertical = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(22.dp)
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -740,17 +797,21 @@ private fun OrynTerminalApp(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .background(Elevated, RoundedCornerShape(14.dp)),
+                        modifier = Modifier.size(44.dp)
+                            .background(ui.accent.copy(alpha = .10f), RoundedCornerShape(14.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("\\$", color = Cyan, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Icon(
+                            painter = painterResource(R.drawable.ic_klyro_mark_monochrome),
+                            contentDescription = "Klyro Shell",
+                            tint = ui.accent,
+                            modifier = Modifier.size(36.dp)
+                        )
                     }
                     Column {
-                        Text("KLYRO", color = TextPrimary, fontSize = 18.sp,
+                        Text("KLYRO", color = ui.foreground, fontSize = 18.sp,
                             fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                        Text("SHELL", color = TextMuted, fontSize = 11.sp,
+                        Text("SHELL", color = ui.muted, fontSize = 11.sp,
                             letterSpacing = 2.5.sp)
                     }
                     Spacer(Modifier.weight(1f))
@@ -759,44 +820,60 @@ private fun OrynTerminalApp(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         "Your shell.\nYour own space.",
-                        color = TextPrimary, fontSize = 30.sp, lineHeight = 36.sp,
+                        color = ui.foreground, fontSize = 28.sp, lineHeight = 34.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         "A standalone Android shell with its own private environment — separate from Termux.",
-                        color = TextMuted, fontSize = 14.sp, lineHeight = 21.sp
+                        color = ui.muted, fontSize = 14.sp, lineHeight = 21.sp
                     )
                 }
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = SurfaceDark,
-                    shape = RoundedCornerShape(20.dp)
+                    color = ui.chrome,
+                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
                     Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                        modifier = Modifier.padding(KlyroUiMetrics.cardPadding),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("PRIVATE ENVIRONMENT", color = Cyan, fontSize = 11.sp,
-                                letterSpacing = 1.3.sp)
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                stateLabel,
-                                color = stateColor,
-                                fontSize = 11.sp, letterSpacing = 0.8.sp
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("PRIVATE ENVIRONMENT", color = ui.muted,
+                                style = MaterialTheme.typography.labelSmall,
+                                letterSpacing = .6.sp)
+                            Surface(
+                                color = stateColor.copy(alpha = .11f),
+                                shape = RoundedCornerShape(50),
+                                border = BorderStroke(1.dp, stateColor.copy(alpha = .22f))
+                            ) {
+                                Text(
+                                    (if (runtimeVerified && !runtimeHasWarnings) "✓ " else "") +
+                                        stateLabel,
+                                    color = stateColor,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1
+                                )
+                            }
                         }
                         Text(
                             status,
-                            color = if (runtimeHasWarnings) Warning else if (technicalErrorDetails != null || sessionFailureMessage != null) Color(0xFFFF8AA5) else TextPrimary,
+                            color = if (runtimeHasWarnings) ui.warningInk
+                                else if (technicalErrorDetails != null || sessionFailureMessage != null)
+                                    (if (ui.dark) Color(0xFFFFB3BE) else Color(0xFF9A2940))
+                                else ui.foreground,
                             fontSize = 13.sp,
                             lineHeight = 19.sp
                         )
                         if (runtimeHasWarnings && warningLines.isNotEmpty()) {
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
-                                color = Warning.copy(alpha = 0.10f),
+                                color = ui.warningContainer,
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Column(
@@ -806,12 +883,12 @@ private fun OrynTerminalApp(
                                     Text(
                                         if (warningLines.size == 1) "1 distinct runtime warning"
                                         else "${warningLines.size} distinct runtime warnings",
-                                        color = Warning, fontSize = 12.sp,
+                                        color = ui.warningInk, fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
                                         warningLines.first(),
-                                        color = TextMuted, fontSize = 12.sp, lineHeight = 17.sp,
+                                        color = ui.muted, fontSize = 12.sp, lineHeight = 17.sp,
                                         fontFamily = FontFamily.Monospace,
                                         maxLines = 3
                                     )
@@ -828,7 +905,7 @@ private fun OrynTerminalApp(
                                     Text(
                                         if (showTechnicalDetails) "Hide technical details"
                                         else "Show technical details",
-                                        color = Cyan,
+                                        color = ui.accent,
                                         fontSize = 13.sp
                                     )
                                 }
@@ -838,14 +915,14 @@ private fun OrynTerminalApp(
                                         modifier = Modifier.heightIn(min = 48.dp),
                                         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
                                     ) {
-                                        Text("Copy", color = Cyan, fontSize = 13.sp)
+                                        Text("Copy", color = ui.accent, fontSize = 13.sp)
                                     }
                                 }
                             }
                             if (showTechnicalDetails) {
                                 Surface(
                                     modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
-                                    color = Obsidian,
+                                    color = ui.background,
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Box(
@@ -855,7 +932,7 @@ private fun OrynTerminalApp(
                                     ) {
                                         Text(
                                             technicalErrorDetails,
-                                            color = TextMuted,
+                                            color = ui.muted,
                                             fontSize = 12.sp,
                                             lineHeight = 17.sp,
                                             fontFamily = FontFamily.Monospace
@@ -865,16 +942,13 @@ private fun OrynTerminalApp(
                             }
                         }
                         if (installing) {
-                            Box(
-                                Modifier.fillMaxWidth().height(5.dp)
-                                    .background(Elevated, CircleShape)
-                            ) {
-                                Box(
-                                    Modifier.fillMaxWidth(progress / 100f).height(5.dp)
-                                        .background(Cyan, CircleShape)
-                                )
-                            }
-                            Text("$progress%", color = Cyan, fontSize = 11.sp,
+                            LinearProgressIndicator(
+                                progress = { (progress / 100f).coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth().height(6.dp),
+                                color = ui.accent,
+                                trackColor = ui.tile
+                            )
+                            Text("$progress%", color = ui.accent, fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace)
                         }
                         if (!runtimeVerified) {
@@ -883,12 +957,12 @@ private fun OrynTerminalApp(
                                 enabled = !installing && !verifyingRuntime,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Cyan,
-                                    contentColor = Obsidian,
-                                    disabledContainerColor = Elevated,
-                                    disabledContentColor = TextMuted
+                                    containerColor = ui.accent,
+                                    contentColor = ui.onAccent,
+                                    disabledContainerColor = ui.tile,
+                                    disabledContentColor = ui.muted
                                 ),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
                                 Text(
                                     when {
@@ -909,19 +983,20 @@ private fun OrynTerminalApp(
                                 onClick = onLaunch,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Purple,
-                                    contentColor = Color.White
+                                    containerColor = ui.accent,
+                                    contentColor = ui.onAccent
                                 ),
-                                shape = RoundedCornerShape(13.dp)
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
-                                Text("Launch Bash", fontWeight = FontWeight.SemiBold)
+                                Text(if (hasRunningSessions) "Return to terminal" else "Launch Bash",
+                                    fontWeight = FontWeight.SemiBold)
                             }
                             TextButton(
                                 onClick = onRecheck,
                                 enabled = !verifyingRuntime && !installing,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                             ) {
-                                Text("Recheck environment", color = Cyan, fontSize = 13.sp)
+                                Text("Recheck environment", color = ui.accent, fontSize = 13.sp)
                             }
                         }
                     }
