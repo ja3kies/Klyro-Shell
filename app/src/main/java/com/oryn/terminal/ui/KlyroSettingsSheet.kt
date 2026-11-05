@@ -111,9 +111,9 @@ internal fun KlyroSettingsSheet(
                 modifier = Modifier.fillMaxWidth()
                     .heightIn(max = 600.dp)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -167,10 +167,10 @@ internal fun KlyroSettingsSheet(
                     }
                     "appearance" -> {
                         SectionHeading("Appearance", "Select a theme or follow Android's appearance.")
-                        Surface(shape = RoundedCornerShape(26.dp), color = colors.tile) {
+                        Surface(shape = RoundedCornerShape(22.dp), color = colors.tile) {
                             Column(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text("App theme", fontWeight = FontWeight.SemiBold)
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -251,14 +251,14 @@ internal fun KlyroSettingsSheet(
                                         color = colors.muted
                                     )
                                 }
-                                Text("Saved automatically; terminal sessions keep running.",
+                                Text("Changes save instantly; sessions keep running.",
                                     style = MaterialTheme.typography.bodySmall, color = colors.muted)
                             }
                         }
-                        Surface(shape = RoundedCornerShape(26.dp), color = colors.tile) {
+                        Surface(shape = RoundedCornerShape(22.dp), color = colors.tile) {
                             Column(
-                                modifier = Modifier.fillMaxWidth().padding(18.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(9.dp)
                             ) {
                                 Text("Terminal font", fontWeight = FontWeight.SemiBold)
                                 Row(
@@ -284,7 +284,7 @@ internal fun KlyroSettingsSheet(
                                         ) }
                                     }
                                 }
-                                Text("DSH Go uses JetBrains Mono; Android monospace is the fallback.",
+                                Text("Preview each typeface before choosing.",
                                     style = MaterialTheme.typography.bodySmall, color = colors.muted)
                                 Surface(
                                     shape = RoundedCornerShape(16.dp),
@@ -341,8 +341,7 @@ internal fun KlyroSettingsSheet(
                                     TextButton(onClick = onResetFont,
                                         enabled = fontSizeSp != 13.5f) { Text("Reset") }
                                 }
-                                Text("Changes are saved automatically.", color = colors.muted,
-                                    style = MaterialTheme.typography.bodySmall)
+                                // Font changes are persisted without interrupting the terminal.
                             }
                         }
                     }
@@ -506,8 +505,8 @@ private fun SettingsTile(
 @Composable
 private fun SectionHeading(title: String, subtitle: String) {
     val colors = LocalKlyroColors.current
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text(subtitle, color = colors.muted, style = MaterialTheme.typography.bodyMedium)
     }
 }

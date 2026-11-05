@@ -107,26 +107,26 @@ internal fun KlyroColorPickerDialog(
             onDismissRequest = onDismiss,
             containerColor = colors.sheet,
             shape = RoundedCornerShape(28.dp),
-            title = { Text("Choose a color", style = MaterialTheme.typography.titleLarge) },
+            title = { Text("Custom accent", style = MaterialTheme.typography.titleLarge) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth()
-                        .heightIn(max = 550.dp)
+                        .heightIn(max = 440.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        "Adjust hue, brightness, saturation and transparency. Changes apply after confirmation.",
+                        "Choose a shade, then tap Apply.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.muted
                     )
                     // Native HSV area: white/saturated along X, black/bright along Y.
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(184.dp)
+                        modifier = Modifier.fillMaxWidth().height(140.dp)
                             .semantics { contentDescription = "Saturation and brightness area, drag to choose" }
                     ) {
                         Canvas(
-                            modifier = Modifier.fillMaxWidth().height(184.dp)
+                            modifier = Modifier.fillMaxWidth().height(140.dp)
                                 .pointerInput(hue) {
                                     detectTapGestures { offset ->
                                         position(offset.x, offset.y, size.width, size.height)
@@ -267,10 +267,6 @@ internal fun KlyroColorPickerDialog(
                             border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
                         ) {}
                     }
-                    Text(
-                        "Selected button labels are adjusted to remain readable; opacity blends with the current theme.",
-                        style = MaterialTheme.typography.bodySmall, color = colors.muted
-                    )
                     TextButton(onClick = { showExtended = !showExtended }) {
                         Text(if (showExtended) "Hide extended presets" else "Show extended presets")
                     }
