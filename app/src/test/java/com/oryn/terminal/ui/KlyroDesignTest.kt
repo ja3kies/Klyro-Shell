@@ -3,6 +3,8 @@ package com.oryn.terminal.ui
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import org.junit.Assert.assertEquals
+import com.oryn.terminal.klyroReadyInk
+import com.oryn.terminal.klyroWarningInk
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
@@ -23,6 +25,14 @@ class KlyroDesignTest {
         val x = luminance(a)
         val y = luminance(b)
         return (maxOf(x, y) + .05) / (minOf(x, y) + .05)
+    }
+
+    @Test fun runtimeReadinessAndWarningInkRemainReadableOnBothThemes() {
+        for (dark in listOf(false, true)) {
+            val surface = KlyroColors.create(dark, "lime").chrome
+            assertTrue("ready status dark=$dark", contrast(klyroReadyInk(dark), surface) >= 4.5)
+            assertTrue("warning status dark=$dark", contrast(klyroWarningInk(dark), surface) >= 4.5)
+        }
     }
 
     @Test fun everyPresetHasReadableChromeAndSelectedLabel() {
