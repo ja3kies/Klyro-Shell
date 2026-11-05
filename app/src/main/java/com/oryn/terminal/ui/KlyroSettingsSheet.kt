@@ -1,6 +1,7 @@
 package com.oryn.terminal.ui
 
 import android.content.Context
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -75,6 +76,7 @@ internal fun KlyroSettingsSheet(
 ) {
     var section by remember(initialSection) { mutableStateOf(initialSection) }
     var showFontLicense by remember { mutableStateOf(false) }
+    var showColorPicker by remember { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     val version = remember(context) {
@@ -171,30 +173,55 @@ internal fun KlyroSettingsSheet(
                                     }
                                 }
                                 Text("Accent preset", fontWeight = FontWeight.SemiBold)
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    KlyroColors.accents.forEach { key ->
-                                        val name = key.replaceFirstChar { it.uppercase() }
-                                        val swatch = KlyroColors.create(colors.dark, key)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    KlyroColors.primary.forEach { preset ->
+                                        val swatch = KlyroColors.create(colors.dark, preset.id)
                                         Button(
                                             modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                                                 .semantics {
-                                                    selected = accentId == key
-                                                    contentDescription = "$name accent"
+                                                    selected = accentId == preset.id
+                                                    contentDescription = preset.label + " accent"
                                                 },
-                                            onClick = { onAccentIdChange(key) },
+                                            onClick = { onAccentIdChange(preset.id) },
                                             shape = RoundedCornerShape(14.dp),
-                                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                            colors = ButtonDefaults.buttonColors(
                                                 containerColor = swatch.accent,
                                                 contentColor = swatch.onAccent
                                             ),
                                             contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                                horizontal = 2.dp, vertical = 4.dp
+                                                horizontal = 1.dp, vertical = 3.dp
                                             ),
-                                            border = if (accentId == key)
+                                            border = if (accentId == preset.id)
                                                 androidx.compose.foundation.BorderStroke(2.dp, colors.foreground)
                                                 else null
-                                        ) { Text(name, fontSize = 11.sp) }
+                                        ) { Text(preset.label, fontSize = 11.sp, maxLines = 1) }
                                     }
+                                    Button(
+                                        onClick = { showColorPicker = true },
+                                        modifier = Modifier.weight(.68f).heightIn(min = 48.dp)
+                                            .semantics { contentDescription = "Choose custom accent color" },
+                                        shape = RoundedCornerShape(14.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = colors.key, contentColor = colors.accent
+                                        ),
+                                        border = if (accentId.startsWith("custom:#") ||
+                                            KlyroColors.extended.any { it.id == accentId })
+                                            androidx.compose.foundation.BorderStroke(2.dp, colors.accent)
+                                        else null
+                                    ) { Text("+", fontSize = 22.sp) }
+                                }
+                                if (accentId.startsWith("custom:#") ||
+                                    KlyroColors.extended.any { it.id == accentId }) {
+                                    Text(
+                                        "Selected: " + (KlyroColors.selectedOption(accentId)?.label
+                                            ?: accentId.removePrefix("custom:")),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colors.muted
+                                    )
                                 }
                                 Text("Saved automatically; terminal sessions keep running.",
                                     style = MaterialTheme.typography.bodySmall, color = colors.muted)
@@ -315,6 +342,18 @@ internal fun KlyroSettingsSheet(
                     }
                 }
             }
+        }
+        if (showColorPicker) {
+            val initialColor = remember(accentId) {
+                val hex = if (accentId.startsWith("custom:#")) accentId.removePrefix("custom:")
+                    else (KlyroColors.selectedOption(accentId)?.darkHex ?: "#BDCC64")
+                AndroidColor.parseColor(hex)
+            }
+            KlyroColorPickerDialog(
+                initialArgb = initialColor,
+                onApply = { onAccentIdChange(it); showColorPicker = false },
+                onDismiss = { showColorPicker = false }
+            )
         }
         if (showFontLicense) {
             val licence = remember(context) {
