@@ -121,10 +121,10 @@ public final class TerminalSessionManager {
             int exitCode = process.exitValue();
             String stdout = readOutput(stdoutFile);
             String stderr = readOutput(stderrFile);
-            boolean bashStarted = stdout.contains(VERIFY_MARKER);
-            boolean uidValid = stdout.contains("KLYRO_UID_OK");
-            boolean aptResponds = stdout.contains("KLYRO_APT_OK");
-            boolean pkgResponds = stdout.contains("KLYRO_PKG_OK");
+            boolean bashStarted = hasExactLine(stdout, VERIFY_MARKER);
+            boolean uidValid = hasExactLine(stdout, "KLYRO_UID_OK");
+            boolean aptResponds = hasExactLine(stdout, "KLYRO_APT_OK");
+            boolean pkgResponds = hasExactLine(stdout, "KLYRO_PKG_OK");
             return new VerificationResult(
                     bashStarted, uidValid, aptResponds, pkgResponds, exitCode,
                     diagnostics(stdout, stderr, exitCode), !stderr.isEmpty());
@@ -133,6 +133,15 @@ public final class TerminalSessionManager {
             stdoutFile.delete();
             stderrFile.delete();
         }
+    }
+
+    /** Prevent partial diagnostic text from being mistaken for a successful probe. */
+    static boolean hasExactLine(String output, String marker) {
+        if (output == null || marker == null || marker.isEmpty()) return false;
+        for (String line : output.split("\\r?\\n")) {
+            if (marker.equals(line)) return true;
+        }
+        return false;
     }
 
     private static String diagnostics(String stdout, String stderr, int exitCode) {
