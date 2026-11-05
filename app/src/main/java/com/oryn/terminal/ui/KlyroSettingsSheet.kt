@@ -115,6 +115,14 @@ internal fun KlyroSettingsSheet(
                 }
                 when (section) {
                     "home" -> {
+                        if (context.resources.getBoolean(R.bool.klyro_experimental_bento)) {
+                            KlyroExperimentalBento(
+                                tabsCount = tabs.size,
+                                accentLabel = KlyroColors.selectedOption(accentId)?.label
+                                    ?: "Custom",
+                                onOpen = { section = it }
+                            )
+                        } else {
                         Text("Make Klyro yours",
                             style = MaterialTheme.typography.bodyMedium, color = colors.muted)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -139,6 +147,7 @@ internal fun KlyroSettingsSheet(
                             SettingsTile("About", "Build & terminal engine",
                                 R.drawable.hugeicons_information_square,
                                 Modifier.weight(1f)) { section = "about" }
+                        }
                         }
                     }
                     "appearance" -> {
