@@ -3,37 +3,37 @@
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- Three-part K logo reconstructed from approved Klyro brand reference.
-         Entire drawing within x=27..84, y=23..85 (66dp safe region). -->
-    <path android:pathData="M27,28 Q27,23 32,23 L39,23
-        Q43,23 43,28 L43,80 Q43,85 39,85 L32,85
-        Q27,85 27,80 Z">
+    <!-- User's interlocking K: broad ribbon in front of rounded vertical and
+         the angled tail. Full glyph in official centered 66dp safe region. -->
+    <path android:pathData="M23,42 Q23,34 30,31 L41,23
+        Q46,20 46,28 L46,78 Q46,85 41,85 L28,77
+        Q23,74 23,68 Z">
         <aapt:attr name="android:fillColor">
-            <gradient android:type="linear"
-                android:startX="27" android:startY="23"
-                android:endX="44" android:endY="85"
-                android:startColor="#E9F681" android:endColor="#789938"/>
+            <gradient android:type="linear" android:startX="30" android:startY="21"
+                android:endX="48" android:endY="87"
+                android:startColor="#EDFC8F" android:endColor="#718E36"/>
         </aapt:attr>
     </path>
-    <path android:pathData="M39,52 L70,26 Q74,23 78,27
-        L81,30 Q84,34 80,39 L49,65 Q45,68 41,64
-        L37,59 Q35,55 39,52 Z">
+    <path android:pathData="M44,66 Q43,63 46,61 L61,54
+        L81,68 Q86,72 85,78 L85,80 Q84,86 77,85
+        L48,69 Q45,68 44,66 Z">
         <aapt:attr name="android:fillColor">
-            <gradient android:type="linear"
-                android:startX="38" android:startY="63"
-                android:endX="82" android:endY="25"
-                android:startColor="#A0B947" android:endColor="#E8F57B"/>
+            <gradient android:type="linear" android:startX="54" android:startY="57"
+                android:endX="85" android:endY="86"
+                android:startColor="#476A27" android:endColor="#DDF26C"/>
         </aapt:attr>
     </path>
-    <path android:pathData="M51,59 L81,78 Q84,80 81,83
-        L79,85 L74,85 Q72,85 69,83 L44,66 Z">
+    <path android:pathData="M23,57 Q23,52 29,49 L75,25
+        Q84,20 85,29 L85,36 Q85,41 79,45 L47,65
+        Q43,68 43,73 L43,57 Q43,53 39,53
+        Q36,53 36,57 L36,75 L27,79 Q23,76 23,70 Z">
         <aapt:attr name="android:fillColor">
-            <gradient android:type="linear"
-                android:startX="49" android:startY="58"
-                android:endX="83" android:endY="85"
-                android:startColor="#6D912E" android:endColor="#DFEE65"/>
+            <gradient android:type="linear" android:startX="27" android:startY="68"
+                android:endX="83" android:endY="28"
+                android:startColor="#E7F56E" android:endColor="#9EB34A"/>
         </aapt:attr>
     </path>
     <path android:fillColor="#0B1014"
-        android:pathData="M41,49 L43.5,49 L43.5,61 L41,61 Z"/>
+        android:pathData="M37,54 Q37,52 40,52 L43,52
+            Q44,52 44,55 L44,70 L37,70 Z"/>
 </vector>
