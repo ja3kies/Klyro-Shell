@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color as AndroidColor
+import android.graphics.Typeface
 import android.widget.EditText
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
@@ -15,6 +16,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
@@ -61,10 +63,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -101,6 +106,7 @@ fun TerminalPane(
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
     onNewTab: () -> Unit,
+    onReturnHome: () -> Unit,
     onImportFile: () -> Unit,
     onExportFile: () -> Unit,
     onSetupStorage: () -> Unit,
@@ -108,6 +114,8 @@ fun TerminalPane(
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
     sessionFailureMessage: String?,
+    nativePasteRequest: String?,
+    onNativePasteConsumed: () -> Unit,
     onClose: () -> Unit,
     runtimeHasWarnings: Boolean = false,
     modifier: Modifier = Modifier
@@ -120,16 +128,22 @@ fun TerminalPane(
     val TerminalText = ui.foreground
     val TerminalMuted = ui.muted
     val inactiveTabSurface = ui.key
-    var showToolsMenu by remember { mutableStateOf(false) }
-    var showTerminalSettings by remember { mutableStateOf(false) }
-    var initialSettingsSection by remember { mutableStateOf("home") }
-    var sessionSheetId by remember { mutableStateOf<Long?>(null) }
-    var renameDialogId by remember { mutableStateOf<Long?>(null) }
-    var shellChooserSourceId by remember { mutableStateOf<Long?>(null) }
+    var showToolsMenu by remember(session) { mutableStateOf(false) }
+    var showTerminalSettings by remember(session) { mutableStateOf(false) }
+    var initialSettingsSection by remember(session) { mutableStateOf("home") }
+    var sessionSheetId by remember(session) { mutableStateOf<Long?>(null) }
+    var renameDialogId by remember(session) { mutableStateOf<Long?>(null) }
+    var shellChooserSourceId by remember(session) { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
-    var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
-    var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
-    var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
+    var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
+    var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
+    LaunchedEffect(nativePasteRequest, session) {
+        if (nativePasteRequest != null) {
+            pendingMultilinePaste = nativePasteRequest
+            onNativePasteConsumed()
+        }
+    }
+    var activeTerminalView by remember(session) { mutableStateOf<TerminalView?>(null) }
     LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId, renameDialogId, shellChooserSourceId) {
         if (sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null) {
             activeTerminalView?.let { view ->
@@ -145,17 +159,31 @@ fun TerminalPane(
     var terminalFontSp by remember {
         mutableStateOf(fontPreferences.getFloat("font_size_sp", 13.5f).coerceIn(9f, 24f))
     }
+    var terminalFontId by remember {
+        mutableStateOf(KlyroTerminalFonts.normalize(fontPreferences.getString("font_family", "system")))
+    }
+    val terminalTypeface = remember(context, terminalFontId) {
+        KlyroTerminalFonts.load(context, terminalFontId)
+    }
     val terminalTextSizePx = with(LocalDensity.current) { terminalFontSp.sp.roundToPx() }
-    // Apply only when the preference changes: avoid resetting pinch-to-zoom on recomposition.
+    // Avoid resetting pinch-to-zoom during unrelated Compose recomposition.
     LaunchedEffect(terminalTextSizePx, activeTerminalView) {
+        viewClient.setBaseTextSizePx(terminalTextSizePx)
         activeTerminalView?.setTextSize(terminalTextSizePx)
+    }
+    LaunchedEffect(terminalTypeface, activeTerminalView) {
+        activeTerminalView?.setTypeface(terminalTypeface)
+    }
+    LaunchedEffect(ui.terminal, activeTerminalView) {
+        activeTerminalView?.setBackgroundColor(ui.terminal.toArgb())
+        activeTerminalView?.invalidate()
     }
     fun changeTerminalFont(delta: Float) {
         terminalFontSp = (terminalFontSp + delta).coerceIn(9f, 24f)
         fontPreferences.edit().putFloat("font_size_sp", terminalFontSp).apply()
     }
-    var showTranscriptSearch by remember { mutableStateOf(false) }
-    var transcriptQuery by remember { mutableStateOf("") }
+    var showTranscriptSearch by remember(session) { mutableStateOf(false) }
+    var transcriptQuery by remember(session) { mutableStateOf("") }
     var searchIndex by remember(session) { mutableStateOf(0) }
     var pendingSearch by remember(session) { mutableStateOf<Int?>(null) }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -192,10 +220,10 @@ fun TerminalPane(
     }
     var controlActive by remember(viewClient) { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
-    var shiftActive by remember(viewClient) { mutableStateOf(false) }
-    var fnActive by remember(viewClient) { mutableStateOf(false) }
-    var showEndSessionConfirmation by remember { mutableStateOf(false) }
-    var warningNoteDismissed by remember { mutableStateOf(false) }
+    var shiftActive by remember(viewClient) { mutableStateOf(viewClient.isShiftDown()) }
+    var fnActive by remember(viewClient) { mutableStateOf(viewClient.isFnDown()) }
+    var showEndSessionConfirmation by remember(session) { mutableStateOf(false) }
+    var warningNoteDismissed by remember(session) { mutableStateOf(false) }
 
     BackHandler(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
@@ -209,11 +237,12 @@ fun TerminalPane(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
     val compact = maxHeight < 300.dp
     // Fit seven 48dp+ touch targets across a Pixel-width screen; scroll on narrower devices.
-    val keyWidth = ((maxWidth - 36.dp) / 7).coerceIn(36.dp, 56.dp)
+    val keyWidth = if (compact) 48.dp else ((maxWidth - 36.dp) / 7).coerceIn(40.dp, 56.dp)
     val toolsMenu: @Composable () -> Unit = {
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
-                    Text("⋮", color = TerminalAccent, fontSize = 22.sp)
+                    Text("⋮", color = TerminalAccent, fontSize = 22.sp,
+                        modifier = Modifier.semantics { contentDescription = "More actions" })
                 }
                 DropdownMenu(
                     expanded = showToolsMenu,
@@ -249,29 +278,19 @@ fun TerminalPane(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Paste", color = MaterialTheme.colorScheme.onSurface) },
+                        text = { Text("Home", color = MaterialTheme.colorScheme.onSurface) },
                         modifier = Modifier.heightIn(min = 56.dp),
                         leadingIcon = {
-                            Icon(painterResource(R.drawable.hugeicons_clipboard_paste),
-                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                            Icon(painterResource(R.drawable.hugeicons_terminal),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface)
                         },
                         onClick = {
                             showToolsMenu = false
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val pasted = runCatching {
-                                clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
-                            }.getOrNull()
-                            pasted?.let { value ->
-                                if (ClipboardPastePolicy.canPaste(value)) {
-                                    if (ClipboardPastePolicy.requiresConfirmation(value)) {
-                                        pendingMultilinePaste = value
-                                    } else {
-                                        write(session, value)
-                                    }
-                                }
-                            }
+                            onReturnHome()
                         }
                     )
+
                 }
             }
     }
@@ -332,7 +351,10 @@ fun TerminalPane(
                             },
                             onLongClick = { openSessionSheet(id, tabTitle) }
                         )
-                        .semantics { contentDescription = "Session ${tabTitle.ifBlank { "Session" }}" },
+                        .semantics {
+                            contentDescription = tabTitle.ifBlank { "Session" }
+                            stateDescription = if (active) "Active session" else "Inactive session"
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Surface(
@@ -353,29 +375,36 @@ fun TerminalPane(
                 }
             }
             Box(
-                modifier = Modifier.size(48.dp).semantics {
-                    contentDescription = "New terminal"
-                },
+                modifier = Modifier
+                    .size(48.dp)
+                    .clickable(
+                        enabled = tabs.size < 8,
+                        role = Role.Button,
+                        onClickLabel = "New terminal",
+                        onClick = onNewTab
+                    )
+                    .semantics { contentDescription = "New terminal" },
                 contentAlignment = Alignment.Center
             ) {
-                Button(
-                    onClick = onNewTab,
-                    enabled = tabs.size < 8,
+                Surface(
                     modifier = Modifier.size(38.dp),
+                    // A translucent affordance, distinct from the active tab.
+                    color = if (tabs.size < 8) TerminalAccent.copy(alpha = 0.14f) else inactiveTabSurface,
+                    contentColor = if (tabs.size < 8) TerminalAccent else TerminalMuted,
                     shape = androidx.compose.foundation.shape.CircleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = TerminalAccent,
-                        contentColor = ui.onAccent
-                    ),
-                    contentPadding = PaddingValues(0.dp)
-                ) { Text("+", fontSize = 20.sp) }
+                    border = if (tabs.size < 8) androidx.compose.foundation.BorderStroke(
+                        1.dp, TerminalAccent.copy(alpha = 0.25f)
+                    ) else null
+                ) {
+                    Box(contentAlignment = Alignment.Center) { Text("+", fontSize = 20.sp) }
+                }
             }
         }
 
         if (sessionFailureMessage != null) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                color = Color(0xFF2A1B25),
+                color = ui.dangerContainer,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -384,13 +413,13 @@ fun TerminalPane(
                 ) {
                     Text(
                         sessionFailureMessage,
-                        color = Color(0xFFFFB4C0),
+                        color = ui.danger,
                         fontSize = 12.sp,
                         lineHeight = 17.sp,
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = onClose) {
-                        Text("Back to setup", color = TerminalAccent, fontSize = 12.sp)
+                    TextButton(onClick = onReturnHome) {
+                        Text("Home", color = TerminalAccent, fontSize = 12.sp)
                     }
                 }
             }
@@ -399,7 +428,7 @@ fun TerminalPane(
         if (runtimeHasWarnings && sessionFailureMessage == null && !warningNoteDismissed) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                color = Color(0xFF2B2415),
+                color = ui.warningContainer,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -408,7 +437,7 @@ fun TerminalPane(
                 ) {
                     Text(
                         "The environment check reported warnings. Messages above the prompt may relate to them.",
-                        color = Color(0xFFFFC857),
+                        color = ui.warningInk,
                         fontSize = 12.sp,
                         lineHeight = 17.sp,
                         modifier = Modifier.weight(1f)
@@ -433,12 +462,25 @@ fun TerminalPane(
         ) {
         key(session) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            // Inset real terminal glyphs inside the clipped rounded viewport.
+            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 6.dp),
             factory = { context ->
                 TerminalView(context, null).apply {
+                    // TerminalView (JitPack 0.118.0) is final. The upstream
+                    // floating ActionMode's More calls showContextMenu().
+                    // Register a real Android context-menu item; do not
+                    // subclass the terminal or replace its selection engine.
+                    setOnCreateContextMenuListener { menu, _, _ ->
+                        menu.add("Select all").setOnMenuItemClickListener {
+                            outputSelectionView = null
+                            selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
+                            true
+                        }
+                    }
                     setTerminalViewClient(viewClient)
                     setTextSize(terminalTextSizePx)
-                    setBackgroundColor(AndroidColor.rgb(16, 22, 25))
+                    setTypeface(terminalTypeface)
+                    setBackgroundColor(ui.terminal.toArgb())
                     isFocusable = true
                     isFocusableInTouchMode = true
                     sessionClient.attachView(this)
@@ -462,7 +504,7 @@ fun TerminalPane(
         }
         }
 
-        // Seven visible keys per row: no horizontal gesture or hidden actions.
+        // Portrait: two fixed rows; compact height: one scrollable row to preserve PTY height.
         val firstRow: @Composable () -> Unit = {
             TerminalExtraKey("ESC", keyWidth = keyWidth, darkChrome = darkChrome) { session.writeCodePoint(false, 27) }
             TerminalExtraKey("TAB", keyWidth = keyWidth, darkChrome = darkChrome) { session.writeCodePoint(false, 9) }
@@ -504,28 +546,37 @@ fun TerminalPane(
                 session.writeCodePoint(false, 12) // Ctrl+L; keep scrollback.
             }
         }
-        Column(
-            modifier = Modifier.fillMaxWidth().background(TerminalSurface)
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+        if (compact) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().background(TerminalSurface)
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) { firstRow() }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) { secondRow() }
+            ) {
+                firstRow()
+                secondRow()
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth().background(TerminalSurface)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) { firstRow() }
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) { secondRow() }
+            }
         }
     }
 
     }
 
-    // TerminalView does not expose programmatic select-all. Use a read-only native
-    // selection surface, with the whole available snapshot selected on opening.
+    // The native More item opens this in-app Select all action.
+    // Selection is performed on a native read-only text surface, without
+    // accidentally sending selected content to the running Bash session.
     selectedOutput?.let { output ->
-        val selectionLimit = 256 * 1024
+        val selectionLimit = 2 * 1024 * 1024
         val truncated = output.length > selectionLimit
         val visibleOutput = output.takeLast(selectionLimit)
         fun closeSelection() {
@@ -534,7 +585,7 @@ fun TerminalPane(
         }
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { closeSelection() },
             title = { Text("Select terminal output") },
@@ -542,7 +593,7 @@ fun TerminalPane(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (truncated) {
                         Text(
-                            "Only the latest 256 KiB are selectable; earlier output is omitted.",
+                            "Only the latest 2 MiB are selectable; older output is omitted for memory safety.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -558,8 +609,10 @@ fun TerminalPane(
                                     setShowSoftInputOnFocus(false)
                                     setHorizontallyScrolling(false)
                                     setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
-                                    setTextColor(AndroidColor.WHITE)
-                                    setBackgroundColor(AndroidColor.rgb(16, 23, 25))
+                                    // Selection preview shares the current terminal ink,
+                                    // including light mode; no isolated black subpanel.
+                                    setTextColor(ui.foreground.toArgb())
+                                    setBackgroundColor(ui.terminal.toArgb())
                                     typeface = android.graphics.Typeface.MONOSPACE
                                     setPadding(12, 8, 12, 8)
                                     outputSelectionView = this
@@ -614,6 +667,11 @@ fun TerminalPane(
             accentId = accentId,
             onAccentIdChange = onAccentIdChange,
             fontSizeSp = terminalFontSp,
+            fontFamilyId = terminalFontId,
+            onFontFamilyChange = { id ->
+                terminalFontId = KlyroTerminalFonts.normalize(id)
+                fontPreferences.edit().putString("font_family", terminalFontId).apply()
+            },
             onFontChange = ::changeTerminalFont,
             onResetFont = {
                 terminalFontSp = 13.5f
@@ -646,7 +704,7 @@ fun TerminalPane(
     if (pendingMultilinePaste != null) {
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { pendingMultilinePaste = null },
             title = { Text("Paste multiple lines?") },
@@ -747,16 +805,17 @@ fun TerminalPane(
         }
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { showTranscriptSearch = false },
-            title = { Text("Search terminal transcript") },
+            title = { Text("Find in terminal", style = MaterialTheme.typography.titleLarge, maxLines = 1) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = transcriptQuery,
                         onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
                         label = { Text("Find text") },
+                        modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
                     Text(
@@ -798,6 +857,8 @@ fun TerminalPane(
                                 text = preview,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
+                                maxLines = 2,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 modifier = Modifier.fillMaxWidth().padding(10.dp)
                             )
                         }
@@ -824,7 +885,7 @@ fun TerminalPane(
                         showTranscriptSearch = false
                     },
                     enabled = matches.isNotEmpty(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
                 ) { Text("Go to line") }
             },
             dismissButton = {
@@ -837,7 +898,7 @@ fun TerminalPane(
     if (showEndSessionConfirmation) {
         KlyroModalTheme {
         AlertDialog(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { showEndSessionConfirmation = false },
             title = { Text("End Bash session?") },
@@ -846,7 +907,7 @@ fun TerminalPane(
                 TextButton(onClick = {
                     showEndSessionConfirmation = false
                     onClose()
-                }) { Text("End session") }
+                }) { Text("End session", color = ui.danger, fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
                 TextButton(onClick = { showEndSessionConfirmation = false }) {
@@ -880,7 +941,7 @@ private fun TerminalExtraKey(
             .height(50.dp)
             .width(keyWidth)
             .semantics { contentDescription = description ?: label },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) accentTint.copy(alpha = 0.18f)

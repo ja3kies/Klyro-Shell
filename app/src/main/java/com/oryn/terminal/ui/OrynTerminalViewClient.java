@@ -36,8 +36,15 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
 
     public boolean isControlDown() { return controlDown; }
     public boolean isAltDown() { return altDown; }
+    public boolean isShiftDown() { return shiftDown; }
+    public boolean isFnDown() { return fnDown; }
 
     private int textSizePx = 0;
+
+    /** Anchor pinch zoom to the currently configured font size. */
+    public void setBaseTextSizePx(int pixels) {
+        if (pixels > 0) textSizePx = pixels;
+    }
 
     @Override
     public float onScale(float scale) {

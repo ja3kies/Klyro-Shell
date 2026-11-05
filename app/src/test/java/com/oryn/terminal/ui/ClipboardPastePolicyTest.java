@@ -10,6 +10,10 @@ public class ClipboardPastePolicyTest {
         assertFalse(ClipboardPastePolicy.canPaste("abc\u0000def"));
         assertFalse(ClipboardPastePolicy.canPaste("echo ok\u001B[31m"));
         assertFalse(ClipboardPastePolicy.canPaste("abc\u007f"));
+        assertFalse(ClipboardPastePolicy.canPaste("abc\u0085"));
+        assertFalse(ClipboardPastePolicy.canPaste("bad\uD800"));
+        assertFalse(ClipboardPastePolicy.canPaste("\uDC00bad"));
+        assertTrue(ClipboardPastePolicy.canPaste("emoji \uD83D\uDE00"));
         assertFalse(ClipboardPastePolicy.canPaste("a".repeat(ClipboardPastePolicy.MAX_CHARS + 1)));
     }
 

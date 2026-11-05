@@ -35,6 +35,56 @@ public class TerminalSessionManagerTest {
     }
 
     @Test
+    public void verificationMarkersRequireCompleteOutputLines() {
+        assertTrue(TerminalSessionManager.hasExactLine(
+                "noise\nKLYRO_UID_OK\nKLYRO_PKG_OK", "KLYRO_UID_OK"));
+        assertTrue(TerminalSessionManager.hasExactLine(
+                "KLYRO_APT_OK\r\n", "KLYRO_APT_OK"));
+        assertTrue(!TerminalSessionManager.hasExactLine(
+                "KLYRO_UID_OK_BUT_NOT_VERIFIED", "KLYRO_UID_OK"));
+        assertTrue(!TerminalSessionManager.hasExactLine(
+                "prefix KLYRO_PKG_OK suffix", "KLYRO_PKG_OK"));
+        assertTrue(!TerminalSessionManager.hasExactLine(null, "KLYRO_UID_OK"));
+        assertTrue(!TerminalSessionManager.hasExactLine("", "KLYRO_UID_OK"));
+    }
+
+    @Test
+    public void terminalArgvRejectsMissingExecutableAndCopiesInput() {
+        for (String[] bad : new String[][] {null, {}, {null}, {""}, {"  "}}) {
+            try {
+                TerminalSessionManager.buildTerminalArgv(bad);
+                org.junit.Assert.fail("Expected invalid executable rejection");
+            } catch (IllegalArgumentException expected) {
+                // An invalid command must never reach JNI execvp.
+            }
+        }
+        String[] input = {"/private/libproot.so", "-r", "/private/root"};
+        String[] copy = TerminalSessionManager.buildTerminalArgv(input);
+        copy[0] = "/system/bin/sh";
+        assertEquals("/private/libproot.so", input[0]);
+    }
+
+    @Test
+    public void invalidArgumentsNeverReachNativePty() {
+        for (String[] bad : new String[][] {
+            {"/private/proot", null}, {"/private/proot", "bad\0argument"}
+        }) {
+            try {
+                TerminalSessionManager.buildTerminalArgv(bad);
+                org.junit.Assert.fail("expected invalid argument rejection");
+            } catch (IllegalArgumentException expected) {}
+        }
+    }
+
+    @Test
+    public void verificationDiagnosticsStripTerminalControlSequences() {
+        String cleaned = TerminalSessionManager.safeDiagnostics("hello" + (char) 27 + "[31m");
+        assertTrue(!cleaned.contains(String.valueOf((char) 27)));
+        assertTrue(!TerminalSessionManager.safeDiagnostics("x" + (char) 0x85 + "y").contains(String.valueOf((char) 0x85)));
+        assertEquals("(empty)", TerminalSessionManager.safeDiagnostics(null));
+    }
+
+    @Test
     public void terminalArgvRetainsExecutableAsArgvZero() {
         String[] command = {"/app/lib/libproot.so", "--link2symlink", "-r", "/private/root"};
         assertArrayEquals(command, TerminalSessionManager.buildTerminalArgv(command));

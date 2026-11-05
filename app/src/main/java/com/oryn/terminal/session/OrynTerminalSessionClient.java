@@ -4,6 +4,10 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Toast;
+import com.oryn.terminal.ui.ClipboardPastePolicy;
 import android.view.HapticFeedbackConstants;
 
 import androidx.annotation.NonNull;
@@ -21,11 +25,13 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         void onTitleChanged(String title);
         void onSessionFinished(com.termux.terminal.TerminalSession session, int exitStatus);
         void onShellPid(int pid);
+        void onNativePasteRequiresConfirmation(String text);
     }
 
     private final Context context;
     private final Listener listener;
     private volatile TerminalView terminalView;
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     public OrynTerminalSessionClient(Context context, Listener listener) {
         this.context = context.getApplicationContext();
@@ -44,14 +50,20 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
 
     @Override
     public void onTitleChanged(@NonNull com.termux.terminal.TerminalSession session) {
-        if (listener != null) listener.onTitleChanged(session.getTitle());
+        if (listener != null) {
+            String title = session.getTitle();
+            uiHandler.post(() -> listener.onTitleChanged(title));
+        }
     }
 
     @Override
     public void onSessionFinished(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.postInvalidate();
-        if (listener != null) listener.onSessionFinished(session, session.getExitStatus());
+        if (listener != null) {
+            int status = session.getExitStatus();
+            uiHandler.post(() -> listener.onSessionFinished(session, status));
+        }
     }
 
     @Override
@@ -73,7 +85,21 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         if (clip == null || clip.getItemCount() == 0) return;
         CharSequence text = clip.getItemAt(0).coerceToText(context);
         if (text == null) return;
-        byte[] bytes = text.toString().getBytes(StandardCharsets.UTF_8);
+        String pasted = text.toString();
+        if (!ClipboardPastePolicy.canPaste(pasted)) {
+            uiHandler.post(() ->
+                Toast.makeText(context, "Clipboard text is unsupported or too long.",
+                    Toast.LENGTH_SHORT).show());
+            return;
+        }
+        if (ClipboardPastePolicy.requiresConfirmation(pasted)) {
+            if (listener != null) {
+                uiHandler.post(() ->
+                    listener.onNativePasteRequiresConfirmation(pasted));
+            }
+            return;
+        }
+        byte[] bytes = pasted.getBytes(StandardCharsets.UTF_8);
         session.write(bytes, 0, bytes.length);
     }
 

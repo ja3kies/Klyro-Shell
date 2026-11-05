@@ -1,6 +1,7 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,11 +55,14 @@ internal fun KlyroSessionSheet(
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
         ModalBottomSheet(
-            onDismissRequest = onDismiss,
+            onDismissRequest = { if (!confirmClose) onDismiss() },
             containerColor = colors.sheet,
             contentColor = colors.foreground,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFB5C3C9)) }
+            shape = RoundedCornerShape(
+                topStart = KlyroUiMetrics.sheetCorner,
+                topEnd = KlyroUiMetrics.sheetCorner
+            ),
+            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
@@ -68,42 +72,41 @@ internal fun KlyroSessionSheet(
                 Text(sessionName.ifBlank { "Session" },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold)
-                Surface(color = colors.tile, shape = RoundedCornerShape(26.dp)) {
+                Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
                     Column {
                         SheetAction("", "Rename", onRename, icon = R.drawable.hugeicons_pen_01)
                         SheetAction("+", "New terminal", onChooseShell, trailing = "›")
                         if (!isActive) SheetAction("↗", "Switch to session", onActivate)
                     }
                 }
-                Surface(color = colors.tile, shape = RoundedCornerShape(26.dp)) {
+                Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
                     Column {
                         SheetAction("×", "Close terminal", onClick = {
                             confirmClose = true
                         }, destructive = true)
-                        if (confirmClose) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Text("Stop this session and its child processes?",
-                                    color = colors.danger,
-                                    style = MaterialTheme.typography.bodyMedium)
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    TextButton(onClick = { confirmClose = false }) {
-                                        Text("Keep session")
-                                    }
-                                    TextButton(onClick = onCloseSession) {
-                                        Text("Close session", color = colors.danger)
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
+        }
+        if (confirmClose) {
+            AlertDialog(
+                onDismissRequest = { confirmClose = false },
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+                containerColor = colors.sheet,
+                title = { Text("Close ${sessionName.ifBlank { "session" }}?") },
+                text = {
+                    Text("This stops its Bash process and running child commands. Other sessions remain open.")
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmClose = false
+                        onCloseSession()
+                    }) { Text("Close session", color = colors.danger, fontWeight = FontWeight.SemiBold) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmClose = false }) { Text("Keep session") }
+                }
+            )
         }
     }
 }
@@ -119,8 +122,8 @@ private fun SheetAction(
 ) {
     val colors = LocalKlyroColors.current
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-            .clickable(onClickLabel = label, onClick = onClick)
+        modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+            .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(18.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -159,7 +162,7 @@ internal fun KlyroRenameSessionDialog(
     KlyroModalTheme {
         AlertDialog(
             onDismissRequest = onDismiss,
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = colors.sheet,
             title = { Text("Rename terminal", fontWeight = FontWeight.Bold) },
             text = {
@@ -208,8 +211,11 @@ internal fun KlyroChooseShellSheet(
             onDismissRequest = onDismiss,
             containerColor = colors.sheet,
             contentColor = colors.foreground,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFB5C3C9)) }
+            shape = RoundedCornerShape(
+                topStart = KlyroUiMetrics.sheetCorner,
+                topEnd = KlyroUiMetrics.sheetCorner
+            ),
+            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
@@ -224,7 +230,7 @@ internal fun KlyroChooseShellSheet(
                     Text("Choose shell", style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold)
                 }
-                Surface(color = colors.tile, shape = RoundedCornerShape(26.dp)) {
+                Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable(
                             onClickLabel = "Start a Bash terminal", onClick = onNewBash
