@@ -133,7 +133,6 @@ fun TerminalPane(
     var renameDialogId by remember { mutableStateOf<Long?>(null) }
     var shellChooserSourceId by remember { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
-    var showNativeSelectionMore by remember(session) { mutableStateOf(false) }
     var outputSelectionView by remember { mutableStateOf<EditText?>(null) }
     var pendingMultilinePaste by remember { mutableStateOf<String?>(null) }
     var activeTerminalView by remember { mutableStateOf<TerminalView?>(null) }
@@ -484,14 +483,18 @@ fun TerminalPane(
             // Inset real terminal glyphs inside the clipped rounded viewport.
             modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 6.dp),
             factory = { context ->
-                object : TerminalView(context, null) {
-                    // Termux's native floating selection mode sends "More"
-                    // to showContextMenu; expose a real action.
-                    override fun showContextMenu(): Boolean {
-                        showNativeSelectionMore = true
-                        return true
+                TerminalView(context, null).apply {
+                    // TerminalView (JitPack 0.118.0) is final. The upstream
+                    // floating ActionMode's More calls showContextMenu().
+                    // Register a real Android context-menu item; do not
+                    // subclass the terminal or replace its selection engine.
+                    setOnCreateContextMenuListener { menu, _, _ ->
+                        menu.add("Select all").setOnMenuItemClickListener {
+                            outputSelectionView = null
+                            selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
+                            true
+                        }
                     }
-                }.apply {
                     setTerminalViewClient(viewClient)
                     setTextSize(terminalTextSizePx)
                     setTypeface(terminalTypeface)
@@ -588,40 +591,6 @@ fun TerminalPane(
     }
 
     // The native More item opens this in-app Select all action.
-    if (showNativeSelectionMore) {
-        KlyroModalTheme {
-            ModalBottomSheet(
-                onDismissRequest = { showNativeSelectionMore = false },
-                containerColor = ui.sheet,
-                contentColor = ui.foreground,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                    topStart = 26.dp, topEnd = 26.dp
-                ),
-                dragHandle = { BottomSheetDefaults.DragHandle(color = ui.muted) }
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 10.dp)
-                        .padding(bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("Selection", style = MaterialTheme.typography.titleLarge)
-                    Text("Select all available output, including scrollback.",
-                        color = ui.muted, style = MaterialTheme.typography.bodySmall)
-                    Button(
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        onClick = {
-                            showNativeSelectionMore = false
-                            outputSelectionView = null
-                            selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
-                        },
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-                    ) { Text("Select all") }
-                }
-            }
-        }
-    }
-
     // Selection is performed on a native read-only text surface, without
     // accidentally sending selected content to the running Bash session.
     selectedOutput?.let { output ->
