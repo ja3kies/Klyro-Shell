@@ -152,20 +152,18 @@ internal fun KlyroColorPickerDialog(
                                     value = hexInput,
                                     onValueChange = { input ->
                                         pendingPreset = null
-                                                                    val cleaned = input.removePrefix("#")
-                                                                        .filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
-                                                                        .take(6)
-                                                                    hexInput = "#" + cleaned.uppercase()
-                                                                    if (cleaned.length == 6) {
-                                                                        val hsv = FloatArray(3)
-                                                                        AndroidColor.colorToHSV(
-                                                                            cleaned.toInt(16) or -0x1000000, hsv
-                                                                        )
-                                                                        hue = hsv[0]
-                                                                        saturation = hsv[1]
-                                                                        brightness = hsv[2]
-                                                                    }
-                                                                },
+                                        hexInput = KlyroHexInput.sanitize(input)
+                                        if (KlyroHexInput.isComplete(hexInput)) {
+                                            val hsv = FloatArray(3)
+                                            AndroidColor.colorToHSV(
+                                                hexInput.substring(1).toInt(16) or -0x1000000,
+                                                hsv
+                                            )
+                                            hue = hsv[0]
+                                            saturation = hsv[1]
+                                            brightness = hsv[2]
+                                        }
+                                    },
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(
                                         keyboardType = KeyboardType.Ascii,
@@ -328,7 +326,7 @@ internal fun KlyroColorPickerDialog(
             },
             confirmButton = {
                 Button(
-                    enabled = pendingPreset != null || hexInput.length == 7,
+                    enabled = pendingPreset != null || KlyroHexInput.isComplete(hexInput),
                     onClick = { onApply(pendingPreset ?: KlyroColors.customId(argb())) },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                 ) { Text("Apply") }
@@ -371,7 +369,7 @@ internal fun KlyroColorPickerDialog(
                                     favorites, "#%08X".format(argb()), favoriteName
                                 ))
                             },
-                            enabled = hexInput.length == 7,
+                            enabled = KlyroHexInput.isComplete(hexInput),
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Save current color") }
                         favorites.forEach { favorite ->

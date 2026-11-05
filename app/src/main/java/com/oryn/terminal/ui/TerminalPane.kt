@@ -279,7 +279,7 @@ fun TerminalPane(
                     )
                     DropdownMenuItem(
                         text = { Text("Home", color = MaterialTheme.colorScheme.onSurface) },
-                        modifier = Modifier.heightIn(min = 48.dp),
+                        modifier = Modifier.heightIn(min = 56.dp),
                         leadingIcon = {
                             Icon(painterResource(R.drawable.hugeicons_terminal),
                                 contentDescription = null,
