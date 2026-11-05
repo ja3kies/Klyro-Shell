@@ -25,7 +25,7 @@ La colonne « source » ne prouve **pas** une exécution sur Pixel 9.
 | P1 Sélection | menu More / Select all, copie/historique | PARTIEL | action existante, limite 2MiB; tester UX Android |
 | P1 Affichage | contraste des quatre accents, modes clair/sombre, prompt | SOURCE/CI | tests de contraste et palette ANSI; truecolor OSC à éprouver |
 | P1 Color Picker | presets directs, HEX compact en hauteur, un slider, aucun scroll normal | SOURCE/CI | main dialog compact, sous-panneau facultatif; agrandissement police réel à tester |
-| P1 Logo | ressource vectorielle Android, mono, safe area et zoom | SOURCE/CI / DEVICE OUVERT | groupes à 79% identiques dans les calques; comparaison marque vs référence et launcher requis |
+| P1 Logo | ressource vectorielle Android, mono, safe area et zoom | SOURCE/CI / DEVICE OUVERT | groupes à 72% identiques dans les calques; comparaison marque vs référence et launcher requis |
 | P1 Identité | bento Klyro sans clone de DSH Go | DEBUG SEULEMENT | release conserve UI stable; promouvoir seulement sur accord |
 | P2 A11y | 48dp cibles, états sélectionnés, TalkBack | SOURCE/CI / DEVICE OUVERT | thème, polices, tabs; exploration TalkBack incomplète |
 | P2 Sécurité | OSC52 bloqué, clipboard ordinaire préservé | SOURCE/CI | test de régression OSC52; essais Android requis |
@@ -33,7 +33,7 @@ La colonne « source » ne prouve **pas** une exécution sur Pixel 9.
 
 ## Régressions suivies
 - VersionCode 6 restait identique pendant plusieurs builds: passage à **7** et versionName **0.4.0-dev** car édition identité graphique, correction de sécurité clipboard, redéfinition UI et entrée en phase opérationnelle.
-- Le logo initial était surdimensionné. Échelle centrée à 79% sans réduire le viewport 108dp; Android applique son masque.
+- Le logo initial était surdimensionné. Échelle centrée à 72% sans réduire le viewport 108dp; Android applique son masque.
 - Un contrôle documentaire et des tests automatisés ne remplacent pas les observations du launcher réel.
 - Pas de décision implicite sur l'**inline FIND**, ni sur le bento release (demande d'approbation antérieure).
 - Aucune modification de `main` ni du stockage Termux existant.
