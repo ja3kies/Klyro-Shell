@@ -216,17 +216,6 @@ internal fun KlyroColorPickerDialog(
                         },
                         modifier = Modifier.semantics { contentDescription = "Brightness percentage" }
                     )
-                    /* Native Material slider is used for hue above.
-                    Slider(
-                        value = hue,
-                        onValueChange = {
-                            hue = it
-                            hexInput = "#%06X".format(rgb() and 0xFFFFFF)
-                        },
-                        valueRange = 0f..360f,
-                        modifier = Modifier.semantics { contentDescription = "Hue" }
-                    )
-                    */
                     Text("Opacity · " + (alpha * 100f).roundToInt() + "%",
                         style = MaterialTheme.typography.labelMedium)
                     Slider(
