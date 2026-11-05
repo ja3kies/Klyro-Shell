@@ -3,10 +3,10 @@
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- Mask-safe at OEM launcher sizes: render the carefully spaced mark at 78%.
+    <!-- Mask-safe at OEM launcher sizes: render the carefully spaced mark at 79%.
          The 108dp foreground canvas remains full size for adaptive masks. -->
     <group android:pivotX="54" android:pivotY="54"
-        android:scaleX="0.78" android:scaleY="0.78">
+        android:scaleX="0.79" android:scaleY="0.79">
     <!-- Reference-derived ribbon-K and terminal chevron. -->
     <path android:pathData="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24
         L46,81.5 Q46,85.5 43,84 L29,76 Q24,73 24,67 Z">

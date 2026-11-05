@@ -3,7 +3,7 @@
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <group android:pivotX="54" android:pivotY="54"
-        android:scaleX="0.78" android:scaleY="0.78">
+        android:scaleX="0.79" android:scaleY="0.79">
     <!-- Themed icon: one opaque solid color, no hard-coded background. -->
     <path android:fillColor="#FFFFFFFF"
         android:pathData="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24
