@@ -76,8 +76,7 @@ class KlyroFileSafetyTest {
     }
 
     @Test fun streamingCopyPreservesDataAndCapsSize() {
-        val data = "é
-".toByteArray(Charsets.UTF_8)
+        val data = "é\n".toByteArray(Charsets.UTF_8)
         val output = ByteArrayOutputStream()
         assertEquals(data.size.toLong(),
             KlyroFileSafety.copyLimited(ByteArrayInputStream(data), output))
