@@ -24,6 +24,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     )
 
     private val tabs = mutableStateListOf<ShellTab>()
+    private val invalidTitleCharacters = Regex("[\\p{Cntrl}]")
     val sessions: List<ShellTab> get() = tabs
     private var nextId = 1L
     var activeTabId by mutableStateOf<Long?>(null)
@@ -105,10 +106,12 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     fun renameTab(id: Long, rawName: String) {
-        val name = rawName.trim().replace(Regex("[\\p{Cntrl}]"), "").take(32)
+        val name = rawName.trim().replace(invalidTitleCharacters, "").take(32)
         if (name.isBlank()) return
         val index = tabs.indexOfFirst { it.id == id }
-        if (index >= 0) tabs[index] = tabs[index].copy(customTitle = name)
+        if (index >= 0 && tabs[index].customTitle != name) {
+            tabs[index] = tabs[index].copy(customTitle = name)
+        }
     }
 
     fun closeTab(id: Long) {
@@ -138,7 +141,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     private fun updateTitle(id: Long, title: String?) {
         val index = tabs.indexOfFirst { it.id == id }
         if (index >= 0) {
-            tabs[index] = tabs[index].copy(title = title?.takeIf { it.isNotBlank() } ?: "Bash")
+            val next = title?.takeIf { it.isNotBlank() } ?: "Bash"
+            if (tabs[index].title != next) tabs[index] = tabs[index].copy(title = next)
         }
     }
 

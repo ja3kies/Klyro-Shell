@@ -128,9 +128,9 @@ fun TerminalPane(
     val TerminalText = ui.foreground
     val TerminalMuted = ui.muted
     val inactiveTabSurface = ui.key
-    var showToolsMenu by remember { mutableStateOf(false) }
-    var showTerminalSettings by remember { mutableStateOf(false) }
-    var initialSettingsSection by remember { mutableStateOf("home") }
+    var showToolsMenu by remember(session) { mutableStateOf(false) }
+    var showTerminalSettings by remember(session) { mutableStateOf(false) }
+    var initialSettingsSection by remember(session) { mutableStateOf("home") }
     var sessionSheetId by remember(session) { mutableStateOf<Long?>(null) }
     var renameDialogId by remember(session) { mutableStateOf<Long?>(null) }
     var shellChooserSourceId by remember(session) { mutableStateOf<Long?>(null) }
@@ -220,10 +220,10 @@ fun TerminalPane(
     }
     var controlActive by remember(viewClient) { mutableStateOf(viewClient.isControlDown()) }
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
-    var shiftActive by remember(viewClient) { mutableStateOf(false) }
-    var fnActive by remember(viewClient) { mutableStateOf(false) }
+    var shiftActive by remember(viewClient) { mutableStateOf(viewClient.isShiftDown()) }
+    var fnActive by remember(viewClient) { mutableStateOf(viewClient.isFnDown()) }
     var showEndSessionConfirmation by remember(session) { mutableStateOf(false) }
-    var warningNoteDismissed by remember { mutableStateOf(false) }
+    var warningNoteDismissed by remember(session) { mutableStateOf(false) }
 
     BackHandler(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&

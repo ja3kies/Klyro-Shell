@@ -36,6 +36,8 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
 
     public boolean isControlDown() { return controlDown; }
     public boolean isAltDown() { return altDown; }
+    public boolean isShiftDown() { return shiftDown; }
+    public boolean isFnDown() { return fnDown; }
 
     private int textSizePx = 0;
 
