@@ -20,6 +20,12 @@ class KlyroSessionNamesTest {
             KlyroSessionNames.display(original.filterNot { it.first == 25L }))
     }
 
+    @Test fun oldBlankCustomNamesRenderAsDefaultAndDoNotAffectIds() {
+        val saved = listOf(10L to " ", 99L to "Dev", 101L to null)
+        assertEquals(listOf(10L to "Session 1", 99L to "Dev", 101L to "Session 3"),
+            KlyroSessionNames.display(saved))
+    }
+
     @Test fun renamesStayBoundToStableSessionId() {
         val original = listOf(4L to null, 6L to "Development", 8L to null)
         assertEquals(listOf(4L to "Session 1", 6L to "Development", 8L to "Session 3"),

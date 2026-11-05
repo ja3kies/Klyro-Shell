@@ -7,6 +7,6 @@ package com.oryn.terminal
 internal object KlyroSessionNames {
     fun display(sessions: List<Pair<Long, String?>>): List<Pair<Long, String>> =
         sessions.mapIndexed { index, (id, customTitle) ->
-            id to (customTitle ?: "Session ${index + 1}")
+            id to (customTitle?.takeIf { it.isNotBlank() } ?: "Session ${index + 1}")
         }
 }

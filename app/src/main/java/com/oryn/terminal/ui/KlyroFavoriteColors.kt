@@ -9,13 +9,14 @@ package com.oryn.terminal.ui
 internal object KlyroFavoriteColors {
     data class Favorite(val hex: String, val label: String)
     private val hexPattern = Regex("^#[0-9A-F]{8}$")
+    private val invalidNameChars = Regex("[\\r\\n|\\p{Cntrl}]")
     const val MAX_FAVORITES = 6
 
     fun normalizeHex(input: String): String? =
         input.uppercase().takeIf { hexPattern.matches(it) }
 
     fun normalizeLabel(input: String): String =
-        input.trim().replace(Regex("[\\r\\n|\\p{Cntrl}]"), " ").take(22)
+        input.trim().replace(invalidNameChars, " ").take(22)
             .ifBlank { "Custom" }
 
     fun decode(raw: String?): List<Favorite> = raw.orEmpty().lineSequence()

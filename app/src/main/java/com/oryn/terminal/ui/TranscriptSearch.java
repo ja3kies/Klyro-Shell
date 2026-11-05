@@ -8,9 +8,13 @@ import java.util.List;
 public final class TranscriptSearch {
     private TranscriptSearch() {}
 
+    // UI search should never allocate memory for arbitrarily large queries.
+    public static final int MAX_QUERY_CHARS = 512;
+
     public static List<Integer> findRows(TerminalBuffer screen, int columns, int rows, String query) {
         List<Integer> matches = new ArrayList<>();
-        if (query.trim().isEmpty()) return matches;
+        if (screen == null || columns <= 0 || rows <= 0 || query == null
+                || query.length() > MAX_QUERY_CHARS || query.trim().isEmpty()) return matches;
         StringBuilder line = new StringBuilder();
         List<Integer> starts = new ArrayList<>();
         int firstRow = -screen.getActiveTranscriptRows();
@@ -34,10 +38,11 @@ public final class TranscriptSearch {
     }
 
     public static int nextIndex(int position, int direction, int count) {
-        return count == 0 ? 0 : Math.floorMod(position + direction, count);
+        return count <= 0 ? 0 : Math.floorMod(position + direction, count);
     }
 
     public static int topRow(int matchRow, int visibleRows, int historyRows) {
-        return Math.max(-historyRows, Math.min(0, matchRow - visibleRows / 2));
+        return Math.max(-Math.max(0, historyRows),
+                Math.min(0, matchRow - Math.max(0, visibleRows) / 2));
     }
 }

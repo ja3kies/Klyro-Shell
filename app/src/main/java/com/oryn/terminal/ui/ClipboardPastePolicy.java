@@ -9,9 +9,17 @@ public final class ClipboardPastePolicy {
         if (value == null || value.isEmpty() || value.length() > MAX_CHARS) return false;
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
-            // Reject terminal control sequences; allow tabs and line endings.
-            if (c < 0x20 && c != '\n' && c != '\r' && c != '\t') return false;
-            if (c == 0x7f) return false;
+            // Reject all Unicode ISO control characters except tab/newline.
+            if (Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t') return false;
+            // Reject malformed UTF-16 rather than emitting replacement glyphs
+            // into shell commands or accidentally corrupting pasted scripts.
+            if (Character.isHighSurrogate(c)) {
+                if (++i >= value.length() || !Character.isLowSurrogate(value.charAt(i))) {
+                    return false;
+                }
+            } else if (Character.isLowSurrogate(c)) {
+                return false;
+            }
         }
         return true;
     }

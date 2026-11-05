@@ -26,6 +26,17 @@ public class TranscriptSearchTest {
         assertTrue(TranscriptSearch.findRows(screen, COLUMNS, ROWS, "missing").isEmpty());
     }
 
+    @Test public void rejectsOversizedOrInvalidQueriesWithoutTouchingTheBuffer() {
+        TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
+        assertTrue(TranscriptSearch.findRows(screen, 0, ROWS, "x").isEmpty());
+        assertTrue(TranscriptSearch.findRows(screen, COLUMNS, 0, "x").isEmpty());
+        assertTrue(TranscriptSearch.findRows(screen, COLUMNS, ROWS, null).isEmpty());
+        assertTrue(TranscriptSearch.findRows(screen, COLUMNS, ROWS,
+            "x".repeat(TranscriptSearch.MAX_QUERY_CHARS + 1)).isEmpty());
+        assertEquals(0, TranscriptSearch.nextIndex(10, 1, -1));
+        assertEquals(0, TranscriptSearch.topRow(5, -5, -1));
+    }
+
     @Test public void historyScreenAndRepeatedMatchesKeepBufferCoordinates() {
         TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
         write(screen, 0, "Hit hit");
