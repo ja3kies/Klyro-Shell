@@ -39,11 +39,21 @@ class KlyroLauncherIdentityTest(unittest.TestCase):
             self.assertEqual(root.attrib[ANDROID + "height"], "108dp")
             self.assertEqual(root.attrib[ANDROID + "viewportWidth"], "108")
             self.assertEqual(root.attrib[ANDROID + "viewportHeight"], "108")
-            self.assertTrue(root.findall("path"))
+            self.assertTrue(root.findall(".//path"))
         self.assertTrue(
             ET.parse(RES / "drawable/ic_klyro_launcher_foreground.xml")
             .getroot().findall(".//" + AAPT + "attr")
         )
+
+    def test_foreground_and_monochrome_share_mask_safe_scale(self):
+        for name in ("ic_klyro_launcher_foreground", "ic_klyro_mark_monochrome"):
+            node = ET.parse(RES / "drawable" / (name + ".xml")).getroot()
+            group = node.find("group")
+            self.assertIsNotNone(group)
+            self.assertEqual(group.attrib[ANDROID + "pivotX"], "54")
+            self.assertEqual(group.attrib[ANDROID + "pivotY"], "54")
+            self.assertEqual(float(group.attrib[ANDROID + "scaleX"]), 0.78)
+            self.assertEqual(float(group.attrib[ANDROID + "scaleY"]), 0.78)
 
     def test_manifest_references_launcher_resources(self):
         manifest = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()
@@ -54,13 +64,13 @@ class KlyroLauncherIdentityTest(unittest.TestCase):
     def test_monochrome_uses_solid_fill_not_gradients(self):
         root = ET.parse(RES / "drawable/ic_klyro_mark_monochrome.xml").getroot()
         self.assertFalse(root.findall(".//" + AAPT + "attr"))
-        self.assertEqual(root.findall("path")[0].attrib[ANDROID + "fillColor"], "#FFFFFFFF")
+        self.assertEqual(root.findall(".//path")[0].attrib[ANDROID + "fillColor"], "#FFFFFFFF")
 
     def test_reference_terminal_prompt_in_normal_and_themed_icons(self):
         foreground = ET.parse(
             RES / "drawable/ic_klyro_launcher_foreground.xml"
         ).getroot()
-        strokes = [p for p in foreground.findall("path")
+        strokes = [p for p in foreground.findall(".//path")
                    if p.attrib.get(ANDROID + "strokeWidth")]
         self.assertEqual(len(strokes), 2)
         self.assertTrue(all(float(p.attrib[ANDROID + "strokeWidth"]) >= 3.0
@@ -68,7 +78,7 @@ class KlyroLauncherIdentityTest(unittest.TestCase):
         mono = ET.parse(
             RES / "drawable/ic_klyro_mark_monochrome.xml"
         ).getroot()
-        self.assertEqual(mono.findall("path")[1].attrib[ANDROID + "fillType"],
+        self.assertEqual(mono.findall(".//path")[1].attrib[ANDROID + "fillType"],
                          "evenOdd")
         self.assertTrue((ROOT / "design/klyro-brand-mark.svg").is_file())
         source = ET.parse(ROOT / "design/klyro-brand-mark.svg").getroot()

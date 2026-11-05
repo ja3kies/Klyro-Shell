@@ -2,6 +2,8 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54"
+        android:scaleX="0.78" android:scaleY="0.78">
     <!-- Themed icon: one opaque solid color, no hard-coded background. -->
     <path android:fillColor="#FFFFFFFF"
         android:pathData="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24
@@ -16,4 +18,5 @@
         android:pathData="M24,56 Q24,51.5 28.5,49 L80,22 Q84.5,19.5 84.5,24.5
             L84.5,33 Q84.5,38 80,41 L47.5,63 Q46,64.5 46,68
             L46,82 Q46,85 43.5,84 L29,76 Q24,73 24,67 Z" />
+    </group>
 </vector>
