@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -264,6 +265,29 @@ internal fun KlyroSettingsSheet(
                                 }
                                 Text("DSH Go uses JetBrains Mono; Android monospace is the fallback.",
                                     style = MaterialTheme.typography.bodySmall, color = colors.muted)
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = colors.terminal,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text("klyro ~ $", color = colors.accent,
+                                            fontFamily = FontFamily.Monospace, fontSize = fontSizeSp.sp)
+                                        Text("echo \"Ready.\"", color = colors.foreground,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = fontSizeSp.sp)
+                                        Text(
+                                            "Preview: ${KlyroTerminalFonts.options.firstOrNull {
+                                                it.id == fontFamilyId
+                                            }?.label ?: "System Mono"}",
+                                            color = colors.muted,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                }
                                 Text("Terminal font size", fontWeight = FontWeight.SemiBold)
                                 Text(if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
                                     color = colors.muted)
