@@ -149,6 +149,16 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         }
     }
 
+    // Legacy interface compatibility; normal sessions use listenerFor(tabId)
+    // so each native paste is routed to its owning tab.
+    override fun onNativePasteRequiresConfirmation(text: String) {
+        activeTabId?.let { id ->
+            if (tabs.any { it.id == id }) {
+                pendingNativePaste = NativePasteRequest(id, text)
+            }
+        }
+    }
+
     // Legacy listener compatibility for existing single-session startup.
     override fun onTitleChanged(title: String?) {
         activeTabId?.let { updateTitle(it, title) }
