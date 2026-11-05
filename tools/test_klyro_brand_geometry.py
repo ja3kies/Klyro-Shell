@@ -111,10 +111,14 @@ class KlyroBrandGeometryTest(unittest.TestCase):
         root = ET.parse(self.master).getroot()
         group = root.find(".//" + SVG + "g[@id='mark']")
         self.assertIn("scale(.80)", group.attrib["transform"])
+        scale = float(re.search(r"scale\\((\\d*\\.?\\d+)\\)",
+                                group.attrib["transform"]).group(1))
+        native_group = ET.parse(RES / "ic_klyro_launcher_foreground.xml").getroot().find("group")
+        self.assertEqual(scale, float(native_group.attrib[ANDROID + "scaleX"]))
+        self.assertEqual(scale, float(native_group.attrib[ANDROID + "scaleY"]))
         box = [bounds(p.attrib["d"]) for p in self.svg_paths.values()]
         x0=min(b[0] for b in box); y0=min(b[1] for b in box)
         x1=max(b[2] for b in box); y1=max(b[3] for b in box)
-        scale=.72
         # Android requires 48..66dp artwork inside the centered 66dp safe zone.
         # Final launcher output is typically 48dp; source layers remain 108dp.
         self.assertGreaterEqual(min(x1-x0,y1-y0)*scale, 48.0)
