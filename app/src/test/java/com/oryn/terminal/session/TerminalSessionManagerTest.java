@@ -35,6 +35,36 @@ public class TerminalSessionManagerTest {
     }
 
     @Test
+    public void verificationMarkersRequireCompleteOutputLines() {
+        assertTrue(TerminalSessionManager.hasExactLine(
+                "noise\\nKLYRO_UID_OK\\nKLYRO_PKG_OK", "KLYRO_UID_OK"));
+        assertTrue(TerminalSessionManager.hasExactLine(
+                "KLYRO_APT_OK\\r\\n", "KLYRO_APT_OK"));
+        assertTrue(!TerminalSessionManager.hasExactLine(
+                "KLYRO_UID_OK_BUT_NOT_VERIFIED", "KLYRO_UID_OK"));
+        assertTrue(!TerminalSessionManager.hasExactLine(
+                "prefix KLYRO_PKG_OK suffix", "KLYRO_PKG_OK"));
+        assertTrue(!TerminalSessionManager.hasExactLine(null, "KLYRO_UID_OK"));
+        assertTrue(!TerminalSessionManager.hasExactLine("", "KLYRO_UID_OK"));
+    }
+
+    @Test
+    public void terminalArgvRejectsMissingExecutableAndCopiesInput() {
+        for (String[] bad : new String[][] {null, {}, {null}, {""}, {"  "}}) {
+            try {
+                TerminalSessionManager.buildTerminalArgv(bad);
+                org.junit.Assert.fail("Expected invalid executable rejection");
+            } catch (IllegalArgumentException expected) {
+                // An invalid command must never reach JNI execvp.
+            }
+        }
+        String[] input = {"/private/libproot.so", "-r", "/private/root"};
+        String[] copy = TerminalSessionManager.buildTerminalArgv(input);
+        copy[0] = "/system/bin/sh";
+        assertEquals("/private/libproot.so", input[0]);
+    }
+
+    @Test
     public void terminalArgvRetainsExecutableAsArgvZero() {
         String[] command = {"/app/lib/libproot.so", "--link2symlink", "-r", "/private/root"};
         assertArrayEquals(command, TerminalSessionManager.buildTerminalArgv(command));
