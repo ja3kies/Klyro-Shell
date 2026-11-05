@@ -54,7 +54,7 @@ internal fun KlyroSessionSheet(
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
         ModalBottomSheet(
-            onDismissRequest = onDismiss,
+            onDismissRequest = { if (!confirmClose) onDismiss() },
             containerColor = colors.sheet,
             contentColor = colors.foreground,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
@@ -80,30 +80,29 @@ internal fun KlyroSessionSheet(
                         SheetAction("×", "Close terminal", onClick = {
                             confirmClose = true
                         }, destructive = true)
-                        if (confirmClose) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Text("Stop this session and its child processes?",
-                                    color = colors.danger,
-                                    style = MaterialTheme.typography.bodyMedium)
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    TextButton(onClick = { confirmClose = false }) {
-                                        Text("Keep session")
-                                    }
-                                    TextButton(onClick = onCloseSession) {
-                                        Text("Close session", color = colors.danger)
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
+        }
+        if (confirmClose) {
+            AlertDialog(
+                onDismissRequest = { confirmClose = false },
+                shape = RoundedCornerShape(24.dp),
+                containerColor = colors.sheet,
+                title = { Text("Close ${sessionName.ifBlank { "session" }}?") },
+                text = {
+                    Text("This stops its Bash process and running child commands. Other sessions remain open.")
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmClose = false
+                        onCloseSession()
+                    }) { Text("Close session", color = colors.danger) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmClose = false }) { Text("Keep session") }
+                }
+            )
         }
     }
 }
