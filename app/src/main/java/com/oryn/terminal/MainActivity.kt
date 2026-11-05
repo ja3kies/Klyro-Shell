@@ -153,7 +153,7 @@ class MainActivity : ComponentActivity() {
                     val paths = OrynPaths(applicationContext.filesDir,
                         File(applicationContext.applicationInfo.nativeLibraryDir))
                     val destination = File(paths.home, "storage-imports")
-                    if (!destination.isDirectory && !destination.mkdirs()) throw IOException("Cannot create destination")
+                    KlyroFileSafety.verifyDestination(destination)
                     var imported = 0
                     contentResolver.query(children, arrayOf(
                         DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -165,30 +165,18 @@ class MainActivity : ComponentActivity() {
                             val mime = cursor.getString(2) ?: continue
                             if (mime == DocumentsContract.Document.MIME_TYPE_DIR) continue
                             val size = if (cursor.isNull(3)) -1L else cursor.getLong(3)
-                            if (size > 32L * 1024 * 1024) continue
-                            val name = (cursor.getString(1) ?: "file")
-                                .replace(Regex("[^a-zA-Z0-9._-]"), "_").trimStart('.')
-                                .take(80).ifBlank { "file" }
-                            val target = generateSequence(0) { it + 1 }
-                                .map { index -> File(destination, if (index == 0) name else "${index}_${name}") }
-                                .first { !it.exists() }
+                            if (size > KlyroFileSafety.MAX_FILE_BYTES) continue
+                            val name = KlyroFileSafety.safeName(cursor.getString(1), "file")
+                            val target = KlyroFileSafety.availableName(destination, name)
                             val item = DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0))
                             val temporary = File.createTempFile(".klyro-", ".tmp", destination)
                             try {
                                 contentResolver.openInputStream(item)?.use { input ->
                                     FileOutputStream(temporary).use { output ->
-                                        val buffer = ByteArray(8192)
-                                        var copied = 0L
-                                        while (true) {
-                                            val count = input.read(buffer)
-                                            if (count < 0) break
-                                            copied += count
-                                            if (copied > 32L * 1024 * 1024) throw IOException("File exceeds 32 MiB")
-                                            output.write(buffer, 0, count)
-                                        }
+                                        KlyroFileSafety.copyLimited(input, output)
                                     }
                                 } ?: continue
-                                if (!temporary.renameTo(target)) throw IOException("Cannot save file")
+                                java.nio.file.Files.move(temporary.toPath(), target.toPath())
                                 imported++
                             } finally {
                                 if (temporary.exists()) temporary.delete()
@@ -220,39 +208,23 @@ class MainActivity : ComponentActivity() {
                             File(applicationContext.applicationInfo.nativeLibraryDir)
                         )
                         val destinationDir = File(paths.home, "imports")
-                        if (!destinationDir.isDirectory && !destinationDir.mkdirs()) {
-                            throw IOException("Cannot create imports directory")
-                        }
+                        KlyroFileSafety.verifyDestination(destinationDir)
                         var sourceName = "imported-file"
                         contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
                             if (cursor.moveToFirst()) {
                                 sourceName = cursor.getString(0) ?: sourceName
                             }
                         }
-                        val safeName = sourceName.substringAfterLast('/').substringAfterLast('\\')
-                            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
-                            .trimStart('.').take(80).ifBlank { "imported-file" }
-                        val target = generateSequence(0) { it + 1 }
-                            .map { n -> File(destinationDir, if (n == 0) safeName else n.toString() + "_" + safeName) }
-                            .first { !it.exists() }
+                        val safeName = KlyroFileSafety.safeName(sourceName)
+                        val target = KlyroFileSafety.availableName(destinationDir, safeName)
                         val temporary = File.createTempFile(".klyro-import-", ".tmp", destinationDir)
                         try {
                             contentResolver.openInputStream(uri)?.use { input ->
                                 FileOutputStream(temporary).use { output ->
-                                    val buffer = ByteArray(8192)
-                                    var total = 0L
-                                    while (true) {
-                                        val count = input.read(buffer)
-                                        if (count < 0) break
-                                        total += count
-                                        if (total > 32L * 1024 * 1024) {
-                                            throw IOException("Import limited to 32 MiB")
-                                        }
-                                        output.write(buffer, 0, count)
-                                    }
+                                    KlyroFileSafety.copyLimited(input, output)
                                 }
                             } ?: throw IOException("Cannot open selected file")
-                            if (!temporary.renameTo(target)) throw IOException("Cannot finalize import")
+                            java.nio.file.Files.move(temporary.toPath(), target.toPath())
                         } finally {
                             if (temporary.exists()) temporary.delete()
                         }
@@ -281,7 +253,14 @@ class MainActivity : ComponentActivity() {
                         if (!source.isFile) throw IOException("Create ~/imports/klyro-export.txt first")
                         val stream = contentResolver.openOutputStream(uri, "w")
                             ?: throw IOException("Unable to open destination")
-                        stream.use { output -> FileInputStream(source).use { it.copyTo(output) } }
+                        if (source.length() > KlyroFileSafety.MAX_FILE_BYTES) {
+                            throw IOException("Export limited to 32 MiB")
+                        }
+                        stream.use { output ->
+                            FileInputStream(source).use { input ->
+                                KlyroFileSafety.copyLimited(input, output)
+                            }
+                        }
                     }
                 }
                 val message = outcome.fold(
