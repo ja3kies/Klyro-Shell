@@ -67,7 +67,7 @@ public class TerminalSessionManagerTest {
     @Test
     public void invalidArgumentsNeverReachNativePty() {
         for (String[] bad : new String[][] {
-            {"/private/proot", null}, {"/private/proot", "bad\\0argument"}
+            {"/private/proot", null}, {"/private/proot", "bad\0argument"}
         }) {
             try {
                 TerminalSessionManager.buildTerminalArgv(bad);
@@ -78,9 +78,9 @@ public class TerminalSessionManagerTest {
 
     @Test
     public void verificationDiagnosticsStripTerminalControlSequences() {
-        String cleaned = TerminalSessionManager.safeDiagnostics("hello\\u001b[31m");
-        assertTrue(!cleaned.contains("\\u001b"));
-        assertTrue(!TerminalSessionManager.safeDiagnostics("x\\u0085y").contains("\\u0085"));
+        String cleaned = TerminalSessionManager.safeDiagnostics("hello" + (char) 27 + "[31m");
+        assertTrue(!cleaned.contains(String.valueOf((char) 27)));
+        assertTrue(!TerminalSessionManager.safeDiagnostics("x" + (char) 0x85 + "y").contains(String.valueOf((char) 0x85)));
         assertEquals("(empty)", TerminalSessionManager.safeDiagnostics(null));
     }
 
