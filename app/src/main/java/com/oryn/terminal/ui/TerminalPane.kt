@@ -106,6 +106,7 @@ fun TerminalPane(
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
     onNewTab: () -> Unit,
+    onReturnHome: () -> Unit,
     onImportFile: () -> Unit,
     onExportFile: () -> Unit,
     onSetupStorage: () -> Unit,
@@ -242,6 +243,19 @@ fun TerminalPane(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
+                    DropdownMenuItem(
+                        text = { Text("Home", color = MaterialTheme.colorScheme.onSurface) },
+                        modifier = Modifier.heightIn(min = 48.dp),
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.hugeicons_terminal),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface)
+                        },
+                        onClick = {
+                            showToolsMenu = false
+                            onReturnHome()
+                        }
+                    )
                     DropdownMenuItem(
                         text = { Text("Settings", color = MaterialTheme.colorScheme.onSurface) },
                         modifier = Modifier.heightIn(min = 56.dp),

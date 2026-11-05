@@ -33,7 +33,19 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     val activeSession: TerminalSession? get() = selected?.session
     val sessionClient: OrynTerminalSessionClient? get() = selected?.client
     val viewClient: OrynTerminalViewClient? get() = selected?.viewClient
-    val terminalTitle: String get() = selected?.let { it.customTitle ?: it.title } ?: "Bash"
+    val terminalTitle: String get() = selected?.let { displayName(it.id) } ?: "Bash"
+
+    // Stable PTY identifiers never change; user-facing default numbering stays dense.
+    fun displayName(id: Long): String? {
+        val index = tabs.indexOfFirst { it.id == id }
+        if (index < 0) return null
+        return tabs[index].customTitle ?: "Session ${index + 1}"
+    }
+
+    val displayTabs: List<Pair<Long, String>> get() =
+        tabs.mapIndexed { index, entry ->
+            entry.id to (entry.customTitle ?: "Session ${index + 1}")
+        }
 
     var sessionStatus by mutableStateOf("")
         private set

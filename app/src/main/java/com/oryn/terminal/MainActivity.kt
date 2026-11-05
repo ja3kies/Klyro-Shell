@@ -111,6 +111,7 @@ class MainActivity : ComponentActivity() {
     private var runtimeVerified by mutableStateOf(false)
     private var runtimeHasWarnings by mutableStateOf(false)
     private var bashStarted by mutableStateOf(false)
+    private var showWelcomeScreen by mutableStateOf(false)
     private var isVerifyingRuntime by mutableStateOf(false)
     private val terminalState: TerminalSessionViewModel by lazy {
         ViewModelProvider(this)[TerminalSessionViewModel::class.java]
@@ -420,13 +421,15 @@ class MainActivity : ComponentActivity() {
                     },
                     bootstrapInstalled = bootstrapInstalled,
                     runtimeInstalled = runtimeInstalled,
-                    session = terminalState.activeSession,
-                    tabs = terminalState.sessions.map { it.id to (it.customTitle ?: it.title) },
+                    session = if (showWelcomeScreen) null else terminalState.activeSession,
+                    hasRunningSessions = terminalState.sessions.isNotEmpty(),
+                    tabs = terminalState.displayTabs,
                     activeTabId = terminalState.activeTabId,
                     onSelectTab = terminalState::selectTab,
                     onRenameTab = terminalState::renameTab,
                     onCloseTab = terminalState::closeTab,
                     onNewTab = ::launchBash,
+                    onReturnHome = { showWelcomeScreen = true },
                     onImportFile = ::chooseFileToImport,
                     onExportFile = ::chooseFileToExport,
                     onSetupStorage = ::chooseStorageFolder,
@@ -436,7 +439,10 @@ class MainActivity : ComponentActivity() {
                     viewClient = terminalState.viewClient,
                     sessionFailureMessage = terminalState.sessionFailureMessage,
                     onInstall = ::handlePrimaryAction,
-                    onLaunch = ::launchBash,
+                    onLaunch = {
+                        if (terminalState.sessions.isNotEmpty()) showWelcomeScreen = false
+                        else launchBash()
+                    },
                     onClose = ::closeBash,
                     onRecheck = ::verifyRuntime
                 )
@@ -596,6 +602,7 @@ class MainActivity : ComponentActivity() {
             val newViewClient = OrynTerminalViewClient(applicationContext)
             val newSession = manager.startBash("Bash", newSessionClient)
             terminalState.attachSession(newSession, newSessionClient, newViewClient, tabId)
+            showWelcomeScreen = false
             statusMessage = "Starting private Bash session…"
         } catch (error: Exception) {
             runtimeVerified = false
@@ -655,12 +662,14 @@ private fun OrynTerminalApp(
     bootstrapInstalled: Boolean,
     runtimeInstalled: Boolean,
     session: TerminalSession?,
+    hasRunningSessions: Boolean,
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
     onSelectTab: (Long) -> Unit,
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
     onNewTab: () -> Unit,
+    onReturnHome: () -> Unit,
     onImportFile: () -> Unit,
     onExportFile: () -> Unit,
     onSetupStorage: () -> Unit,
@@ -733,6 +742,7 @@ private fun OrynTerminalApp(
                 onRenameTab = onRenameTab,
                 onCloseTab = onCloseTab,
                 onNewTab = onNewTab,
+                onReturnHome = onReturnHome,
                 onImportFile = onImportFile,
                 onExportFile = onExportFile,
                 onSetupStorage = onSetupStorage,
@@ -951,7 +961,8 @@ private fun OrynTerminalApp(
                                 ),
                                 shape = RoundedCornerShape(16.dp)
                             ) {
-                                Text("Launch Bash", fontWeight = FontWeight.SemiBold)
+                                Text(if (hasRunningSessions) "Return to terminal" else "Launch Bash",
+                                    fontWeight = FontWeight.SemiBold)
                             }
                             TextButton(
                                 onClick = onRecheck,
