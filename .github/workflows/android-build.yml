@@ -174,7 +174,7 @@ jobs:
           retention-days: 14
 
       - name: Build ARM64 debug APK and instrumented test APK
-        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease
 
       - name: Verify packaged APK metadata and native runtime
         shell: bash
