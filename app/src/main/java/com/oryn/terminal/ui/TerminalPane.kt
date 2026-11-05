@@ -590,22 +590,35 @@ fun TerminalPane(
     // The native More item opens this in-app Select all action.
     if (showNativeSelectionMore) {
         KlyroModalTheme {
-            AlertDialog(
+            ModalBottomSheet(
                 onDismissRequest = { showNativeSelectionMore = false },
                 containerColor = ui.sheet,
-                title = { Text("Selection actions") },
-                text = { Text("Select the terminal transcript, including available scrollback.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        showNativeSelectionMore = false
-                        outputSelectionView = null
-                        selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
-                    }) { Text("Select all") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showNativeSelectionMore = false }) { Text("Cancel") }
+                contentColor = ui.foreground,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                    topStart = 26.dp, topEnd = 26.dp
+                ),
+                dragHandle = { BottomSheetDefaults.DragHandle(color = ui.muted) }
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                        .padding(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Selection", style = MaterialTheme.typography.titleLarge)
+                    Text("Select all available output, including scrollback.",
+                        color = ui.muted, style = MaterialTheme.typography.bodySmall)
+                    Button(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        onClick = {
+                            showNativeSelectionMore = false
+                            outputSelectionView = null
+                            selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
+                        },
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                    ) { Text("Select all") }
                 }
-            )
+            }
         }
     }
 
