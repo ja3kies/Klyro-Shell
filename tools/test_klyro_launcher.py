@@ -70,11 +70,11 @@ class KlyroLauncherIdentityTest(unittest.TestCase):
         foreground = ET.parse(
             RES / "drawable/ic_klyro_launcher_foreground.xml"
         ).getroot()
+        # Ignore the deliberately thin (< 1dp) reference-glint stroke:
+        # this test tracks the *two legible terminal prompt strokes* only.
         strokes = [p for p in foreground.findall(".//path")
-                   if p.attrib.get(ANDROID + "strokeWidth")]
+                   if float(p.attrib.get(ANDROID + "strokeWidth", "0")) >= 3.0]
         self.assertEqual(len(strokes), 2)
-        self.assertTrue(all(float(p.attrib[ANDROID + "strokeWidth"]) >= 3.0
-                            for p in strokes))
         mono = ET.parse(
             RES / "drawable/ic_klyro_mark_monochrome.xml"
         ).getroot()
