@@ -24,7 +24,8 @@ import java.util.concurrent.TimeUnit;
 public final class TerminalSessionManager {
     private static final String VERIFY_MARKER = "__KLYRO_BASH_START_OK__";
     private static final int VERIFY_TIMEOUT_SECONDS = 20;
-    private static final int MAX_DIAGNOSTIC_BYTES = 64 * 1024;
+    private static final int MAX_DIAGNOSTIC_BYTES = 16 * 1024;
+    private static final int MAX_SESSION_NAME = 32;
 
 
     public static final class VerificationResult {
@@ -81,16 +82,17 @@ public final class TerminalSessionManager {
     }
 
     /** Runs Bash and verifies UID plus both Termux package-manager entry points. */
-    public VerificationResult verifyBash() throws IOException {
+    public synchronized VerificationResult verifyBash() throws IOException {
         if (!isRuntimeInstalled()) {
             throw new IOException("Klyro's private bootstrap and APK-native PRoot runtime are required.");
         }
         File stdoutFile = File.createTempFile("klyro-check-out-", ".log", paths.getTmp());
         File stderrFile = File.createTempFile("klyro-check-err-", ".log", paths.getTmp());
         Process process = null;
+        String nonce = VERIFY_MARKER + UUID.randomUUID().toString().replace("-", "");
         try {
             ProcessBuilder builder = new ProcessBuilder(
-                    bootstrap.buildVerificationCommand(VERIFY_MARKER));
+                    bootstrap.buildVerificationCommand(nonce));
             builder.directory(paths.getRoot());
             builder.redirectOutput(stdoutFile);
             builder.redirectError(stderrFile);
@@ -121,7 +123,8 @@ public final class TerminalSessionManager {
             int exitCode = process.exitValue();
             String stdout = readOutput(stdoutFile);
             String stderr = readOutput(stderrFile);
-            boolean bashStarted = hasExactLine(stdout, VERIFY_MARKER);
+            boolean bashStarted = hasExactLine(stdout, nonce)
+                    && hasExactLine(stdout, "KLYRO_PATHS_OK");
             boolean uidValid = hasExactLine(stdout, "KLYRO_UID_OK");
             boolean aptResponds = hasExactLine(stdout, "KLYRO_APT_OK");
             boolean pkgResponds = hasExactLine(stdout, "KLYRO_PKG_OK");
@@ -130,8 +133,12 @@ public final class TerminalSessionManager {
                     diagnostics(stdout, stderr, exitCode), !stderr.isEmpty());
         } finally {
             if (process != null && process.isAlive()) process.destroyForcibly();
-            stdoutFile.delete();
-            stderrFile.delete();
+            if (!stdoutFile.delete() && stdoutFile.exists()) {
+                android.util.Log.w("KlyroVerify", "Cannot clear stdout probe log");
+            }
+            if (!stderrFile.delete() && stderrFile.exists()) {
+                android.util.Log.w("KlyroVerify", "Cannot clear stderr probe log");
+            }
         }
     }
 
@@ -146,8 +153,22 @@ public final class TerminalSessionManager {
 
     private static String diagnostics(String stdout, String stderr, int exitCode) {
         return "Exit code: " + exitCode
-                + "\nSTDOUT:\n" + (stdout == null || stdout.isEmpty() ? "(empty)" : stdout)
-                + "\nSTDERR:\n" + (stderr == null || stderr.isEmpty() ? "(empty)" : stderr);
+                + "\nSTDOUT:\n" + safeDiagnostics(stdout)
+                + "\nSTDERR:\n" + safeDiagnostics(stderr);
+    }
+
+    static String safeDiagnostics(String raw) {
+        if (raw == null || raw.isEmpty()) return "(empty)";
+        StringBuilder cleaned = new StringBuilder(Math.min(raw.length(), MAX_DIAGNOSTIC_BYTES));
+        for (int i = 0; i < raw.length() && cleaned.length() < MAX_DIAGNOSTIC_BYTES; i++) {
+            char c = raw.charAt(i);
+            if (c == '\n' || c == '\t' ||
+                    (c >= 0x20 && c != 0x7f && !Character.isISOControl(c))) {
+                cleaned.append(c);
+            }
+        }
+        if (raw.length() > MAX_DIAGNOSTIC_BYTES) cleaned.append("\n[output truncated]");
+        return cleaned.toString();
     }
 
     private static String diagnostics(File stdout, File stderr, int exitCode) throws IOException {
@@ -177,6 +198,7 @@ public final class TerminalSessionManager {
             throw new IOException("Klyro's private bootstrap and complete PRoot runtime are required.");
         }
 
+        if (client == null) throw new IllegalArgumentException("TerminalSessionClient is required.");
         // Use the maintained Termux PTY + VT terminal engine, but only Oryn-owned paths.
         String[] command = bootstrap.buildLoginCommand();
         // JNI calls execvp(cmd, argv): argv[0] must name the executable, not the first option.
@@ -197,8 +219,9 @@ public final class TerminalSessionManager {
                         5000,
                         client
                 );
-        session.mSessionName = name == null || name.trim().isEmpty()
-                ? "Bash" : name.trim();
+        String displayName = name == null ? "" : name.trim().replaceAll("[\\p{Cntrl}]", "");
+        session.mSessionName = displayName.isEmpty() ? "Bash"
+                : displayName.substring(0, Math.min(MAX_SESSION_NAME, displayName.length()));
         return session;
     }
 
@@ -206,6 +229,11 @@ public final class TerminalSessionManager {
         if (command == null || command.length == 0 || command[0] == null
                 || command[0].trim().isEmpty()) {
             throw new IllegalArgumentException("A complete command with argv[0] is required.");
+        }
+        for (String item : command) {
+            if (item == null || item.indexOf('\0') >= 0) {
+                throw new IllegalArgumentException("Command arguments must be non-null and NUL-free.");
+            }
         }
         return Arrays.copyOf(command, command.length);
     }
@@ -225,6 +253,7 @@ public final class TerminalSessionManager {
         environment.put("TERM", "xterm-256color");
         environment.put("COLORTERM", "truecolor");
         environment.put("LANG", "en_US.UTF-8");
+        environment.put("LC_ALL", "en_US.UTF-8");
         return Collections.unmodifiableMap(environment);
     }
 

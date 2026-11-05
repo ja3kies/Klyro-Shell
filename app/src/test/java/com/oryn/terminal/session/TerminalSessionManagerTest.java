@@ -37,9 +37,9 @@ public class TerminalSessionManagerTest {
     @Test
     public void verificationMarkersRequireCompleteOutputLines() {
         assertTrue(TerminalSessionManager.hasExactLine(
-                "noise\\nKLYRO_UID_OK\\nKLYRO_PKG_OK", "KLYRO_UID_OK"));
+                "noise\nKLYRO_UID_OK\nKLYRO_PKG_OK", "KLYRO_UID_OK"));
         assertTrue(TerminalSessionManager.hasExactLine(
-                "KLYRO_APT_OK\\r\\n", "KLYRO_APT_OK"));
+                "KLYRO_APT_OK\r\n", "KLYRO_APT_OK"));
         assertTrue(!TerminalSessionManager.hasExactLine(
                 "KLYRO_UID_OK_BUT_NOT_VERIFIED", "KLYRO_UID_OK"));
         assertTrue(!TerminalSessionManager.hasExactLine(
@@ -62,6 +62,26 @@ public class TerminalSessionManagerTest {
         String[] copy = TerminalSessionManager.buildTerminalArgv(input);
         copy[0] = "/system/bin/sh";
         assertEquals("/private/libproot.so", input[0]);
+    }
+
+    @Test
+    public void invalidArgumentsNeverReachNativePty() {
+        for (String[] bad : new String[][] {
+            {"/private/proot", null}, {"/private/proot", "bad\\0argument"}
+        }) {
+            try {
+                TerminalSessionManager.buildTerminalArgv(bad);
+                org.junit.Assert.fail("expected invalid argument rejection");
+            } catch (IllegalArgumentException expected) {}
+        }
+    }
+
+    @Test
+    public void verificationDiagnosticsStripTerminalControlSequences() {
+        String cleaned = TerminalSessionManager.safeDiagnostics("hello\\u001b[31m");
+        assertTrue(!cleaned.contains("\\u001b"));
+        assertTrue(!TerminalSessionManager.safeDiagnostics("x\\u0085y").contains("\\u0085"));
+        assertEquals("(empty)", TerminalSessionManager.safeDiagnostics(null));
     }
 
     @Test
