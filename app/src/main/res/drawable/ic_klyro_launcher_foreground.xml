@@ -16,10 +16,12 @@
                 android:startColor="#C7F16C" android:endColor="#8BB54A" />
         </aapt:attr>
     </path>
-    <!-- Deliberate lime highlight / seam around the rear console tail. -->
-    <path android:fillColor="#C9EC73"
-        android:pathData="M44,58 L60,49 L79.5,61 Q84.5,64 84.5,70
-            L84.5,78 Q84.5,84.5 77,84.5 L45,84.5 Q43.5,82.5 44,77 Z" />
+    <!-- Fine diagonal highlight only: the reference does NOT have a
+         fluorescent outline around the entire terminal panel. -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#CDE96B" android:strokeWidth="0.95"
+        android:strokeLineCap="round"
+        android:pathData="M54,52 L79,62" />
     <path android:pathData="M46.5,58.2 Q47,54 52,52 L59,49.8 L78.5,61.5
         Q84,65 84,70 L84,77.8 Q84,84 77.5,84 L48,84
         Q46.5,84 46.5,81 Z">
