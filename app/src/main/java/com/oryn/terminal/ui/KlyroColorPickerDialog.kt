@@ -73,6 +73,9 @@ internal fun KlyroColorPickerDialog(
         mutableFloatStateOf((initialArgb ushr 24) / 255f)
     }
     var showExtended by remember { mutableStateOf(false) }
+    var hexInput by remember(initialArgb) {
+        mutableStateOf("#%06X".format(initialArgb and 0xFFFFFF))
+    }
     fun rgb(): Int = AndroidColor.HSVToColor(floatArrayOf(hue, saturation, brightness))
     fun argb(): Int =
         ((alpha * 255f).roundToInt().coerceIn(0, 255) shl 24) or (rgb() and 0xFFFFFF)
@@ -80,6 +83,7 @@ internal fun KlyroColorPickerDialog(
         if (w <= 0 || h <= 0) return
         saturation = (x / w).coerceIn(0f, 1f)
         brightness = (1f - y / h).coerceIn(0f, 1f)
+        hexInput = "#%06X".format(rgb() and 0xFFFFFF)
     }
 
     KlyroModalTheme {
@@ -154,7 +158,10 @@ internal fun KlyroColorPickerDialog(
                     Text("Hue", style = MaterialTheme.typography.labelMedium)
                     Slider(
                         value = hue,
-                        onValueChange = { hue = it },
+                        onValueChange = {
+                            hue = it
+                            hexInput = "#%06X".format(rgb() and 0xFFFFFF)
+                        },
                         valueRange = 0f..360f,
                         modifier = Modifier.semantics { contentDescription = "Hue" }
                     )
@@ -171,17 +178,18 @@ internal fun KlyroColorPickerDialog(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val hexText = "#%06X".format(rgb() and 0xFFFFFF)
                         OutlinedTextField(
-                            value = hexText,
+                            value = hexInput,
                             onValueChange = { input ->
                                 val cleaned = input.removePrefix("#")
-                                if (cleaned.length == 6 && cleaned.all {
-                                        it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F'
-                                    }) {
-                                    val value = cleaned.toInt(16)
+                                    .filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
+                                    .take(6)
+                                hexInput = "#" + cleaned.uppercase()
+                                if (cleaned.length == 6) {
                                     val hsv = FloatArray(3)
-                                    AndroidColor.colorToHSV(value or -0x1000000, hsv)
+                                    AndroidColor.colorToHSV(
+                                        cleaned.toInt(16) or -0x1000000, hsv
+                                    )
                                     hue = hsv[0]
                                     saturation = hsv[1]
                                     brightness = hsv[2]
@@ -232,6 +240,7 @@ internal fun KlyroColorPickerDialog(
             },
             confirmButton = {
                 Button(
+                    enabled = hexInput.length == 7,
                     onClick = { onApply(KlyroColors.customId(argb())) },
                     shape = RoundedCornerShape(14.dp)
                 ) { Text("Apply") }
