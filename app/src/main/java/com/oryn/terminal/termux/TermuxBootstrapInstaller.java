@@ -256,8 +256,15 @@ public final class TermuxBootstrapInstaller {
         if (verificationMarker != null) {
             args.add("-c");
             args.add("printf '%s\\n' '" + verificationMarker + "'; "
+                    + "if [[ \"$HOME\" == '" + home + "' && \"$PREFIX\" == '" + prefix + "' "
+                    + "&& \"$TMPDIR\" == '" + prefix + "/tmp' "
+                    + "&& -d \"$HOME\" && -d \"$PREFIX/bin\" && -d \"$TMPDIR\" "
+                    + "&& -x '" + prefix + "/bin/bash' ]]; "
+                    + "then printf '%s\\n' 'KLYRO_PATHS_OK'; "
+                    + "else printf '%s\\n' 'KLYRO_PATHS_INVALID'; exit 24; fi; "
                     + "uid=\"$(id -u)\"; "
-                    + "if [[ \"$uid\" =~ ^[0-9]+$ ]]; then printf '%s\\n' 'KLYRO_UID_OK'; "
+                    + "if [[ \"$uid\" =~ ^[0-9]+$ ]] && [ \"$uid\" -ne 0 ]; "
+                    + "then printf '%s\\n' 'KLYRO_UID_OK'; "
                     + "else printf 'KLYRO_UID_INVALID=%s\\n' \"$uid\"; exit 21; fi; "
                     + "if apt --version >/dev/null 2>&1; then printf '%s\\n' 'KLYRO_APT_OK'; "
                     + "else printf '%s\\n' 'KLYRO_APT_FAILED'; exit 22; fi; "
@@ -301,6 +308,7 @@ public final class TermuxBootstrapInstaller {
             connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setConnectTimeout(20000);
             connection.setReadTimeout(45000);
+            connection.setUseCaches(false);
             connection.setInstanceFollowRedirects(true);
             connection.setRequestProperty("User-Agent", "KlyroShell/0.1");
             int status = connection.getResponseCode();
