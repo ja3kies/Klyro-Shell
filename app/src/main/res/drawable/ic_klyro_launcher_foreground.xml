@@ -3,7 +3,7 @@
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
     <!-- Generated from design/klyro-logo-master.svg; x≈46px y≈48px art
          centered within the 108dp adaptive launcher foreground. -->
-  <group android:name="mark" android:pivotX="54" android:pivotY="54" android:scaleX=".72" android:scaleY=".72">
+  <group android:name="mark" android:pivotX="54" android:pivotY="54" android:scaleX=".80" android:scaleY=".80">
     <path android:name="k-stem" android:pathData="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24 L46,81.5 Q46,85.5 43,84 L29,76 Q24,73 24,67 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="29" android:startY="22" android:endX="46" android:endY="85" android:startColor="#C7F16C" android:endColor="#8BB54A"/></aapt:attr></path>
     <path android:name="terminal-panel" android:pathData="M49.8,62.8 Q50.3,56.7 54,53.7 L60.5,51.6 L79.1,62.3 Q84.5,65.6 84.5,70.4 L84.5,77.9 Q84.5,84.2 78,84.2 L49.8,84.2 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="49" android:startY="54" android:endX="84" android:endY="84" android:startColor="#151721" android:endColor="#4D4261"/></aapt:attr></path>
     <path android:name="terminal-glint" android:fillColor="#00000000" android:strokeColor="#CDE96B" android:strokeWidth="1.5" android:strokeLineCap="round" android:pathData="M54,52.3 L79,62"/>

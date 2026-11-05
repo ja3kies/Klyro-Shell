@@ -52,8 +52,8 @@ class KlyroLauncherIdentityTest(unittest.TestCase):
             self.assertIsNotNone(group)
             self.assertEqual(group.attrib[ANDROID + "pivotX"], "54")
             self.assertEqual(group.attrib[ANDROID + "pivotY"], "54")
-            self.assertEqual(float(group.attrib[ANDROID + "scaleX"]), 0.72)
-            self.assertEqual(float(group.attrib[ANDROID + "scaleY"]), 0.72)
+            self.assertEqual(float(group.attrib[ANDROID + "scaleX"]), 0.80)
+            self.assertEqual(float(group.attrib[ANDROID + "scaleY"]), 0.80)
 
     def test_manifest_references_launcher_resources(self):
         manifest = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()

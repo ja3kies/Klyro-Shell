@@ -110,13 +110,15 @@ class KlyroBrandGeometryTest(unittest.TestCase):
     def test_safe_art_and_k_panel_gap(self):
         root = ET.parse(self.master).getroot()
         group = root.find(".//" + SVG + "g[@id='mark']")
-        self.assertIn("scale(.72)", group.attrib["transform"])
+        self.assertIn("scale(.80)", group.attrib["transform"])
         box = [bounds(p.attrib["d"]) for p in self.svg_paths.values()]
         x0=min(b[0] for b in box); y0=min(b[1] for b in box)
         x1=max(b[2] for b in box); y1=max(b[3] for b in box)
         scale=.72
-        # Native 48dp bounding target, inside official 66dp safe zone.
-        self.assertLessEqual(max(x1-x0,y1-y0)*scale, 48.0)
+        # Android requires 48..66dp artwork inside the centered 66dp safe zone.
+        # Final launcher output is typically 48dp; source layers remain 108dp.
+        self.assertGreaterEqual(min(x1-x0,y1-y0)*scale, 48.0)
+        self.assertLessEqual(max(x1-x0,y1-y0)*scale, 66.0)
         for point in (x0,x1,y0,y1):
             out=54+(point-54)*scale
             self.assertGreaterEqual(out, 21)
@@ -148,7 +150,7 @@ class KlyroBrandGeometryTest(unittest.TestCase):
         for name in ("klyro-logo-monochrome-light.svg",
                      "klyro-logo-monochrome-dark.svg"):
             root=ET.parse(DESIGN/name).getroot()
-            self.assertIn("scale(.72)",root.find(".//"+SVG+"g[@id='mark']").attrib["transform"])
+            self.assertIn("scale(.80)",root.find(".//"+SVG+"g[@id='mark']").attrib["transform"])
             self.assertEqual(len(root.findall(".//"+SVG+"path")),3)
         self.assertTrue((DESIGN/"klyro-logo-construction.svg").exists())
         self.assertIn('x="21" y="21" width="66" height="66"',

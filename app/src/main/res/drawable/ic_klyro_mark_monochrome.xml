@@ -3,7 +3,7 @@
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
     <!-- Same geometry and scale as the full-color icon. Pure monochrome
          transparent mark, with the >_ glyph cut from the terminal panel. -->
-  <group android:name="mark" android:pivotX="54" android:pivotY="54" android:scaleX=".72" android:scaleY=".72">
+  <group android:name="mark" android:pivotX="54" android:pivotY="54" android:scaleX=".80" android:scaleY=".80">
     <path android:name="k-stem" android:fillColor="#FFFFFFFF" android:pathData="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24 L46,81.5 Q46,85.5 43,84 L29,76 Q24,73 24,67 Z"/>
     <path android:name="terminal-panel" android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M49.8,62.8 Q50.3,56.7 54,53.7 L60.5,51.6 L79.1,62.3 Q84.5,65.6 84.5,70.4 L84.5,77.9 Q84.5,84.2 78,84.2 L49.8,84.2 Z M55,61.7 L65.4,69.2 L55,76 L52.7,72.8 L59.4,69.2 L52.7,65 Z M68.2,75.4 H77.4 V78.8 H68.2 Z"/>
     <path android:name="k-ribbon" android:fillColor="#FFFFFFFF" android:pathData="M24,56 Q24,51.5 28.5,49 L80,22 Q84.5,19.5 84.5,24.5 L84.5,33 Q84.5,38 80,41 L47.5,63 Q46,64.5 46,68 L46,82 Q46,85 43.5,84 L29,76 Q24,73 24,67 Z"/>

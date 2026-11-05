@@ -16,13 +16,13 @@
   </g>
   <rect x="21" y="21" width="66" height="66" rx="1" fill="#BDCC64" fill-opacity=".06" stroke="#809B27" stroke-dasharray="1.4 1" stroke-width=".4"/>
   <circle cx="54" cy="54" r="33" fill="none" stroke="#CA5DEC" stroke-width=".4" stroke-dasharray="1.3 1.2"/>
-  <g fill="#262833" fill-opacity=".1" stroke="#69758A" stroke-width=".35" transform="translate(54 54) scale(.72) translate(-54 -54)">
+  <g fill="#262833" fill-opacity=".1" stroke="#69758A" stroke-width=".35" transform="translate(54 54) scale(.80) translate(-54 -54)">
     <path d="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24 L46,81.5 Q46,85.5 43,84 L29,76 Q24,73 24,67 Z"/><path d="M49.8,62.8 Q50.3,56.7 54,53.7 L60.5,51.6 L79.1,62.3 Q84.5,65.6 84.5,70.4 L84.5,77.9 Q84.5,84.2 78,84.2 L49.8,84.2 Z"/><path d="M24,56 Q24,51.5 28.5,49 L80,22 Q84.5,19.5 84.5,24.5 L84.5,33 Q84.5,38 80,41 L47.5,63 Q46,64.5 46,68 L46,82 Q46,85 43.5,84 L29,76 Q24,73 24,67 Z"/>
   </g>
-  <g fill="none" stroke="#A33627" stroke-width=".45" transform="translate(54 54) scale(.72) translate(-54 -54)">
+  <g fill="none" stroke="#A33627" stroke-width=".45" transform="translate(54 54) scale(.80) translate(-54 -54)">
     <path d="M46,68 V84 M49.8,68 V84"/>
     <path d="M56,64 L63.8,69.2 L56,74.5"/><path d="M69,77.1 H76"/>
   </g>
-  <text x="4" y="96" fill="#313741" font-family="sans-serif" font-size="3.3">108dp artboard | 66dp safe area | ~44x48dp mark</text>
+  <text x="4" y="96" fill="#313741" font-family="sans-serif" font-size="3.3">108dp artboard | 66dp safe area | ~48x53dp mark</text>
   <text x="4" y="101" fill="#313741" font-family="sans-serif" font-size="2.9">K ribbon vs console panel: deliberate ~3.8u gap before scale</text>
 </svg>

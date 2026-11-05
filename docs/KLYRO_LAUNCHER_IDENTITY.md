@@ -35,3 +35,13 @@
 The themed-icon K incorporates transparent cutouts forming the `>_` terminal
 prompt inside its lower dark-arm silhouette. A single opaque fill is used.
 The holes are tested using the Android vector `evenOdd` fill rule.
+
+## Official Android sizing review
+Android's official adaptive icon guidance: both layers stay 108×108dp,
+artwork must be at least 48×48dp and no greater than 66×66dp inside
+the mask-safe region. The centered K/>_ mark now spans approximately
+48×53dp in source coordinates (uniform scale 0.80; no aspect distortion).
+The launcher may rasterize the final masked icon at 48dp. The 48dp launcher
+output size and the 108dp resource canvas are different measurements.
+Source: https://developer.android.com/develop/ui/compose/system/icon_design_adaptive
+Geometry is tested by `tools/test_klyro_brand_geometry.py`.
