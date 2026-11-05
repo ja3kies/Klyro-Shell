@@ -113,7 +113,7 @@ data class KlyroColors(
             // the current theme to avoid invisible ink in native TerminalView.
             val opaque = lerp(canvas, raw.copy(alpha = 1f), raw.alpha)
             val accent = accessibleAccent(opaque, dark)
-            val seed = if (option != null) hex(option.seedHex) else raw.copy(alpha = 1f)
+            val seed = if (option != null) hex(option.seedHex) else opaque
             return if (dark) KlyroColors(
                 dark = true, accentId = id,
                 background = lerp(Color(0xFF11191D), seed, .15f),
