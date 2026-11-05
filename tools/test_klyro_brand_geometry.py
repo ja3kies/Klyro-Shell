@@ -111,7 +111,7 @@ class KlyroBrandGeometryTest(unittest.TestCase):
         root = ET.parse(self.master).getroot()
         group = root.find(".//" + SVG + "g[@id='mark']")
         self.assertIn("scale(.80)", group.attrib["transform"])
-        scale = float(re.search(r"scale\\((\\d*\\.?\\d+)\\)",
+        scale = float(re.search(r"scale\((\d*\.?\d+)\)",
                                 group.attrib["transform"]).group(1))
         native_group = ET.parse(RES / "ic_klyro_launcher_foreground.xml").getroot().find("group")
         self.assertEqual(scale, float(native_group.attrib[ANDROID + "scaleX"]))
