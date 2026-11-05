@@ -6,7 +6,7 @@
  <linearGradient id="terminal" x1="0.1" y1="0" x2="1" y2="0.9"><stop stop-color="#151721"/><stop offset="1" stop-color="#4D4261"/></linearGradient>
 </defs>
 <rect width="108" height="108" fill="#0C0B13"/>
-<g transform="translate(54 54) scale(.78) translate(-54 -54)">
+<g transform="translate(54 54) scale(.79) translate(-54 -54)">
 <path fill="url(#stem)" d="M24 41 Q24 34 29 31 L43.5 22 Q46 20.5 46 24 L46 81.5 Q46 85.5 43 84 L29 76 Q24 73 24 67 Z"/>
 <path fill="#C9EC73" d="M44 58 L60 49 L79.5 61 Q84.5 64 84.5 70 L84.5 78 Q84.5 84.5 77 84.5 L45 84.5 Q43.5 82.5 44 77 Z"/>
 <path fill="url(#terminal)" d="M46.5 58.2 Q47 54 52 52 L59 49.8 L78.5 61.5 Q84 65 84 70 L84 77.8 Q84 84 77.5 84 L48 84 Q46.5 84 46.5 81 Z"/>
