@@ -30,6 +30,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -193,6 +194,10 @@ internal fun KlyroColorPickerDialog(
                                 hexInput = "#%06X".format(rgb() and 0xFFFFFF)
                             },
                             valueRange = 0f..360f,
+                            colors = SliderDefaults.colors(
+                                activeTrackColor = Color.Transparent,
+                                inactiveTrackColor = Color.Transparent
+                            ),
                             modifier = Modifier.semantics { contentDescription = "Hue in degrees" }
                         )
                     }
