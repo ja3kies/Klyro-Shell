@@ -172,7 +172,7 @@ private fun BentoAction(
             }
         } else {
             Column(modifier = Modifier.fillMaxWidth()
-                .heightIn(min = if (compact) 105.dp else 130.dp).padding(14.dp),
+                .heightIn(min = if (compact) 96.dp else 116.dp).padding(14.dp),
                 verticalArrangement = Arrangement.SpaceBetween) {
                 Icon(painterResource(icon), contentDescription = null, tint = c.accent,
                     modifier = Modifier.size(24.dp))

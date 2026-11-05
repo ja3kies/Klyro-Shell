@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.unit.dp
 
 /**
  * Klyro-only visual tokens. One source of truth for the status/navigation bars,
@@ -141,6 +142,17 @@ data class KlyroColors(
             )
         }
     }
+}
+
+/** Cross-screen geometry: one place to adjust every Klyro modal and action. */
+object KlyroUiMetrics {
+    val modalCorner = 28.dp
+    val sheetCorner = 28.dp
+    val cardCorner = 22.dp
+    val controlCorner = 14.dp
+    val minTouch = 48.dp
+    val sheetGutter = 16.dp
+    val cardPadding = 14.dp
 }
 
 val LocalKlyroColors = compositionLocalOf { KlyroColors.create(true, "lime") }
