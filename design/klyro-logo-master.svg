@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108" aria-label="Klyro Shell brand mark">
+  <!-- Canonical editable master. Internal art bounds scale to ~46x48dp,
+       inside Android's centered 66dp adaptive safe area. -->
+  <defs>
+    <linearGradient id="stem" gradientUnits="userSpaceOnUse" x1="29" y1="22" x2="46" y2="85"><stop offset="0" stop-color="#C7F16C"/><stop offset="1" stop-color="#8BB54A"/></linearGradient>
+    <linearGradient id="panel" gradientUnits="userSpaceOnUse" x1="49" y1="54" x2="84" y2="84"><stop offset="0" stop-color="#151721"/><stop offset="1" stop-color="#4D4261"/></linearGradient>
+    <linearGradient id="ribbon" gradientUnits="userSpaceOnUse" x1="24" y1="73" x2="84" y2="23"><stop offset="0" stop-color="#F4FFD4"/><stop offset="1" stop-color="#D3F772"/></linearGradient>
+    <linearGradient id="light" gradientUnits="userSpaceOnUse" x1="24" y1="69" x2="46" y2="42"><stop offset="0" stop-color="#FAFFE3"/><stop offset="1" stop-color="#CBEE71"/></linearGradient>
+  </defs>
+  <rect id="launcher-background" width="108" height="108" fill="#0C0B13"/>
+  <g id="mark" transform="translate(54 54) scale(.76) translate(-54 -54)">
+    <g id="k-stem-layer"><path id="k-stem" fill="url(#stem)" d="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24 L46,81.5 Q46,85.5 43,84 L29,76 Q24,73 24,67 Z"/></g>
+    <g id="terminal-layer">
+      <path id="terminal-panel" fill="url(#panel)" d="M49.8,62.8 Q50.3,56.7 54,53.7 L60.5,51.6 L79.1,62.3 Q84.5,65.6 84.5,70.4 L84.5,77.9 Q84.5,84.2 78,84.2 L49.8,84.2 Z"/>
+      <path id="terminal-glint" fill="none" stroke="#CDE96B" stroke-width="1.5" stroke-linecap="round" d="M54,52.3 L79,62"/>
+    </g>
+    <g id="k-ribbon-layer">
+      <path id="k-ribbon" fill="url(#ribbon)" d="M24,56 Q24,51.5 28.5,49 L80,22 Q84.5,19.5 84.5,24.5 L84.5,33 Q84.5,38 80,41 L47.5,63 Q46,64.5 46,68 L46,82 Q46,85 43.5,84 L29,76 Q24,73 24,67 Z"/>
+      <path id="k-highlight" fill="url(#light)" opacity=".36" d="M24,56 Q24,51.5 28.5,49 L46,40 L46,64 Q46,70 42,77 L29,76 Q24,73 24,67 Z"/>
+    </g>
+    <g id="terminal-prompt-layer">
+      <path id="prompt-chevron" fill="none" stroke="#F9F9F4" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" d="M56,64 L63.8,69.2 L56,74.5"/>
+      <path id="prompt-underscore" fill="none" stroke="#FAFAF6" stroke-width="3.4" stroke-linecap="round" d="M69,77.1 H76"/>
+    </g>
+  </g>
+</svg>

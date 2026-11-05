@@ -1,62 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <!-- Mask-safe at OEM launcher sizes: render the carefully spaced mark at 79%.
-         The 108dp foreground canvas remains full size for adaptive masks. -->
-    <group android:pivotX="54" android:pivotY="54"
-        android:scaleX="0.79" android:scaleY="0.79">
-    <!-- Reference-derived ribbon-K and terminal chevron. -->
-    <path android:pathData="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24
-        L46,81.5 Q46,85.5 43,84 L29,76 Q24,73 24,67 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="29" android:startY="22"
-                android:endX="46" android:endY="85"
-                android:startColor="#C7F16C" android:endColor="#8BB54A" />
-        </aapt:attr>
-    </path>
-    <!-- Fine diagonal highlight only: the reference does NOT have a
-         fluorescent outline around the entire terminal panel. -->
-    <path android:fillColor="#00000000"
-        android:strokeColor="#CDE96B" android:strokeWidth="0.95"
-        android:strokeLineCap="round"
-        android:pathData="M54,52 L79,62" />
-    <path android:pathData="M46.5,58.2 Q47,54 52,52 L59,49.8 L78.5,61.5
-        Q84,65 84,70 L84,77.8 Q84,84 77.5,84 L48,84
-        Q46.5,84 46.5,81 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="47" android:startY="52"
-                android:endX="84" android:endY="84"
-                android:startColor="#151721" android:endColor="#4D4261" />
-        </aapt:attr>
-    </path>
-    <path android:pathData="M24,56 Q24,51.5 28.5,49 L80,22
-        Q84.5,19.5 84.5,24.5 L84.5,33 Q84.5,38 80,41
-        L47.5,63 Q46,64.5 46,68 L46,82 Q46,85 43.5,84
-        L29,76 Q24,73 24,67 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="24" android:startY="73"
-                android:endX="84" android:endY="23"
-                android:startColor="#F4FFD4" android:endColor="#D3F772" />
-        </aapt:attr>
-    </path>
-    <path android:fillAlpha="0.36"
-        android:pathData="M24,56 Q24,51.5 28.5,49 L46,40 L46,64
-            Q46,70 42,77 L29,76 Q24,73 24,67 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="24" android:startY="69"
-                android:endX="46" android:endY="42"
-                android:startColor="#FAFFE3" android:endColor="#CBEE71" />
-        </aapt:attr>
-    </path>
-    <!-- Essential terminal mark (>_) must remain visible at launcher 24dp. -->
-    <path android:fillColor="#00000000" android:strokeColor="#F9F9F4"
-        android:strokeWidth="3.5" android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:pathData="M56,64 L63.8,69.2 L56,74.5" />
-    <path android:fillColor="#00000000" android:strokeColor="#FAFAF6"
-        android:strokeWidth="3.4" android:strokeLineCap="round"
-        android:pathData="M69,77.1 H76" />
-    </group>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Generated from design/klyro-logo-master.svg; x≈46px y≈48px art
+         centered within the 108dp adaptive launcher foreground. -->
+  <group android:name="mark" android:pivotX="54" android:pivotY="54" android:scaleX=".76" android:scaleY=".76">
+    <path android:name="k-stem" android:pathData="M24,41 Q24,34 29,31 L43.5,22 Q46,20.5 46,24 L46,81.5 Q46,85.5 43,84 L29,76 Q24,73 24,67 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="29" android:startY="22" android:endX="46" android:endY="85" android:startColor="#C7F16C" android:endColor="#8BB54A"/></aapt:attr></path>
+    <path android:name="terminal-panel" android:pathData="M49.8,62.8 Q50.3,56.7 54,53.7 L60.5,51.6 L79.1,62.3 Q84.5,65.6 84.5,70.4 L84.5,77.9 Q84.5,84.2 78,84.2 L49.8,84.2 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="49" android:startY="54" android:endX="84" android:endY="84" android:startColor="#151721" android:endColor="#4D4261"/></aapt:attr></path>
+    <path android:name="terminal-glint" android:fillColor="#00000000" android:strokeColor="#CDE96B" android:strokeWidth="1.5" android:strokeLineCap="round" android:pathData="M54,52.3 L79,62"/>
+    <path android:name="k-ribbon" android:pathData="M24,56 Q24,51.5 28.5,49 L80,22 Q84.5,19.5 84.5,24.5 L84.5,33 Q84.5,38 80,41 L47.5,63 Q46,64.5 46,68 L46,82 Q46,85 43.5,84 L29,76 Q24,73 24,67 Z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="24" android:startY="73" android:endX="84" android:endY="23" android:startColor="#F4FFD4" android:endColor="#D3F772"/></aapt:attr></path>
+    <path android:name="k-highlight" android:pathData="M24,56 Q24,51.5 28.5,49 L46,40 L46,64 Q46,70 42,77 L29,76 Q24,73 24,67 Z" android:fillAlpha="0.36"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="24" android:startY="69" android:endX="46" android:endY="42" android:startColor="#FAFFE3" android:endColor="#CBEE71"/></aapt:attr></path>
+    <path android:name="prompt-chevron" android:fillColor="#00000000" android:strokeColor="#F9F9F4" android:strokeWidth="3.5" android:strokeLineJoin="round" android:strokeLineCap="round" android:pathData="M56,64 L63.8,69.2 L56,74.5"/>
+    <path android:name="prompt-underscore" android:fillColor="#00000000" android:strokeColor="#FAFAF6" android:strokeWidth="3.4" android:strokeLineCap="round" android:pathData="M69,77.1 H76"/>
+  </group>
 </vector>
