@@ -250,12 +250,9 @@ class MainActivity : ComponentActivity() {
                             File(applicationContext.applicationInfo.nativeLibraryDir)
                         )
                         val source = File(root.home, "imports/klyro-export.txt")
-                        if (!source.isFile) throw IOException("Create ~/imports/klyro-export.txt first")
+                        KlyroFileSafety.verifyExportSource(root.home, source)
                         val stream = contentResolver.openOutputStream(uri, "w")
                             ?: throw IOException("Unable to open destination")
-                        if (source.length() > KlyroFileSafety.MAX_FILE_BYTES) {
-                            throw IOException("Export limited to 32 MiB")
-                        }
                         stream.use { output ->
                             FileInputStream(source).use { input ->
                                 KlyroFileSafety.copyLimited(input, output)

@@ -46,6 +46,35 @@ class KlyroFileSafetyTest {
         }
     }
 
+    @Test fun exportRejectsSymlinkAndOutsidePrivateHome() {
+        val home = Files.createTempDirectory("klyro-home-")
+        val outside = Files.createTempFile("klyro-other-", ".txt")
+        val dir = home.resolve("imports")
+        Files.createDirectories(dir)
+        val link = dir.resolve("klyro-export.txt")
+        try {
+            Files.write(outside, "secret".toByteArray())
+            Files.createSymbolicLink(link, outside)
+            try {
+                KlyroFileSafety.verifyExportSource(home.toFile(), link.toFile())
+                fail("must not export through symlink")
+            } catch (expected: IOException) {
+                assertTrue(expected.message!!.contains("private"))
+            }
+            try {
+                KlyroFileSafety.verifyExportSource(home.toFile(), outside.toFile())
+                fail("must not export outside home")
+            } catch (expected: IOException) {
+                assertTrue(expected.message!!.contains("private"))
+            }
+        } finally {
+            Files.deleteIfExists(link)
+            Files.deleteIfExists(dir)
+            Files.deleteIfExists(home)
+            Files.deleteIfExists(outside)
+        }
+    }
+
     @Test fun streamingCopyPreservesDataAndCapsSize() {
         val data = "é
 ".toByteArray(Charsets.UTF_8)

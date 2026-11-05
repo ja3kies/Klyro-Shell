@@ -31,6 +31,19 @@ internal object KlyroFileSafety {
         }
     }
 
+    fun verifyExportSource(home: File, source: File) {
+        val root = home.canonicalFile.toPath()
+        val normalized = source.toPath().toAbsolutePath().normalize()
+        if (!normalized.startsWith(root)
+            || Files.isSymbolicLink(source.toPath())
+            || Files.isSymbolicLink(source.parentFile.toPath())
+            || !source.canonicalFile.toPath().startsWith(root)) {
+            throw IOException("Export must be a regular Klyro-private file")
+        }
+        if (!source.isFile) throw IOException("Create ~/imports/klyro-export.txt first")
+        if (source.length() > MAX_FILE_BYTES) throw IOException("Export limited to 32 MiB")
+    }
+
     fun availableName(directory: File, name: String): File {
         val safe = safeName(name)
         for (index in 0 until MAX_COLLISIONS) {
