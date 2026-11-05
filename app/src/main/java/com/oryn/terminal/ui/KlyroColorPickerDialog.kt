@@ -90,7 +90,7 @@ internal fun KlyroColorPickerDialog(
     var alpha by remember(initialArgb) {
         mutableFloatStateOf((initialArgb ushr 24) / 255f)
     }
-    var showExtended by remember { mutableStateOf(false) }
+    var showFavorites by remember { mutableStateOf(false) }
     var hexInput by remember(initialArgb) {
         mutableStateOf("#%06X".format(initialArgb and 0xFFFFFF))
     }
@@ -117,15 +117,12 @@ internal fun KlyroColorPickerDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        "Choose a shade, then tap Apply.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.muted
-                    )
+                    Text("Pick a shade or select a preset.",
+                        style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     // Hex entry and alpha preview remain visible without scrolling.
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
@@ -147,11 +144,11 @@ internal fun KlyroColorPickerDialog(
                             },
                             label = { Text("Hex") },
                             singleLine = true,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.width(148.dp),
                             textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
                         )
                         Surface(
-                            modifier = Modifier.size(52.dp),
+                            modifier = Modifier.size(42.dp),
                             color = androidx.compose.ui.graphics.lerp(
                                 colors.sheet,
                                 Color(argb()).copy(alpha = 1f),
@@ -160,6 +157,30 @@ internal fun KlyroColorPickerDialog(
                             shape = RoundedCornerShape(16.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
                         ) {}
+                    }
+                    Text("Presets", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        KlyroColors.extended.forEach { preset ->
+                            val swatch = KlyroColors.create(colors.dark, preset.id)
+                            Button(
+                                onClick = { onApply(preset.id) },
+                                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                    .semantics {
+                                        contentDescription = "Use ${preset.label} preset, ${preset.sourceHex}"
+                                    },
+                                shape = RoundedCornerShape(14.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(3.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = swatch.accent,
+                                    contentColor = swatch.onAccent
+                                )
+                            ) {
+                                Text(preset.label, fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
                     }
                     // Native HSV area: white/saturated along X, black/bright along Y.
                     Box(
@@ -272,30 +293,10 @@ internal fun KlyroColorPickerDialog(
                         valueRange = 0f..1f,
                         modifier = Modifier.semantics { contentDescription = "Opacity" }
                     )
-                    TextButton(onClick = { showExtended = !showExtended }) {
-                        Text(if (showExtended) "Hide extended presets" else "Show extended presets")
+                    TextButton(onClick = { showFavorites = !showFavorites }) {
+                        Text(if (showFavorites) "Hide saved colors" else "My saved colors")
                     }
-                    if (showExtended) {
-                        Text("Extended colors", style = MaterialTheme.typography.titleSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            KlyroColors.extended.forEach { preset ->
-                                val swatch = KlyroColors.create(colors.dark, preset.id)
-                                Button(
-                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp)
-                                        .semantics { contentDescription = "Select " + preset.label },
-                                    onClick = { onApply(preset.id) },
-                                    shape = RoundedCornerShape(14.dp),
-                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(3.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = swatch.accent, contentColor = swatch.onAccent
-                                    )
-                                ) { Text(preset.label, fontSize = 11.sp, maxLines = 1) }
-                            }
-                        }
-                        Text(
-                            "#8D0826 · #EBEF7E · #DB0A71 (source colors)",
-                            style = MaterialTheme.typography.bodySmall, color = colors.muted
-                        )
+                    if (showFavorites) {
                         Text("My colors", style = MaterialTheme.typography.titleSmall)
                         OutlinedTextField(
                             value = favoriteName,
