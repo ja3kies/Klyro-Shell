@@ -155,7 +155,53 @@ internal fun KlyroColorPickerDialog(
                             )
                         }
                     }
-                    Text("Hue", style = MaterialTheme.typography.labelMedium)
+                    Text("Hue · ${hue.roundToInt()}°", style = MaterialTheme.typography.labelMedium)
+                    // Draw an actual rainbow under the native slider: the
+                    // Material3 default accent track gives no hue feedback.
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Canvas(Modifier.fillMaxWidth().height(36.dp)) {
+                            val steps = 60
+                            val width = size.width / steps
+                            for (i in 0 until steps) {
+                                drawRect(
+                                    color = Color(AndroidColor.HSVToColor(
+                                        floatArrayOf(i * 360f / steps, 1f, 1f))),
+                                    topLeft = Offset(i * width, size.height * .36f),
+                                    size = Size(width + 1f, size.height * .28f)
+                                )
+                            }
+                        }
+                        Slider(
+                            value = hue,
+                            onValueChange = {
+                                hue = it
+                                hexInput = "#%06X".format(rgb() and 0xFFFFFF)
+                            },
+                            valueRange = 0f..360f,
+                            modifier = Modifier.semantics { contentDescription = "Hue in degrees" }
+                        )
+                    }
+                    Text("Saturation · ${(saturation * 100f).roundToInt()}%",
+                        style = MaterialTheme.typography.labelMedium)
+                    Slider(
+                        value = saturation,
+                        onValueChange = {
+                            saturation = it
+                            hexInput = "#%06X".format(rgb() and 0xFFFFFF)
+                        },
+                        modifier = Modifier.semantics { contentDescription = "Saturation percentage" }
+                    )
+                    Text("Brightness · ${(brightness * 100f).roundToInt()}%",
+                        style = MaterialTheme.typography.labelMedium)
+                    Slider(
+                        value = brightness,
+                        onValueChange = {
+                            brightness = it
+                            hexInput = "#%06X".format(rgb() and 0xFFFFFF)
+                        },
+                        modifier = Modifier.semantics { contentDescription = "Brightness percentage" }
+                    )
+                    /* Native Material slider is used for hue above.
                     Slider(
                         value = hue,
                         onValueChange = {
@@ -165,6 +211,7 @@ internal fun KlyroColorPickerDialog(
                         valueRange = 0f..360f,
                         modifier = Modifier.semantics { contentDescription = "Hue" }
                     )
+                    */
                     Text("Opacity · " + (alpha * 100f).roundToInt() + "%",
                         style = MaterialTheme.typography.labelMedium)
                     Slider(
@@ -202,13 +249,17 @@ internal fun KlyroColorPickerDialog(
                         )
                         Surface(
                             modifier = Modifier.size(52.dp),
-                            color = Color(argb()).copy(alpha = 1f),
+                            color = androidx.compose.ui.graphics.lerp(
+                                colors.sheet,
+                                Color(argb()).copy(alpha = 1f),
+                                alpha
+                            ),
                             shape = RoundedCornerShape(16.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
                         ) {}
                     }
                     Text(
-                        "Low-contrast colors are adjusted for readable labels; alpha is blended with the current theme.",
+                        "Selected button labels are adjusted to remain readable; opacity blends with the current theme.",
                         style = MaterialTheme.typography.bodySmall, color = colors.muted
                     )
                     TextButton(onClick = { showExtended = !showExtended }) {
