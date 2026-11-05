@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -90,7 +91,7 @@ internal fun KlyroColorPickerDialog(
     var alpha by remember(initialArgb) {
         mutableFloatStateOf((initialArgb ushr 24) / 255f)
     }
-    var showFavorites by remember { mutableStateOf(false) }
+    var showAdvanced by remember { mutableStateOf(false) }
     var hexInput by remember(initialArgb) {
         mutableStateOf("#%06X".format(initialArgb and 0xFFFFFF))
     }
@@ -112,84 +113,74 @@ internal fun KlyroColorPickerDialog(
             title = { Text("Custom accent", style = MaterialTheme.typography.titleLarge) },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth()
-                        .heightIn(max = 440.dp)
-                        .verticalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text("Pick a shade or select a preset.",
                         style = MaterialTheme.typography.bodySmall, color = colors.muted)
-                    // Hex entry and alpha preview remain visible without scrolling.
+                    // 44dp tall, full-width input; shortened vertically, not horizontally.
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedTextField(
-                            value = hexInput,
-                            onValueChange = { input ->
-                                val cleaned = input.removePrefix("#")
-                                    .filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
-                                    .take(6)
-                                hexInput = "#" + cleaned.uppercase()
-                                if (cleaned.length == 6) {
-                                    val hsv = FloatArray(3)
-                                    AndroidColor.colorToHSV(
-                                        cleaned.toInt(16) or -0x1000000, hsv
-                                    )
-                                    hue = hsv[0]
-                                    saturation = hsv[1]
-                                    brightness = hsv[2]
-                                }
-                            },
-                            label = { Text("Hex") },
-                            singleLine = true,
-                            modifier = Modifier.width(148.dp),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
-                        )
                         Surface(
-                            modifier = Modifier.size(42.dp),
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = colors.tile,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("HEX", style = MaterialTheme.typography.labelSmall,
+                                    color = colors.muted)
+                                BasicTextField(
+                                    value = hexInput,
+                                    onValueChange = { input ->
+                                                                    val cleaned = input.removePrefix("#")
+                                                                        .filter { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
+                                                                        .take(6)
+                                                                    hexInput = "#" + cleaned.uppercase()
+                                                                    if (cleaned.length == 6) {
+                                                                        val hsv = FloatArray(3)
+                                                                        AndroidColor.colorToHSV(
+                                                                            cleaned.toInt(16) or -0x1000000, hsv
+                                                                        )
+                                                                        hue = hsv[0]
+                                                                        saturation = hsv[1]
+                                                                        brightness = hsv[2]
+                                                                    }
+                                                                },
+                                    singleLine = true,
+                                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                        color = colors.foreground
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                        .semantics { contentDescription = "Hex color value" }
+                                )
+                            }
+                        }
+                        Surface(
+                            modifier = Modifier.size(44.dp),
                             color = androidx.compose.ui.graphics.lerp(
-                                colors.sheet,
-                                Color(argb()).copy(alpha = 1f),
-                                alpha
+                                colors.sheet, Color(argb()).copy(alpha = 1f), alpha
                             ),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
                         ) {}
                     }
-                    Text("Presets", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        KlyroColors.extended.forEach { preset ->
-                            val swatch = KlyroColors.create(colors.dark, preset.id)
-                            Button(
-                                onClick = { onApply(preset.id) },
-                                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
-                                    .semantics {
-                                        contentDescription = "Use ${preset.label} preset, ${preset.sourceHex}"
-                                    },
-                                shape = RoundedCornerShape(14.dp),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(3.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = swatch.accent,
-                                    contentColor = swatch.onAccent
-                                )
-                            ) {
-                                Text(preset.label, fontSize = 12.sp, maxLines = 1)
-                            }
-                        }
-                    }
                     // Native HSV area: white/saturated along X, black/bright along Y.
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(140.dp)
+                        modifier = Modifier.fillMaxWidth().height(112.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .semantics { contentDescription = "Saturation and brightness area, drag to choose" }
                     ) {
                         Canvas(
-                            modifier = Modifier.fillMaxWidth().height(140.dp)
+                            modifier = Modifier.fillMaxWidth().height(112.dp)
                                 .pointerInput(hue) {
                                     detectTapGestures { offset ->
                                         position(offset.x, offset.y, size.width, size.height)
@@ -265,38 +256,64 @@ internal fun KlyroColorPickerDialog(
                             modifier = Modifier.semantics { contentDescription = "Hue in degrees" }
                         )
                     }
-                    Text("Saturation · ${(saturation * 100f).roundToInt()}%",
-                        style = MaterialTheme.typography.labelMedium)
-                    Slider(
-                        value = saturation,
-                        onValueChange = {
-                            saturation = it
-                            hexInput = "#%06X".format(rgb() and 0xFFFFFF)
-                        },
-                        modifier = Modifier.semantics { contentDescription = "Saturation percentage" }
-                    )
-                    Text("Brightness · ${(brightness * 100f).roundToInt()}%",
-                        style = MaterialTheme.typography.labelMedium)
-                    Slider(
-                        value = brightness,
-                        onValueChange = {
-                            brightness = it
-                            hexInput = "#%06X".format(rgb() and 0xFFFFFF)
-                        },
-                        modifier = Modifier.semantics { contentDescription = "Brightness percentage" }
-                    )
-                    Text("Opacity · " + (alpha * 100f).roundToInt() + "%",
-                        style = MaterialTheme.typography.labelMedium)
-                    Slider(
-                        value = alpha,
-                        onValueChange = { alpha = it },
-                        valueRange = 0f..1f,
-                        modifier = Modifier.semantics { contentDescription = "Opacity" }
-                    )
-                    TextButton(onClick = { showFavorites = !showFavorites }) {
-                        Text(if (showFavorites) "Hide saved colors" else "My saved colors")
+                    Text("Presets", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        KlyroColors.extended.forEach { preset ->
+                            val swatch = KlyroColors.create(colors.dark, preset.id)
+                            Button(
+                                onClick = { onApply(preset.id) },
+                                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                    .semantics { contentDescription = "Use ${preset.label} preset" },
+                                shape = RoundedCornerShape(14.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(3.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = swatch.accent,
+                                    contentColor = swatch.onAccent
+                                )
+                            ) {
+                                Text(preset.label, fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
                     }
-                    if (showFavorites) {
+                    TextButton(onClick = { showAdvanced = true }) {
+                        Text("Opacity & saved colors")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = hexInput.length == 7,
+                    onClick = { onApply(KlyroColors.customId(argb())) },
+                    shape = RoundedCornerShape(14.dp)
+                ) { Text("Apply") }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        )
+        if (showAdvanced) {
+            AlertDialog(
+                onDismissRequest = { showAdvanced = false },
+                containerColor = colors.sheet,
+                shape = RoundedCornerShape(24.dp),
+                title = { Text("Opacity & saved colors") },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Opacity · " + (alpha * 100f).roundToInt() + "%",
+                            style = MaterialTheme.typography.labelMedium)
+                        Slider(
+                            value = alpha,
+                            onValueChange = { alpha = it },
+                            valueRange = 0f..1f,
+                            modifier = Modifier.semantics { contentDescription = "Opacity" }
+                        )
                         Text("My colors", style = MaterialTheme.typography.titleSmall)
                         OutlinedTextField(
                             value = favoriteName,
@@ -350,20 +367,14 @@ internal fun KlyroColorPickerDialog(
                                 }) { Text("Remove") }
                             }
                         }
+
                     }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showAdvanced = false }) { Text("Done") }
                 }
-            },
-            confirmButton = {
-                Button(
-                    enabled = hexInput.length == 7,
-                    onClick = { onApply(KlyroColors.customId(argb())) },
-                    shape = RoundedCornerShape(14.dp)
-                ) { Text("Apply") }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-            }
-        )
+            )
+        }
         pendingFavoriteDeletion?.let { favorite ->
             AlertDialog(
                 onDismissRequest = { pendingFavoriteDeletion = null },
