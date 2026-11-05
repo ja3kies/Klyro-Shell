@@ -1,0 +1,61 @@
+"""Deterministic Android adaptive launcher identity smoke tests.
+
+Run by the existing GitHub Actions python3 unittest discovery.
+"""
+from pathlib import Path
+import unittest
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parents[1]
+RES = ROOT / "app/src/main/res"
+ANDROID = "{http://schemas.android.com/apk/res/android}"
+AAPT = "{http://schemas.android.com/aapt}"
+
+
+class KlyroLauncherIdentityTest(unittest.TestCase):
+    def test_min_sdk_adaptive_icon_aliases(self):
+        gradle = (ROOT / "app/build.gradle.kts").read_text()
+        self.assertIn("minSdk = 26", gradle)
+        for name in ("ic_launcher", "ic_launcher_round"):
+            file = RES / "mipmap-anydpi-v26" / (name + ".xml")
+            root = ET.parse(file).getroot()
+            self.assertEqual(root.tag, "adaptive-icon")
+            for tag, suffix in (
+                ("background", "ic_klyro_launcher_background"),
+                ("foreground", "ic_klyro_launcher_foreground"),
+                ("monochrome", "ic_klyro_mark_monochrome"),
+            ):
+                child = root.find(tag)
+                self.assertIsNotNone(child)
+                self.assertEqual(child.attrib[ANDROID + "drawable"], "@drawable/" + suffix)
+
+    def test_vectors_are_scalable_full_resolution_layers(self):
+        for name in ("ic_klyro_launcher_background",
+                     "ic_klyro_launcher_foreground",
+                     "ic_klyro_mark_monochrome"):
+            root = ET.parse(RES / "drawable" / (name + ".xml")).getroot()
+            self.assertEqual(root.tag, "vector")
+            self.assertEqual(root.attrib[ANDROID + "width"], "108dp")
+            self.assertEqual(root.attrib[ANDROID + "height"], "108dp")
+            self.assertEqual(root.attrib[ANDROID + "viewportWidth"], "108")
+            self.assertEqual(root.attrib[ANDROID + "viewportHeight"], "108")
+            self.assertTrue(root.findall("path"))
+        self.assertTrue(
+            ET.parse(RES / "drawable/ic_klyro_launcher_foreground.xml")
+            .getroot().findall(".//" + AAPT + "attr")
+        )
+
+    def test_manifest_references_launcher_resources(self):
+        manifest = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()
+        application = manifest.find("application")
+        self.assertEqual(application.attrib[ANDROID + "icon"], "@mipmap/ic_launcher")
+        self.assertEqual(application.attrib[ANDROID + "roundIcon"], "@mipmap/ic_launcher_round")
+
+    def test_monochrome_uses_solid_fill_not_gradients(self):
+        root = ET.parse(RES / "drawable/ic_klyro_mark_monochrome.xml").getroot()
+        self.assertFalse(root.findall(".//" + AAPT + "attr"))
+        self.assertEqual(root.findall("path")[0].attrib[ANDROID + "fillColor"], "#FFFFFFFF")
+
+
+if __name__ == "__main__":
+    unittest.main()
