@@ -244,19 +244,6 @@ fun TerminalPane(
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Home", color = MaterialTheme.colorScheme.onSurface) },
-                        modifier = Modifier.heightIn(min = 48.dp),
-                        leadingIcon = {
-                            Icon(painterResource(R.drawable.hugeicons_terminal),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface)
-                        },
-                        onClick = {
-                            showToolsMenu = false
-                            onReturnHome()
-                        }
-                    )
-                    DropdownMenuItem(
                         text = { Text("Settings", color = MaterialTheme.colorScheme.onSurface) },
                         modifier = Modifier.heightIn(min = 56.dp),
                         leadingIcon = {
@@ -283,32 +270,19 @@ fun TerminalPane(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Paste", color = MaterialTheme.colorScheme.onSurface) },
-                        modifier = Modifier.heightIn(min = 56.dp),
+                        text = { Text("Home", color = MaterialTheme.colorScheme.onSurface) },
+                        modifier = Modifier.heightIn(min = 48.dp),
                         leadingIcon = {
-                            Icon(painterResource(R.drawable.hugeicons_clipboard_paste),
-                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                            Icon(painterResource(R.drawable.hugeicons_terminal),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface)
                         },
                         onClick = {
                             showToolsMenu = false
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val pasted = runCatching {
-                                clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
-                            }.getOrNull()
-                            when {
-                                pasted.isNullOrEmpty() -> Toast.makeText(
-                                    context, "Clipboard is empty", Toast.LENGTH_SHORT
-                                ).show()
-                                !ClipboardPastePolicy.canPaste(pasted) -> Toast.makeText(
-                                    context, "Clipboard text is too long or contains unsupported controls.",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                                ClipboardPastePolicy.requiresConfirmation(pasted) ->
-                                    pendingMultilinePaste = pasted
-                                else -> write(session, pasted)
-                            }
+                            onReturnHome()
                         }
                     )
+
                 }
             }
     }
