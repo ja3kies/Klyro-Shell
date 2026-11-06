@@ -18,6 +18,7 @@ import com.termux.terminal.TerminalSessionClient;
 import com.termux.view.TerminalView;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Bridges Termux's terminal engine callbacks to Oryn-owned UI and clipboard handling. */
 public final class OrynTerminalSessionClient implements TerminalSessionClient {
@@ -32,6 +33,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private final Listener listener;
     private volatile TerminalView terminalView;
     private volatile Runnable outputObserver;
+    private final AtomicBoolean pendingOutputRefresh = new AtomicBoolean(false);
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     public OrynTerminalSessionClient(Context context, Listener listener) {
@@ -50,12 +52,17 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
 
     @Override
     public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
-        TerminalView view = terminalView;
-        if (view != null) view.post(view::onScreenUpdated);
-        Runnable observer = outputObserver;
-        if (observer != null) uiHandler.post(() -> {
-            if (outputObserver == observer) observer.run();
-        });
+        // A noisy PTY can emit thousands of chunks. One main-thread refresh
+        // consumes the latest buffer and always targets the currently attached view.
+        if (pendingOutputRefresh.compareAndSet(false, true)) {
+            uiHandler.post(() -> {
+                pendingOutputRefresh.set(false);
+                TerminalView view = terminalView;
+                if (view != null) view.onScreenUpdated();
+                Runnable observer = outputObserver;
+                if (observer != null) observer.run();
+            });
+        }
     }
 
     @Override
