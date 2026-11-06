@@ -575,17 +575,17 @@ fun TerminalPane(
             }
         }
         val secondRow: @Composable () -> Unit = {
-            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, "\u001B[D") }
-            TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, "\u001B[A") }
-            TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, "\u001B[B") }
-            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, "\u001B[C") }
+            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('D', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('A', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('B', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('C', controlActive, altActive, shiftActive)) }
             TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth, darkChrome = darkChrome) {
                 transcriptQuery = ""
                 searchIndex = 0
                 showTranscriptSearch = true
             }
             TerminalExtraKey("END", description = "Move cursor to end of line", keyWidth = keyWidth, darkChrome = darkChrome) {
-                write(session, "\u001B[F")
+                write(session, TerminalNavigationPolicy.end(controlActive, altActive, shiftActive))
             }
             TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser, keyWidth = keyWidth, darkChrome = darkChrome) {
                 // Clear emulator display and scrollback without injecting input into Bash.
