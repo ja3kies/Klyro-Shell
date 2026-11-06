@@ -9,6 +9,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ModalBottomSheet
@@ -136,7 +137,32 @@ fun TerminalPane(
     var shellChooserSourceId by remember(session) { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
+    val context = LocalContext.current
     var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
+    var hasCopyableOutput by remember(session) {
+        mutableStateOf(TerminalActionPolicy.hasCopyableOutput(session.emulator?.screen?.transcriptText))
+    }
+    DisposableEffect(sessionClient, session) {
+        val observer = Runnable {
+            hasCopyableOutput = TerminalActionPolicy.hasCopyableOutput(session.emulator?.screen?.transcriptText)
+        }
+        sessionClient.setOutputObserver(observer)
+        observer.run()
+        onDispose { sessionClient.setOutputObserver(null) }
+    }
+    fun pasteClipboard() {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clip = clipboard?.primaryClip
+        val content = if (clip != null && clip.itemCount > 0)
+            clip.getItemAt(0).coerceToText(context)?.toString() else null
+        if (!ClipboardPastePolicy.canPaste(content)) {
+            Toast.makeText(context, "No supported clipboard text", Toast.LENGTH_SHORT).show()
+        } else if (ClipboardPastePolicy.requiresConfirmation(content)) {
+            pendingMultilinePaste = content
+        } else {
+            write(session, content!!)
+        }
+    }
     LaunchedEffect(nativePasteRequest, session) {
         if (nativePasteRequest != null) {
             pendingMultilinePaste = nativePasteRequest
@@ -152,7 +178,6 @@ fun TerminalPane(
             }
         }
     }
-    val context = LocalContext.current
     val fontPreferences = remember(context) {
         context.getSharedPreferences("klyro_terminal_preferences", Context.MODE_PRIVATE)
     }
@@ -524,9 +549,17 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
-            TerminalExtraKey("ALL", description = "Select all terminal output", glyph = R.drawable.hugeicons_clipboard_list, keyWidth = keyWidth, darkChrome = darkChrome) {
-                outputSelectionView = null
-                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
+            TerminalExtraKey(
+                if (hasCopyableOutput) "ALL" else "PASTE",
+                description = if (hasCopyableOutput) "Select and copy terminal output" else "Paste clipboard text",
+                glyph = if (hasCopyableOutput) R.drawable.hugeicons_clipboard_list else R.drawable.hugeicons_clipboard_paste,
+                keyWidth = keyWidth, darkChrome = darkChrome
+            ) {
+                val output = session.emulator?.screen?.transcriptText.orEmpty()
+                if (TerminalActionPolicy.hasCopyableOutput(output)) {
+                    outputSelectionView = null
+                    selectedOutput = output
+                } else pasteClipboard()
             }
         }
         val secondRow: @Composable () -> Unit = {
@@ -543,7 +576,11 @@ fun TerminalPane(
                 write(session, "\u001B[F")
             }
             TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser, keyWidth = keyWidth, darkChrome = darkChrome) {
-                session.writeCodePoint(false, 12) // Ctrl+L; keep scrollback.
+                // Clear emulator display and scrollback without injecting input into Bash.
+                TerminalDisplayActions.clear(session)
+                activeTerminalView?.setTopRow(0)
+                activeTerminalView?.invalidate()
+                hasCopyableOutput = false
             }
         }
         if (compact) {
