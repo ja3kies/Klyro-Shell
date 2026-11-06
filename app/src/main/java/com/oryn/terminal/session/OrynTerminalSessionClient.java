@@ -31,6 +31,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private final Context context;
     private final Listener listener;
     private volatile TerminalView terminalView;
+    private volatile Runnable outputObserver;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     public OrynTerminalSessionClient(Context context, Listener listener) {
@@ -42,10 +43,19 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         terminalView = view;
     }
 
+    /** Observer belongs to the visible pane and is removed on disposal. */
+    public void setOutputObserver(@Nullable Runnable observer) {
+        outputObserver = observer;
+    }
+
     @Override
     public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (view != null) view.post(view::onScreenUpdated);
+        Runnable observer = outputObserver;
+        if (observer != null) uiHandler.post(() -> {
+            if (outputObserver == observer) observer.run();
+        });
     }
 
     @Override
