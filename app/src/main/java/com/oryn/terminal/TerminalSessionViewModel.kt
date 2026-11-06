@@ -24,7 +24,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     )
 
     private val tabs = mutableStateListOf<ShellTab>()
-    private val invalidTitleCharacters = Regex("[\\p{Cntrl}]")
+    private val invalidTitleCharacters = Regex("[\\p{Cntrl}\\p{Cf}]")
     val sessions: List<ShellTab> get() = tabs
     private var nextId = 1L
     var activeTabId by mutableStateOf<Long?>(null)
@@ -73,11 +73,16 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
                 }
             }
             override fun onShellPid(pid: Int) {
-                if (activeTabId == tabId) sessionStatus = "Bash session started (PID $pid)."
+                if (pid > 0 && activeTabId == tabId && tabs.any { it.id == tabId }) {
+                    sessionStatus = "Bash session started (PID $pid)."
+                }
             }
         }
 
-    fun reserveTabId(): Long = nextId++
+    fun reserveTabId(): Long {
+        check(nextId > 0 && nextId < Long.MAX_VALUE) { "Terminal tab ID space exhausted" }
+        return nextId++
+    }
 
     fun attachSession(
         session: TerminalSession,
@@ -106,7 +111,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     fun renameTab(id: Long, rawName: String) {
-        val name = rawName.trim().replace(invalidTitleCharacters, "").take(32)
+        val name = rawName.trim().replace(invalidTitleCharacters, "").take(32).trim()
         if (name.isBlank()) return
         val index = tabs.indexOfFirst { it.id == id }
         if (index >= 0 && tabs[index].customTitle != name) {
@@ -141,7 +146,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     private fun updateTitle(id: Long, title: String?) {
         val index = tabs.indexOfFirst { it.id == id }
         if (index >= 0) {
-            val next = title?.takeIf { it.isNotBlank() } ?: "Bash"
+            val next = TerminalTitlePolicy.safeTitle(title)
             if (tabs[index].title != next) tabs[index] = tabs[index].copy(title = next)
         }
     }
@@ -176,7 +181,9 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         tabs.firstOrNull { it.session === session }?.let { finishTab(it.id, session, exitStatus) }
     }
     override fun onShellPid(pid: Int) {
-        sessionStatus = "Bash session started (PID $pid)."
+        if (pid > 0 && activeTabId != null && tabs.any { it.id == activeTabId }) {
+            sessionStatus = "Bash session started (PID $pid)."
+        }
     }
 
     override fun onCleared() {
