@@ -297,8 +297,10 @@ class MainActivity : ComponentActivity() {
 
         // An Android process restart cannot preserve a PTY. Never pretend the
         // previous process's sessions survived when the ViewModel is empty.
-        if (savedInstanceState?.getBoolean("klyro_had_sessions", false) == true
-                && !terminalState.hasLiveSessions()) {
+        if (KlyroSessionRecovery.shouldNotify(
+                savedInstanceState?.getBoolean("klyro_had_sessions", false) == true,
+                terminalState.sessions.size
+            )) {
             showWelcomeScreen = true
             statusMessage = "Android restarted Klyro. Previous shell processes ended; open a new session."
         }
