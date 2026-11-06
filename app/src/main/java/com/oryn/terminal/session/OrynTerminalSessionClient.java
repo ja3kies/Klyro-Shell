@@ -34,6 +34,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private volatile TerminalView terminalView;
     private volatile Runnable outputObserver;
     private final AtomicBoolean pendingOutputRefresh = new AtomicBoolean(false);
+    private final AtomicBoolean disposed = new AtomicBoolean(false);
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     public OrynTerminalSessionClient(Context context, Listener listener) {
@@ -42,21 +43,31 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     public void attachView(@Nullable TerminalView view) {
-        terminalView = view;
+        if (!disposed.get()) terminalView = view;
+    }
+
+    /** Drop stale UI work when the owning PTY tab is permanently closed. */
+    public void dispose() {
+        disposed.set(true);
+        terminalView = null;
+        outputObserver = null;
+        uiHandler.removeCallbacksAndMessages(null);
+        pendingOutputRefresh.set(false);
     }
 
     /** Observer belongs to the visible pane and is removed on disposal. */
     public void setOutputObserver(@Nullable Runnable observer) {
-        outputObserver = observer;
+        if (!disposed.get()) outputObserver = observer;
     }
 
     @Override
     public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
         // A noisy PTY can emit thousands of chunks. One main-thread refresh
         // consumes the latest buffer and always targets the currently attached view.
-        if (pendingOutputRefresh.compareAndSet(false, true)) {
+        if (!disposed.get() && pendingOutputRefresh.compareAndSet(false, true)) {
             uiHandler.post(() -> {
                 pendingOutputRefresh.set(false);
+                if (disposed.get()) return;
                 TerminalView view = terminalView;
                 if (view != null) view.onScreenUpdated();
                 Runnable observer = outputObserver;
@@ -69,17 +80,21 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     public void onTitleChanged(@NonNull com.termux.terminal.TerminalSession session) {
         if (listener != null) {
             String title = session.getTitle();
-            uiHandler.post(() -> listener.onTitleChanged(title));
+            uiHandler.post(() -> {
+                if (!disposed.get()) listener.onTitleChanged(title);
+            });
         }
     }
 
     @Override
     public void onSessionFinished(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
-        if (view != null) view.postInvalidate();
+        if (!disposed.get() && view != null) view.postInvalidate();
         if (listener != null) {
             int status = session.getExitStatus();
-            uiHandler.post(() -> listener.onSessionFinished(session, status));
+            uiHandler.post(() -> {
+                if (!disposed.get()) listener.onSessionFinished(session, status);
+            });
         }
     }
 
@@ -87,14 +102,14 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     public void onCopyTextToClipboard(@NonNull com.termux.terminal.TerminalSession session, String text) {
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard != null) {
+        if (!disposed.get() && clipboard != null && text != null && !text.isEmpty()) {
             clipboard.setPrimaryClip(ClipData.newPlainText("Klyro Shell", text));
         }
     }
 
     @Override
     public void onPasteTextFromClipboard(@Nullable com.termux.terminal.TerminalSession session) {
-        if (session == null) return;
+        if (session == null || disposed.get() || !session.isRunning()) return;
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
         String pasted = com.oryn.terminal.ui.ClipboardTextReader.readPlainText(clipboard);
@@ -107,32 +122,38 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         }
         if (ClipboardPastePolicy.requiresConfirmation(pasted)) {
             if (listener != null) {
-                uiHandler.post(() ->
-                    listener.onNativePasteRequiresConfirmation(pasted));
+                uiHandler.post(() -> {
+                    if (!disposed.get() && session.isRunning()) {
+                        listener.onNativePasteRequiresConfirmation(pasted);
+                    }
+                });
             }
             return;
         }
         byte[] bytes = pasted.getBytes(StandardCharsets.UTF_8);
-        session.write(bytes, 0, bytes.length);
+        if (!disposed.get() && session.isRunning()) session.write(bytes, 0, bytes.length);
     }
 
     @Override
     public void onBell(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
-        if (view != null) view.post(() ->
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP));
+        if (!disposed.get() && view != null) view.post(() -> {
+            if (!disposed.get() && terminalView == view && view.isAttachedToWindow()) {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            }
+        });
     }
 
     @Override
     public void onColorsChanged(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
-        if (view != null) view.postInvalidate();
+        if (!disposed.get() && view != null) view.postInvalidate();
     }
 
     @Override
     public void onTerminalCursorStateChange(boolean state) {
         TerminalView view = terminalView;
-        if (view != null) view.postInvalidate();
+        if (!disposed.get() && view != null) view.postInvalidate();
     }
 
     @Override

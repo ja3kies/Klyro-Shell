@@ -295,6 +295,14 @@ class MainActivity : ComponentActivity() {
             statusMessage = "Klyro couldn't verify its private environment."
         }
 
+        // An Android process restart cannot preserve a PTY. Never pretend the
+        // previous process's sessions survived when the ViewModel is empty.
+        if (savedInstanceState?.getBoolean("klyro_had_sessions", false) == true
+                && !terminalState.hasLiveSessions()) {
+            showWelcomeScreen = true
+            statusMessage = "Android restarted Klyro. Previous shell processes ended; open a new session."
+        }
+
         setContent {
             val themePreferences = remember {
                 getSharedPreferences("klyro_ui_theme", MODE_PRIVATE)
@@ -433,6 +441,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("klyro_show_welcome", showWelcomeScreen)
+        outState.putBoolean("klyro_had_sessions", terminalState.hasLiveSessions())
         super.onSaveInstanceState(outState)
     }
 

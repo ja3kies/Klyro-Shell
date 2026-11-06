@@ -56,6 +56,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (pendingNativePaste?.tabId == tabId) pendingNativePaste = null
     }
 
+    fun hasLiveSessions(): Boolean = tabs.isNotEmpty()
+
     fun isSessionActive(id: Long): Boolean =
         activeTabId == id && tabs.any { it.id == id }
 
@@ -91,6 +93,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         tabId: Long = reserveTabId()
     ) {
         require(tabs.none { it.id == tabId }) { "Duplicate terminal tab ID" }
+        require(tabId > 0) { "Terminal tab ID must be positive" }
         tabs.add(ShellTab(tabId, session, client, terminalViewClient, title = "Session $tabId"))
         selectTab(tabId)
         sessionStatus = "Starting private Bash session…"
@@ -124,7 +127,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (index < 0) return
         if (pendingNativePaste?.tabId == id) pendingNativePaste = null
         val entry = tabs.removeAt(index)
-        entry.client.attachView(null)
+        entry.client.dispose()
         entry.viewClient.attachView(null)
         entry.session.finishIfRunning()
         if (activeTabId == id) {
@@ -166,24 +169,19 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     // Legacy interface compatibility; normal sessions use listenerFor(tabId)
     // so each native paste is routed to its owning tab.
     override fun onNativePasteRequiresConfirmation(text: String) {
-        activeTabId?.let { id ->
-            if (tabs.any { it.id == id }) {
-                pendingNativePaste = NativePasteRequest(id, text)
-            }
-        }
+        // Legacy unscoped callbacks cannot prove which session requested the paste.
+        // Production clients always use listenerFor(tabId).
     }
 
     // Legacy listener compatibility for existing single-session startup.
     override fun onTitleChanged(title: String?) {
-        activeTabId?.let { updateTitle(it, title) }
+        // Never attribute an unscoped OSC title to whichever tab is now active.
     }
     override fun onSessionFinished(session: TerminalSession, exitStatus: Int) {
         tabs.firstOrNull { it.session === session }?.let { finishTab(it.id, session, exitStatus) }
     }
     override fun onShellPid(pid: Int) {
-        if (pid > 0 && activeTabId != null && tabs.any { it.id == activeTabId }) {
-            sessionStatus = "Bash session started (PID $pid)."
-        }
+        // Unscoped legacy PID events must not change the active tab's status.
     }
 
     override fun onCleared() {
