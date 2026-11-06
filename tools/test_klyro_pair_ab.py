@@ -1,6 +1,7 @@
 """A+B release source regressions, supplementing JVM and Android Lint."""
 from pathlib import Path
 import unittest
+from klyro_version_contract import assert_supported_klyro_version
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "app/src/main/java/com/oryn/terminal/ui"
@@ -49,8 +50,8 @@ class KlyroPairABTest(unittest.TestCase):
 
     def test_build_version_bumped(self):
         build=(ROOT/"app/build.gradle.kts").read_text()
-        self.assertIn("versionCode = 9",build)
-        self.assertIn('versionName = "0.4.2-dev"',build)
+        assert_supported_klyro_version(self, build)
+        self.assertTrue((ROOT / "docs/OBJECTIVES_H_I_2026-11-06.md").is_file())
         self.assertTrue((ROOT/"docs/QA_PIXEL9_0_4_2_DEV.md").is_file())
 
 

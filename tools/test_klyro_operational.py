@@ -5,6 +5,7 @@ No shell command is executed against a real Android device from CI.
 from pathlib import Path
 import re
 import unittest
+from klyro_version_contract import assert_supported_klyro_version
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -12,8 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 class KlyroOperationalReadinessTest(unittest.TestCase):
     def test_version_bumped_and_debug_bento_remains_gated(self):
         gradle = (ROOT / "app/build.gradle.kts").read_text()
-        self.assertIn('versionCode = 9', gradle)
-        self.assertIn('versionName = "0.4.2-dev"', gradle)
+        assert_supported_klyro_version(self, gradle)
+        self.assertTrue((ROOT / "docs/OBJECTIVES_H_I_2026-11-06.md").is_file())
         self.assertIn('resValue("bool", "klyro_experimental_bento", "true")', gradle)
         self.assertIn('resValue("bool", "klyro_experimental_bento", "false")', gradle)
 

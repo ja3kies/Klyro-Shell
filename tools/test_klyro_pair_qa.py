@@ -5,6 +5,7 @@ real UI interaction.
 """
 from pathlib import Path
 import unittest
+from klyro_version_contract import assert_supported_klyro_version
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app/src/main/java/com/oryn/terminal"
@@ -45,8 +46,8 @@ class KlyroPairQaTest(unittest.TestCase):
 
     def test_version_and_qa_document_present(self):
         gradle = (ROOT / "app/build.gradle.kts").read_text()
-        self.assertIn('versionCode = 9', gradle)
-        self.assertIn('versionName = "0.4.2-dev"', gradle)
+        assert_supported_klyro_version(self, gradle)
+        self.assertTrue((ROOT / "docs/OBJECTIVES_H_I_2026-11-06.md").is_file())
         self.assertTrue((ROOT / "docs/QA_PIXEL9_0_4_1_DEV.md").is_file())
         self.assertTrue((ROOT / "docs/OBJECTIVES_D_E_2026-11-05.md").is_file())
 

@@ -1,6 +1,7 @@
 """F/G source contract checks; runtime behavior still needs a real device."""
 from pathlib import Path
 import unittest
+from klyro_version_contract import assert_supported_klyro_version
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "app/src/main/java/com/oryn/terminal"
@@ -39,8 +40,8 @@ class FGSourceContracts(unittest.TestCase):
         manager = (SRC / "session/TerminalSessionManager.java").read_text()
         self.assertIn("KlyroDiagnostics.sanitize(cleaned.toString())", manager)
         build = (ROOT / "app/build.gradle.kts").read_text()
-        self.assertIn("versionCode = 9", build)
-        self.assertIn('versionName = "0.4.2-dev"', build)
+        assert_supported_klyro_version(self, build)
+        self.assertTrue((ROOT / "docs/OBJECTIVES_H_I_2026-11-06.md").is_file())
         self.assertTrue((ROOT / "docs/OBJECTIVES_F_G_2026-11-06.md").is_file())
 
 
