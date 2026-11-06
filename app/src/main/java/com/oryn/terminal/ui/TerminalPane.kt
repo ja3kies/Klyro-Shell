@@ -142,14 +142,14 @@ fun TerminalPane(
         context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     }
     var clipboardAvailable by remember(session) {
-        mutableStateOf(clipboardManager?.hasPrimaryClip() == true)
+        mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
     DisposableEffect(clipboardManager, session) {
         val listener = ClipboardManager.OnPrimaryClipChangedListener {
-            clipboardAvailable = clipboardManager?.hasPrimaryClip() == true
+            clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
         }
         clipboardManager?.addPrimaryClipChangedListener(listener)
-        clipboardAvailable = clipboardManager?.hasPrimaryClip() == true
+        clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
         onDispose { clipboardManager?.removePrimaryClipChangedListener(listener) }
     }
     var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
@@ -165,10 +165,7 @@ fun TerminalPane(
         onDispose { sessionClient.setOutputObserver(null) }
     }
     fun pasteClipboard() {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        val clip = clipboard?.primaryClip
-        val content = if (clip != null && clip.itemCount > 0)
-            clip.getItemAt(0).coerceToText(context)?.toString() else null
+        val content = ClipboardTextReader.readPlainText(clipboardManager)
         if (!ClipboardPastePolicy.canPaste(content)) {
             Toast.makeText(context, "No supported clipboard text", Toast.LENGTH_SHORT).show()
         } else if (ClipboardPastePolicy.requiresConfirmation(content)) {
@@ -776,8 +773,13 @@ fun TerminalPane(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    pendingMultilinePaste?.let { write(session, it) }
+                    val text = pendingMultilinePaste
                     pendingMultilinePaste = null
+                    if (ClipboardPastePolicy.canPaste(text)) {
+                        write(session, text!!)
+                    } else {
+                        Toast.makeText(context, "Clipboard text rejected", Toast.LENGTH_SHORT).show()
+                    }
                 }) { Text("Paste") }
             },
             dismissButton = {

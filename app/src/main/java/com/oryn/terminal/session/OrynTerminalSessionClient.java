@@ -97,12 +97,8 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         if (session == null) return;
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard == null || !clipboard.hasPrimaryClip()) return;
-        ClipData clip = clipboard.getPrimaryClip();
-        if (clip == null || clip.getItemCount() == 0) return;
-        CharSequence text = clip.getItemAt(0).coerceToText(context);
-        if (text == null) return;
-        String pasted = text.toString();
+        String pasted = com.oryn.terminal.ui.ClipboardTextReader.readPlainText(clipboard);
+        if (pasted == null) return;
         if (!ClipboardPastePolicy.canPaste(pasted)) {
             uiHandler.post(() ->
                 Toast.makeText(context, "Clipboard text is unsupported or too long.",
