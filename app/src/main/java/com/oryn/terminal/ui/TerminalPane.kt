@@ -138,6 +138,20 @@ fun TerminalPane(
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
     val context = LocalContext.current
+    val clipboardManager = remember(context) {
+        context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+    }
+    var clipboardAvailable by remember(session) {
+        mutableStateOf(clipboardManager?.hasPrimaryClip() == true)
+    }
+    DisposableEffect(clipboardManager, session) {
+        val listener = ClipboardManager.OnPrimaryClipChangedListener {
+            clipboardAvailable = clipboardManager?.hasPrimaryClip() == true
+        }
+        clipboardManager?.addPrimaryClipChangedListener(listener)
+        clipboardAvailable = clipboardManager?.hasPrimaryClip() == true
+        onDispose { clipboardManager?.removePrimaryClipChangedListener(listener) }
+    }
     var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
     var hasCopyableOutput by remember(session) {
         mutableStateOf(TerminalActionPolicy.hasCopyableOutput(session.emulator?.screen?.transcriptText))
@@ -553,7 +567,8 @@ fun TerminalPane(
                 if (hasCopyableOutput) "ALL" else "PASTE",
                 description = if (hasCopyableOutput) "Select and copy terminal output" else "Paste clipboard text",
                 glyph = if (hasCopyableOutput) R.drawable.hugeicons_clipboard_list else R.drawable.hugeicons_clipboard_paste,
-                keyWidth = keyWidth, darkChrome = darkChrome
+                keyWidth = keyWidth, darkChrome = darkChrome,
+                enabled = hasCopyableOutput || clipboardAvailable
             ) {
                 val output = session.emulator?.screen?.transcriptText.orEmpty()
                 if (TerminalActionPolicy.hasCopyableOutput(output)) {
@@ -960,6 +975,7 @@ fun TerminalPane(
 private fun TerminalExtraKey(
     label: String,
     active: Boolean = false,
+    enabled: Boolean = true,
     description: String? = null,
     labelSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     glyph: Int? = null,
@@ -974,6 +990,7 @@ private fun TerminalExtraKey(
     val backgroundTint = colors.key
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier
             .height(50.dp)
             .width(keyWidth)
