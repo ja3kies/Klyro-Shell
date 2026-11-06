@@ -2,13 +2,13 @@
 
 ## Chimera Terminal — PTY implementation
 
-The initial Oryn PTY adapter and native JNI bridge are derived from source code in:
+The initial Klyro PTY adapter and native JNI bridge are derived from source code in:
 
 - Repository: https://github.com/ChimeraAnt-DEV/Android-Terminal
 - Upstream components: `PtyProcess.java` and `pty_bridge.cpp`
-- Local Oryn components: `app/src/main/java/com/oryn/terminal/core/PtyProcess.java` and `app/src/main/cpp/pty_bridge.cpp`
+- Local Klyro components: `app/src/main/java/com/oryn/terminal/core/PtyProcess.java` and `app/src/main/cpp/pty_bridge.cpp`
 
-The code was adapted for Oryn's Java package, JNI symbols, and native library name. This notice records provenance; it is not a substitute for the upstream project's terms. Oryn is currently intended for personal use. Review the exact upstream terms and all dependency notices before redistributing source or binaries.
+The code was adapted for Klyro's Java package, JNI symbols, and native library name. This notice records provenance; it is not a substitute for the upstream project's terms. Klyro is currently intended for personal use. Review the exact upstream terms and all dependency notices before redistributing source or binaries.
 
 
 ## Termux ARM64 proot runtime
@@ -25,16 +25,16 @@ The corresponding Termux package build recipes declare the applicable licences. 
 
 The Termux repository signing keys are sourced from the pinned `termux/termux-packages` keyring revision used by the CI workflow.
 
-Oryn is currently intended for personal use. Review all upstream licence obligations before redistributing the derived application, APK, or source.
+Klyro is currently intended for personal use. Review all upstream licence obligations before redistributing the derived application, APK, or source.
 
 
 ## Termux terminal emulator and view
 
-Oryn uses the Termux `terminal-view` library, which brings in the matching `terminal-emulator` module transitively:
+Klyro uses the Termux `terminal-view` library, which brings in the matching `terminal-emulator` module transitively:
 
 - Maven coordinate: `com.termux:terminal-view:0.118.0`
 - Upstream: https://github.com/termux/termux-app
 - Upstream module publication: `terminal-view/build.gradle` and `terminal-emulator/build.gradle`
 - The Termux application repository is licensed under GPLv3-only. Its license file identifies an Apache-2.0 exception for code originating from Android Terminal Emulator.
 
-The library supplies terminal rendering, VT/ANSI emulation, terminal input handling, clipboard callbacks, and its native PTY implementation. Oryn supplies its own shell command, private paths, palette, and Compose integration. Review and comply with the upstream licence before any redistribution.
+The library supplies terminal rendering, VT/ANSI emulation, terminal input handling, clipboard callbacks, and its native PTY implementation. Klyro supplies its own shell command, private paths, palette, and Compose integration. Review and comply with the upstream licence before any redistribution.

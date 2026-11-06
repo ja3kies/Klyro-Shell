@@ -6,15 +6,15 @@ plugins {
 
 android {
     namespace = "com.oryn.terminal"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "com.oryn.terminal"
+        applicationId = "com.klyro.shell"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        targetSdk = 36
+        versionCode = 10
+        versionName = "0.4.3-dev"
 
         ndk {
             abiFilters += setOf("arm64-v8a")
@@ -28,7 +28,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Bento stays in experimental test APK only; release UI stays stable.
+            resValue("bool", "klyro_experimental_bento", "true")
+        }
         release {
+            resValue("bool", "klyro_experimental_bento", "false")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -58,6 +63,12 @@ android {
     }
 
     packaging {
+        jniLibs {
+            // Extract APK-native runtime files into the executable nativeLibraryDir.
+            useLegacyPackaging = true
+            // Preserve the ELF bytes verified by the generated runtime manifest.
+            keepDebugSymbols += "**/*.so"
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
@@ -75,6 +86,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("com.termux.termux-app:terminal-view:0.118.0") {
         // JitPack publishes this transitive artifact under the repository group.
         exclude(group = "com.termux.termux-app", module = "terminal-emulator")
@@ -84,4 +96,15 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+}
+
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    testLogging {
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showCauses = true
+        showExceptions = true
+        showStackTraces = true
+    }
 }

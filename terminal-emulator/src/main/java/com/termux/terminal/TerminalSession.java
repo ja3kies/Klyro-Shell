@@ -233,10 +233,20 @@ public final class TerminalSession extends TerminalOutput {
     /** Finish this terminal session by sending SIGKILL to the shell. */
     public void finishIfRunning() {
         if (isRunning()) {
+            // createSubprocess() calls setsid() in the child, making its PID the
+            // process-group ID. Kill the whole group so proot/Bash descendants
+            // cannot remain orphaned when the session is closed.
             try {
-                Os.kill(mShellPid, OsConstants.SIGKILL);
-            } catch (ErrnoException e) {
-                mClient.logWarn(LOG_TAG, "Failed sending SIGKILL: " + e.getMessage());
+                Os.kill(-mShellPid, OsConstants.SIGKILL);
+            } catch (ErrnoException groupError) {
+                // Defensive fallback for a process that could not establish its
+                // own session or has already left the original process group.
+                try {
+                    Os.kill(mShellPid, OsConstants.SIGKILL);
+                } catch (ErrnoException processError) {
+                    mClient.logWarn(LOG_TAG, "Failed killing process group: "
+                            + groupError.getMessage() + "; process: " + processError.getMessage());
+                }
             }
         }
     }
@@ -260,7 +270,7 @@ public final class TerminalSession extends TerminalOutput {
     }
 
     public synchronized boolean isRunning() {
-        return mShellPid != -1;
+        return mShellPid > 0;
     }
 
     /** Only valid if not {@link #isRunning()}. */
@@ -325,9 +335,12 @@ public final class TerminalSession extends TerminalOutput {
             }
             descriptorField.setAccessible(true);
             descriptorField.set(result, fileDescriptor);
-        } catch (NoSuchFieldException | IllegalAccessException | IllegalArgumentException e) {
-            client.logStackTraceWithMessage(LOG_TAG, "Error accessing FileDescriptor#descriptor private field", e);
-            System.exit(1);
+        } catch (NoSuchFieldException | IllegalAccessException |
+                 IllegalArgumentException | SecurityException e) {
+            // A hidden-API/reflection failure must not terminate the entire
+            // Android application (and every other PTY) with System.exit(1).
+            JNI.close(fileDescriptor);
+            throw new IllegalStateException("Cannot attach PTY file descriptor", e);
         }
         return result;
     }

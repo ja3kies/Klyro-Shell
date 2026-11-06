@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/readme/oryn-terminal-hero.svg" alt="Oryn Terminal — Neon Obsidian preview" width="100%">
+  <img src="assets/readme/oryn-terminal-hero.svg" alt="Klyro Shell — Neon Obsidian preview" width="100%">
 </p>
 
-<h1 align="center">Oryn Terminal</h1>
+<h1 align="center">Klyro Shell</h1>
 
 <p align="center">
   <strong>Your Android terminal. Your environment. Your rules.</strong><br>
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ja3kies/Oryn-Terminal/actions"><img src="https://img.shields.io/github/actions/workflow/status/ja3kies/Oryn-Terminal/android-build.yml?branch=main&style=for-the-badge&logo=githubactions" alt="Build status"></a>
+  <a href="https://github.com/ja3kies/Klyro-Shell/actions"><img src="https://img.shields.io/github/actions/workflow/status/ja3kies/Klyro-Shell/android-build.yml?branch=main&style=for-the-badge&logo=githubactions" alt="Build status"></a>
   <img src="https://img.shields.io/badge/platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android">
   <img src="https://img.shields.io/badge/language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin">
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
@@ -31,13 +31,13 @@
 
 ## ✦ The idea
 
-Oryn Terminal is a standalone Android terminal for people who want a capable command-line environment without sacrificing the Termux installation they already rely on.
+Klyro Shell is a standalone Android terminal for people who want a capable command-line environment without sacrificing the Termux installation they already rely on.
 
 It is designed around one non-negotiable rule:
 
-> **Oryn and Termux are two completely separate apps, with two completely separate environments.**
+> **Klyro and Termux are two completely separate apps, with two completely separate environments.**
 
-Oryn gets its own Android application identity, private storage, home directory, package prefix, shell configuration, installed packages and terminal sessions. It must never overwrite, migrate, uninstall, or write into the user's existing Termux data.
+Klyro gets its own Android application identity, private storage, home directory, package prefix, shell configuration, installed packages and terminal sessions. It must never overwrite, migrate, uninstall, or write into the user's existing Termux data.
 
 The project is currently in its foundation phase. The interface and architecture are being built before the terminal runtime is considered production-ready.
 
@@ -48,7 +48,7 @@ The project is currently in its foundation phase. The interface and architecture
 | Neon Obsidian visual system | Native Android PTY target | Independent app sandbox | Bash by default |
 | Jetpack Compose + Material 3 | Real interactive shell | Separate `$HOME` and prefix | Optional Zsh |
 | Restrained cyan / purple accents | ANSI terminal rendering | No dependency on installed Termux | Git, SSH, Python, Node.js, Java |
-| Touch-first, keyboard-friendly UI | Multiple concurrent sessions | Package state owned by Oryn | Gradle and local servers |
+| Touch-first, keyboard-friendly UI | Multiple concurrent sessions | Package state owned by Klyro | Gradle and local servers |
 
 <sub>Planned capabilities are targets, not claims that they are already implemented.</sub>
 
@@ -70,7 +70,7 @@ The project is currently in its foundation phase. The interface and architecture
 
 ### ◈ A self-contained developer environment
 
-- **Termux-compatible package workflow** — a dedicated package environment owned by Oryn.
+- **Termux-compatible package workflow** — a dedicated package environment owned by Klyro.
 - **Developer tools** — Git, SSH, Python, Node.js, Java/Kotlin, Gradle, Nano and Vim.
 - **Local development** — run scripts and local servers directly on the device.
 - **Storage access** — explicit Android storage permissions and user-controlled access.
@@ -128,7 +128,7 @@ A dark, focused interface with a small number of expressive accents. Neon is use
 
 ## ✦ Architecture
 
-The runtime is split into clear boundaries so the UI never owns shell-process logic. Oryn uses the Termux `terminal-view` UI with a locally vendored `terminal-emulator` module patched to reject terminal-originated OSC 52 clipboard writes.
+The runtime is split into clear boundaries so the UI never owns shell-process logic. Klyro uses the Termux `terminal-view` UI with a locally vendored `terminal-emulator` module patched to reject terminal-originated OSC 52 clipboard writes.
 
 ```mermaid
 flowchart TD
@@ -136,17 +136,17 @@ flowchart TD
     VM --> SM["Session Manager"]
     SM --> PTY["Termux PTY engine"]
     PTY --> SHELL["Bash / Zsh"]
-    SHELL --> ENV["Oryn-owned userland"]
+    SHELL --> ENV["Klyro-owned userland"]
     ENV --> PKG["Package manager"]
     ENV --> HOME["Private HOME and config"]
 ```
 
 ### Isolation contract
 
-- Application ID: `com.oryn.terminal`
-- Private files, cache, preferences and session metadata belong to Oryn.
+- Application ID: `com.oryn.terminal (legacy application ID retained for installation continuity)`
+- Private files, cache, preferences and session metadata belong to Klyro.
 - The existing Termux package and its data are out of bounds.
-- Any compatibility path mapping must happen inside Oryn's own proot environment.
+- Any compatibility path mapping must happen inside Klyro's own proot environment.
 - Package bootstrap archives must be pinned and checksum-verified before extraction.
 
 ### Technology direction
@@ -156,14 +156,14 @@ flowchart TD
 | Language | Kotlin |
 | UI | Jetpack Compose + Material 3 |
 | Android minimum | API 26 target, subject to device testing |
-| Terminal process | Termux terminal-view + Oryn-patched terminal-emulator |
+| Terminal process | Termux terminal-view + Klyro-patched terminal-emulator |
 | Userland compatibility | Termux packages via isolated proot mapping (under validation) |
 | Build | Gradle / Android Gradle Plugin |
 | Target ABI | ARM64 first |
 
 ## ✦ Build
 
-The Android project scaffold is in place. Use Gradle 8.10.2, JDK 17 and Android SDK 35.
+The Android project scaffold is in place. Use Gradle 8.11.1, JDK 17, Android SDK 36 and NDK 27.0.12077973.
 
 GitHub Actions prepares the ARM64 runtime assets before building. It verifies the official Termux stable APT metadata, then downloads these pinned packages:
 
@@ -173,7 +173,7 @@ GitHub Actions prepares the ARM64 runtime assets before building. It verifies th
 | `libtalloc` | `2.5.0` |
 | `libandroid-shmem` | `0.7` |
 
-The runtime files are extracted into APK assets with a SHA-256 manifest. Oryn verifies that manifest again before copying the files into its own private storage. The CI workflow performs this preparation automatically; a plain local Gradle build needs the generated files under `app/src/main/assets/proot/`.
+The runtime files are extracted into APK assets with a SHA-256 manifest. Klyro verifies that manifest again before copying the files into its own private storage. The CI workflow performs this preparation automatically; a plain local Gradle build needs the generated files under `app/src/main/assets/proot/`.
 
 The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`. GitHub Actions builds and uploads it on pushes and pull requests to `main`.
 
@@ -184,10 +184,10 @@ A successful APK build proves compilation and packaging only. It does not prove 
 - [x] Product requirements and isolation contract
 - [x] Compare terminal foundations and document technical risks
 - [x] Establish repository README and visual direction
-- [x] Create Android application scaffold with Oryn identity
+- [x] Create Android application scaffold with Klyro identity
 - [x] Integrate native PTY bridge into the Android project
 - [x] Add a PTY-backed Bash session manager with isolated host environment and process-group cleanup
-- [x] Add Oryn-private path layout and virtual Termux bind mapping
+- [x] Add Klyro-private path layout and virtual Termux bind mapping
 - [x] Add pinned, SHA-256-verified ARM64 bootstrap installer
 - [x] Add the private ARM64 proot runtime installer and verified CI packaging
 - [x] Pin the official Termux proot runtime package versions
@@ -204,13 +204,13 @@ A successful APK build proves compilation and packaging only. It does not prove 
 
 ## ✦ Project status
 
-Oryn Terminal is an early-stage personal project. Features listed above describe the intended product; they should not be interpreted as already available.
+Klyro Shell is an early-stage personal project. Features listed above describe the intended product; they should not be interpreted as already available.
 
 The current engineering priority is correctness: a truly independent environment, a reliable PTY lifecycle, safe bootstrap installation and real package operations. Visual polish comes after those foundations are verified.
 
 ---
 
 <p align="center">
-  <strong>ORYN TERMINAL</strong><br>
+  <strong>KLYRO SHELL</strong><br>
   <sub>Independent by design. Built for the command line.</sub>
 </p>
