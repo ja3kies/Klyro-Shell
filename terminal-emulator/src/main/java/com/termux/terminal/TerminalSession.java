@@ -335,9 +335,12 @@ public final class TerminalSession extends TerminalOutput {
             }
             descriptorField.setAccessible(true);
             descriptorField.set(result, fileDescriptor);
-        } catch (NoSuchFieldException | IllegalAccessException | IllegalArgumentException e) {
-            client.logStackTraceWithMessage(LOG_TAG, "Error accessing FileDescriptor#descriptor private field", e);
-            System.exit(1);
+        } catch (NoSuchFieldException | IllegalAccessException |
+                 IllegalArgumentException | SecurityException e) {
+            // A hidden-API/reflection failure must not terminate the entire
+            // Android application (and every other PTY) with System.exit(1).
+            JNI.close(fileDescriptor);
+            throw new IllegalStateException("Cannot attach PTY file descriptor", e);
         }
         return result;
     }
