@@ -18,7 +18,18 @@ object KlyroTerminalPalette {
         setProperty("foreground", rgb(colors.foreground))
         setProperty("background", rgb(colors.terminal))
         setProperty("cursor", rgb(colors.accent))
-        val ansi = if (colors.dark) listOf(
+        val ansi = if (colors.accentId.startsWith("mono-")) {
+            val dark = colors.dark
+            val foreground = if (dark) "#FFFFFF" else "#101010"
+            val background = if (dark) "#000000" else "#FFFFFF"
+            val secondary = if (dark) "#BFBFBF" else "#555555"
+            listOf(
+                background, foreground, foreground, secondary,
+                secondary, foreground, secondary, foreground,
+                secondary, foreground, foreground, secondary,
+                secondary, foreground, secondary, foreground
+            )
+        } else if (colors.dark) listOf(
             "#182528", "#FF6677", "#64DC9B", "#D3BF71",
             "#84B3EE", "#B6A1F2", "#71CDD8", "#DFEDF0",
             "#87999E", "#FF8A97", "#85E6AC", "#E6D38B",
