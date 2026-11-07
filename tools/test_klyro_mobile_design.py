@@ -77,6 +77,18 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("Files.isSymbolicLink", bridge)
         self.assertIn("KlyroStorageCommandBridge.installHelper", installer)
 
+    def test_private_cli_adapters_have_single_owner_and_no_implicit_privilege(self):
+        installer = src(APP / "termux/KlyroShellHelperInstaller.java")
+        info = src(APP / "termux/KlyroTermuxInfo.java")
+        bridge = src(APP / "termux/KlyroStorageCommandBridge.java")
+        self.assertIn('command.matches("klyro-[a-z0-9-]{1,48}")', installer)
+        self.assertIn('Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)', installer)
+        self.assertIn('if (!existing.contains("# " + marker)) return;', installer)
+        self.assertIn('KlyroShellHelperInstaller.install', info)
+        self.assertIn('KlyroShellHelperInstaller.install', bridge)
+        self.assertIn('if [ "$#" -ne 0 ]', info)
+        self.assertNotIn('MANAGE_EXTERNAL_STORAGE', src(ROOT / "app/src/main/AndroidManifest.xml"))
+
     def test_legacy_actions_not_duplicated_in_palette_or_settings(self):
         palette = src(UI / "KlyroCommandPalette.kt")
         settings = src(UI / "KlyroSettingsSheet.kt")
