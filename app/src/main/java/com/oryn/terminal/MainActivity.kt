@@ -155,7 +155,8 @@ class MainActivity : ComponentActivity() {
             }
             try {
                 contentResolver.takePersistableUriPermission(
-                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    // Folder import only needs read access. Exports use CreateDocument separately.
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
                 getSharedPreferences("klyro_storage", MODE_PRIVATE)
                     .edit().putString("tree_uri", uri.toString()).apply()
