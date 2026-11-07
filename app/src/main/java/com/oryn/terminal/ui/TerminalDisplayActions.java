@@ -9,6 +9,9 @@ public final class TerminalDisplayActions {
     private static final byte[] CLEAR_SCREEN_AND_SCROLLBACK =
             "\u001B[3J\u001B[2J\u001B[H".getBytes(StandardCharsets.US_ASCII);
 
+    private static final byte[] ACCENT_PROMPT = "\u001B[36m".getBytes(StandardCharsets.US_ASCII);
+    private static final byte[] RESET_COLORS = "\u001B[0m".getBytes(StandardCharsets.US_ASCII);
+
     private TerminalDisplayActions() {}
 
     static String promptToRestore(String line) {
@@ -41,7 +44,11 @@ public final class TerminalDisplayActions {
         emulator.append(CLEAR_SCREEN_AND_SCROLLBACK, CLEAR_SCREEN_AND_SCROLLBACK.length);
         if (!prompt.isEmpty()) {
             byte[] bytes = prompt.getBytes(StandardCharsets.UTF_8);
+            // Bash renders its Klyro prompt with ANSI color 36 (palette slot 6).
+            // The terminal palette maps that slot to the selected accent.
+            emulator.append(ACCENT_PROMPT, ACCENT_PROMPT.length);
             emulator.append(bytes, bytes.length);
+            emulator.append(RESET_COLORS, RESET_COLORS.length);
         }
     }
 }
