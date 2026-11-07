@@ -159,6 +159,18 @@ object KlyroUiMetrics {
     val minTouch = 48.dp
     val sheetGutter = 16.dp
     val cardPadding = 14.dp
+    val spaceXs = 4.dp
+    val spaceSm = 8.dp
+    val spaceMd = 12.dp
+    val spaceLg = 16.dp
+    val spaceXl = 24.dp
+    val compactRow = 52.dp
+    val optionRow = 48.dp
+    val sectionGap = 20.dp
+    val selectedCorner = 16.dp
+    val selectedBorder = 1.5.dp
+    val glyphSmall = 20.dp
+    val glyphMedium = 24.dp
 }
 
 val LocalKlyroColors = compositionLocalOf { KlyroColors.create(true, "lime") }
