@@ -130,8 +130,10 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
             }
             return;
         }
-        byte[] bytes = pasted.getBytes(StandardCharsets.UTF_8);
-        if (!disposed.get() && session.isRunning()) session.write(bytes, 0, bytes.length);
+        // Respect Bash DECSET 2004: native paste must not bypass bracketed mode.
+        if (!disposed.get() && session.isRunning() && session.getEmulator() != null) {
+            session.getEmulator().paste(pasted);
+        }
     }
 
     @Override
