@@ -184,8 +184,12 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         // Unscoped legacy PID events must not change the active tab's status.
     }
 
-    override fun onCleared() {
+    /** The foreground service, not the Activity, owns the PTY lifetime. */
+    fun closeAllSessions() {
         tabs.toList().forEach { closeTab(it.id) }
+    }
+
+    override fun onCleared() {
         super.onCleared()
     }
 }
