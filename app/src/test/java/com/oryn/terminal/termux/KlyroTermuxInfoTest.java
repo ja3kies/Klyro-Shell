@@ -33,7 +33,7 @@ public class KlyroTermuxInfoTest {
             KlyroTermuxInfo.installHelper(prefix.toFile());
             Path info = bin.resolve("klyro-info");
             assertTrue(Files.isExecutable(info));
-            assertTrue(Files.readString(info).contains("KLYRO_INFO_BRIDGE_V1"));
+            assertTrue(new String(Files.readAllBytes(info), StandardCharsets.UTF_8).contains("KLYRO_INFO_BRIDGE_V1"));
             Path storage = bin.resolve("klyro-setup-storage");
             KlyroStorageCommandBridge.installHelper(prefix.toFile());
             Process infoSyntax = new ProcessBuilder("bash", "-n", info.toString()).start();
