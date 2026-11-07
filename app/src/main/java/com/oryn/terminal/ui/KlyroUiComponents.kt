@@ -1,11 +1,14 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
@@ -21,11 +25,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -169,6 +176,59 @@ internal fun KlyroLicenseDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismissRequest) { Text("Close") }
+        }
+    )
+}
+
+/** iOS-inspired restrained slider shared by font, hue and opacity settings. */
+@Composable
+internal fun KlyroThinSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    modifier: Modifier = Modifier,
+    steps: Int = 0,
+    showTrack: Boolean = true
+) {
+    val colors = LocalKlyroColors.current
+    Slider(
+        value = value.coerceIn(valueRange.start, valueRange.endInclusive),
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        steps = steps,
+        modifier = modifier,
+        colors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = colors.accent,
+            inactiveTrackColor = colors.key
+        ),
+        thumb = {
+            Box(
+                Modifier.size(KlyroUiMetrics.iosSliderThumb)
+                    .background(Color.White, CircleShape)
+                    .border(KlyroUiMetrics.iosSliderBorder,
+                        colors.muted.copy(alpha = .35f), CircleShape)
+            )
+        },
+        track = { state ->
+            if (showTrack) {
+                Box(
+                    Modifier.fillMaxWidth().height(KlyroUiMetrics.iosSliderTrack)
+                        .background(colors.key, CircleShape)
+                ) {
+                    val range = valueRange.endInclusive - valueRange.start
+                    val progress = if (range > 0f) {
+                        ((state.value - valueRange.start) / range).coerceIn(0f, 1f)
+                    } else 0f
+                    Box(
+                        Modifier.fillMaxWidth(progress)
+                            .height(KlyroUiMetrics.iosSliderTrack)
+                            .background(colors.accent, CircleShape)
+                    )
+                }
+            } else {
+                Spacer(Modifier.fillMaxWidth().height(KlyroUiMetrics.iosSliderTrack))
+            }
         }
     )
 }
