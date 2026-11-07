@@ -12,6 +12,11 @@ public final class TranscriptSearch {
     public static final int MAX_QUERY_CHARS = 512;
 
     public static List<Integer> findRows(TerminalBuffer screen, int columns, int rows, String query) {
+        return findRows(screen, columns, rows, query, false);
+    }
+
+    public static List<Integer> findRows(TerminalBuffer screen, int columns, int rows,
+            String query, boolean caseSensitive) {
         List<Integer> matches = new ArrayList<>();
         if (screen == null || columns <= 0 || rows <= 0 || query == null
                 || query.length() > MAX_QUERY_CHARS || query.trim().isEmpty()) return matches;
@@ -26,7 +31,7 @@ public final class TranscriptSearch {
             String text = line.toString();
             int physicalRow = 0;
             for (int offset = 0; offset <= text.length() - query.length(); offset++) {
-                if (!text.regionMatches(true, offset, query, 0, query.length())) continue;
+                if (!text.regionMatches(!caseSensitive, offset, query, 0, query.length())) continue;
                 while (physicalRow + 1 < starts.size() && starts.get(physicalRow + 1) <= offset) physicalRow++;
                 matches.add(firstRow + physicalRow);
             }
