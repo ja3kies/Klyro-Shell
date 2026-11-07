@@ -17,7 +17,7 @@ public class KlyroHealthReportTest {
         String report = KlyroHealthReport.format("0.4.5-dev", 37, true, false,
                 false, false, -1, -3, -4, "error at /data/data/com.klyro.shell/files/secrets");
         assertFalse(report.contains("/data/data/"));
-        assertTrue(report.contains("[private-path]"));
+        assertTrue(report.contains("details hidden"));
         assertTrue(report.contains("Open PTY sessions: 0"));
         assertTrue(report.contains("Private storage available: 0 MiB"));
     }
