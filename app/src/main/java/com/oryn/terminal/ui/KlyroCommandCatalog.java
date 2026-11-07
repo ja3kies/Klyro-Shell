@@ -1,5 +1,8 @@
 package com.oryn.terminal.ui;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -91,6 +94,21 @@ public final class KlyroCommandCatalog {
             }
         }
         return matching;
+    }
+
+    /**
+     * Check for installed command files in Klyro's own prefix. A present file
+     * does not prove execution succeeds, but absent files are not advertised
+     * as installed. Bash built-ins are supplied by the live Bash session.
+     */
+    public static boolean isInstalled(Entry entry, File privatePrefix) {
+        if (entry == null || !entry.insertable) return false;
+        if ("Bash built-ins".equals(entry.category)) return true;
+        if (privatePrefix == null) return false;
+        String command = entry.insertion.trim().split(" ", 2)[0];
+        if (!command.matches("[A-Za-z0-9_-]+")) return false;
+        File binary = new File(new File(privatePrefix, "bin"), command);
+        return Files.exists(binary.toPath(), LinkOption.NOFOLLOW_LINKS);
     }
 
     public static String safeInsertion(Entry entry) {
