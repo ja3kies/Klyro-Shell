@@ -376,41 +376,14 @@ internal fun KlyroSettingsSheet(
                                             fontSize = fontSizeSp.sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis)
-                                        Slider(
-                                    value = fontSizeSp.coerceIn(9f, 24f),
-                                    onValueChange = { onFontChange(it - fontSizeSp) },
-                                    valueRange = 9f..24f,
-                                    steps = 29,
-                                    modifier = Modifier.fillMaxWidth().semantics {
-                                        contentDescription = "Terminal font size"
-                                    },
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = colors.accent,
-                                        inactiveTrackColor = colors.key
-                                    ),
-                                    thumb = {
-                                        Box(
-                                            Modifier.size(KlyroUiMetrics.iosSliderThumb)
-                                                .background(Color.White,
-                                                    androidx.compose.foundation.shape.CircleShape)
-                                                .border(KlyroUiMetrics.iosSliderBorder,
-                                                    colors.muted.copy(alpha = .35f),
-                                                    androidx.compose.foundation.shape.CircleShape)
-                                        )
-                                    },
-                                    track = { state ->
-                                        Box(Modifier.fillMaxWidth()
-                                            .height(KlyroUiMetrics.iosSliderTrack)
-                                            .background(colors.key,
-                                                androidx.compose.foundation.shape.CircleShape)) {
-                                            Box(Modifier.fillMaxWidth(
-                                                ((state.value - 9f) / 15f).coerceIn(0f, 1f))
-                                                .height(KlyroUiMetrics.iosSliderTrack)
-                                                .background(colors.accent,
-                                                    androidx.compose.foundation.shape.CircleShape))
-                                        }
-                                    }
+                                        KlyroThinSlider(
+                                            value = fontSizeSp.coerceIn(9f, 24f),
+                                            onValueChange = { onFontChange(it - fontSizeSp) },
+                                            valueRange = 9f..24f,
+                                            steps = 29,
+                                            modifier = Modifier.fillMaxWidth().semantics {
+                                                contentDescription = "Terminal font size"
+                                            }
                                         )
                                     }
                                 }
