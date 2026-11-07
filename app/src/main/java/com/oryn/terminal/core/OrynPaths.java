@@ -7,64 +7,69 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 
-/**
- * Canonical private-storage layout for Oryn Terminal.
- *
- * Nothing in this class resolves to Termux's application data. Termux's
- * compiled-in prefix is only a virtual path used later inside proot.
- */
+/** Canonical private-storage layout for Oryn Terminal. */
 public final class OrynPaths {
-    public static final String TERMUX_VIRTUAL_PREFIX =
-            "/data/data/com.termux/files/usr";
-    public static final String TERMUX_VIRTUAL_HOME =
-            "/data/data/com.termux/files/home";
+    public static final String TERMUX_VIRTUAL_PREFIX = "/data/data/com.termux/files/usr";
+    public static final String TERMUX_VIRTUAL_HOME = "/data/data/com.termux/files/home";
 
     private final File filesDir;
+    private final File runtimeLibDir;
+    private final boolean runtimeLibDirPrivate;
     private final File root;
     private final File prefix;
     private final File home;
     private final File tmp;
     private final File proot;
     private final File prootLibDir;
+    private final File prootDependencyDir;
     private final File prootLoader;
     private final File stagingPrefix;
     private final File previousPrefix;
 
+    /** Test-friendly constructor. Production callers must pass nativeLibraryDir. */
     public OrynPaths(File appFilesDir) throws IOException {
+        this(appFilesDir, new File(appFilesDir, "native-libs"));
+    }
+
+    public OrynPaths(File appFilesDir, File nativeLibraryDir) throws IOException {
         if (appFilesDir == null) throw new IllegalArgumentException("appFilesDir is required");
+        if (nativeLibraryDir == null) throw new IllegalArgumentException("nativeLibraryDir is required");
         this.filesDir = appFilesDir.getCanonicalFile();
+        this.runtimeLibDir = nativeLibraryDir.getCanonicalFile();
+        this.runtimeLibDirPrivate = runtimeLibDir.toPath().startsWith(filesDir.toPath());
         this.root = child(filesDir, "termux");
         this.prefix = child(root, "usr");
         this.home = child(root, "home");
         this.tmp = child(root, "tmp");
-        this.proot = child(filesDir, "bin/proot");
-        this.prootLibDir = child(filesDir, "bin/lib");
-        this.prootLoader = child(prefix, "libexec/proot/loader");
+        this.proot = child(runtimeLibDir, "libproot.so");
+        this.prootLibDir = runtimeLibDir;
+        this.prootDependencyDir = child(filesDir, "proot-libs");
+        this.prootLoader = child(runtimeLibDir, "libproot-loader.so");
         this.stagingPrefix = child(root, "usr.staging");
         this.previousPrefix = child(root, "usr.previous");
     }
 
     public File getFilesDir() { return filesDir; }
+    public File getRuntimeLibDir() { return runtimeLibDir; }
     public File getRoot() { return root; }
     public File getPrefix() { return prefix; }
     public File getHome() { return home; }
     public File getTmp() { return tmp; }
     public File getProot() { return proot; }
     public File getProotLibDir() { return prootLibDir; }
+    public File getProotDependencyDir() { return prootDependencyDir; }
     public File getProotLoader() { return prootLoader; }
     public File getStagingPrefix() { return stagingPrefix; }
     public File getPreviousPrefix() { return previousPrefix; }
 
-    /** Creates only Oryn-owned directories, including virtual proot bind targets. */
+    /** Creates writable rootfs directories only; APK-native runtime files are read-only. */
     public void prepareLayout() throws IOException {
         mkdir(root);
         mkdir(home);
         mkdir(tmp);
         mkdir(prefix.getParentFile());
-        mkdir(proot.getParentFile());
-        mkdir(prootLibDir);
-
-        // proot resolves bind destinations inside Oryn's private rootfs.
+        if (runtimeLibDirPrivate) mkdir(runtimeLibDir);
+        mkdir(prootDependencyDir);
         mkdir(child(root, "data/data/com.termux/files/usr"));
         mkdir(child(root, "data/data/com.termux/files/home"));
         mkdir(child(root, "dev"));
@@ -78,6 +83,24 @@ public final class OrynPaths {
         mkdir(child(root, "storage"));
     }
 
+    /**
+     * Creates an empty file bind target for an absolute virtual path (for example
+     * "/linkerconfig/ld.config.txt") strictly inside Oryn's private rootfs.
+     * Called only when the matching host file exists, so no placeholder can ever
+     * be read in place of a missing host file.
+     */
+    public void ensureFileBindTarget(String virtualPath) throws IOException {
+        if (virtualPath == null || !virtualPath.startsWith("/") || virtualPath.contains("..")) {
+            throw new IOException("Unsafe bind target: " + virtualPath);
+        }
+        File target = child(root, virtualPath.substring(1));
+        File parent = target.getParentFile();
+        mkdir(parent);
+        if (!target.exists() && !target.createNewFile()) {
+            throw new IOException("Cannot create bind target: " + virtualPath);
+        }
+    }
+
     public boolean isBootstrapInstalled() {
         return new File(prefix, "bin/bash").canExecute()
                 && new File(prefix, "bin/pkg").exists()
@@ -85,13 +108,11 @@ public final class OrynPaths {
                 && new File(prefix, ".oryn-bootstrap-version").isFile();
     }
 
-    /** True only when every Oryn-owned proot runtime component is present. */
+    /** True only when the APK-native PRoot runtime and its loader/dependencies exist. */
     public boolean isProotInstalled() {
-        return proot.isFile()
-                && proot.canExecute()
-                && prootLoader.isFile()
-                && prootLoader.canExecute()
-                && hasLibrary("libtalloc.so")
+        return proot.isFile() && proot.canExecute()
+                && prootLoader.isFile() && prootLoader.canExecute()
+                && new File(prootDependencyDir, "libtalloc.so.2").isFile()
                 && hasLibrary("libandroid-shmem.so");
     }
 
@@ -104,11 +125,7 @@ public final class OrynPaths {
         return false;
     }
 
-
-    /**
-     * Deletes one Oryn-owned path without following symbolic links.
-     * The target's parent must resolve inside this app's private files directory.
-     */
+    /** Deletes an Oryn-owned path without following symbolic links. */
     public void deletePrivateTree(File target) throws IOException {
         if (target == null) throw new IllegalArgumentException("target is required");
         Path rootPath = filesDir.toPath();

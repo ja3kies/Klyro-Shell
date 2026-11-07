@@ -3,27 +3,27 @@ package com.oryn.terminal.termux;
 import android.content.Context;
 
 import com.oryn.terminal.core.OrynPaths;
+import com.oryn.terminal.core.KlyroDiagnostics;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Installs the ARM64 proot runtime packaged by CI from signed official Termux
- * APT packages. Every copied asset is checked against the generated manifest.
- */
+/** Verifies PRoot binaries embedded in the APK native-library directory. */
 public final class ProotRuntimeInstaller {
     public interface Listener {
         void onProgress(String stage, int percent);
@@ -36,8 +36,11 @@ public final class ProotRuntimeInstaller {
 
     private final Context context;
     private final OrynPaths paths;
-    private final AtomicBoolean installing = new AtomicBoolean(false);
+    // Serialise verification/copy work across Activity recreations.
+    private static final AtomicBoolean installing = new AtomicBoolean(false);
     private volatile String lastErrorDetails;
+
+    public static boolean isBusy() { return installing.get(); }
 
     public String getLastErrorDetails() {
         return lastErrorDetails;
@@ -45,150 +48,133 @@ public final class ProotRuntimeInstaller {
 
     public ProotRuntimeInstaller(Context context) throws IOException {
         this.context = context.getApplicationContext();
-        this.paths = new OrynPaths(this.context.getFilesDir());
+        this.paths = new OrynPaths(
+                this.context.getFilesDir(),
+                new File(this.context.getApplicationInfo().nativeLibraryDir)
+        );
     }
 
     public void install(Listener listener) {
         if (!installing.compareAndSet(false, true)) {
-            complete(listener, false, "Proot runtime installation is already running.");
+            complete(listener, false, "Runtime verification is already running.");
             return;
         }
         lastErrorDetails = null;
         Thread worker = new Thread(() -> {
             try {
-                installInternal(listener);
+                verifyPackagedRuntime(listener);
+                complete(listener, true,
+                        "Verified ARM64 PRoot runtime from Klyro's APK-native storage.");
             } catch (Exception error) {
-                lastErrorDetails = diagnosticDetails(error);
+                lastErrorDetails = KlyroDiagnostics.summarize(error);
                 complete(listener, false,
-                        "Oryn couldn't finish installing its private runtime. "
-                        + "Your Termux installation was not modified. You can retry.");
+                        "Klyro couldn't verify its packaged ARM64 runtime. Reinstall the current APK and retry.");
             } finally {
                 installing.set(false);
             }
-        }, "oryn-proot-installer");
+        }, "oryn-proot-verifier");
         worker.start();
     }
 
-    private void installInternal(Listener listener) throws Exception {
+    private void verifyPackagedRuntime(Listener listener) throws Exception {
         if (!"aarch64".equals(TermuxBootstrapInstaller.archName())) {
-            throw new IOException("The packaged proot runtime supports ARM64 only.");
+            throw new IOException("The packaged PRoot runtime supports ARM64 only.");
         }
         if (!paths.isBootstrapInstalled()) {
-            throw new IOException("Install Oryn's private bootstrap before the proot runtime.");
+            throw new IOException("Install Klyro's private bootstrap before verifying PRoot.");
         }
 
         paths.prepareLayout();
-        File binDir = paths.getProot().getParentFile();
-        File stagingBin = new File(paths.getFilesDir(), "bin.staging");
-        File previousBin = new File(paths.getFilesDir(), "bin.previous");
-        File stagingLoader = new File(paths.getFilesDir(), "proot-loader.staging");
-        File previousLoader = new File(paths.getFilesDir(), "proot-loader.previous");
-        File loader = paths.getProotLoader();
-
-        paths.deletePrivateTree(stagingBin);
-        if (!stagingBin.mkdirs() && !stagingBin.isDirectory()) {
-            throw new IOException("Cannot create proot staging directory.");
-        }
-        File loaderParent = loader.getParentFile();
-        if (!loaderParent.mkdirs() && !loaderParent.isDirectory()) {
-            throw new IOException("Cannot create the private proot loader directory.");
-        }
-
         List<ManifestEntry> entries = readManifest();
         if (entries.isEmpty()) throw new IOException("Runtime manifest contains no files.");
 
         int index = 0;
         for (ManifestEntry entry : entries) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new IOException("PRoot verification was interrupted.");
+            }
             index++;
-            File destination;
-            if ("loader".equals(entry.path)) {
-                destination = stagingLoader;
-            } else if (entry.path.startsWith("bin/")) {
-                destination = new File(stagingBin, entry.path.substring("bin/".length()));
-            } else if (entry.path.startsWith("lib/")) {
-                destination = new File(stagingBin, entry.path);
-            } else {
-                throw new IOException("Unsupported runtime asset path: " + entry.path);
-            }
-            ensureInside(stagingBin, destination, "loader".equals(entry.path));
-            File parent = destination.getParentFile();
-            if (!parent.mkdirs() && !parent.isDirectory()) {
-                throw new IOException("Cannot create runtime directory: " + parent);
-            }
-            copyAndVerify(entry, destination);
-            if ("bin/proot".equals(entry.path) || "loader".equals(entry.path)) {
-                if (!destination.setExecutable(true, false) && !destination.canExecute()) {
-                    throw new IOException("Cannot mark runtime executable: " + entry.path);
-                }
+            File packagedFile = resolvePackagedFile(entry.path);
+            verifyFile(entry, packagedFile);
+            if (("bin/proot".equals(entry.path) || "loader".equals(entry.path))
+                    && !packagedFile.canExecute()) {
+                throw new IOException("APK-native runtime file is not executable: " + entry.path);
             }
             progress(listener, "Verifying " + entry.path,
-                    10 + (index * 70 / entries.size()));
+                    10 + (index * 80 / entries.size()));
         }
 
-        File stagedProot = new File(stagingBin, "proot");
-        File stagedLibs = new File(stagingBin, "lib");
-        if (!stagedProot.isFile() || !stagedProot.canExecute()
-                || !stagedLibs.isDirectory() || !stagingLoader.isFile()
-                || !stagingLoader.canExecute()) {
-            throw new IOException("Runtime is incomplete after asset verification.");
-        }
-        if (!containsLibrary(stagedLibs, "libtalloc.so")
-                || !containsLibrary(stagedLibs, "libandroid-shmem.so")) {
-            throw new IOException("Proot shared-library dependencies are missing.");
-        }
+        installVersionedTalloc(entries);
 
-        progress(listener, "Activating verified private runtime", 88);
-        paths.deletePrivateTree(previousBin);
-        if (previousLoader.exists() && !previousLoader.delete()) {
-            throw new IOException("Cannot clear previous loader backup.");
-        }
-
-        boolean backedUpBin = false;
-        boolean backedUpLoader = false;
-        boolean activatedBin = false;
-        boolean activatedLoader = false;
-        try {
-            if (binDir.exists()) {
-                move(binDir, previousBin);
-                backedUpBin = true;
-            }
-            if (loader.exists()) {
-                move(loader, previousLoader);
-                backedUpLoader = true;
-            }
-            move(stagingBin, binDir);
-            activatedBin = true;
-            move(stagingLoader, loader);
-            activatedLoader = true;
-        } catch (Exception activationError) {
-            if (activatedBin) paths.deletePrivateTree(binDir);
-            if (activatedLoader && loader.exists() && !loader.delete()) {
-                throw new IOException("Runtime activation failed and loader cleanup failed.",
-                        activationError);
-            }
-            if (backedUpBin && previousBin.exists()) move(previousBin, binDir);
-            if (backedUpLoader && previousLoader.exists()) move(previousLoader, loader);
-            throw activationError;
-        }
-
-        paths.deletePrivateTree(previousBin);
-        if (previousLoader.exists() && !previousLoader.delete()) {
-            throw new IOException("Runtime installed, but old loader backup could not be removed.");
-        }
         if (!paths.isProotInstalled()) {
-            throw new IOException("Installed runtime failed its final readiness check.");
+            throw new IOException("The packaged PRoot executable, loader or shared libraries are missing.");
         }
-        progress(listener, "Oryn's private proot runtime is installed", 100);
-        complete(listener, true, "Verified ARM64 proot runtime installed in Oryn's private storage.");
+        progress(listener, "Private ARM64 runtime verified", 100);
+    }
+
+    /**
+     * Android's jniLibs packaging only extracts files ending in ".so". Termux
+     * PRoot links against the SONAME libtalloc.so.2, so stage the verified
+     * libtalloc.so payload under that exact name in Oryn-owned private storage.
+     */
+    private void installVersionedTalloc(List<ManifestEntry> entries) throws Exception {
+        ManifestEntry talloc = null;
+        for (ManifestEntry entry : entries) {
+            if ("lib/libtalloc.so".equals(entry.path)) {
+                talloc = entry;
+                break;
+            }
+        }
+        if (talloc == null) {
+            throw new IOException("The APK-native libtalloc.so dependency is missing from the manifest.");
+        }
+
+        File source = resolvePackagedFile(talloc.path);
+        File destination = new File(paths.getProotDependencyDir(), "libtalloc.so.2");
+        File staging = File.createTempFile("libtalloc-", ".part", paths.getProotDependencyDir());
+        try {
+            Files.copy(source.toPath(), staging.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            verifyFile(new ManifestEntry("private/libtalloc.so.2", talloc.sha256), staging);
+            try {
+                Files.move(staging.toPath(), destination.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException unsupported) {
+                Files.move(staging.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            if (staging.exists()) staging.delete();
+        }
+    }
+
+    private File resolvePackagedFile(String manifestPath) throws IOException {
+        File result;
+        if ("bin/proot".equals(manifestPath)) {
+            result = paths.getProot();
+        } else if ("loader".equals(manifestPath)) {
+            result = paths.getProotLoader();
+        } else if (manifestPath.startsWith("lib/")) {
+            result = new File(paths.getProotLibDir(), manifestPath.substring("lib/".length()));
+        } else {
+            throw new IOException("Unsupported runtime manifest path: " + manifestPath);
+        }
+        String root = paths.getRuntimeLibDir().getCanonicalPath() + File.separator;
+        if (!result.getCanonicalPath().startsWith(root)) {
+            throw new IOException("Runtime manifest path escaped nativeLibraryDir.");
+        }
+        return result;
     }
 
     private List<ManifestEntry> readManifest() throws IOException {
         List<ManifestEntry> entries = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
         try (InputStream in = context.getAssets().open(MANIFEST);
              BufferedReader reader = new BufferedReader(
                      new InputStreamReader(in, StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
+                if (line.length() > 512) {
+                    throw new IOException("Runtime manifest line is too long.");
+                }
                 line = line.trim();
                 if (line.isEmpty() || line.startsWith("#")) continue;
                 String[] parts = line.split("\\s+", 2);
@@ -197,7 +183,10 @@ public final class ProotRuntimeInstaller {
                 }
                 String path = parts[1].trim();
                 if (!isAllowedAssetPath(path)) {
-                    throw new IOException("Rejected runtime asset path: " + path);
+                    throw new IOException("Rejected runtime manifest path: " + path);
+                }
+                if (!seen.add(path)) {
+                    throw new IOException("Duplicate runtime manifest path: " + path);
                 }
                 entries.add(new ManifestEntry(path, parts[0].toLowerCase(Locale.US)));
                 if (entries.size() > MAX_FILES) {
@@ -208,73 +197,38 @@ public final class ProotRuntimeInstaller {
         return entries;
     }
 
-    private static boolean isAllowedAssetPath(String path) {
+    static boolean isAllowedAssetPath(String path) {
         if (path.startsWith("/") || path.contains("..") || path.contains("\\")
                 || path.contains(":")) return false;
         if ("loader".equals(path) || "bin/proot".equals(path)) return true;
         return path.matches("lib/[A-Za-z0-9._+\\-]+");
     }
 
-    private void copyAndVerify(ManifestEntry entry, File destination) throws Exception {
+    private static void verifyFile(ManifestEntry entry, File file) throws Exception {
+        if (!file.isFile() || file.length() <= 0 || file.length() > MAX_FILE_BYTES) {
+            throw new IOException("Missing or invalid APK-native runtime file: " + entry.path);
+        }
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        long total = 0;
-        try (InputStream in = context.getAssets().open("proot/" + entry.path);
-             FileOutputStream out = new FileOutputStream(destination)) {
+        try (InputStream in = new FileInputStream(file)) {
             byte[] buffer = new byte[32768];
             int count;
             while ((count = in.read(buffer)) != -1) {
-                total += count;
-                if (total > MAX_FILE_BYTES) {
-                    throw new IOException("Runtime asset exceeds size limit: " + entry.path);
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new IOException("PRoot hash verification interrupted.");
                 }
                 digest.update(buffer, 0, count);
-                out.write(buffer, 0, count);
             }
-            out.getFD().sync();
         }
         String actual = toHex(digest.digest());
         if (!entry.sha256.equals(actual)) {
-            destination.delete();
-            throw new IOException("SHA-256 mismatch for " + entry.path);
+            throw new IOException("SHA-256 mismatch for APK-native runtime file: " + entry.path);
         }
-    }
-
-    private static void ensureInside(File root, File target, boolean loader) throws IOException {
-        File canonicalRoot = root.getCanonicalFile();
-        File canonicalTarget = target.getCanonicalFile();
-        if (loader) {
-            // The loader is installed separately under Oryn's private Termux prefix.
-            if (!canonicalTarget.getPath().startsWith(
-                    canonicalRoot.getParentFile().getCanonicalPath() + File.separator)) {
-                throw new IOException("Loader target escaped Oryn private storage.");
-            }
-        } else if (!canonicalTarget.getPath().startsWith(
-                canonicalRoot.getPath() + File.separator)) {
-            throw new IOException("Runtime target escaped staging directory.");
-        }
-    }
-
-    private static boolean containsLibrary(File directory, String prefix) {
-        File[] files = directory.listFiles();
-        if (files == null) return false;
-        for (File file : files) {
-            if (file.isFile() && file.getName().startsWith(prefix)) return true;
-        }
-        return false;
     }
 
     private static String toHex(byte[] bytes) {
         StringBuilder value = new StringBuilder();
         for (byte item : bytes) value.append(String.format(Locale.US, "%02x", item & 0xff));
         return value.toString();
-    }
-
-    private static void move(File from, File to) throws IOException {
-        try {
-            Files.move(from.toPath(), to.toPath(), StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException atomicFailure) {
-            Files.move(from.toPath(), to.toPath());
-        }
     }
 
     private static String diagnosticDetails(Exception error) {

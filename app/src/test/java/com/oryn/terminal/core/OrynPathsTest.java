@@ -66,6 +66,7 @@ public class OrynPathsTest {
         assertTrue(paths.getTmp().getCanonicalPath().startsWith(base));
         assertTrue(paths.getProot().getParentFile().getCanonicalPath().startsWith(base));
         assertTrue(paths.getProotLibDir().getCanonicalPath().startsWith(base));
+        assertTrue(paths.getProotDependencyDir().getCanonicalPath().startsWith(base));
         assertTrue(paths.getProotLoader().getCanonicalPath().startsWith(base));
         assertFalse(paths.getRoot().getAbsolutePath().contains("/data/data/com.termux/"));
 
@@ -85,10 +86,10 @@ public class OrynPathsTest {
         assertTrue(paths.getProot().createNewFile());
         paths.getProot().setExecutable(true, false);
         File loader = paths.getProotLoader();
-        assertTrue(loader.getParentFile().mkdirs());
+        assertTrue(loader.getParentFile().isDirectory() || loader.getParentFile().mkdirs());
         assertTrue(loader.createNewFile());
         loader.setExecutable(true, false);
-        assertTrue(new File(paths.getProotLibDir(), "libtalloc.so.2").createNewFile());
+        assertTrue(new File(paths.getProotDependencyDir(), "libtalloc.so.2").createNewFile());
         assertFalse(paths.isProotInstalled());
 
         assertTrue(new File(paths.getProotLibDir(), "libandroid-shmem.so").createNewFile());

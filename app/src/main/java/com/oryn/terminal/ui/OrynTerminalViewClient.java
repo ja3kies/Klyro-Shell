@@ -24,6 +24,10 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
     }
 
     public void attachView(View view) { terminalView = view; }
+    public void invalidateTerminal() {
+        View view = terminalView;
+        if (view != null) view.postInvalidate();
+    }
 
     public void setControlDown(boolean value) { controlDown = value; }
     public void setAltDown(boolean value) { altDown = value; }
@@ -32,8 +36,37 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
 
     public boolean isControlDown() { return controlDown; }
     public boolean isAltDown() { return altDown; }
+    public boolean isShiftDown() { return shiftDown; }
+    public boolean isFnDown() { return fnDown; }
 
-    @Override public float onScale(float scale) { return 1.0f; }
+    private int textSizePx = 0;
+
+    /** Anchor pinch zoom to the currently configured font size. */
+    public void setBaseTextSizePx(int pixels) {
+        if (pixels > 0) textSizePx = pixels;
+    }
+
+    @Override
+    public float onScale(float scale) {
+        View view = terminalView;
+        if (view instanceof com.termux.view.TerminalView) {
+            if (textSizePx == 0) {
+                textSizePx = Math.max(12, Math.round(14 * context.getResources().getDisplayMetrics().scaledDensity));
+            }
+            float delta = scale;
+            if (Float.isFinite(delta) && delta > 0) {
+                int next = Math.round(textSizePx * delta);
+                int minimum = Math.round(9 * context.getResources().getDisplayMetrics().scaledDensity);
+                int maximum = Math.round(24 * context.getResources().getDisplayMetrics().scaledDensity);
+                next = Math.max(minimum, Math.min(maximum, next));
+                if (next != textSizePx) {
+                    textSizePx = next;
+                    ((com.termux.view.TerminalView) view).setTextSize(next);
+                }
+            }
+        }
+        return 1.0f;
+    }
 
     @Override
     public void onSingleTapUp(MotionEvent event) {

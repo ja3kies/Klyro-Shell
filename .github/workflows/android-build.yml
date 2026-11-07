@@ -2,9 +2,9 @@ name: Android build
 
 on:
   push:
-    branches: [main]
+    branches: [main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107]
   pull_request:
-    branches: [main]
+    branches: [main, feat/klyro-0110]
   workflow_dispatch:
 
 concurrency:
@@ -30,12 +30,12 @@ jobs:
       - name: Set up Android SDK and NDK
         uses: android-actions/setup-android@v3
         with:
-          packages: "platforms;android-35 build-tools;35.0.0 ndk;27.0.12077973 cmake;3.22.1"
+          packages: "platforms;android-36 build-tools;36.0.0 ndk;27.0.12077973 cmake;3.22.1"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.10.2"
+          gradle-version: "8.11.1"
 
       # Fetch ARM64 packages from the official Termux repository. APT verifies
       # InRelease with the Termux keyring before accepting package SHA-256 data.
@@ -78,7 +78,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/termux-runtime/debs"
           cd "$RUNNER_TEMP/termux-runtime/debs"
           # Keep the runtime reproducible; update these pins deliberately with the Termux sources.
-          apt-get download proot:aarch64=5.1.107.101 libtalloc:aarch64=2.5.0 libandroid-shmem:aarch64=0.7
+          apt-get download proot:aarch64=5.1.107.102 libtalloc:aarch64=2.5.0 libandroid-shmem:aarch64=0.7
 
           mkdir -p extracted
           for deb in ./*.deb; do
@@ -91,15 +91,19 @@ jobs:
           test -n "$PROOT_ROOT"
           test -n "$LOADER_ROOT"
 
+          NATIVE_ROOT="$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a"
           ASSET_ROOT="$GITHUB_WORKSPACE/app/src/main/assets/proot"
-          mkdir -p "$ASSET_ROOT/bin" "$ASSET_ROOT/lib" "$ASSET_ROOT/licenses"
-          install -m 0755 "$PROOT_ROOT" "$ASSET_ROOT/bin/proot"
-          install -m 0755 "$LOADER_ROOT" "$ASSET_ROOT/loader"
+          rm -rf "$NATIVE_ROOT"
+          mkdir -p "$NATIVE_ROOT" "$ASSET_ROOT/licenses"
+          install -m 0755 "$PROOT_ROOT" "$NATIVE_ROOT/libproot.so"
+          install -m 0755 "$LOADER_ROOT" "$NATIVE_ROOT/libproot-loader.so"
 
-          while IFS= read -r -d '' library; do
-            install -m 0644 "$library" "$ASSET_ROOT/lib/$(basename "$library")"
-          done < <(find -L extracted -type f \
-            \( -name 'libtalloc.so*' -o -name 'libandroid-shmem.so*' \) -print0)
+          TALLOC_LIBRARY="$(find -L extracted -type f -path "*/$PREFIX_SUFFIX/lib/libtalloc.so" -print -quit)"
+          SHMEM_LIBRARY="$(find -L extracted -type f -path "*/$PREFIX_SUFFIX/lib/libandroid-shmem.so" -print -quit)"
+          test -n "$TALLOC_LIBRARY"
+          test -n "$SHMEM_LIBRARY"
+          install -m 0644 "$TALLOC_LIBRARY" "$NATIVE_ROOT/libtalloc.so"
+          install -m 0644 "$SHMEM_LIBRARY" "$NATIVE_ROOT/libandroid-shmem.so"
 
           for package in proot libtalloc libandroid-shmem; do
             package_root="$(find extracted -type d -path "*/$PREFIX_SUFFIX/share/doc/$package" -print -quit)"
@@ -108,10 +112,11 @@ jobs:
             fi
           done
 
-          test -s "$ASSET_ROOT/bin/proot"
-          test -s "$ASSET_ROOT/loader"
-          compgen -G "$ASSET_ROOT/lib/libtalloc.so*" >/dev/null
-          compgen -G "$ASSET_ROOT/lib/libandroid-shmem.so*" >/dev/null
+          test -s "$NATIVE_ROOT/libproot.so"
+          test -s "$NATIVE_ROOT/libproot-loader.so"
+          test -s "$NATIVE_ROOT/libtalloc.so"
+          test -s "$NATIVE_ROOT/libandroid-shmem.so"
+          readelf -d "$NATIVE_ROOT/libtalloc.so" | grep -q 'SONAME.*libtalloc.so.2'
 
           {
             echo "# Verified package versions from the signed Termux stable repository"
@@ -119,27 +124,151 @@ jobs:
               deb="$(find . -maxdepth 1 -name "${package}_*_aarch64.deb" -print -quit)"
               printf '# %s=%s\n' "$package" "$(dpkg-deb -f "$deb" Version)"
             done
-            cd "$ASSET_ROOT"
-            find bin lib -type f -print0 | sort -z | xargs -0 sha256sum
-            sha256sum loader
+            sha256sum "$NATIVE_ROOT/libproot.so" | awk '{print $1 " bin/proot"}'
+            sha256sum "$NATIVE_ROOT/libproot-loader.so" | awk '{print $1 " loader"}'
+            sha256sum "$NATIVE_ROOT/libtalloc.so" | awk '{print $1 " lib/libtalloc.so"}'
+            sha256sum "$NATIVE_ROOT/libandroid-shmem.so" | awk '{print $1 " lib/libandroid-shmem.so"}'
           } > "$ASSET_ROOT/runtime-manifest.txt"
 
-          readelf -h "$ASSET_ROOT/bin/proot" | grep -q 'AArch64'
-          readelf -d "$ASSET_ROOT/bin/proot" > "$RUNNER_TEMP/proot-dynamic.txt"
+          readelf -h "$NATIVE_ROOT/libproot.so" | grep -q 'AArch64'
+          readelf -h "$NATIVE_ROOT/libproot-loader.so" | grep -q 'AArch64'
+          readelf -d "$NATIVE_ROOT/libproot.so" > "$RUNNER_TEMP/proot-dynamic.txt"
           cat "$RUNNER_TEMP/proot-dynamic.txt"
-          echo "Verified proot runtime assets:"
+          echo "Verified APK-native proot runtime files:"
           cat "$ASSET_ROOT/runtime-manifest.txt"
 
-      - name: Run JVM unit tests
-        run: gradle :app:testDebugUnitTest
+      # A pinned and verified open-font licence asset; no remote typography
+      # package or UI code is imported from DSH Go.
+      - name: Prepare verified JetBrains Mono terminal font
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="20447ce63b9ce38ab1757d14137467f7d268224a"
+          FONT_DIR="app/src/main/assets/fonts"
+          mkdir -p "$FONT_DIR"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/ccch1mneyyy/dsh-Go/$SOURCE_COMMIT/app/assets/fonts/JetBrainsMono-Regular.ttf" \
+            --output "$FONT_DIR/JetBrainsMono-Regular.ttf"
+          test "$(git hash-object "$FONT_DIR/JetBrainsMono-Regular.ttf")" = \
+            "dff66cc50702c75abd025dcf49f62a4dcc2d72de"
+          test "$(git hash-object "$FONT_DIR/OFL.txt")" = \
+            "8bee4148c1d54dbf5dae6d6c117fc80414266abb"
+          test "$(wc -c < "$FONT_DIR/JetBrainsMono-Regular.ttf")" -eq 273900
+          echo "PASS: verified JetBrains Mono and OFL licence"
 
-      - name: Build ARM64 debug APK
-        run: gradle :app:assembleDebug
+      - name: Run JVM and native alignment auditor unit tests
+        run: |
+          bash -n scripts/klyro-operational-gate.sh
+          python3 -m unittest discover -s tools -p "test_*.py"
+          gradle :app:testDebugUnitTest :terminal-emulator:testDebugUnitTest
 
-      - name: Upload debug APK
+      - name: Android lint and UI accessibility checks
+        run: gradle :app:lintDebug
+
+      - name: Upload Android lint report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oryn-terminal-debug
+          name: android-ui-lint
+          path: app/build/reports/lint-results-debug.html
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Build ARM64 debug APK and instrumented test APK
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease
+
+      - name: Verify packaged APK metadata and native runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          PACKAGE_INFO="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
+          printf '%s\n' "$PACKAGE_INFO" | grep -E "^package:|^sdkVersion:|^targetSdkVersion:"
+          grep -Fq "name='com.klyro.shell'" <<< "$PACKAGE_INFO"
+          grep -Fq "targetSdkVersion:'36'" <<< "$PACKAGE_INFO"
+          APK_ENTRIES="$(unzip -Z1 "$APK")"
+          for entry in \
+            lib/arm64-v8a/libproot.so \
+            lib/arm64-v8a/libproot-loader.so \
+            lib/arm64-v8a/libtalloc.so \
+            lib/arm64-v8a/libandroid-shmem.so \
+            assets/proot/runtime-manifest.txt \
+            assets/fonts/JetBrainsMono-Regular.ttf \
+            assets/fonts/OFL.txt; do
+            grep -Fxq "$entry" <<< "$APK_ENTRIES" || {
+              echo "Required runtime file missing from APK: $entry" >&2
+              exit 1
+            }
+          done
+          test -s app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+
+      - name: Audit 16 KiB native page alignment
+        run: |
+          python3 tools/audit_apk_16k.py \
+            app/build/outputs/apk/debug/app-debug.apk \
+            --report "$RUNNER_TEMP/native-16kb.md" --strict
+
+      - name: Upload native page-size audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-16kb-audit
+          path: ${{ runner.temp }}/native-16kb.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Detect optional signing credentials
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.KLYRO_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.KLYRO_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.KLYRO_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KLYRO_KEY_ALIAS }}
+        run: |
+          if [[ -n "$KEYSTORE_B64" && -n "$STORE_PASS" && -n "$KEY_PASS" && -n "$KEY_ALIAS" ]]; then
+            echo "KLYRO_SIGNING_AVAILABLE=true" >> "$GITHUB_ENV"
+          else
+            echo "KLYRO_SIGNING_AVAILABLE=false" >> "$GITHUB_ENV"
+            echo "Signing credentials unavailable; standard Android debug-key APK retained for CI."
+          fi
+
+      - name: Verify standard debug APK signature
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload debug-key APK for CI validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: klyro-shell-debug-key
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Sign APK with Klyro certificate
+        if: ${{ env.KLYRO_SIGNING_AVAILABLE == 'true' }}
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.KLYRO_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.KLYRO_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.KLYRO_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KLYRO_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          for value in KEYSTORE_B64 STORE_PASS KEY_PASS KEY_ALIAS; do
+            test -n "${!value}" || { echo "Missing signing secret: $value"; exit 1; }
+          done
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/klyro.p12"
+          chmod 600 "$RUNNER_TEMP/klyro.p12"
+          SDK_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
+          "$SDK_TOOLS/zipalign" -f 4 app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/aligned.apk"
+          "$SDK_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/klyro.p12" --ks-type PKCS12 --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out app/build/outputs/apk/debug/klyro-shell-signed.apk "$RUNNER_TEMP/aligned.apk"
+          "$SDK_TOOLS/apksigner" verify --verbose app/build/outputs/apk/debug/klyro-shell-signed.apk
+          rm app/build/outputs/apk/debug/app-debug.apk
+      - name: Upload signed debug APK
+        if: ${{ env.KLYRO_SIGNING_AVAILABLE == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: klyro-shell-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
