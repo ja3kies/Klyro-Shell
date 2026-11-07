@@ -79,7 +79,7 @@ public final class KlyroStorageCommandBridge {
         return "#!/data/data/com.termux/files/usr/bin/bash\n"
             + "# KLYRO_STORAGE_BRIDGE_V1\n"
             + "if [ \"$#\" -ne 0 ]; then\n"
-            + "  printf '%s\\n' 'Usage: termux-setup-storage (no arguments)'\n"
+            + "  printf '%s\\n' 'Usage: klyro-setup-storage (no arguments)'\n"
             + "  exit 2\n"
             + "fi\n"
             + "umask 077\n"
@@ -119,8 +119,9 @@ public final class KlyroStorageCommandBridge {
     /** Add only to generated Klyro profiles, respecting user-managed Bash rc. */
     public static String augmentGeneratedProfile(String existing) {
         if (existing == null || !existing.contains("# Klyro Shell profile") ||
-                existing.contains("# KLYRO_STORAGE_FUNCTION_V1")) return existing;
-        return existing + "\n# KLYRO_STORAGE_FUNCTION_V1\n"
+                existing.contains("# KLYRO_STORAGE_FUNCTION_V2")) return existing;
+        return existing + "\n# KLYRO_STORAGE_FUNCTION_V2\n"
+                + "setup-storage() { command klyro-setup-storage \"$@\"; }\n"
                 + "termux-setup-storage() { command klyro-setup-storage \"$@\"; }\n";
     }
 
