@@ -74,10 +74,10 @@ public final class KlyroCommandCatalog {
         commands.add(new Entry("termux-change-repo", "termux-change-repo",
                 "Configure Termux repository mirrors", "Repository tools",
                 "Only if the command exists in Klyro's private prefix", true, true));
-        commands.add(new Entry("termux-setup-storage", "",
-                "Termux Android storage setup", "Android integration",
-                "Not verified in Klyro. Use Settings > Files & storage and Android's document picker.",
-                false, false));
+        commands.add(new Entry("termux-setup-storage", "klyro-setup-storage",
+                "Choose an Android storage folder", "Klyro Android integration",
+                "Klyro's SAF equivalent. It opens Android's folder picker; it does not create a POSIX storage mount. No command is run until you press Enter.",
+                true, true));
         ENTRIES = Collections.unmodifiableList(commands);
     }
 
