@@ -306,49 +306,29 @@ fun TerminalPane(
                 DropdownMenu(
                     expanded = showToolsMenu,
                     onDismissRequest = { showToolsMenu = false },
-                    modifier = Modifier.width(246.dp),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
-                    containerColor = MaterialTheme.colorScheme.surface
+                    modifier = Modifier.width(KlyroUiMetrics.menuWidth),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        KlyroUiMetrics.controlCorner
+                    ),
+                    containerColor = ui.sheet
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Command Palette") },
-                        leadingIcon = { Icon(painterResource(R.drawable.hugeicons_terminal),
-                            contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) },
-                        onClick = { showToolsMenu = false; showCommandPalette = true }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Workspaces") },
-                        leadingIcon = { Icon(painterResource(R.drawable.hugeicons_folder_01),
-                            contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) },
-                        onClick = { showToolsMenu = false; showWorkspaceSheet = true }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Settings", color = MaterialTheme.colorScheme.onSurface) },
-                        modifier = Modifier.heightIn(min = 56.dp),
-                        leadingIcon = {
-                            Icon(painterResource(R.drawable.hugeicons_settings_01),
-                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
-                        },
-                        onClick = {
-                            showToolsMenu = false
-                            initialSettingsSection = "home"
-                            showTerminalSettings = true
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Home", color = MaterialTheme.colorScheme.onSurface) },
-                        modifier = Modifier.heightIn(min = 56.dp),
-                        leadingIcon = {
-                            Icon(painterResource(R.drawable.hugeicons_terminal),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface)
-                        },
-                        onClick = {
-                            showToolsMenu = false
-                            onReturnHome()
-                        }
-                    )
-
+                    KlyroMenuItem("Command Palette", R.drawable.hugeicons_terminal) {
+                        showToolsMenu = false
+                        showCommandPalette = true
+                    }
+                    KlyroMenuItem("Workspaces", R.drawable.hugeicons_folder_01) {
+                        showToolsMenu = false
+                        showWorkspaceSheet = true
+                    }
+                    KlyroMenuItem("Settings", R.drawable.hugeicons_settings_01) {
+                        showToolsMenu = false
+                        initialSettingsSection = "home"
+                        showTerminalSettings = true
+                    }
+                    KlyroMenuItem("Home", R.drawable.hugeicons_terminal) {
+                        showToolsMenu = false
+                        onReturnHome()
+                    }
                 }
             }
     }
@@ -371,8 +351,6 @@ fun TerminalPane(
                 ) {
                     Text("KLYRO", color = TerminalAccent, fontSize = 12.sp,
                         fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-                    Text("·", color = TerminalMuted)
-                    Text("ARM64", color = TerminalMuted, fontSize = 10.sp)
                 }
                 Text(
                     currentProject,
@@ -515,7 +493,7 @@ fun TerminalPane(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "The environment check reported warnings. Messages above the prompt may relate to them.",
+                        "Environment warnings detected. Review Diagnostics for details.",
                         color = ui.warningInk,
                         fontSize = 12.sp,
                         lineHeight = 17.sp,
