@@ -129,26 +129,8 @@ public final class KlyroStorageCommandBridge {
      * the upstream termux-setup-storage binary from package management.
      */
     public static void installHelper(File prefix) throws IOException {
-        File bin = new File(prefix, "bin");
-        if (!bin.isDirectory()) throw new IOException("Private bootstrap bin directory missing");
-        Path target = new File(bin, "klyro-setup-storage").toPath();
-        if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
-            if (!Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
-                throw new IOException("Refusing unsafe existing storage helper");
-            }
-            String existing = new String(Files.readAllBytes(target), StandardCharsets.UTF_8);
-            if (!existing.contains("# KLYRO_STORAGE_BRIDGE_V1")) return; // user-managed
-            if (existing.equals(helperScript())) return;
-        }
-        Path staging = Files.createTempFile(bin.toPath(), ".klyro-storage-", ".tmp");
-        try {
-            Files.write(staging, helperScript().getBytes(StandardCharsets.UTF_8));
-            if (!staging.toFile().setExecutable(true, true)) {
-                throw new IOException("Cannot mark Klyro storage helper executable");
-            }
-            Files.move(staging, target, StandardCopyOption.REPLACE_EXISTING);
-        } finally {
-            Files.deleteIfExists(staging);
-        }
+        KlyroShellHelperInstaller.install(prefix, "klyro-setup-storage",
+                "KLYRO_STORAGE_BRIDGE_V1", helperScript());
     }
+
 }
