@@ -75,6 +75,17 @@ public class TranscriptSearchTest {
             TranscriptSearch.findRows(screen, COLUMNS, ROWS, "gIt"));
     }
 
+    @Test public void matchCaseOptionFiltersMixedCaseAndRetainsWrappedPositions() {
+        TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
+        write(screen, 0, "Git GIT git");
+        assertEquals(Arrays.asList(0, 0, 0), TranscriptSearch.findRows(screen, COLUMNS, ROWS, "Git", false));
+        assertEquals(Arrays.asList(0), TranscriptSearch.findRows(screen, COLUMNS, ROWS, "Git", true));
+        assertEquals(Arrays.asList(0), TranscriptSearch.findRows(screen, COLUMNS, ROWS, "git", true));
+        assertTrue(TranscriptSearch.findRows(screen, COLUMNS, ROWS, "GiT", true).isEmpty());
+        write(screen, 2, "abcdeABCDE");
+        assertEquals(Arrays.asList(2), TranscriptSearch.findRows(screen, COLUMNS, ROWS, "ABCDE", true));
+    }
+
     @Test public void searchDoesNotMutateTerminalBuffer() {
         TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
         write(screen, 1, "immutable output");
