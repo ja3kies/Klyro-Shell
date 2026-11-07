@@ -1011,7 +1011,6 @@ private fun TerminalExtraKey(
     val inkTint = colors.foreground
     val backgroundTint = colors.key
     val keyContents: @Composable () -> Unit = {
-
         if (glyph != null) {
             Icon(
                 painter = painterResource(glyph),
@@ -1061,7 +1060,7 @@ private fun TerminalExtraKey(
         }
     }
     if (onLongClick == null) {
-    Button(
+        Button(
             onClick = onClick,
             enabled = enabled,
             modifier = Modifier
@@ -1075,8 +1074,9 @@ private fun TerminalExtraKey(
                     else backgroundTint,
                 contentColor = if (active) accentTint else inkTint
             )
-        ) {        keyContents()
-    }
+        ) {
+            keyContents()
+        }
     } else {
         // Own the full gesture for long-press keys: Button's internal click handler
         // would otherwise double-send a short arrow after the long press.
