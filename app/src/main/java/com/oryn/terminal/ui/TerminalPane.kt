@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -221,6 +222,7 @@ fun TerminalPane(
     }
     var showTranscriptSearch by remember(session) { mutableStateOf(false) }
     var transcriptQuery by remember(session) { mutableStateOf("") }
+    var findMatchCase by remember(session) { mutableStateOf(false) }
     var searchIndex by remember(session) { mutableStateOf(0) }
     var pendingSearch by remember(session) { mutableStateOf<Int?>(null) }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -240,7 +242,7 @@ fun TerminalPane(
             lastHeight = view.height
         }
         session.emulator?.let { emulator ->
-            val matches = TranscriptSearch.findRows(emulator.screen, emulator.mColumns, emulator.mRows, transcriptQuery)
+            val matches = TranscriptSearch.findRows(emulator.screen, emulator.mColumns, emulator.mRows, transcriptQuery, findMatchCase)
             if (matches.isNotEmpty()) {
                 view.setTopRow(TranscriptSearch.topRow(matches[index.coerceAtMost(matches.lastIndex)],
                     emulator.mRows, emulator.screen.activeTranscriptRows))
@@ -576,10 +578,18 @@ fun TerminalPane(
             }
         }
         val secondRow: @Composable () -> Unit = {
-            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('D', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome,
+                longClickDescription = "Go to start of line",
+                onLongClick = { write(session, TerminalNavigationPolicy.horizontalLongPress(false,
+                    session.emulator?.isAlternateBufferActive == true, controlActive, altActive, shiftActive)) }
+            ) { write(session, TerminalNavigationPolicy.arrow('D', controlActive, altActive, shiftActive)) }
             TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('A', controlActive, altActive, shiftActive)) }
             TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('B', controlActive, altActive, shiftActive)) }
-            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('C', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth, darkChrome = darkChrome,
+                longClickDescription = "Go to end of line",
+                onLongClick = { write(session, TerminalNavigationPolicy.horizontalLongPress(true,
+                    session.emulator?.isAlternateBufferActive == true, controlActive, altActive, shiftActive)) }
+            ) { write(session, TerminalNavigationPolicy.arrow('C', controlActive, altActive, shiftActive)) }
             TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth, darkChrome = darkChrome) {
                 transcriptQuery = ""
                 searchIndex = 0
@@ -848,7 +858,7 @@ fun TerminalPane(
         val screen = emulator?.screen
         // Re-read the mutable buffer; a screen object keeps its identity as output arrives.
         val matches = if (emulator == null || screen == null) emptyList<Int>()
-            else TranscriptSearch.findRows(screen, emulator.mColumns, emulator.mRows, transcriptQuery)
+            else TranscriptSearch.findRows(screen, emulator.mColumns, emulator.mRows, transcriptQuery, findMatchCase)
         val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
         fun goToMatch(index: Int) {
             if (matches.isNotEmpty() && emulator != null) {
@@ -873,6 +883,13 @@ fun TerminalPane(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = findMatchCase, onCheckedChange = {
+                            findMatchCase = it
+                            searchIndex = 0
+                        })
+                        Text("Match case", fontSize = 13.sp)
+                    }
                     Text(
                         if (transcriptQuery.isBlank()) "Enter text to search"
                         else if (matches.isEmpty()) "No matches"
@@ -885,24 +902,23 @@ fun TerminalPane(
                         val line = screen.getSelectedText(
                             0, matchRow, emulator.mColumns - 1, matchRow, false, false
                         ).orEmpty()
-                        val offset = line.indexOf(transcriptQuery, ignoreCase = true)
                         val highlightBackground = MaterialTheme.colorScheme.primary
                         val highlightForeground = MaterialTheme.colorScheme.onPrimary
                         val preview = buildAnnotatedString {
-                            if (offset >= 0) {
-                                append(line.substring(0, offset))
+                            var offset = 0
+                            while (offset < line.length && transcriptQuery.isNotEmpty()) {
+                                val found = line.indexOf(transcriptQuery, offset, ignoreCase = !findMatchCase)
+                                if (found < 0) break
+                                append(line.substring(offset, found))
                                 withStyle(SpanStyle(
                                     color = highlightForeground,
                                     background = highlightBackground,
                                     fontWeight = FontWeight.Bold
-                                )) {
-                                    append(line.substring(offset, offset + transcriptQuery.length))
-                                }
-                                append(line.substring(offset + transcriptQuery.length))
-                            } else {
-                                // Matches may span wrapped physical rows.
-                                append(line)
+                                )) { append(line.substring(found, found + transcriptQuery.length)) }
+                                offset = found + transcriptQuery.length
                             }
+                            // Matches can also span wrapped physical rows.
+                            append(line.substring(offset))
                         }
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant,
@@ -974,6 +990,7 @@ fun TerminalPane(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TerminalExtraKey(
     label: String,
@@ -985,27 +1002,16 @@ private fun TerminalExtraKey(
     arrow: String? = null,
     keyWidth: androidx.compose.ui.unit.Dp = 52.dp,
     darkChrome: Boolean = true,
+    longClickDescription: String? = null,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
     val accentTint = colors.accent
     val inkTint = colors.foreground
     val backgroundTint = colors.key
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .height(50.dp)
-            .width(keyWidth)
-            .semantics { contentDescription = description ?: label },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
-        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (active) accentTint.copy(alpha = 0.18f)
-                else backgroundTint,
-            contentColor = if (active) accentTint else inkTint
-        )
-    ) {
+    val keyContents: @Composable () -> Unit = {
+
         if (glyph != null) {
             Icon(
                 painter = painterResource(glyph),
@@ -1052,6 +1058,48 @@ private fun TerminalExtraKey(
             }
         } else {
             Text(label, fontSize = labelSize, fontFamily = FontFamily.Monospace)
+        }
+    }
+    if (onLongClick == null) {
+    Button(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier
+                .height(50.dp)
+                .width(keyWidth)
+                .semantics { contentDescription = description ?: label },
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
+            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (active) accentTint.copy(alpha = 0.18f)
+                    else backgroundTint,
+                contentColor = if (active) accentTint else inkTint
+            )
+        ) {        keyContents()
+    }
+    } else {
+        // Own the full gesture for long-press keys: Button's internal click handler
+        // would otherwise double-send a short arrow after the long press.
+        val shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
+        Surface(
+            modifier = Modifier.height(50.dp).width(keyWidth)
+                .clip(shape)
+                .combinedClickable(
+                    enabled = enabled,
+                    role = Role.Button,
+                    onClickLabel = description ?: label,
+                    onLongClickLabel = longClickDescription ?: "Long press",
+                    onLongClick = onLongClick,
+                    onClick = onClick
+                )
+                .semantics { contentDescription = description ?: label },
+            shape = shape,
+            color = if (active) accentTint.copy(alpha = 0.18f) else backgroundTint,
+            contentColor = if (active) accentTint else inkTint
+        ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                keyContents()
+            }
         }
     }
 }
