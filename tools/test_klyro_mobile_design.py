@@ -88,6 +88,21 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertNotIn("Preview each typeface before choosing.", settings)
 
 
+    def test_home_and_terminal_copy_avoid_repeated_runtime_metadata(self):
+        home = src(APP / "MainActivity.kt")
+        pane = src(UI / "TerminalPane.kt")
+        commands = src(UI / "KlyroCommandPalette.kt")
+        self.assertIn('Text("RUNTIME STATUS"', home)
+        self.assertNotIn('Text("PRIVATE ENVIRONMENT"', home)
+        self.assertNotIn('A standalone Android shell with its own private environment', home)
+        self.assertNotIn('Text("ARM64"', pane)
+        self.assertIn("KlyroUiMetrics.menuWidth", pane)
+        self.assertIn("containerColor = ui.sheet", pane)
+        self.assertNotIn("DropdownMenuItem(", pane)
+        self.assertIn('"Insert only; press Enter to run."', commands)
+        self.assertNotIn('"Not available · " + entry.note', commands)
+        self.assertNotIn('ModalBottomSheet(', commands)
+
     def test_shared_sheet_menu_action_and_license_components_prevent_style_drift(self):
         shared = src(UI / "KlyroUiComponents.kt")
         for component in ("KlyroSheet(", "KlyroSectionHeading(",
