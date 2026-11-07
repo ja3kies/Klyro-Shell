@@ -33,6 +33,7 @@ public final class KlyroWelcomeGuide {
             "Android files and storage:\n" +
             " - Open Klyro Settings > Files & storage.\n" +
             " - Storage: termux-setup-storage (Klyro SAF picker)\n" +
+            " - Status: termux-info (Klyro private environment)\n" +
             " - Selected folders are not mounted as Unix paths.\n" +
             "\n" +
             "Open Command Palette to discover commands or read this guide.\n";
