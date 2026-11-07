@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.ui.OrynTerminalViewClient
 import com.termux.terminal.TerminalSession
@@ -20,7 +21,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         val client: OrynTerminalSessionClient,
         val viewClient: OrynTerminalViewClient,
         val title: String = "Bash",
-        val customTitle: String? = null
+        val customTitle: String? = null,
+        val workspaceId: String = KlyroWorkspaceCatalog.GENERAL
     )
 
     private val tabs = mutableStateListOf<ShellTab>()
@@ -42,6 +44,25 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
 
     val displayTabs: List<Pair<Long, String>>
         get() = KlyroSessionNames.display(tabs.map { it.id to it.customTitle })
+
+    /** Workspace membership is transient, exactly like its live PTY tab. */
+    val tabWorkspaceIds: Map<Long, String>
+        get() = tabs.associate { it.id to it.workspaceId }
+
+    fun assignWorkspace(tabId: Long, workspaceId: String) {
+        val index = tabs.indexOfFirst { it.id == tabId }
+        if (index >= 0 && workspaceId.isNotBlank() && tabs[index].workspaceId != workspaceId) {
+            tabs[index] = tabs[index].copy(workspaceId = workspaceId)
+        }
+    }
+
+    fun resetWorkspace(workspaceId: String) {
+        tabs.indices.forEach { index ->
+            if (tabs[index].workspaceId == workspaceId) {
+                tabs[index] = tabs[index].copy(workspaceId = KlyroWorkspaceCatalog.GENERAL)
+            }
+        }
+    }
 
     var sessionStatus by mutableStateOf("")
         private set
@@ -90,11 +111,13 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         session: TerminalSession,
         client: OrynTerminalSessionClient,
         terminalViewClient: OrynTerminalViewClient,
-        tabId: Long = reserveTabId()
+        tabId: Long = reserveTabId(),
+        workspaceId: String = KlyroWorkspaceCatalog.GENERAL
     ) {
         require(tabs.none { it.id == tabId }) { "Duplicate terminal tab ID" }
         require(tabId > 0) { "Terminal tab ID must be positive" }
-        tabs.add(ShellTab(tabId, session, client, terminalViewClient, title = "Session $tabId"))
+        tabs.add(ShellTab(tabId, session, client, terminalViewClient,
+            title = "Session $tabId", workspaceId = workspaceId))
         selectTab(tabId)
         sessionStatus = "Starting private Bash session…"
         sessionFailureMessage = null
