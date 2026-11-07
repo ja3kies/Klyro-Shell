@@ -766,8 +766,6 @@ fun TerminalPane(
                 terminalFontSp = 13.5f
                 fontPreferences.edit().remove("font_size_sp").apply()
             },
-            tabs = tabs,
-            onEditSession = ::openSessionSheet,
             onResetModifiers = {
                 controlActive = false
                 altActive = false
@@ -782,10 +780,6 @@ fun TerminalPane(
             onImportStorageFolder = onImportStorageFolder,
             onImportFile = onImportFile,
             onExportFile = onExportFile,
-            onSelectOutput = {
-                outputSelectionView = null
-                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
-            },
             diagnosticReport = diagnosticReport,
             onRecheckEnvironment = onRecheck,
             onCopyDiagnostic = {
