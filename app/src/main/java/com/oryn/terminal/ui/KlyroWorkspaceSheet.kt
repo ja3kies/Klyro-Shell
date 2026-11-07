@@ -1,18 +1,27 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -24,17 +33,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.oryn.terminal.R
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 
-/**
- * A project is a named grouping, not a process container. Opening another
- * project does not stop, restart, or automatically execute terminal commands.
- */
+/** A workspace groups live PTYs but does not claim to restore dead processes. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun KlyroWorkspaceSheet(
@@ -51,144 +65,240 @@ internal fun KlyroWorkspaceSheet(
     onSwitchTab: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val colors = LocalKlyroColors.current
+    val c = LocalKlyroColors.current
     var editorId by remember { mutableStateOf<String?>(null) }
     var editorText by remember { mutableStateOf("") }
     var editorError by remember { mutableStateOf(false) }
     var deletingId by remember { mutableStateOf<String?>(null) }
+    var menuId by remember { mutableStateOf<String?>(null) }
     val selected = entries.firstOrNull { it.id == selectedId } ?: entries.first()
+    val projectTabs = tabs.filter {
+        (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == selected.id
+    }
+    fun editProject(id: String, title: String) {
+        editorId = id
+        editorText = title
+        editorError = false
+        menuId = null
+    }
 
     KlyroModalTheme {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
-            containerColor = colors.sheet,
-            contentColor = colors.foreground,
+            containerColor = c.sheet,
+            contentColor = c.foreground,
             shape = RoundedCornerShape(
                 topStart = KlyroUiMetrics.sheetCorner,
                 topEnd = KlyroUiMetrics.sheetCorner
             ),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
+            dragHandle = { BottomSheetDefaults.DragHandle(color = c.muted) }
         ) {
             Column(
-                Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp).padding(bottom = 30.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                Modifier.fillMaxWidth().heightIn(max = 620.dp)
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .padding(horizontal = KlyroUiMetrics.sheetGutter)
+                    .padding(bottom = KlyroUiMetrics.spaceXl),
+                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
             ) {
-                Text("Workspaces", style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold)
-                Text("Project grouping never stops background terminals.",
-                    color = colors.muted, style = MaterialTheme.typography.bodySmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Workspaces", style = MaterialTheme.typography.titleLarge,
+                        color = c.foreground, fontWeight = FontWeight.Bold)
+                    TextButton(
+                        onClick = { editProject("", "") },
+                        enabled = entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS
+                    ) {
+                        Text("+ New", color = if (entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS)
+                            c.accent else c.muted)
+                    }
+                }
+                Text("Organize sessions without stopping running shells.",
+                    color = c.muted, style = MaterialTheme.typography.bodySmall)
+
                 entries.forEach { entry ->
-                    val number = tabs.count {
+                    val count = tabs.count {
                         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == entry.id
                     }
+                    val active = entry.id == selected.id
+                    val cardColor = if (active) c.accent.copy(alpha = .11f) else c.tile
                     Surface(
-                        color = if (entry.id == selected.id) colors.accent.copy(alpha = 0.15f) else colors.tile,
-                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-                        modifier = Modifier.fillMaxWidth().clickable { onSelectProject(entry.id) }
+                        color = cardColor,
+                        border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder,
+                            c.accent.copy(alpha = .68f)) else null,
+                        shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)
                     ) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(
-                                entry.name,
-                                modifier = Modifier.fillMaxWidth(),
-                                color = colors.foreground,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                "$number tabs" +
-                                if (entry.id == selected.id) " · Selected" else "",
-                                modifier = Modifier.fillMaxWidth(),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (entry.id == selected.id) colors.accent else colors.muted,
-                                textAlign = TextAlign.Center
-                            )
-                            if (entry.id != KlyroWorkspaceCatalog.GENERAL) {
-                                Row(
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .heightIn(min = 64.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.size(KlyroUiMetrics.minTouch)
+                                    .clickable(role = Role.Button,
+                                        onClickLabel = "Select workspace " + entry.name) {
+                                        onSelectProject(entry.id)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.hugeicons_folder_01),
+                                    contentDescription = null,
+                                    tint = if (active) c.accent else c.muted,
+                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
+                                )
+                            }
+                            Column(
+                                modifier = Modifier.weight(1f)
+                                    .clickable(role = Role.Button,
+                                        onClickLabel = "Select workspace " + entry.name) {
+                                        onSelectProject(entry.id)
+                                    }.semantics { selected = active },
+                                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    entry.name, modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = c.foreground,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    (if (count == 1) "1 session" else count.toString() + " sessions") +
+                                        if (active) " · Selected" else "",
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    TextButton(onClick = {
-                                        editorId = entry.id
-                                        editorText = entry.name
-                                        editorError = false
-                                    }) { Text("Rename") }
-                                    TextButton(onClick = { deletingId = entry.id }) {
-                                        Text("Delete", color = colors.danger)
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (active) c.accent else c.muted
+                                )
+                            }
+                            Box(
+                                modifier = Modifier.size(KlyroUiMetrics.minTouch),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (entry.id != KlyroWorkspaceCatalog.GENERAL) {
+                                    TextButton(onClick = { menuId = entry.id },
+                                        modifier = Modifier.size(KlyroUiMetrics.minTouch)
+                                            .semantics {
+                                                contentDescription = "Options for " + entry.name
+                                            },
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                                    ) {
+                                        Text("⋮", color = c.foreground, fontSize = 22.sp)
+                                    }
+                                    DropdownMenu(
+                                        expanded = menuId == entry.id,
+                                        onDismissRequest = { menuId = null },
+                                        containerColor = c.sheet,
+                                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Rename", color = c.foreground) },
+                                            onClick = { editProject(entry.id, entry.name) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Delete", color = c.danger) },
+                                            onClick = { menuId = null; deletingId = entry.id }
+                                        )
                                     }
                                 }
                             }
                         }
                     }
                 }
-                Button(
-                    onClick = { editorId = ""; editorText = ""; editorError = false },
-                    enabled = entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Create project") }
 
                 if (editorId != null) {
                     val editing = !editorId.isNullOrEmpty()
-                    Surface(
-                        color = colors.tile,
-                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
-                    ) {
+                    Surface(color = c.tile,
+                        shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                         Column(
-                            Modifier.fillMaxWidth().padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd),
+                            verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
                         ) {
-                            Text(
-                                if (editing) "Rename project" else "New project",
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.foreground
-                            )
+                            Text(if (editing) "Rename workspace" else "New workspace",
+                                fontWeight = FontWeight.SemiBold, color = c.foreground)
                             OutlinedTextField(
                                 value = editorText,
                                 onValueChange = {
                                     editorText = it.take(KlyroWorkspaceCatalog.MAX_NAME_CHARS)
                                     editorError = false
                                 },
-                                label = { Text("Project name") },
+                                label = { Text("Workspace name") },
                                 singleLine = true,
+                                isError = editorError,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             )
-                            if (editorError) {
-                                Text("Choose a unique, non-empty name.",
-                                    color = colors.danger,
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TextButton(onClick = {
-                                    val saved = if (editing)
-                                        onRenameProject(editorId!!, editorText)
-                                    else onCreateProject(editorText)
-                                    if (saved) editorId = null else editorError = true
-                                }) { Text("Save") }
+                            if (editorError) Text("Choose a unique, non-empty name.",
+                                color = c.danger, style = MaterialTheme.typography.bodySmall)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
                                 TextButton(onClick = { editorId = null }) { Text("Cancel") }
+                                Button(
+                                    onClick = {
+                                        val saved = if (editing) onRenameProject(editorId!!, editorText)
+                                            else onCreateProject(editorText)
+                                        if (saved) editorId = null else editorError = true
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = c.accent, contentColor = c.onAccent
+                                    ), shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                ) { Text("Save") }
                             }
                         }
                     }
                 }
 
-                Text("Sessions in " + selected.name, fontWeight = FontWeight.SemiBold)
-                val projectTabs = tabs.filter {
-                    (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == selected.id
-                }
+                Text(
+                    "Sessions · " + selected.name,
+                    fontWeight = FontWeight.SemiBold,
+                    color = c.foreground,
+                    style = MaterialTheme.typography.titleSmall
+                )
                 if (projectTabs.isEmpty()) {
-                    Text("No live sessions in this project.", color = colors.muted,
-                        style = MaterialTheme.typography.bodySmall)
+                    Text("No live sessions in this workspace.",
+                        modifier = Modifier.padding(vertical = KlyroUiMetrics.spaceSm),
+                        color = c.muted, style = MaterialTheme.typography.bodySmall)
                 } else {
                     projectTabs.forEach { (id, name) ->
-                        Surface(color = colors.tile, shape = RoundedCornerShape(14.dp)) {
-                            Row(Modifier.fillMaxWidth().padding(start = 14.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween) {
+                        val current = id == activeTabId
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.compactRow)
+                                .clickable(
+                                    enabled = !current,
+                                    role = Role.Button,
+                                    onClickLabel = "Switch to " + name
+                                ) {
+                                    onSwitchTab(id)
+                                    onDismiss()
+                                },
+                            color = c.tile,
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = KlyroUiMetrics.spaceMd),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.hugeicons_terminal),
+                                    contentDescription = null,
+                                    tint = if (current) c.accent else c.muted,
+                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
+                                )
                                 Text(name.ifBlank { "Terminal" },
-                                    modifier = Modifier.weight(1f).padding(top = 14.dp), maxLines = 1)
-                                TextButton(onClick = { onSwitchTab(id); onDismiss() }) {
-                                    Text(if (id == activeTabId) "Current" else "Switch")
-                                }
+                                    modifier = Modifier.weight(1f), maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis, color = c.foreground)
+                                Text(if (current) "Current" else "Open",
+                                    color = if (current) c.accent else c.muted,
+                                    style = MaterialTheme.typography.labelMedium)
                             }
                         }
                     }
@@ -196,29 +306,30 @@ internal fun KlyroWorkspaceSheet(
                 if (activeTabId != null &&
                     (tabWorkspaces[activeTabId] ?: KlyroWorkspaceCatalog.GENERAL) != selected.id
                 ) {
-                    TextButton(onClick = { onAssignCurrentTab(selected.id) },
-                        modifier = Modifier.fillMaxWidth()) {
-                        Text("Move current tab to " + selected.name)
-                    }
+                    TextButton(
+                        onClick = { onAssignCurrentTab(selected.id) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Move current session here") }
                 }
             }
         }
 
         deletingId?.let { id ->
-            val name = entries.firstOrNull { it.id == id }?.name ?: "project"
+            val name = entries.firstOrNull { it.id == id }?.name ?: "workspace"
             AlertDialog(
                 onDismissRequest = { deletingId = null },
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
-                containerColor = colors.sheet,
-                title = { Text("Delete $name?") },
-                text = { Text("Its tabs return to General. No shell or file will be deleted.") },
+                containerColor = c.sheet,
+                title = { Text("Delete " + name + "?") },
+                text = { Text("Its sessions return to General. No shell or files are deleted.") },
                 confirmButton = {
-                    TextButton(onClick = {
-                        onDeleteProject(id)
-                        deletingId = null
-                    }) { Text("Delete project", color = colors.danger) }
+                    TextButton(onClick = { onDeleteProject(id); deletingId = null }) {
+                        Text("Delete", color = c.danger)
+                    }
                 },
-                dismissButton = { TextButton(onClick = { deletingId = null }) { Text("Cancel") } }
+                dismissButton = {
+                    TextButton(onClick = { deletingId = null }) { Text("Cancel") }
+                }
             )
         }
     }
