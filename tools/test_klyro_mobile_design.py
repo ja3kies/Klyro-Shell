@@ -77,6 +77,27 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("Files.isSymbolicLink", bridge)
         self.assertIn("KlyroStorageCommandBridge.installHelper", installer)
 
+    def test_multifolder_grants_preserve_legacy_key_and_filter_revoked_access(self):
+        activity = src(APP / "MainActivity.kt")
+        settings = src(UI / "KlyroSettingsSheet.kt")
+        self.assertIn('putStringSet("tree_uris"', activity)
+        self.assertIn('putString("tree_uri"', activity)
+        self.assertIn('for (raw in folders)', activity)
+        self.assertIn('if (!authorized) continue', activity)
+        self.assertIn('getStringSet("tree_uris"', settings)
+        self.assertIn('authorizedCount', settings)
+
+    def test_monochrome_and_bento_use_existing_theme_state(self):
+        activity = src(APP / "MainActivity.kt")
+        settings = src(UI / "KlyroSettingsSheet.kt")
+        design = src(UI / "KlyroDesign.kt")
+        for mode in ("mono-contrast", "mono-black", "mono-paper"):
+            self.assertIn('"' + mode + '"', design)
+            self.assertIn('"' + mode + '"', settings)
+        self.assertIn('KlyroColors.monochrome(themeMode)', activity)
+        self.assertIn('SettingsBentoTile(', settings)
+        self.assertIn('fontSizeSp.sp', settings)
+
     def test_legacy_actions_not_duplicated_in_palette_or_settings(self):
         palette = src(UI / "KlyroCommandPalette.kt")
         settings = src(UI / "KlyroSettingsSheet.kt")
