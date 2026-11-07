@@ -11,12 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class KlyroOperationalReadinessTest(unittest.TestCase):
-    def test_version_bumped_and_debug_bento_remains_gated(self):
+    def test_version_bumped_and_settings_layout_unified(self):
         gradle = (ROOT / "app/build.gradle.kts").read_text()
         assert_supported_klyro_version(self, gradle)
         self.assertTrue((ROOT / "docs/OBJECTIVES_H_I_2026-11-06.md").is_file())
-        self.assertIn('resValue("bool", "klyro_experimental_bento", "true")', gradle)
-        self.assertIn('resValue("bool", "klyro_experimental_bento", "false")', gradle)
+        self.assertNotIn('klyro_experimental_bento', gradle)
+        self.assertFalse((ROOT / "app/src/main/java/com/oryn/terminal/ui/KlyroExperimentalBento.kt").exists())
 
     def test_native_paste_enforces_same_policy_as_compose(self):
         source = (ROOT /
