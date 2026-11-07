@@ -84,16 +84,7 @@ internal fun KlyroWorkspaceSheet(
     }
 
     KlyroModalTheme {
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            containerColor = c.sheet,
-            contentColor = c.foreground,
-            shape = RoundedCornerShape(
-                topStart = KlyroUiMetrics.sheetCorner,
-                topEnd = KlyroUiMetrics.sheetCorner
-            ),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = c.muted) }
-        ) {
+        KlyroSheet(onDismissRequest = onDismiss) {
             Column(
                 Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
@@ -125,9 +116,6 @@ internal fun KlyroWorkspaceSheet(
                         }
                     }
                 }
-                Text("Organize sessions without stopping running shells.",
-                    color = c.muted, style = MaterialTheme.typography.bodySmall)
-
                 entries.forEach { entry ->
                     val count = tabs.count {
                         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == entry.id
@@ -209,19 +197,13 @@ internal fun KlyroWorkspaceSheet(
                                         containerColor = c.sheet,
                                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                                     ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Rename", color = c.foreground) },
-                                            leadingIcon = { Icon(painterResource(R.drawable.hugeicons_pen_01),
-                                                contentDescription = null, tint = c.foreground,
-                                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall)) },
-                                            onClick = { editProject(entry.id, entry.name) }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Delete", color = c.danger) },
-                                            leadingIcon = { Icon(painterResource(R.drawable.hugeicons_trash),
-                                                contentDescription = null, tint = c.danger,
-                                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall)) },
-                                            onClick = { menuId = null; deletingId = entry.id }
+                                        KlyroMenuItem("Rename", R.drawable.hugeicons_pen_01) {
+                                            editProject(entry.id, entry.name)
+                                        }
+                                        KlyroMenuItem(
+                                            "Delete", R.drawable.hugeicons_trash,
+                                            onClick = { menuId = null; deletingId = entry.id },
+                                            destructive = true
                                         )
                                     }
                                 }
@@ -275,13 +257,13 @@ internal fun KlyroWorkspaceSheet(
                 }
 
                 Text(
-                    "Sessions · " + selected.name,
+                    "Sessions (" + projectTabs.size + ")",
                     fontWeight = FontWeight.SemiBold,
                     color = c.foreground,
                     style = MaterialTheme.typography.titleSmall
                 )
                 if (projectTabs.isEmpty()) {
-                    Text("No live sessions in this workspace.",
+                    Text("No sessions yet.",
                         modifier = Modifier.padding(vertical = KlyroUiMetrics.spaceSm),
                         color = c.muted, style = MaterialTheme.typography.bodySmall)
                 } else {
@@ -314,9 +296,14 @@ internal fun KlyroWorkspaceSheet(
                                 Text(name.ifBlank { "Terminal" },
                                     modifier = Modifier.weight(1f), maxLines = 1,
                                     overflow = TextOverflow.Ellipsis, color = c.foreground)
-                                Text(if (current) "Current" else "Open",
-                                    color = if (current) c.accent else c.muted,
-                                    style = MaterialTheme.typography.labelMedium)
+                                if (current) {
+                                    Text("Current", color = c.accent,
+                                        style = MaterialTheme.typography.labelMedium)
+                                } else {
+                                    Icon(painterResource(R.drawable.hugeicons_chevron_right),
+                                        contentDescription = null, tint = c.muted,
+                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                }
                             }
                         }
                     }
