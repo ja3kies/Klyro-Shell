@@ -88,6 +88,38 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertNotIn("Preview each typeface before choosing.", settings)
 
 
+    def test_shared_sheet_menu_action_and_license_components_prevent_style_drift(self):
+        shared = src(UI / "KlyroUiComponents.kt")
+        for component in ("KlyroSheet(", "KlyroSectionHeading(",
+                          "KlyroActionRow(", "KlyroMenuItem(",
+                          "KlyroLicenseDialog("):
+            self.assertIn(component, shared)
+        self.assertEqual(shared.count("ModalBottomSheet("), 1)
+        self.assertEqual(shared.count("DropdownMenuItem("), 1)
+        for name, count in (("KlyroSettingsSheet.kt", 1),
+                            ("KlyroWorkspaceSheet.kt", 1),
+                            ("KlyroCommandPalette.kt", 1),
+                            ("KlyroSessionSheets.kt", 2)):
+            page = src(UI / name)
+            with self.subTest(page=name):
+                self.assertEqual(page.count("KlyroSheet("), count)
+                self.assertNotIn("ModalBottomSheet(", page)
+        settings = src(UI / "KlyroSettingsSheet.kt")
+        self.assertEqual(settings.count("KlyroLicenseDialog("), 2)
+        self.assertNotIn("private fun SectionHeading(", settings)
+        self.assertNotIn("Klyro SAF access · no Unix mount", settings)
+        self.assertNotIn("Terminal settings and Android integration", settings)
+        self.assertIn("KlyroActionRow(", settings)
+        workspace = src(UI / "KlyroWorkspaceSheet.kt")
+        self.assertEqual(workspace.count("KlyroMenuItem("), 2)
+        self.assertNotIn("Sessions · ", workspace)
+        sessions = src(UI / "KlyroSessionSheets.kt")
+        self.assertEqual(sessions.count("KlyroActionRow("), 4)
+        self.assertNotIn("private fun SheetAction(", sessions)
+        picker = src(UI / "KlyroColorPickerDialog.kt")
+        self.assertNotIn('Text("Preview")', picker)
+        self.assertIn('Text("Edit")', picker)
+
     def test_hugeicons_assets_are_vectorized_and_ui_actions_use_real_icons(self):
         drawable = ROOT / "app/src/main/res/drawable"
         names = (
@@ -135,8 +167,10 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         menu = pane.split("val toolsMenu: @Composable () -> Unit =", 1)[1].split(
             "\n    Column(", 1
         )[0]
-        self.assertEqual(menu.count("DropdownMenuItem("), 4)
-        self.assertEqual(menu.count("leadingIcon ="), 4)
+        self.assertEqual(menu.count("KlyroMenuItem("), 4)
+        shared = src(UI / "KlyroUiComponents.kt")
+        self.assertEqual(shared.count("DropdownMenuItem("), 1)
+        self.assertIn("leadingIcon =", shared)
         self.assertIn("R.drawable.hugeicons_more_vertical", menu)
         self.assertNotIn('Text("+", fontSize', pane)
         palette = src(UI / "KlyroCommandPalette.kt")
