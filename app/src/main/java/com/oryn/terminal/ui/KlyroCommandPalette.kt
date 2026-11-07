@@ -1,6 +1,8 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -87,19 +89,14 @@ internal fun KlyroCommandPalette(
                 }
 
                 if (showingGuide) {
-                    // Reopen the exact onboarding text, without creating a
-                    // second full-screen preview or sending shell input.
-                    Surface(
-                        color = colors.tile,
-                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
-                    ) {
-                        Text(
-                            KlyroWelcomeGuide.MESSAGE,
-                            modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    // One in-sheet help page; scroll independently on small phones.
+                    Column(Modifier.fillMaxWidth().heightIn(max = 450.dp)
+                        .verticalScroll(rememberScrollState())) {
+                        Text(KlyroWelcomeGuide.MESSAGE,
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
                             fontFamily = FontFamily.Monospace,
                             style = MaterialTheme.typography.bodySmall,
-                            color = colors.foreground
-                        )
+                            color = colors.foreground)
                     }
                 } else {
                     OutlinedTextField(
