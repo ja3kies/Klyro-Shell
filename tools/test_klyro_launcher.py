@@ -92,8 +92,15 @@ class KlyroLauncherIdentityTest(unittest.TestCase):
         self.assertNotIn('Text("Saturation ·', picker)
         self.assertNotIn('Text("Brightness ·', picker)
         self.assertNotIn('Text("Paste", color = MaterialTheme.colorScheme.onSurface)', terminal)
-        self.assertLess(terminal.index('Text("Files & storage"'),
-                        terminal.index('Text("Home"'))
+        # Files/diagnostics now belong to Settings only; keep menu concise.
+        self.assertNotIn('text = { Text("Files & storage"', terminal)
+        self.assertNotIn('text = { Text("Diagnostics") }', terminal)
+        self.assertLess(terminal.index('text = { Text("Command Palette")'),
+                        terminal.index('text = { Text("Workspaces")'))
+        self.assertLess(terminal.index('text = { Text("Workspaces")'),
+                        terminal.index('text = { Text("Settings"'))
+        self.assertLess(terminal.index('text = { Text("Settings"'),
+                        terminal.index('text = { Text("Home"'))
 
 
 if __name__ == "__main__":
