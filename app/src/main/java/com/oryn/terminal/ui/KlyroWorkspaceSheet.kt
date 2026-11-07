@@ -159,7 +159,7 @@ internal fun KlyroWorkspaceSheet(
                                     .clickable(role = Role.Button,
                                         onClickLabel = "Select workspace " + entry.name) {
                                         onSelectProject(entry.id)
-                                    }.semantics { selected = active },
+                                    }.semantics { this.selected = active },
                                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
