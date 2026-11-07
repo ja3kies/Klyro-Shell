@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.termux.KlyroWelcomeGuide
+import java.io.File
 
 /**
  * Command discovery, not a second Settings/tools menu. Selecting a command
@@ -41,6 +42,7 @@ import com.oryn.terminal.termux.KlyroWelcomeGuide
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun KlyroCommandPalette(
+    installedPrefix: File?,
     onInsert: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -138,7 +140,7 @@ internal fun KlyroCommandPalette(
                             }
                         }
                         items(matches, key = { it.command }) { entry ->
-                            val available = entry.insertable
+                            val available = KlyroCommandCatalog.isInstalled(entry, installedPrefix)
                             Surface(
                                 modifier = Modifier.fillMaxWidth().clickable(
                                     role = Role.Button,
@@ -153,7 +155,8 @@ internal fun KlyroCommandPalette(
                                                 onInsert(snippet)
                                             }
                                         } else {
-                                            info = entry.note
+                                            info = if (!entry.insertable) entry.note else
+                                                "Command not installed in Klyro's private prefix. " + entry.note
                                         }
                                     }
                                 ),
