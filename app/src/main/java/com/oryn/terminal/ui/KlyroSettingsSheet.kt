@@ -141,23 +141,23 @@ internal fun KlyroSettingsSheet(
                             color = colors.muted)
                         Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)) {
                             Box(Modifier.weight(1f)) {
-                                SettingsBentoTile("Appearance", "Themes & type", "Aa",
+                                SettingsBentoTile("Appearance", "Themes & type", R.drawable.hugeicons_colors,
                                     prominent = true) { section = "appearance" }
                             }
                             Box(Modifier.weight(1f)) {
-                                SettingsBentoTile("Keyboard", "Keys & modifiers", "⌨") {
+                                SettingsBentoTile("Keyboard", "Keys & modifiers", R.drawable.hugeicons_keyboard) {
                                     section = "keyboard"
                                 }
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)) {
                             Box(Modifier.weight(1f)) {
-                                SettingsBentoTile("Storage", "Files & folders", "▣") {
+                                SettingsBentoTile("Storage", "Files & folders", R.drawable.hugeicons_folder_01) {
                                     section = "files"
                                 }
                             }
                             Box(Modifier.weight(1f)) {
-                                SettingsBentoTile("Privacy", "Local controls", "◇") {
+                                SettingsBentoTile("Privacy", "Local controls", R.drawable.hugeicons_shield_01) {
                                     section = "privacy"
                                 }
                             }
@@ -493,13 +493,13 @@ internal fun KlyroSettingsSheet(
                         }
                         SettingsRowLink("Import a file",
                             "Choose a document through Android's file picker.",
-                            glyph = "↓") {
+                            R.drawable.hugeicons_download_01) {
                             onDismiss()
                             onImportFile()
                         }
                         SettingsRowLink("Export a file",
                             "Save a file using Android's document picker.",
-                            glyph = "↑") {
+                            R.drawable.hugeicons_upload_01) {
                             onDismiss()
                             onExportFile()
                         }
@@ -615,7 +615,7 @@ private fun SectionHeading(title: String, subtitle: String) {
 }
 
 @Composable
-private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, glyph: String = "Aa", onClick: () -> Unit) {
+private fun SettingsRowLink(title: String, subtitle: String, icon: Int, onClick: () -> Unit) {
     val colors = LocalKlyroColors.current
     Surface(
         modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
@@ -634,13 +634,8 @@ private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, 
                         RoundedCornerShape(KlyroUiMetrics.controlCorner)),
                 contentAlignment = Alignment.Center
             ) {
-                if (icon != null) {
-                    Icon(painterResource(icon), null, tint = colors.accent,
-                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                } else {
-                    Text(glyph, fontWeight = FontWeight.SemiBold,
-                        color = colors.accent, style = MaterialTheme.typography.bodyMedium)
-                }
+                Icon(painterResource(icon), contentDescription = null,
+                    tint = colors.accent, modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
             }
             Column(Modifier.weight(1f)) {
                 Text(title, color = colors.foreground,
@@ -649,7 +644,8 @@ private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, 
                 Text(subtitle, color = colors.muted,
                     style = MaterialTheme.typography.bodySmall)
             }
-            Text("›", color = colors.accent, style = MaterialTheme.typography.titleLarge)
+            Icon(painterResource(R.drawable.hugeicons_chevron_right), contentDescription = null,
+                tint = colors.accent, modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
         }
     }
 }
@@ -658,7 +654,7 @@ private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, 
 private fun SettingsBentoTile(
     title: String,
     subtitle: String,
-    glyph: String,
+    icon: Int,
     prominent: Boolean = false,
     onClick: () -> Unit
 ) {
@@ -672,8 +668,8 @@ private fun SettingsBentoTile(
     ) {
         Column(Modifier.padding(KlyroUiMetrics.bentoInnerPadding),
             verticalArrangement = Arrangement.SpaceBetween) {
-            Text(glyph, color = colors.accent, style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold)
+            Icon(painterResource(icon), contentDescription = null,
+                tint = colors.accent, modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
             Column {
                 Text(title, color = colors.foreground,
                     fontWeight = FontWeight.Bold,
