@@ -10,10 +10,17 @@ object KlyroSessionRuntime {
 
     fun noteInteraction() { lastInteractionElapsed = SystemClock.elapsedRealtime() }
 
+    /** Pure timeout decision, testable without waiting six real hours. */
+    fun isIdleExpired(nowElapsed: Long, lastElapsed: Long): Boolean {
+        // SystemClock elapsedRealtime is monotonic during a boot. An inverted
+        // clock or overflow must not trigger a destructive session shutdown.
+        if (nowElapsed < lastElapsed) return false
+        return nowElapsed - lastElapsed >= IDLE_TIMEOUT_MS
+    }
+
     fun expireIfIdle(): Boolean {
         if (!sessions.hasLiveSessions()) return false
-        val idle = SystemClock.elapsedRealtime() - lastInteractionElapsed
-        if (idle < 0L || idle < IDLE_TIMEOUT_MS) return false
+        if (!isIdleExpired(SystemClock.elapsedRealtime(), lastInteractionElapsed)) return false
         sessions.closeAllSessions()
         return true
     }
