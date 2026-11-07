@@ -472,15 +472,7 @@ internal fun KlyroSettingsSheet(
                                     style = MaterialTheme.typography.bodyMedium)
                                 Text("Linux runtime: isolated ARM64 environment", color = colors.muted,
                                     style = MaterialTheme.typography.bodySmall)
-                                if (context.resources.getBoolean(R.bool.klyro_experimental_bento)) {
-                                    // Read-only inset telemetry; do not remove camera/status
-                                    // protection without evidence from the user's device.
-                                    Text(
-                                        "Display safe inset · top: ${WindowInsets.safeDrawing.getTop(density)} px",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = colors.muted
-                                    )
-                                }
+
                             }
                         }
                         SettingsRowLink(
