@@ -84,6 +84,9 @@ import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.oryn.terminal.workspace.KlyroWorkspaceStore
 import com.oryn.terminal.termux.ProotRuntimeInstaller
 import com.oryn.terminal.termux.TermuxBootstrapInstaller
+import com.oryn.terminal.termux.KlyroStorageCommandBridge
+import android.os.Handler
+import android.os.Looper
 import com.oryn.terminal.ui.KlyroTerminalPalette
 import com.oryn.terminal.ui.OrynTerminalViewClient
 import com.oryn.terminal.ui.TerminalPane
@@ -108,18 +111,59 @@ class MainActivity : ComponentActivity() {
     private var observingPreviousInstall = false
     private val terminalState: TerminalSessionViewModel get() = KlyroSessionRuntime.sessions
     private val workspaceStore by lazy { KlyroWorkspaceStore(applicationContext) }
+    private val storageCommandBridge by lazy {
+        runCatching {
+            val paths = OrynPaths(applicationContext.filesDir,
+                File(applicationContext.applicationInfo.nativeLibraryDir))
+            KlyroStorageCommandBridge(paths.home)
+        }.getOrNull()
+    }
+    private var pendingStorageRequestToken: String? = null
+    private val storageBridgeHandler = Handler(Looper.getMainLooper())
+    private val storageBridgePoller = object : Runnable {
+        override fun run() {
+            if (!isFinishing && !isDestroyed && pendingStorageRequestToken == null) {
+                runCatching { storageCommandBridge?.poll() }.onSuccess { token ->
+                    if (token != null) {
+                        pendingStorageRequestToken = token
+                        try {
+                            chooseStorageFolder()
+                        } catch (_: Exception) {
+                            completeStorageRequest("DENIED")
+                            Toast.makeText(this@MainActivity,
+                                "Unable to open Android folder picker", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+            if (!isFinishing && !isDestroyed) {
+                storageBridgeHandler.postDelayed(this, 350L)
+            }
+        }
+    }
+
+    private fun completeStorageRequest(status: String) {
+        val token = pendingStorageRequestToken ?: return
+        pendingStorageRequestToken = null
+        runCatching { storageCommandBridge?.finish(token, status) }
+    }
     private val storageFolderLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-            if (uri == null) return@registerForActivityResult
+            if (uri == null) {
+                completeStorageRequest("CANCELLED")
+                return@registerForActivityResult
+            }
             try {
                 contentResolver.takePersistableUriPermission(
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
                 getSharedPreferences("klyro_storage", MODE_PRIVATE)
                     .edit().putString("tree_uri", uri.toString()).apply()
+                completeStorageRequest("OK")
                 Toast.makeText(this, "Storage folder authorized for Klyro", Toast.LENGTH_LONG).show()
-            } catch (error: SecurityException) {
-                Toast.makeText(this, "Storage permission denied: " + error.message, Toast.LENGTH_LONG).show()
+            } catch (error: Exception) {
+                completeStorageRequest("DENIED")
+                Toast.makeText(this, "Folder authorization was not granted", Toast.LENGTH_LONG).show()
             }
         }
 
@@ -273,6 +317,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingStorageRequestToken =
+            savedInstanceState?.getString("klyro_pending_storage_request")
         KlyroSessionRuntime.expireIfIdle()
         if (terminalState.hasLiveSessions()) KlyroSessionService.ensureRunning(this)
         // Navigation is Activity UI state, independent of live PTY ownership.
@@ -482,11 +528,19 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         KlyroSessionRuntime.expireIfIdle()
+        storageBridgeHandler.removeCallbacks(storageBridgePoller)
+        storageBridgeHandler.post(storageBridgePoller)
+    }
+
+    override fun onPause() {
+        storageBridgeHandler.removeCallbacks(storageBridgePoller)
+        super.onPause()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("klyro_show_welcome", showWelcomeScreen)
         outState.putBoolean("klyro_had_sessions", terminalState.hasLiveSessions())
+        outState.putString("klyro_pending_storage_request", pendingStorageRequestToken)
         super.onSaveInstanceState(outState)
     }
 
