@@ -30,11 +30,12 @@ class KlyroPairABTest(unittest.TestCase):
                      "KlyroColorPickerDialog.kt","TerminalPane.kt"):
             self.assertIn("KlyroUiMetrics.",(UI/name).read_text(),name)
         settings=(UI/"KlyroSettingsSheet.kt").read_text()
-        self.assertIn("heightIn(min = 116.dp)", settings)
-        self.assertIn("maxLines = 2, overflow = TextOverflow.Ellipsis",settings)
+        self.assertIn("KlyroUiMetrics.sheetContentWidth", settings)
+        self.assertIn("KlyroUiMetrics.sheetContentMax", settings)
+        self.assertIn("KlyroUiMetrics.minTouch", settings)
         self.assertIn("role = Role.Button", settings)
-        bento=(UI/"KlyroExperimentalBento.kt").read_text()
-        self.assertIn("if (compact) 96.dp else 116.dp",bento)
+        self.assertIn("Slider(", settings)
+        self.assertFalse((UI/"KlyroExperimentalBento.kt").exists())
 
     def test_alerts_and_errors_do_not_destroy_sessions(self):
         pane=(UI/"TerminalPane.kt").read_text()
