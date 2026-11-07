@@ -84,6 +84,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
+import com.oryn.terminal.core.OrynPaths
+import java.io.File
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import java.nio.charset.StandardCharsets
@@ -1021,7 +1023,14 @@ fun TerminalPane(
     }
 
     if (showCommandPalette) {
+        val privatePrefix = remember(context) {
+            runCatching {
+                OrynPaths(context.filesDir,
+                    File(context.applicationInfo.nativeLibraryDir)).prefix
+            }.getOrNull()
+        }
         KlyroCommandPalette(
+            installedPrefix = privatePrefix,
             onInsert = { snippet ->
                 // A curated command is pasted, never submitted with Enter.
                 // Full-screen applications retain their own keyboard focus.
