@@ -138,20 +138,28 @@ internal fun KlyroSettingsSheet(
                         Text("Terminal settings and Android integration",
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.muted)
-                        SettingsRowLink("Appearance", "Theme, accent, font and size") {
-                            section = "appearance"
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(Modifier.weight(1f)) {
+                                SettingsBentoTile("Appearance", "Themes & type", "Aa",
+                                    prominent = true) { section = "appearance" }
+                            }
+                            Box(Modifier.weight(1f)) {
+                                SettingsBentoTile("Keyboard", "Keys & modifiers", "⌨") {
+                                    section = "keyboard"
+                                }
+                            }
                         }
-                        SettingsRowLink("Keyboard", "Extra keys and modifiers",
-                            R.drawable.hugeicons_keyboard) {
-                            section = "keyboard"
-                        }
-                        SettingsRowLink("Files & storage", "Authorized folders and import/export",
-                            R.drawable.hugeicons_folder_01) {
-                            section = "files"
-                        }
-                        SettingsRowLink("Privacy", "Clipboard and local data",
-                            R.drawable.hugeicons_shield_01) {
-                            section = "privacy"
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(Modifier.weight(1f)) {
+                                SettingsBentoTile("Storage", "Files & folders", "▣") {
+                                    section = "files"
+                                }
+                            }
+                            Box(Modifier.weight(1f)) {
+                                SettingsBentoTile("Privacy", "Local controls", "◇") {
+                                    section = "privacy"
+                                }
+                            }
                         }
                         SettingsRowLink("Diagnostics", "Runtime health and shareable report",
                             R.drawable.hugeicons_information_square) {
@@ -199,6 +207,45 @@ internal fun KlyroSettingsSheet(
                                                     style = MaterialTheme.typography.labelLarge,
                                                     fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
                                                 )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                Text("Monochrome", fontWeight = FontWeight.SemiBold,
+                                    color = colors.foreground)
+                                Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                    listOf(
+                                        Triple("mono-contrast", "Contrast", "◩"),
+                                        Triple("mono-black", "OLED", "●"),
+                                        Triple("mono-paper", "Paper", "○")
+                                    ).forEach { (id, label, glyph) ->
+                                        val active = themeMode == id
+                                        Surface(
+                                            modifier = Modifier.weight(1f)
+                                                .heightIn(min = KlyroUiMetrics.optionRow)
+                                                .clickable(role = Role.RadioButton,
+                                                    onClickLabel = "Use " + label + " monochrome theme") {
+                                                    onThemeModeChange(id)
+                                                }.semantics { selected = active },
+                                            color = if (active) colors.accent.copy(alpha = .15f) else colors.tile,
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                            border = if (active) BorderStroke(
+                                                KlyroUiMetrics.selectedBorder, colors.accent
+                                            ) else null
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth()
+                                                    .padding(horizontal = 6.dp, vertical = 12.dp),
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(glyph + " " + label,
+                                                    color = colors.foreground,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = if (active) FontWeight.Bold
+                                                        else FontWeight.Medium)
                                             }
                                         }
                                     }
@@ -323,7 +370,18 @@ internal fun KlyroSettingsSheet(
                                         }
                                     }
                                 }
-                                Slider(
+                                Surface(color = colors.tile,
+                                    shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
+                                    Column(Modifier.fillMaxWidth().padding(
+                                        horizontal = KlyroUiMetrics.spaceLg,
+                                        vertical = KlyroUiMetrics.spaceSm)) {
+                                        Text("Aa  The quick brown fox",
+                                            color = colors.foreground,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = fontSizeSp.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis)
+                                        Slider(
                                     value = fontSizeSp.coerceIn(9f, 24f),
                                     onValueChange = { onFontChange(it - fontSizeSp) },
                                     valueRange = 9f..24f,
@@ -338,7 +396,9 @@ internal fun KlyroSettingsSheet(
                                         activeTickColor = colors.onAccent,
                                         inactiveTickColor = colors.muted
                                     )
-                                )
+                                        )
+                                    }
+                                }
                                 Row(modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("9 sp", color = colors.muted,
@@ -360,14 +420,13 @@ internal fun KlyroSettingsSheet(
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "files" -> {
-                        val savedTree = remember(context, section) {
-                            context.getSharedPreferences("klyro_storage", Context.MODE_PRIVATE)
-                                .getString("tree_uri", null)
-                        }
-                        val authorized = savedTree != null &&
-                            context.contentResolver.persistedUriPermissions.any { permission ->
-                                permission.uri.toString() == savedTree && permission.isReadPermission
-                            }
+                        val stored = context.getSharedPreferences(
+                            "klyro_storage", Context.MODE_PRIVATE)
+                        val savedTrees = stored.getStringSet("tree_uris", emptySet()).orEmpty() +
+                            listOfNotNull(stored.getString("tree_uri", null))
+                        val authorizedCount = context.contentResolver.persistedUriPermissions
+                            .count { it.isReadPermission && it.uri.toString() in savedTrees }
+                        val authorized = authorizedCount > 0
                         SectionHeading("Files & storage",
                             "Android folder access is limited to what you authorize.")
                         Surface(
@@ -387,7 +446,7 @@ internal fun KlyroSettingsSheet(
                                     modifier = Modifier.size(KlyroUiMetrics.glyphMedium)
                                 )
                                 Column(Modifier.weight(1f)) {
-                                    Text(if (authorized) "Folder connected" else "No folder connected",
+                                    Text(if (authorized) "$authorizedCount folders connected" else "No folder connected",
                                         fontWeight = FontWeight.SemiBold,
                                         color = colors.foreground)
                                     Text("Klyro SAF access · no Unix mount",
@@ -404,7 +463,7 @@ internal fun KlyroSettingsSheet(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.accent, contentColor = colors.onAccent
                             )
-                        ) { Text(if (authorized) "Change authorized folder" else "Choose a folder") }
+                        ) { Text(if (authorized) "Add another folder" else "Choose a folder") }
                         SettingsRowLink("Import from folder",
                             "Copy selected folder files into ~/storage-imports.",
                             R.drawable.hugeicons_folder_01) {
@@ -423,8 +482,8 @@ internal fun KlyroSettingsSheet(
                             onDismiss()
                             onExportFile()
                         }
-                        Text("In Bash, termux-setup-storage requests this same folder picker. " +
-                            "SAF permissions cannot expose arbitrary Android folders as POSIX paths.",
+                        Text("Run klyro-setup-storage or setup-storage in Bash. " +
+                            "Each new SAF grant preserves previous folders. Android restricts selecting the Download root; use Import a file for individual downloads.",
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "privacy" -> {
@@ -570,6 +629,37 @@ private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, 
                     style = MaterialTheme.typography.bodySmall)
             }
             Text("›", color = colors.accent, style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+@Composable
+private fun SettingsBentoTile(
+    title: String,
+    subtitle: String,
+    glyph: String,
+    prominent: Boolean = false,
+    onClick: () -> Unit
+) {
+    val colors = LocalKlyroColors.current
+    Surface(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 112.dp)
+            .clickable(role = Role.Button, onClickLabel = "Open " + title, onClick = onClick),
+        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+        color = if (prominent) colors.accent.copy(alpha = .13f) else colors.tile,
+        border = if (prominent) BorderStroke(1.dp, colors.accent.copy(alpha = .35f)) else null
+    ) {
+        Column(Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween) {
+            Text(glyph, color = colors.accent, style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold)
+            Column {
+                Text(title, color = colors.foreground,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall)
+                Text(subtitle, color = colors.muted,
+                    style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }
