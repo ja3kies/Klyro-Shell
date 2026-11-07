@@ -2,6 +2,7 @@ package com.oryn.terminal
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -26,6 +27,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     )
 
     private val tabs = mutableStateListOf<ShellTab>()
+    private val unreadActivity = mutableStateMapOf<Long, Boolean>()
+    val tabsWithUnreadOutput: Set<Long> get() = unreadActivity.keys.toSet()
     private val invalidTitleCharacters = Regex("[\\p{Cntrl}\\p{Cf}]")
     val sessions: List<ShellTab> get() = tabs
     private var nextId = 1L
@@ -84,6 +87,11 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
 
     fun listenerFor(tabId: Long): OrynTerminalSessionClient.Listener =
         object : OrynTerminalSessionClient.Listener {
+            override fun onOutputActivity() {
+                if (activeTabId != tabId && tabs.any { it.id == tabId }) {
+                    unreadActivity[tabId] = true
+                }
+            }
             override fun onTitleChanged(title: String?) {
                 updateTitle(tabId, title)
             }
@@ -132,6 +140,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             it.viewClient.attachView(null)
         }
         activeTabId = id
+        unreadActivity.remove(id)
         sessionFailureMessage = null
         sessionStatus = ""
     }
@@ -150,6 +159,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (index < 0) return
         if (pendingNativePaste?.tabId == id) pendingNativePaste = null
         val entry = tabs.removeAt(index)
+        unreadActivity.remove(id)
         entry.client.dispose()
         entry.viewClient.attachView(null)
         entry.session.finishIfRunning()
