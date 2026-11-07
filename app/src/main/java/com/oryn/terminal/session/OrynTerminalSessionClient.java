@@ -27,6 +27,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         void onSessionFinished(com.termux.terminal.TerminalSession session, int exitStatus);
         void onShellPid(int pid);
         void onNativePasteRequiresConfirmation(String text);
+        default void onOutputActivity() {}
     }
 
     private final Context context;
@@ -68,6 +69,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
             uiHandler.post(() -> {
                 pendingOutputRefresh.set(false);
                 if (disposed.get()) return;
+                if (listener != null) listener.onOutputActivity();
                 TerminalView view = terminalView;
                 if (view != null) view.onScreenUpdated();
                 Runnable observer = outputObserver;
