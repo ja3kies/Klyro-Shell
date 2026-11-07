@@ -202,10 +202,14 @@ internal fun KlyroWorkspaceSheet(
                                     ) {
                                         DropdownMenuItem(
                                             text = { Text("Rename", color = c.foreground) },
+                                            leadingIcon = { Text("✎", color = c.foreground,
+                                                fontSize = 20.sp) },
                                             onClick = { editProject(entry.id, entry.name) }
                                         )
                                         DropdownMenuItem(
                                             text = { Text("Delete", color = c.danger) },
+                                            leadingIcon = { Text("×", color = c.danger,
+                                                fontSize = 22.sp) },
                                             onClick = { menuId = null; deletingId = entry.id }
                                         )
                                     }
