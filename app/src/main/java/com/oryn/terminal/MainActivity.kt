@@ -137,7 +137,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             if (!isFinishing && !isDestroyed) {
-                storageBridgeHandler.postDelayed(this, 350L)
+                storageBridgeHandler.postDelayed(this, 750L)
             }
         }
     }
