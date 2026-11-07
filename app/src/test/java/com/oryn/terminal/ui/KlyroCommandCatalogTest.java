@@ -23,11 +23,12 @@ public class KlyroCommandCatalogTest {
         }
     }
 
-    @Test public void unsupportedStorageIsNeverPastedAsShellCode() {
+    @Test public void storageUsesNamespacedKlyroBridgeWithoutImplicitExecution() {
         KlyroCommandCatalog.Entry storage = KlyroCommandCatalog.search("termux-setup-storage").get(0);
-        assertFalse(storage.insertable);
-        assertEquals("", KlyroCommandCatalog.safeInsertion(storage));
-        assertTrue(storage.note.contains("Settings > Files & storage"));
+        assertTrue(storage.insertable);
+        assertEquals("klyro-setup-storage", KlyroCommandCatalog.safeInsertion(storage));
+        assertTrue(storage.note.contains("SAF"));
+        assertFalse(storage.insertion.contains("\n"));
     }
 
     @Test public void exitAndUpgradeOnlyInsertWithoutEnter() {
@@ -50,9 +51,12 @@ public class KlyroCommandCatalogTest {
             assertFalse(KlyroCommandCatalog.isInstalled(git, root.toFile()));
             assertTrue(KlyroCommandCatalog.isInstalled(pwd, root.toFile()));
             assertFalse(KlyroCommandCatalog.isInstalled(storage, root.toFile()));
+            java.nio.file.Files.createFile(bin.resolve("klyro-setup-storage"));
+            assertTrue(KlyroCommandCatalog.isInstalled(storage, root.toFile()));
             assertFalse(KlyroCommandCatalog.isInstalled(pkg, null));
         } finally {
             java.nio.file.Files.deleteIfExists(bin.resolve("pkg"));
+            java.nio.file.Files.deleteIfExists(bin.resolve("klyro-setup-storage"));
             java.nio.file.Files.deleteIfExists(bin);
             java.nio.file.Files.deleteIfExists(root);
         }
