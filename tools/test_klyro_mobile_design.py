@@ -1,6 +1,7 @@
 """Adversarial Compose UI architecture checks (not a substitute for device screenshots)."""
 from pathlib import Path
 import unittest
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "app/src/main/java/com/oryn/terminal/ui"
@@ -86,6 +87,53 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertNotIn("ActionTile(", settings)
         self.assertNotIn("Preview each typeface before choosing.", settings)
 
+
+    def test_hugeicons_assets_are_vectorized_and_ui_actions_use_real_icons(self):
+        drawable = ROOT / "app/src/main/res/drawable"
+        names = (
+            "colors", "keyboard", "folder_01", "shield_01",
+            "download_01", "upload_01", "chevron_right",
+            "more_vertical", "pen_01", "trash", "plus_sign",
+            "arrow_up_right_01", "cancel_circle", "terminal",
+        )
+        ns = "{http://schemas.android.com/apk/res/android}"
+        for name in names:
+            with self.subTest(icon=name):
+                path = drawable / ("hugeicons_" + name + ".xml")
+                self.assertTrue(path.is_file(), str(path))
+                vector = ET.parse(path).getroot()
+                self.assertEqual(vector.tag, "vector")
+                paths = vector.findall("path")
+                self.assertGreaterEqual(len(paths), 1)
+                self.assertTrue(all(p.get(ns + "pathData") for p in paths))
+
+        settings = src(UI / "KlyroSettingsSheet.kt")
+        self.assertIn("private fun SettingsBentoTile(", settings)
+        self.assertIn("icon: Int,", settings)
+        self.assertIn("Icon(painterResource(icon)", settings)
+        for token in ('"⌨"', '"▣"', '"◇"', 'glyph = "↓"', 'glyph = "↑"'):
+            self.assertNotIn(token, settings)
+        self.assertIn("hugeicons-MIT.txt", settings)
+        self.assertTrue((ROOT / "app/src/main/assets/licenses/hugeicons-MIT.txt").is_file())
+
+        workspaces = src(UI / "KlyroWorkspaceSheet.kt")
+        self.assertIn("R.drawable.hugeicons_pen_01", workspaces)
+        self.assertIn("R.drawable.hugeicons_trash", workspaces)
+        self.assertIn("R.drawable.hugeicons_more_vertical", workspaces)
+        self.assertNotIn('leadingIcon = { Text(', workspaces)
+
+        sessions = src(UI / "KlyroSessionSheets.kt")
+        self.assertIn("R.drawable.hugeicons_plus_sign", sessions)
+        self.assertIn("R.drawable.hugeicons_cancel_circle", sessions)
+        self.assertNotIn('SheetAction("×"', sessions)
+
+        pane = src(UI / "TerminalPane.kt")
+        menu = pane.split("val toolsMenu: @Composable () -> Unit =", 1)[1].split(
+            "\n    Column(", 1
+        )[0]
+        self.assertEqual(menu.count("DropdownMenuItem("), 4)
+        self.assertEqual(menu.count("leadingIcon ="), 4)
+        self.assertIn("R.drawable.hugeicons_more_vertical", menu)
 
 if __name__ == "__main__":
     unittest.main()
