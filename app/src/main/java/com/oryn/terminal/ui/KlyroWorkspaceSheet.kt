@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -94,7 +95,8 @@ internal fun KlyroWorkspaceSheet(
             dragHandle = { BottomSheetDefaults.DragHandle(color = c.muted) }
         ) {
             Column(
-                Modifier.fillMaxWidth().heightIn(max = 620.dp)
+                Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
+                    .fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
                     .verticalScroll(rememberScrollState())
                     .imePadding()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
@@ -133,7 +135,7 @@ internal fun KlyroWorkspaceSheet(
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth()
-                                .heightIn(min = 64.dp),
+                                .heightIn(min = KlyroUiMetrics.workspaceRow),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
