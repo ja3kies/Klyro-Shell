@@ -33,7 +33,7 @@ public class KlyroShellHelperInstallerTest {
         Path bin = Files.createDirectory(prefix.resolve("bin"));
         Path outside = Files.createTempFile("klyro-external", ".sh");
         Path link = bin.resolve("klyro-info");
-        Files.writeString(outside, "untouched\n");
+        Files.write(outside, "untouched\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         try {
             Files.createSymbolicLink(link, outside);
             try {
@@ -41,7 +41,7 @@ public class KlyroShellHelperInstallerTest {
                         MARKER, SCRIPT);
                 fail("Accepted linked helper");
             } catch (IOException expected) { }
-            assertEquals("untouched\n", Files.readString(outside));
+            assertEquals("untouched\n", new String(Files.readAllBytes(outside), java.nio.charset.StandardCharsets.UTF_8));
         } finally {
             Files.deleteIfExists(link);
             Files.deleteIfExists(outside);
@@ -56,17 +56,17 @@ public class KlyroShellHelperInstallerTest {
         Path bin = Files.createDirectory(prefix.resolve("bin"));
         Path helper = bin.resolve("klyro-info");
         try {
-            Files.writeString(helper, "#!/bin/sh\n# user-owned\n");
+            Files.write(helper, "#!/bin/sh\n# user-owned\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             KlyroShellHelperInstaller.install(prefix.toFile(), "klyro-info",
                     MARKER, SCRIPT);
-            assertEquals("#!/bin/sh\n# user-owned\n", Files.readString(helper));
+            assertEquals("#!/bin/sh\n# user-owned\n", new String(Files.readAllBytes(helper), java.nio.charset.StandardCharsets.UTF_8));
             Files.delete(helper);
             KlyroShellHelperInstaller.install(prefix.toFile(), "klyro-info",
                     MARKER, SCRIPT);
-            assertEquals(SCRIPT, Files.readString(helper));
+            assertEquals(SCRIPT, new String(Files.readAllBytes(helper), java.nio.charset.StandardCharsets.UTF_8));
             KlyroShellHelperInstaller.install(prefix.toFile(), "klyro-info",
                     MARKER, SCRIPT);
-            assertEquals(SCRIPT, Files.readString(helper));
+            assertEquals(SCRIPT, new String(Files.readAllBytes(helper), java.nio.charset.StandardCharsets.UTF_8));
         } finally {
             Files.deleteIfExists(helper);
             Files.delete(bin);
