@@ -346,28 +346,82 @@ internal fun KlyroSettingsSheet(
                         }
                     }
                     "keyboard" -> {
-                        SectionHeading("Keyboard", "Two rows in portrait; one scrollable row when space is limited.")
-                        ActionTile(
-                            title = "Release modifiers",
-                            subtitle = "Turn off CTRL, ALT, SHIFT and FN if a key stays active."
-                        ) { onResetModifiers() }
-                        Text("In compact windows, swipe the shortcut row to reach the remaining keys.",
+                        SectionHeading("Keyboard", "Controls for interactive terminal programs.")
+                        SettingsRowLink("Release modifiers",
+                            "Clear Ctrl, Alt, Shift and Fn if they remain latched.",
+                            R.drawable.hugeicons_keyboard) {
+                            onResetModifiers()
+                        }
+                        Text("Swipe the shortcuts row in compact layouts.",
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "files" -> {
-                        SectionHeading("Files & storage", "Access only Android folders you authorize.")
-                        ActionTile("Set up storage folder", "Choose a folder with Android's file picker") {
-                            onDismiss(); onSetupStorage()
+                        val savedTree = remember(context, section) {
+                            context.getSharedPreferences("klyro_storage", Context.MODE_PRIVATE)
+                                .getString("tree_uri", null)
                         }
-                        ActionTile("Import from authorized folder", "Import into Klyro private storage") {
-                            onDismiss(); onImportStorageFolder()
+                        val authorized = savedTree != null &&
+                            context.contentResolver.persistedUriPermissions.any { permission ->
+                                permission.uri.toString() == savedTree && permission.isReadPermission
+                            }
+                        SectionHeading("Files & storage",
+                            "Android folder access is limited to what you authorize.")
+                        Surface(
+                            color = if (authorized) colors.readyInk.copy(alpha = .10f) else colors.tile,
+                            shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(KlyroUiMetrics.spaceMd),
+                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.hugeicons_folder_01),
+                                    contentDescription = null,
+                                    tint = if (authorized) colors.readyInk else colors.muted,
+                                    modifier = Modifier.size(KlyroUiMetrics.glyphMedium)
+                                )
+                                Column(Modifier.weight(1f)) {
+                                    Text(if (authorized) "Folder connected" else "No folder connected",
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = colors.foreground)
+                                    Text("Klyro SAF access · no Unix mount",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colors.muted)
+                                }
+                            }
                         }
-                        ActionTile("Import file", "Choose a document from Android") {
-                            onDismiss(); onImportFile()
+                        Button(
+                            onClick = { onDismiss(); onSetupStorage() },
+                            modifier = Modifier.fillMaxWidth()
+                                .heightIn(min = KlyroUiMetrics.optionRow),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.accent, contentColor = colors.onAccent
+                            )
+                        ) { Text(if (authorized) "Change authorized folder" else "Choose a folder") }
+                        SettingsRowLink("Import from folder",
+                            "Copy selected folder files into ~/storage-imports.",
+                            R.drawable.hugeicons_folder_01) {
+                            onDismiss()
+                            onImportStorageFolder()
                         }
-                        ActionTile("Export file", "Save a file through Android's file picker") {
-                            onDismiss(); onExportFile()
+                        SettingsRowLink("Import a file",
+                            "Choose a document through Android's file picker.",
+                            glyph = "↓") {
+                            onDismiss()
+                            onImportFile()
                         }
+                        SettingsRowLink("Export a file",
+                            "Save a file using Android's document picker.",
+                            glyph = "↑") {
+                            onDismiss()
+                            onExportFile()
+                        }
+                        Text("In Bash, termux-setup-storage requests this same folder picker. " +
+                            "SAF permissions cannot expose arbitrary Android folders as POSIX paths.",
+                            style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "privacy" -> {
                         SectionHeading("Privacy", "Terminal output stays on your device by default.")
@@ -429,9 +483,10 @@ internal fun KlyroSettingsSheet(
                                 }
                             }
                         }
-                        ActionTile(
+                        SettingsRowLink(
                             "JetBrains Mono licence",
-                            "SIL Open Font License 1.1 · included in this APK"
+                            "SIL Open Font License 1.1 · included in this APK",
+                            R.drawable.hugeicons_information_square
                         ) { showFontLicense = true }
                     }
                 }
@@ -484,26 +539,7 @@ private fun SectionHeading(title: String, subtitle: String) {
 }
 
 @Composable
-private fun ActionTile(title: String, subtitle: String, onClick: () -> Unit) {
-    val colors = LocalKlyroColors.current
-    Surface(
-        modifier = Modifier.fillMaxWidth()
-            .clickable(role = Role.Button, onClickLabel = title, onClick = onClick),
-        color = colors.tile,
-        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(17.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(title, fontWeight = FontWeight.SemiBold, color = colors.foreground)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.muted)
-        }
-    }
-}
-
-@Composable
-private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, onClick: () -> Unit) {
+private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, glyph: String = "Aa", onClick: () -> Unit) {
     val colors = LocalKlyroColors.current
     Surface(
         modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
@@ -526,7 +562,7 @@ private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, 
                     Icon(painterResource(icon), null, tint = colors.accent,
                         modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                 } else {
-                    Text("Aa", fontWeight = FontWeight.SemiBold,
+                    Text(glyph, fontWeight = FontWeight.SemiBold,
                         color = colors.accent, style = MaterialTheme.typography.bodyMedium)
                 }
             }
