@@ -171,7 +171,8 @@ fun TerminalPane(
         } else if (ClipboardPastePolicy.requiresConfirmation(content)) {
             pendingMultilinePaste = content
         } else {
-            write(session, content!!)
+            // Termux TerminalEmulator handles DECSET 2004 bracketed paste.
+            session.emulator?.paste(content!!)
         }
     }
     LaunchedEffect(nativePasteRequest, session) {
@@ -776,7 +777,7 @@ fun TerminalPane(
                     val text = pendingMultilinePaste
                     pendingMultilinePaste = null
                     if (ClipboardPastePolicy.canPaste(text)) {
-                        write(session, text!!)
+                        session.emulator?.paste(text!!)
                     } else {
                         Toast.makeText(context, "Clipboard text rejected", Toast.LENGTH_SHORT).show()
                     }
