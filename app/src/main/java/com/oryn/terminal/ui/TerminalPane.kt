@@ -299,8 +299,9 @@ fun TerminalPane(
     val toolsMenu: @Composable () -> Unit = {
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
-                    Text("⋮", color = TerminalAccent, fontSize = 22.sp,
-                        modifier = Modifier.semantics { contentDescription = "More actions" })
+                    Icon(painterResource(R.drawable.hugeicons_more_vertical),
+                        contentDescription = "More actions", tint = TerminalAccent,
+                        modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
                 }
                 DropdownMenu(
                     expanded = showToolsMenu,
@@ -311,10 +312,14 @@ fun TerminalPane(
                 ) {
                     DropdownMenuItem(
                         text = { Text("Command Palette") },
+                        leadingIcon = { Icon(painterResource(R.drawable.hugeicons_terminal),
+                            contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) },
                         onClick = { showToolsMenu = false; showCommandPalette = true }
                     )
                     DropdownMenuItem(
                         text = { Text("Workspaces") },
+                        leadingIcon = { Icon(painterResource(R.drawable.hugeicons_folder_01),
+                            contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) },
                         onClick = { showToolsMenu = false; showWorkspaceSheet = true }
                     )
                     DropdownMenuItem(
