@@ -471,7 +471,11 @@ fun TerminalPane(
                         1.dp, TerminalAccent.copy(alpha = 0.25f)
                     ) else null
                 ) {
-                    Box(contentAlignment = Alignment.Center) { Text("+", fontSize = 20.sp) }
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(painterResource(R.drawable.hugeicons_plus_sign),
+                            contentDescription = null,
+                            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                    }
                 }
             }
         }
