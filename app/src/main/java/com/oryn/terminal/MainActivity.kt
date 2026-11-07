@@ -79,6 +79,9 @@ import androidx.compose.ui.unit.sp
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.session.TerminalSessionManager
 import com.oryn.terminal.core.KlyroDiagnostics
+import com.oryn.terminal.core.KlyroHealthReport
+import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
+import com.oryn.terminal.workspace.KlyroWorkspaceStore
 import com.oryn.terminal.termux.ProotRuntimeInstaller
 import com.oryn.terminal.termux.TermuxBootstrapInstaller
 import com.oryn.terminal.ui.KlyroTerminalPalette
@@ -104,6 +107,7 @@ class MainActivity : ComponentActivity() {
     private var isVerifyingRuntime by mutableStateOf(false)
     private var observingPreviousInstall = false
     private val terminalState: TerminalSessionViewModel get() = KlyroSessionRuntime.sessions
+    private val workspaceStore by lazy { KlyroWorkspaceStore(applicationContext) }
     private val storageFolderLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri == null) return@registerForActivityResult
@@ -403,6 +407,22 @@ class MainActivity : ComponentActivity() {
                     hasRunningSessions = terminalState.sessions.isNotEmpty(),
                     tabs = terminalState.displayTabs,
                     activeTabId = terminalState.activeTabId,
+                    workspaces = workspaceStore.entries,
+                    selectedWorkspaceId = workspaceStore.activeId,
+                    tabWorkspaces = terminalState.tabWorkspaceIds,
+                    onSelectWorkspace = { workspaceStore.select(it) },
+                    onCreateWorkspace = { workspaceStore.create(it) != null },
+                    onRenameWorkspace = { id, name -> workspaceStore.rename(id, name) },
+                    onDeleteWorkspace = { id ->
+                        if (workspaceStore.delete(id)) terminalState.resetWorkspace(id)
+                    },
+                    onAssignWorkspace = { workspaceId ->
+                        if (workspaceStore.entries.any { it.id == workspaceId }) {
+                            terminalState.activeTabId?.let { tabId ->
+                                terminalState.assignWorkspace(tabId, workspaceId)
+                            }
+                        }
+                    },
                     onSelectTab = terminalState::selectTab,
                     onRenameTab = terminalState::renameTab,
                     onCloseTab = { id ->
@@ -657,7 +677,8 @@ class MainActivity : ComponentActivity() {
             val newSessionClient = OrynTerminalSessionClient(applicationContext, terminalState.listenerFor(tabId))
             val newViewClient = OrynTerminalViewClient(applicationContext)
             val newSession = manager.startBash("Bash", newSessionClient)
-            terminalState.attachSession(newSession, newSessionClient, newViewClient, tabId)
+            terminalState.attachSession(newSession, newSessionClient, newViewClient,
+                tabId, workspaceStore.activeId)
             KlyroSessionRuntime.noteInteraction()
             KlyroSessionService.ensureRunning(this)
             showWelcomeScreen = false
@@ -725,6 +746,14 @@ private fun OrynTerminalApp(
     hasRunningSessions: Boolean,
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
+    workspaces: List<KlyroWorkspaceCatalog.Entry>,
+    selectedWorkspaceId: String,
+    tabWorkspaces: Map<Long, String>,
+    onSelectWorkspace: (String) -> Unit,
+    onCreateWorkspace: (String) -> Boolean,
+    onRenameWorkspace: (String, String) -> Boolean,
+    onDeleteWorkspace: (String) -> Unit,
+    onAssignWorkspace: (String) -> Unit,
     onSelectTab: (Long) -> Unit,
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
@@ -748,6 +777,7 @@ private fun OrynTerminalApp(
     // Setup and terminal chrome share the same persisted appearance selection.
     // Each role keeps its contrast in both Klyro Soft Mint and Klyro Dark.
     val ui = LocalKlyroColors.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
@@ -792,6 +822,25 @@ private fun OrynTerminalApp(
                 title = terminalTitle,
                 tabs = tabs,
                 activeTabId = activeTabId,
+                workspaces = workspaces,
+                selectedWorkspaceId = selectedWorkspaceId,
+                tabWorkspaces = tabWorkspaces,
+                onSelectWorkspace = onSelectWorkspace,
+                onCreateWorkspace = onCreateWorkspace,
+                onRenameWorkspace = onRenameWorkspace,
+                onDeleteWorkspace = onDeleteWorkspace,
+                onAssignWorkspace = onAssignWorkspace,
+                diagnosticReport = KlyroHealthReport.format(
+                    try {
+                        context.packageManager.getPackageInfo(context.packageName, 0)
+                            .versionName ?: "unknown"
+                    } catch (_: Exception) { "unknown" },
+                    android.os.Build.VERSION.SDK_INT,
+                    bootstrapInstalled, runtimeInstalled, runtimeVerified,
+                    runtimeHasWarnings, tabs.size, workspaces.size,
+                    context.filesDir.usableSpace, technicalErrorDetails
+                ),
+                onRecheck = onRecheck,
                 onSelectTab = onSelectTab,
                 onRenameTab = onRenameTab,
                 onCloseTab = onCloseTab,
