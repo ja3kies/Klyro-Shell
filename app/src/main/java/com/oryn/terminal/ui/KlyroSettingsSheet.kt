@@ -91,6 +91,7 @@ internal fun KlyroSettingsSheet(
 ) {
     var section by remember(initialSection) { mutableStateOf(initialSection) }
     var showFontLicense by remember { mutableStateOf(false) }
+    var showHugeiconsLicense by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
@@ -564,6 +565,10 @@ internal fun KlyroSettingsSheet(
                             "SIL Open Font License 1.1 · included in this APK",
                             R.drawable.hugeicons_information_square
                         ) { showFontLicense = true }
+                        SettingsRowLink(
+                            "Hugeicons licence", "MIT · vector icon set",
+                            R.drawable.hugeicons_information_square
+                        ) { showHugeiconsLicense = true }
                     }
                 }
             }
@@ -578,6 +583,31 @@ internal fun KlyroSettingsSheet(
                 initialArgb = initialColor,
                 onApply = { onAccentIdChange(it); showColorPicker = false },
                 onDismiss = { showColorPicker = false }
+            )
+        }
+        if (showHugeiconsLicense) {
+            val licence = remember(context) {
+                runCatching {
+                    context.assets.open("licenses/hugeicons-MIT.txt")
+                        .bufferedReader().use { it.readText() }
+                }.getOrElse { "Licence unavailable in this build." }
+            }
+            AlertDialog(
+                onDismissRequest = { showHugeiconsLicense = false },
+                containerColor = colors.sheet,
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+                title = { Text("Hugeicons · MIT") },
+                text = {
+                    Column(
+                        Modifier.heightIn(max = KlyroUiMetrics.paletteListMax)
+                            .verticalScroll(rememberScrollState())
+                    ) { Text(licence, style = MaterialTheme.typography.bodySmall) }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showHugeiconsLicense = false }) {
+                        Text("Close")
+                    }
+                }
             )
         }
         if (showFontLicense) {
