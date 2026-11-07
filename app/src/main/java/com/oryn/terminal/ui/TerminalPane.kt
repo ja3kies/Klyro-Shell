@@ -146,7 +146,6 @@ fun TerminalPane(
     var showToolsMenu by remember(session) { mutableStateOf(false) }
     var showWorkspaceSheet by remember(session) { mutableStateOf(false) }
     var showCommandPalette by remember(session) { mutableStateOf(false) }
-    var showDiagnosticsSheet by remember(session) { mutableStateOf(false) }
     val currentProject = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
     var showTerminalSettings by remember(session) { mutableStateOf(false) }
     var initialSettingsSection by remember(session) { mutableStateOf("home") }
@@ -284,7 +283,7 @@ fun TerminalPane(
     BackHandler(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
-            !showWorkspaceSheet && !showCommandPalette && !showDiagnosticsSheet &&
+            !showWorkspaceSheet && !showCommandPalette &&
             pendingMultilinePaste == null && selectedOutput == null &&
             sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null
     ) {
@@ -317,10 +316,6 @@ fun TerminalPane(
                         onClick = { showToolsMenu = false; showWorkspaceSheet = true }
                     )
                     DropdownMenuItem(
-                        text = { Text("Diagnostics") },
-                        onClick = { showToolsMenu = false; showDiagnosticsSheet = true }
-                    )
-                    DropdownMenuItem(
                         text = { Text("Settings", color = MaterialTheme.colorScheme.onSurface) },
                         modifier = Modifier.heightIn(min = 56.dp),
                         leadingIcon = {
@@ -330,19 +325,6 @@ fun TerminalPane(
                         onClick = {
                             showToolsMenu = false
                             initialSettingsSection = "home"
-                            showTerminalSettings = true
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Files & storage", color = MaterialTheme.colorScheme.onSurface) },
-                        modifier = Modifier.heightIn(min = 56.dp),
-                        leadingIcon = {
-                            Icon(painterResource(R.drawable.hugeicons_folder_01),
-                                contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
-                        },
-                        onClick = {
-                            showToolsMenu = false
-                            initialSettingsSection = "files"
                             showTerminalSettings = true
                         }
                     )
@@ -369,41 +351,35 @@ fun TerminalPane(
             .background(TerminalBackground)
     ) {
         if (!compact) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
+            Box(
+                modifier = Modifier.fillMaxWidth()
                     .background(TerminalSurface)
-                    .padding(start = 14.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .heightIn(min = 52.dp)
+                    .padding(horizontal = 10.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        title,
-                        color = TerminalAccent,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace
-                    )
+                    Text("KLYRO", color = TerminalAccent, fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                     Text("·", color = TerminalMuted)
-                    Text("ARM64", color = TerminalMuted, fontSize = 11.sp)
-                    Text("·", color = TerminalMuted)
-                    Text(currentProject, color = TerminalMuted, fontSize = 11.sp,
-                        maxLines = 1)
-                    if (runtimeHasWarnings) {
-                        Text("⚠", color = ui.warningInk, fontSize = 12.sp,
-                            modifier = Modifier.semantics {
-                                contentDescription = "Runtime warnings reported"
-                            })
-                    }
+                    Text("ARM64", color = TerminalMuted, fontSize = 10.sp)
                 }
-
-                toolsMenu()
+                Text(
+                    currentProject,
+                    modifier = Modifier.align(Alignment.Center).widthIn(max = 136.dp),
+                    color = TerminalText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                    toolsMenu()
+                }
             }
         }
 
@@ -810,6 +786,20 @@ fun TerminalPane(
                 outputSelectionView = null
                 selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
             },
+            diagnosticReport = diagnosticReport,
+            onRecheckEnvironment = onRecheck,
+            onCopyDiagnostic = {
+                clipboardManager?.setPrimaryClip(
+                    ClipData.newPlainText("Klyro health snapshot", diagnosticReport))
+                Toast.makeText(context, "Report copied", Toast.LENGTH_SHORT).show()
+            },
+            onShareDiagnostic = {
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, diagnosticReport)
+                }
+                context.startActivity(Intent.createChooser(send, "Share Klyro report"))
+            },
             onDismiss = { showTerminalSettings = false }
         )
     }
@@ -1037,96 +1027,19 @@ fun TerminalPane(
     }
 
     if (showCommandPalette) {
-        fun moveTab(direction: Int) {
-            if (tabs.size < 2) return
-            val current = tabs.indexOfFirst { it.first == activeTabId }.coerceAtLeast(0)
-            onSelectTab(tabs[Math.floorMod(current + direction, tabs.size)].first)
-        }
-        val actions = listOf(
-            KlyroPaletteAction("New terminal", "Start another private Bash session",
-                enabled = tabs.size < 8) { onNewTab() },
-            KlyroPaletteAction("Find", "Search terminal scrollback") {
-                transcriptQuery = ""
-                searchIndex = 0
-                showTranscriptSearch = true
-            },
-            KlyroPaletteAction("Workspaces", "Organize live sessions by project") {
-                showWorkspaceSheet = true
-            },
-            KlyroPaletteAction("Diagnostics", "Inspect environment and generate a report") {
-                showDiagnosticsSheet = true
-            },
-            KlyroPaletteAction("Settings", "Appearance, keyboard and sessions") {
-                initialSettingsSection = "home"
-                showTerminalSettings = true
-            },
-            KlyroPaletteAction("Files & storage", "Manage Android file access") {
-                initialSettingsSection = "files"
-                showTerminalSettings = true
-            },
-            KlyroPaletteAction("Paste clipboard", "Paste validated text into Bash",
-                enabled = clipboardAvailable && session.isRunning()) { pasteClipboard() },
-            KlyroPaletteAction("Copy output", "Select text from terminal history",
-                enabled = hasCopyableOutput) {
-                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
-            },
-            KlyroPaletteAction("Clear display", "Clear history while preserving input") {
-                TerminalDisplayActions.clear(session)
-                activeTerminalView?.setTopRow(0)
-                activeTerminalView?.invalidate()
-            },
-            KlyroPaletteAction("Next session", "Switch to the next tab",
-                enabled = tabs.size > 1) { moveTab(1) },
-            KlyroPaletteAction("Previous session", "Switch to the previous tab",
-                enabled = tabs.size > 1) { moveTab(-1) },
-            KlyroPaletteAction("Import file", "Select a file using Android storage") {
-                onImportFile()
-            },
-            KlyroPaletteAction("Export file", "Export a Klyro file through Android") {
-                onExportFile()
-            },
-            KlyroPaletteAction("Import authorized folder", "Import from selected storage folder") {
-                onImportStorageFolder()
-            },
-            KlyroPaletteAction("Configure storage", "Authorize an Android folder") {
-                onSetupStorage()
-            },
-            KlyroPaletteAction("Change light or dark appearance", "Toggle terminal chrome theme") {
-                onThemeModeChange(if (themeMode == "dark") "light" else "dark")
-            },
-            KlyroPaletteAction("Home", "Return to private environment overview") {
-                onReturnHome()
-            }
-        ) + tabs.map { (id, name) ->
-            KlyroPaletteAction("Session: " + name, "Switch to existing PTY tab") {
-                onSelectTab(id)
-            }
-        } + workspaces.map { project ->
-            KlyroPaletteAction("Project: " + project.name, "Select named workspace") {
-                onSelectWorkspace(project.id)
-                showWorkspaceSheet = true
-            }
-        }
-        KlyroCommandPalette(actions, onDismiss = { showCommandPalette = false })
-    }
-
-    if (showDiagnosticsSheet) {
-        KlyroDiagnosticsSheet(
-            report = diagnosticReport,
-            onVerify = onRecheck,
-            onCopy = {
-                clipboardManager?.setPrimaryClip(
-                    ClipData.newPlainText("Klyro health snapshot", diagnosticReport))
-                Toast.makeText(context, "Report copied", Toast.LENGTH_SHORT).show()
-            },
-            onShare = {
-                val send = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, diagnosticReport)
+        KlyroCommandPalette(
+            onInsert = { snippet ->
+                // A curated command is pasted, never submitted with Enter.
+                // Full-screen applications retain their own keyboard focus.
+                if (session.isRunning() && session.emulator?.isAlternateBufferActive == false) {
+                    session.emulator?.paste(snippet)
+                } else {
+                    Toast.makeText(context,
+                        "Return to the Bash prompt before inserting a command.",
+                        Toast.LENGTH_SHORT).show()
                 }
-                context.startActivity(Intent.createChooser(send, "Share Klyro report"))
             },
-            onDismiss = { showDiagnosticsSheet = false }
+            onDismiss = { showCommandPalette = false }
         )
     }
 
