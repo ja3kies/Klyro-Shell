@@ -203,6 +203,7 @@ object KlyroUiMetrics {
     val workspaceRow = 64.dp
     val sheetContentMax = 620.dp
     val paletteListMax = 420.dp
+    val menuWidth = 246.dp
     val sheetContentWidth = 540.dp
 }
 
