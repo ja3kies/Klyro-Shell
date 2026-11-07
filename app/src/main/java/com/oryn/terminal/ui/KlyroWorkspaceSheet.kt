@@ -192,7 +192,9 @@ internal fun KlyroWorkspaceSheet(
                                             },
                                         contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                                     ) {
-                                        Text("⋮", color = c.foreground, fontSize = 22.sp)
+                                        Icon(painterResource(R.drawable.hugeicons_more_vertical),
+                                            contentDescription = null, tint = c.foreground,
+                                            modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
                                     }
                                     DropdownMenu(
                                         expanded = menuId == entry.id,
@@ -202,14 +204,16 @@ internal fun KlyroWorkspaceSheet(
                                     ) {
                                         DropdownMenuItem(
                                             text = { Text("Rename", color = c.foreground) },
-                                            leadingIcon = { Text("✎", color = c.foreground,
-                                                fontSize = 20.sp) },
+                                            leadingIcon = { Icon(painterResource(R.drawable.hugeicons_pen_01),
+                                                contentDescription = null, tint = c.foreground,
+                                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall)) },
                                             onClick = { editProject(entry.id, entry.name) }
                                         )
                                         DropdownMenuItem(
                                             text = { Text("Delete", color = c.danger) },
-                                            leadingIcon = { Text("×", color = c.danger,
-                                                fontSize = 22.sp) },
+                                            leadingIcon = { Icon(painterResource(R.drawable.hugeicons_trash),
+                                                contentDescription = null, tint = c.danger,
+                                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall)) },
                                             onClick = { menuId = null; deletingId = entry.id }
                                         )
                                     }
