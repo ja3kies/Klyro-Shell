@@ -1,6 +1,7 @@
 package com.oryn.terminal.ui
 
 import android.content.ClipData
+import android.content.Intent
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color as AndroidColor
@@ -82,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.oryn.terminal.session.OrynTerminalSessionClient
+import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import java.nio.charset.StandardCharsets
@@ -104,6 +106,17 @@ fun TerminalPane(
     title: String,
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
+    workspaces: List<KlyroWorkspaceCatalog.Entry>,
+    selectedWorkspaceId: String,
+    tabWorkspaces: Map<Long, String>,
+    tabsWithUnreadOutput: Set<Long>,
+    onSelectWorkspace: (String) -> Unit,
+    onCreateWorkspace: (String) -> Boolean,
+    onRenameWorkspace: (String, String) -> Boolean,
+    onDeleteWorkspace: (String) -> Unit,
+    onAssignWorkspace: (String) -> Unit,
+    diagnosticReport: String,
+    onRecheck: () -> Unit,
     onSelectTab: (Long) -> Unit,
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
@@ -131,6 +144,10 @@ fun TerminalPane(
     val TerminalMuted = ui.muted
     val inactiveTabSurface = ui.key
     var showToolsMenu by remember(session) { mutableStateOf(false) }
+    var showWorkspaceSheet by remember(session) { mutableStateOf(false) }
+    var showCommandPalette by remember(session) { mutableStateOf(false) }
+    var showDiagnosticsSheet by remember(session) { mutableStateOf(false) }
+    val currentProject = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
     var showTerminalSettings by remember(session) { mutableStateOf(false) }
     var initialSettingsSection by remember(session) { mutableStateOf("home") }
     var sessionSheetId by remember(session) { mutableStateOf<Long?>(null) }
@@ -267,6 +284,7 @@ fun TerminalPane(
     BackHandler(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
             !showTerminalSettings && !showTranscriptSearch &&
+            !showWorkspaceSheet && !showCommandPalette && !showDiagnosticsSheet &&
             pendingMultilinePaste == null && selectedOutput == null &&
             sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null
     ) {
@@ -290,6 +308,18 @@ fun TerminalPane(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
+                    DropdownMenuItem(
+                        text = { Text("Command Palette") },
+                        onClick = { showToolsMenu = false; showCommandPalette = true }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Workspaces") },
+                        onClick = { showToolsMenu = false; showWorkspaceSheet = true }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Diagnostics") },
+                        onClick = { showToolsMenu = false; showDiagnosticsSheet = true }
+                    )
                     DropdownMenuItem(
                         text = { Text("Settings", color = MaterialTheme.colorScheme.onSurface) },
                         modifier = Modifier.heightIn(min = 56.dp),
@@ -362,6 +392,15 @@ fun TerminalPane(
                     )
                     Text("·", color = TerminalMuted)
                     Text("ARM64", color = TerminalMuted, fontSize = 11.sp)
+                    Text("·", color = TerminalMuted)
+                    Text(currentProject, color = TerminalMuted, fontSize = 11.sp,
+                        maxLines = 1)
+                    if (runtimeHasWarnings) {
+                        Text("⚠", color = ui.warningInk, fontSize = 12.sp,
+                            modifier = Modifier.semantics {
+                                contentDescription = "Runtime warnings reported"
+                            })
+                    }
                 }
 
                 toolsMenu()
@@ -391,8 +430,13 @@ fun TerminalPane(
                             onLongClick = { openSessionSheet(id, tabTitle) }
                         )
                         .semantics {
-                            contentDescription = tabTitle.ifBlank { "Session" }
-                            stateDescription = if (active) "Active session" else "Inactive session"
+                            contentDescription = tabTitle.ifBlank { "Session" } +
+                                ", project " + (workspaces.firstOrNull {
+                                    it.id == (tabWorkspaces[id] ?: KlyroWorkspaceCatalog.GENERAL)
+                                }?.name ?: "General")
+                            stateDescription = if (id in tabsWithUnreadOutput && !active)
+                                "New terminal output" else if (active) "Selected terminal"
+                                else "Open terminal"
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -402,14 +446,23 @@ fun TerminalPane(
                         contentColor = if (active) ui.onAccent else TerminalText,
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(19.dp)
                     ) {
-                        Text(
-                            tabTitle.ifBlank { "Session" },
+                        Row(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            fontSize = 12.sp,
-                            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (id in tabsWithUnreadOutput && !active) {
+                                Box(Modifier.size(7.dp).background(
+                                    TerminalAccent, androidx.compose.foundation.shape.CircleShape))
+                            }
+                            Text(
+                                tabTitle.ifBlank { "Session" },
+                                fontSize = 12.sp,
+                                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
