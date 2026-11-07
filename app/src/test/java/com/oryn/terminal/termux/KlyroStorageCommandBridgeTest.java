@@ -44,6 +44,7 @@ public class KlyroStorageCommandBridgeTest {
                 bridge.finish("123-4-5", "PATH=/data/data/secret");
                 fail("unsafe status accepted");
             } catch (IOException expected) {}
+            assertNull(bridge.poll()); // Creates the private control directory.
             Path request = home.resolve(".klyro-control/storage.request");
             Files.write(request, "../../escape\n".getBytes(StandardCharsets.UTF_8));
             assertNull(bridge.poll());
