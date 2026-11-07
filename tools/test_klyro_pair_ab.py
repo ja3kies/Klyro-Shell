@@ -14,7 +14,9 @@ class KlyroPairABTest(unittest.TestCase):
         self.assertIn('onApply(pendingPreset ?: KlyroColors.customId(argb()))', picker)
         self.assertIn('pendingPreset = null', picker)
         self.assertNotIn('onApply(preset.id)', picker)
-        self.assertIn('Text("Preview")', picker)
+        # Preview was a duplicate of Edit; editing still stages until Apply.
+        self.assertIn('Text("Edit")', picker)
+        self.assertNotIn('Text("Preview")', picker)
         self.assertIn('keyboardType = KeyboardType.Ascii', picker)
         self.assertIn('LocalConfiguration.current.screenHeightDp', picker)
         self.assertIn('Brush.horizontalGradient(', picker)
@@ -34,7 +36,9 @@ class KlyroPairABTest(unittest.TestCase):
         self.assertIn("KlyroUiMetrics.sheetContentMax", settings)
         self.assertIn("KlyroUiMetrics.minTouch", settings)
         self.assertIn("role = Role.Button", settings)
-        self.assertIn("Slider(", settings)
+        self.assertIn("KlyroThinSlider(", settings)
+        shared = (UI/"KlyroUiComponents.kt").read_text()
+        self.assertIn("Slider(", shared)
         self.assertFalse((UI/"KlyroExperimentalBento.kt").exists())
 
     def test_alerts_and_errors_do_not_destroy_sessions(self):
