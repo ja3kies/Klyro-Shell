@@ -60,22 +60,13 @@ internal fun KlyroCommandPalette(
     val matches = remember(query) { KlyroCommandCatalog.search(query) }
 
     KlyroModalTheme {
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            containerColor = colors.sheet,
-            contentColor = colors.foreground,
-            shape = RoundedCornerShape(
-                topStart = KlyroUiMetrics.sheetCorner,
-                topEnd = KlyroUiMetrics.sheetCorner
-            ),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
-        ) {
+        KlyroSheet(onDismissRequest = onDismiss) {
             Column(
                 modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().imePadding()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(bottom = KlyroUiMetrics.spaceXl),
+                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -99,7 +90,7 @@ internal fun KlyroCommandPalette(
 
                 if (showingGuide) {
                     // One in-sheet help page; scroll independently on small phones.
-                    Column(Modifier.fillMaxWidth().heightIn(max = 450.dp)
+                    Column(Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.paletteListMax)
                         .verticalScroll(rememberScrollState())) {
                         Text(KlyroWelcomeGuide.MESSAGE,
                             modifier = Modifier.fillMaxWidth().padding(8.dp),
@@ -121,7 +112,7 @@ internal fun KlyroCommandPalette(
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                     )
                     Text(
-                        "Select to insert. Press Enter in Bash to run.",
+                        "Insert only; press Enter to run.",
                         color = colors.muted,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -190,8 +181,7 @@ internal fun KlyroCommandPalette(
                                             fontWeight = FontWeight.SemiBold,
                                             style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            if (available) entry.purpose
-                                            else "Not available · " + entry.note,
+                                            entry.purpose,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = colors.muted,
                                             maxLines = 2
