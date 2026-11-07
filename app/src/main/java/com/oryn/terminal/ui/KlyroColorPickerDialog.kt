@@ -127,8 +127,6 @@ internal fun KlyroColorPickerDialog(
                         else Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("Pick a shade or select a preset.",
-                        style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     // 44dp tall, full-width input; shortened vertically, not horizontally.
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -402,18 +400,6 @@ internal fun KlyroColorPickerDialog(
                                     pendingPreset = null
                                     showAdvanced = false
                                 }) { Text("Edit") }
-                                TextButton(onClick = {
-                                    val favArgb = AndroidColor.parseColor(favorite.hex)
-                                    val hsv = FloatArray(3)
-                                    AndroidColor.colorToHSV(favArgb or -0x1000000, hsv)
-                                    hue = hsv[0]
-                                    saturation = hsv[1]
-                                    brightness = hsv[2]
-                                    alpha = (favArgb ushr 24) / 255f
-                                    hexInput = "#%06X".format(favArgb and 0xFFFFFF)
-                                    pendingPreset = null
-                                    showAdvanced = false
-                                }) { Text("Preview") }
                                 TextButton(onClick = {
                                     pendingFavoriteDeletion = favorite
                                 }) { Text("Remove") }
