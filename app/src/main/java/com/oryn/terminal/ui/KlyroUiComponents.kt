@@ -189,6 +189,7 @@ internal fun KlyroLicenseDialog(
 }
 
 /** iOS-inspired restrained slider shared by font, hue and opacity settings. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun KlyroThinSlider(
     value: Float,
