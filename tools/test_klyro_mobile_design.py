@@ -86,7 +86,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn('if (!existing.contains("# " + marker)) return;', installer)
         self.assertIn('KlyroShellHelperInstaller.install', info)
         self.assertIn('KlyroShellHelperInstaller.install', bridge)
-        self.assertIn('if [ "$#" -ne 0 ]', info)
+        self.assertIn('Usage: termux-info', info)
         self.assertNotIn('MANAGE_EXTERNAL_STORAGE', src(ROOT / "app/src/main/AndroidManifest.xml"))
 
     def test_legacy_actions_not_duplicated_in_palette_or_settings(self):
