@@ -61,9 +61,7 @@ internal fun KlyroSessionSheet(
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
             ) {
-                Text(sessionName.ifBlank { "Session" },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold)
+                KlyroSheetTitle(sessionName.ifBlank { "Session" })
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
                         KlyroActionRow("Rename", R.drawable.hugeicons_pen_01, onRename)
@@ -179,8 +177,7 @@ internal fun KlyroChooseShellSheet(
                             contentDescription = "Back",
                             modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                     }
-                    Text("Choose shell", style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold)
+                    KlyroSheetTitle("Choose shell")
                 }
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Row(
