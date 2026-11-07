@@ -114,8 +114,15 @@ internal fun KlyroWorkspaceSheet(
                         onClick = { editProject("", "") },
                         enabled = entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS
                     ) {
-                        Text("+ New", color = if (entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS)
-                            c.accent else c.muted)
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
+                            val tint = if (entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS)
+                                c.accent else c.muted
+                            Icon(painterResource(R.drawable.hugeicons_plus_sign),
+                                contentDescription = null, tint = tint,
+                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                            Text("New", color = tint)
+                        }
                     }
                 }
                 Text("Organize sessions without stopping running shells.",
