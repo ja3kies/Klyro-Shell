@@ -110,6 +110,27 @@ data class KlyroColors(
             return result
         }
 
+        /** Three monochrome schemes share the same semantic surfaces as colored Klyro. */
+        fun monochrome(mode: String): KlyroColors {
+            val black = Color(0xFF000000)
+            val white = Color(0xFFFFFFFF)
+            val ink = Color(0xFF101010)
+            return when (mode) {
+                "mono-contrast" -> KlyroColors(
+                    false, mode, white, white, black, Color(0xFFF0F0F0),
+                    white, Color(0xFFF4F4F4), ink, Color(0xFF555555),
+                    ink, white, Color(0xFF9C3030))
+                "mono-paper" -> KlyroColors(
+                    false, mode, white, white, white, Color(0xFFF0F0F0),
+                    white, Color(0xFFF6F6F6), ink, Color(0xFF555555),
+                    ink, white, Color(0xFF9C3030))
+                else -> KlyroColors(
+                    true, "mono-black", black, black, black, Color(0xFF1D1D1D),
+                    Color(0xFF101010), Color(0xFF191919), white,
+                    Color(0xFFBFBFBF), white, black, Color(0xFFFFB5BA))
+            }
+        }
+
         fun create(dark: Boolean, accentId: String?): KlyroColors {
             val id = normalizedAccent(accentId)
             val option = all.firstOrNull { it.id == id }
