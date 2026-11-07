@@ -64,6 +64,14 @@ internal fun KlyroSheet(
     )
 }
 
+/** Consistent 22sp title for all root Klyro bottom sheets. */
+@Composable
+internal fun KlyroSheetTitle(title: String) {
+    val colors = LocalKlyroColors.current
+    Text(title, style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold, color = colors.foreground)
+}
+
 @Composable
 internal fun KlyroSectionHeading(title: String, subtitle: String? = null) {
     val colors = LocalKlyroColors.current
