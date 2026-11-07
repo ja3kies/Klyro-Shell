@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.widthIn
@@ -390,12 +391,32 @@ internal fun KlyroSettingsSheet(
                                         contentDescription = "Terminal font size"
                                     },
                                     colors = SliderDefaults.colors(
-                                        thumbColor = colors.accent,
+                                        thumbColor = Color.White,
                                         activeTrackColor = colors.accent,
-                                        inactiveTrackColor = colors.key,
-                                        activeTickColor = colors.onAccent,
-                                        inactiveTickColor = colors.muted
-                                    )
+                                        inactiveTrackColor = colors.key
+                                    ),
+                                    thumb = {
+                                        Box(
+                                            Modifier.size(KlyroUiMetrics.iosSliderThumb)
+                                                .background(Color.White,
+                                                    androidx.compose.foundation.shape.CircleShape)
+                                                .border(KlyroUiMetrics.iosSliderBorder,
+                                                    colors.muted.copy(alpha = .35f),
+                                                    androidx.compose.foundation.shape.CircleShape)
+                                        )
+                                    },
+                                    track = { state ->
+                                        Box(Modifier.fillMaxWidth()
+                                            .height(KlyroUiMetrics.iosSliderTrack)
+                                            .background(colors.key,
+                                                androidx.compose.foundation.shape.CircleShape)) {
+                                            Box(Modifier.fillMaxWidth(
+                                                ((state.value - 9f) / 15f).coerceIn(0f, 1f))
+                                                .height(KlyroUiMetrics.iosSliderTrack)
+                                                .background(colors.accent,
+                                                    androidx.compose.foundation.shape.CircleShape))
+                                        }
+                                    }
                                         )
                                     }
                                 }
