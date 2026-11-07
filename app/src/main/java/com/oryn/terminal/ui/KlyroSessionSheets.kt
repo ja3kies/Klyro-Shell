@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
@@ -65,21 +66,21 @@ internal fun KlyroSessionSheet(
             dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-                    .padding(bottom = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = KlyroUiMetrics.sheetGutter)
+                    .padding(bottom = KlyroUiMetrics.spaceXl),
+                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
             ) {
                 Text(sessionName.ifBlank { "Session" },
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold)
-                Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold)
+                Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
                         SheetAction("", "Rename", onRename, icon = R.drawable.hugeicons_pen_01)
                         SheetAction("+", "New terminal", onChooseShell, trailing = "›")
                         if (!isActive) SheetAction("↗", "Switch to session", onActivate)
                     }
                 }
-                Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
+                Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
                         SheetAction("×", "Close terminal", onClick = {
                             confirmClose = true
@@ -124,8 +125,8 @@ private fun SheetAction(
     Row(
         modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
             .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
+             .padding(horizontal = KlyroUiMetrics.spaceLg, vertical = KlyroUiMetrics.spaceSm),
+        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
@@ -140,7 +141,7 @@ private fun SheetAction(
                 style = MaterialTheme.typography.titleLarge)
         }
         Text(label, color = if (destructive) colors.danger else colors.foreground,
-            style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         if (trailing != null) Text(trailing, color = colors.muted,
             style = MaterialTheme.typography.titleLarge)
     }
@@ -218,8 +219,8 @@ internal fun KlyroChooseShellSheet(
             dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-                    .padding(bottom = 28.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = KlyroUiMetrics.sheetGutter)
+                    .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Row(
@@ -230,7 +231,7 @@ internal fun KlyroChooseShellSheet(
                     Text("Choose shell", style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold)
                 }
-                Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
+                Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable(
                             onClickLabel = "Start a Bash terminal", onClick = onNewBash
@@ -238,8 +239,9 @@ internal fun KlyroChooseShellSheet(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("⌘", color = colors.muted,
-                            style = MaterialTheme.typography.headlineSmall)
+                        Icon(painterResource(R.drawable.hugeicons_terminal),
+                            contentDescription = null, tint = colors.accent,
+                            modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
                         Column {
                             Text("bash", fontWeight = FontWeight.SemiBold)
                             Text("/bin/bash", color = colors.muted,
