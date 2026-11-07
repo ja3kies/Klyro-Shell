@@ -219,7 +219,11 @@ internal fun KlyroChooseShellSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    TextButton(onClick = onBack) { Text("←") }
+                    TextButton(onClick = onBack) {
+                        Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                    }
                     Text("Choose shell", style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold)
                 }
