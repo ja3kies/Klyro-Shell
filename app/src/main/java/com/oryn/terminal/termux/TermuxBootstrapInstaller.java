@@ -544,12 +544,13 @@ public final class TermuxBootstrapInstaller {
                 + "export EDITOR=nano\nexport PAGER=less\n"
                 + "alias ll='ls -lah'\nalias la='ls -A'\n";
         if (!file.isFile()) {
-            writeIfAbsent(file, defaultProfile);
+            writeIfAbsent(file, KlyroWelcomeGuide.augmentGeneratedProfile(defaultProfile));
             return;
         }
 
         String existing = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-        String migrated = migrateGeneratedPrompt(existing);
+        String migrated = KlyroWelcomeGuide.augmentGeneratedProfile(
+                migrateGeneratedPrompt(existing));
         if (existing.equals(migrated)) return;
 
         File backup = new File(file.getParentFile(), ".bashrc.klyro-before-color.bak");
