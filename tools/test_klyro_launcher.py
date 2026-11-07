@@ -95,12 +95,10 @@ class KlyroLauncherIdentityTest(unittest.TestCase):
         # Files/diagnostics now belong to Settings only; keep menu concise.
         self.assertNotIn('text = { Text("Files & storage"', terminal)
         self.assertNotIn('text = { Text("Diagnostics") }', terminal)
-        self.assertLess(terminal.index('text = { Text("Command Palette")'),
-                        terminal.index('text = { Text("Workspaces")'))
-        self.assertLess(terminal.index('text = { Text("Workspaces")'),
-                        terminal.index('text = { Text("Settings"'))
-        self.assertLess(terminal.index('text = { Text("Settings"'),
-                        terminal.index('text = { Text("Home"'))
+        # The shared menu item still preserves the same four-action order.
+        ordered = [terminal.index('KlyroMenuItem("' + label + '"')
+                   for label in ("Command Palette", "Workspaces", "Settings", "Home")]
+        self.assertEqual(ordered, sorted(ordered))
 
 
 if __name__ == "__main__":
