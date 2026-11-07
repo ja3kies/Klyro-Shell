@@ -1019,6 +1019,117 @@ fun TerminalPane(
         }
     }
 
+    if (showWorkspaceSheet) {
+        KlyroWorkspaceSheet(
+            entries = workspaces,
+            selectedId = selectedWorkspaceId,
+            tabs = tabs,
+            tabWorkspaces = tabWorkspaces,
+            activeTabId = activeTabId,
+            onSelectProject = onSelectWorkspace,
+            onCreateProject = onCreateWorkspace,
+            onRenameProject = onRenameWorkspace,
+            onDeleteProject = onDeleteWorkspace,
+            onAssignCurrentTab = onAssignWorkspace,
+            onSwitchTab = onSelectTab,
+            onDismiss = { showWorkspaceSheet = false }
+        )
+    }
+
+    if (showCommandPalette) {
+        fun moveTab(direction: Int) {
+            if (tabs.size < 2) return
+            val current = tabs.indexOfFirst { it.first == activeTabId }.coerceAtLeast(0)
+            onSelectTab(tabs[Math.floorMod(current + direction, tabs.size)].first)
+        }
+        val actions = listOf(
+            KlyroPaletteAction("New terminal", "Start another private Bash session",
+                enabled = tabs.size < 8) { onNewTab() },
+            KlyroPaletteAction("Find", "Search terminal scrollback") {
+                transcriptQuery = ""
+                searchIndex = 0
+                showTranscriptSearch = true
+            },
+            KlyroPaletteAction("Workspaces", "Organize live sessions by project") {
+                showWorkspaceSheet = true
+            },
+            KlyroPaletteAction("Diagnostics", "Inspect environment and generate a report") {
+                showDiagnosticsSheet = true
+            },
+            KlyroPaletteAction("Settings", "Appearance, keyboard and sessions") {
+                initialSettingsSection = "home"
+                showTerminalSettings = true
+            },
+            KlyroPaletteAction("Files & storage", "Manage Android file access") {
+                initialSettingsSection = "files"
+                showTerminalSettings = true
+            },
+            KlyroPaletteAction("Paste clipboard", "Paste validated text into Bash",
+                enabled = clipboardAvailable && session.isRunning()) { pasteClipboard() },
+            KlyroPaletteAction("Copy output", "Select text from terminal history",
+                enabled = hasCopyableOutput) {
+                selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
+            },
+            KlyroPaletteAction("Clear display", "Clear history while preserving input") {
+                TerminalDisplayActions.clear(session)
+                activeTerminalView?.setTopRow(0)
+                activeTerminalView?.invalidate()
+            },
+            KlyroPaletteAction("Next session", "Switch to the next tab",
+                enabled = tabs.size > 1) { moveTab(1) },
+            KlyroPaletteAction("Previous session", "Switch to the previous tab",
+                enabled = tabs.size > 1) { moveTab(-1) },
+            KlyroPaletteAction("Import file", "Select a file using Android storage") {
+                onImportFile()
+            },
+            KlyroPaletteAction("Export file", "Export a Klyro file through Android") {
+                onExportFile()
+            },
+            KlyroPaletteAction("Import authorized folder", "Import from selected storage folder") {
+                onImportStorageFolder()
+            },
+            KlyroPaletteAction("Configure storage", "Authorize an Android folder") {
+                onSetupStorage()
+            },
+            KlyroPaletteAction("Change light or dark appearance", "Toggle terminal chrome theme") {
+                onThemeModeChange(if (themeMode == "dark") "light" else "dark")
+            },
+            KlyroPaletteAction("Home", "Return to private environment overview") {
+                onReturnHome()
+            }
+        ) + tabs.map { (id, name) ->
+            KlyroPaletteAction("Session: " + name, "Switch to existing PTY tab") {
+                onSelectTab(id)
+            }
+        } + workspaces.map { project ->
+            KlyroPaletteAction("Project: " + project.name, "Select named workspace") {
+                onSelectWorkspace(project.id)
+                showWorkspaceSheet = true
+            }
+        }
+        KlyroCommandPalette(actions, onDismiss = { showCommandPalette = false })
+    }
+
+    if (showDiagnosticsSheet) {
+        KlyroDiagnosticsSheet(
+            report = diagnosticReport,
+            onVerify = onRecheck,
+            onCopy = {
+                clipboardManager?.setPrimaryClip(
+                    ClipData.newPlainText("Klyro health snapshot", diagnosticReport))
+                Toast.makeText(context, "Report copied", Toast.LENGTH_SHORT).show()
+            },
+            onShare = {
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, diagnosticReport)
+                }
+                context.startActivity(Intent.createChooser(send, "Share Klyro report"))
+            },
+            onDismiss = { showDiagnosticsSheet = false }
+        )
+    }
+
     if (showEndSessionConfirmation) {
         KlyroModalTheme {
         AlertDialog(
