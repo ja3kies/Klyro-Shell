@@ -74,22 +74,6 @@ internal fun KlyroExperimentalBento(
                         Text("Aa", fontSize = 18.sp, color = c.accent)
                     }
                 }
-                // Klyro signature: a real monospace command-preview on the
-                // same terminal token as the PTY, not a stock "settings" graphic.
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = c.terminal,
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, c.accent.copy(alpha = .13f))
-                ) {
-                    Column(modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("klyro ~ $", fontFamily = FontFamily.Monospace, color = c.accent,
-                            fontSize = 13.sp)
-                        Text("echo \"make it yours\"", fontFamily = FontFamily.Monospace,
-                            color = c.foreground, fontSize = 12.sp)
-                    }
-                }
             }
         }
         Row(
@@ -134,8 +118,6 @@ internal fun KlyroExperimentalBento(
                 compact = true
             ) { onOpen("about") }
         }
-        Text("Experimental Settings layout · available in test APK only",
-            color = c.muted, style = MaterialTheme.typography.labelSmall)
     }
 }
 
