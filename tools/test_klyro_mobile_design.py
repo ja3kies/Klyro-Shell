@@ -114,6 +114,13 @@ class KlyroMobileDesignAudit(unittest.TestCase):
             self.assertIn(component, shared)
         self.assertEqual(shared.count("ModalBottomSheet("), 1)
         self.assertEqual(shared.count("DropdownMenuItem("), 1)
+        self.assertIn("internal fun KlyroSheetTitle(", shared)
+        for page, expected in (("KlyroSettingsSheet.kt", 1),
+                               ("KlyroCommandPalette.kt", 1),
+                               ("KlyroWorkspaceSheet.kt", 1),
+                               ("KlyroSessionSheets.kt", 2)):
+            self.assertEqual(src(UI / page).count("KlyroSheetTitle("),
+                             expected, page)
         for name, count in (("KlyroSettingsSheet.kt", 1),
                             ("KlyroWorkspaceSheet.kt", 1),
                             ("KlyroCommandPalette.kt", 1),
