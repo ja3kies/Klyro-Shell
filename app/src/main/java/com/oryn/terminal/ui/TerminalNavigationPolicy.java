@@ -11,6 +11,15 @@ public final class TerminalNavigationPolicy {
         return csi(direction, ctrl, alt, shift);
     }
 
+    /** Long-press horizontal arrows: Readline on the main shell, Home/End in full-screen apps.
+     * Modified long-presses preserve xterm modifiers instead of injecting Ctrl+A/Ctrl+E.
+     */
+    public static String horizontalLongPress(boolean end, boolean alternateScreen,
+            boolean ctrl, boolean alt, boolean shift) {
+        if (alternateScreen || ctrl || alt || shift) return csi(end ? 'F' : 'H', ctrl, alt, shift);
+        return end ? "\u0005" : "\u0001";
+    }
+
     public static String end(boolean ctrl, boolean alt, boolean shift) {
         return csi('F', ctrl, alt, shift);
     }
