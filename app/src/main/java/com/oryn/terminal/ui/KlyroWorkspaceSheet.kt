@@ -99,8 +99,7 @@ internal fun KlyroWorkspaceSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Workspaces", style = MaterialTheme.typography.titleLarge,
-                        color = c.foreground, fontWeight = FontWeight.Bold)
+                    KlyroSheetTitle("Workspaces")
                     TextButton(
                         onClick = { editProject("", "") },
                         enabled = entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS
