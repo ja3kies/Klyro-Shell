@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -109,8 +111,10 @@ internal fun KlyroSettingsSheet(
             dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth()
-                    .heightIn(max = 600.dp)
+                modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
+                    .fillMaxWidth()
+                    .heightIn(max = KlyroUiMetrics.sheetContentMax)
+                    .imePadding()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 18.dp),
@@ -224,7 +228,7 @@ internal fun KlyroSettingsSheet(
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Box(
-                                                modifier = Modifier.size(36.dp)
+                                                modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
                                                     .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
                                                     .then(if (active) Modifier.border(
                                                         KlyroUiMetrics.selectedBorder,
@@ -545,7 +549,7 @@ private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, 
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Box(
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(KlyroUiMetrics.iconWell)
                     .background(colors.accent.copy(alpha = .09f),
                         RoundedCornerShape(KlyroUiMetrics.controlCorner)),
                 contentAlignment = Alignment.Center
