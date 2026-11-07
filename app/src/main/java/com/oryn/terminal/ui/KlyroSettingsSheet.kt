@@ -119,7 +119,7 @@ internal fun KlyroSettingsSheet(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -139,7 +139,7 @@ internal fun KlyroSettingsSheet(
                         Text("Terminal settings and Android integration",
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.muted)
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)) {
                             Box(Modifier.weight(1f)) {
                                 SettingsBentoTile("Appearance", "Themes & type", "Aa",
                                     prominent = true) { section = "appearance" }
@@ -150,7 +150,7 @@ internal fun KlyroSettingsSheet(
                                 }
                             }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)) {
                             Box(Modifier.weight(1f)) {
                                 SettingsBentoTile("Storage", "Files & folders", "▣") {
                                     section = "files"
@@ -664,13 +664,13 @@ private fun SettingsBentoTile(
 ) {
     val colors = LocalKlyroColors.current
     Surface(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 112.dp)
+        modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.bentoMinHeight)
             .clickable(role = Role.Button, onClickLabel = "Open " + title, onClick = onClick),
         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
         color = if (prominent) colors.accent.copy(alpha = .13f) else colors.tile,
         border = if (prominent) BorderStroke(1.dp, colors.accent.copy(alpha = .35f)) else null
     ) {
-        Column(Modifier.padding(14.dp),
+        Column(Modifier.padding(KlyroUiMetrics.bentoInnerPadding),
             verticalArrangement = Arrangement.SpaceBetween) {
             Text(glyph, color = colors.accent, style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold)
