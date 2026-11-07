@@ -153,6 +153,7 @@ internal fun KlyroWorkspaceSheet(
                             }
                             Column(
                                 modifier = Modifier.weight(1f)
+                                    .heightIn(min = KlyroUiMetrics.minTouch)
                                     .clickable(role = Role.Button,
                                         onClickLabel = "Select workspace " + entry.name) {
                                         onSelectProject(entry.id)
