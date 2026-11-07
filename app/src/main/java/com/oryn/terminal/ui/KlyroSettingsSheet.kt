@@ -3,6 +3,11 @@ package com.oryn.terminal.ui
 import android.content.Context
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
@@ -160,141 +165,189 @@ internal fun KlyroSettingsSheet(
                         ) { section = "diagnostics" }
                     }
                     "appearance" -> {
-                        SectionHeading("Appearance", "Select a theme or follow Android's appearance.")
-                        Surface(shape = RoundedCornerShape(KlyroUiMetrics.cardCorner), color = colors.tile) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text("App theme", fontWeight = FontWeight.SemiBold)
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SectionHeading("Appearance", "Changes apply to the terminal immediately.")
+                        Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                Text("App theme", fontWeight = FontWeight.SemiBold,
+                                    color = colors.foreground)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .background(colors.key, RoundedCornerShape(KlyroUiMetrics.controlCorner))
+                                        .padding(KlyroUiMetrics.spaceXs),
+                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
+                                ) {
                                     listOf(
-                                        "system" to "System",
-                                        "light" to "Light",
-                                        "dark" to "Dark"
-                                    ).forEach { (mode, label) ->
-                                        Button(
-                                            onClick = { onThemeModeChange(mode) },
-                                            modifier = Modifier.weight(1f)
-                                                .semantics { selected = themeMode == mode },
-                                            shape = RoundedCornerShape(14.dp),
-                                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                                containerColor = if (themeMode == mode)
-                                                    colors.accent else colors.key,
-                                                contentColor = if (themeMode == mode)
-                                                    colors.onAccent else colors.foreground
-                                            ),
-                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                                horizontal = 1.dp, vertical = 4.dp
-                                            )
-                                        ) { Text((if (themeMode == mode) "✓ " else "") + label,
-                                            fontSize = 12.sp, maxLines = 1) }
+                                        "system" to "System", "light" to "Light", "dark" to "Dark"
+                                    ).forEach { (mode, title) ->
+                                        val active = themeMode == mode
+                                        Surface(
+                                            modifier = Modifier.weight(1f).heightIn(
+                                                min = KlyroUiMetrics.optionRow
+                                            ).clickable(role = Role.RadioButton,
+                                                onClickLabel = "Use " + title + " theme") {
+                                                onThemeModeChange(mode)
+                                            }.semantics { selected = active },
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                            color = if (active) colors.accent else colors.key,
+                                            contentColor = if (active) colors.onAccent else colors.foreground
+                                        ) {
+                                            Box(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    title,
+                                                    modifier = Modifier.padding(vertical = KlyroUiMetrics.spaceMd),
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+                                                )
+                                            }
+                                        }
                                     }
                                 }
-                                Text("Accent preset", fontWeight = FontWeight.SemiBold)
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                Text("Accent", color = colors.foreground,
+                                    fontWeight = FontWeight.SemiBold)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     KlyroColors.primary.forEach { preset ->
                                         val swatch = KlyroColors.create(colors.dark, preset.id)
-                                        Button(
-                                            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                                        val active = accentId == preset.id
+                                        Box(
+                                            modifier = Modifier.size(KlyroUiMetrics.minTouch)
+                                                .clickable(role = Role.RadioButton,
+                                                    onClickLabel = "Select " + preset.label + " accent") {
+                                                    onAccentIdChange(preset.id)
+                                                }
                                                 .semantics {
-                                                    selected = accentId == preset.id
+                                                    selected = active
                                                     contentDescription = preset.label + " accent"
                                                 },
-                                            onClick = { onAccentIdChange(preset.id) },
-                                            shape = RoundedCornerShape(14.dp),
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = swatch.accent,
-                                                contentColor = swatch.onAccent
-                                            ),
-                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                                horizontal = 1.dp, vertical = 3.dp
-                                            ),
-                                            border = if (accentId == preset.id)
-                                                androidx.compose.foundation.BorderStroke(2.dp, colors.foreground)
-                                                else null
-                                        ) { Text(
-                                            (if (accentId == preset.id) "✓ " else "") + preset.label,
-                                            fontSize = 11.sp, maxLines = 1
-                                        ) }
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Box(
+                                                modifier = Modifier.size(36.dp)
+                                                    .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
+                                                    .then(if (active) Modifier.border(
+                                                        KlyroUiMetrics.selectedBorder,
+                                                        colors.foreground,
+                                                        androidx.compose.foundation.shape.CircleShape
+                                                    ) else Modifier),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (active) {
+                                                    Text("✓", color = swatch.onAccent,
+                                                        fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                        }
                                     }
-                                    Button(
-                                        onClick = { showColorPicker = true },
-                                        modifier = Modifier.weight(.68f).heightIn(min = 48.dp)
-                                            .semantics { contentDescription = "Choose custom accent color" },
-                                        shape = RoundedCornerShape(14.dp),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = colors.key, contentColor = colors.accent
-                                        ),
-                                        border = if (accentId.startsWith("custom:#") ||
-                                            KlyroColors.extended.any { it.id == accentId })
-                                            androidx.compose.foundation.BorderStroke(2.dp, colors.accent)
-                                        else null
-                                    ) { Text("+", fontSize = 22.sp) }
+                                    Box(
+                                        modifier = Modifier.size(KlyroUiMetrics.minTouch)
+                                            .background(colors.key, androidx.compose.foundation.shape.CircleShape)
+                                            .clickable(role = Role.Button,
+                                                onClickLabel = "Choose custom accent") {
+                                                showColorPicker = true
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("+", color = colors.accent,
+                                            style = MaterialTheme.typography.titleLarge)
+                                    }
                                 }
-                                if (accentId.startsWith("custom:#") ||
-                                    KlyroColors.extended.any { it.id == accentId }) {
-                                    Text(
-                                        "Selected: " + (KlyroColors.selectedOption(accentId)?.label
-                                            ?: accentId.removePrefix("custom:")),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = colors.muted
-                                    )
-                                }
-                                Text("Changes save instantly; sessions keep running.",
-                                    style = MaterialTheme.typography.bodySmall, color = colors.muted)
+                                val chosen = KlyroColors.selectedOption(accentId)?.label
+                                    ?: if (accentId.startsWith("custom:")) "Custom" else "Lime"
+                                Text("Selected: " + chosen, color = colors.muted,
+                                    style = MaterialTheme.typography.bodySmall)
                             }
-                        }
-                        Surface(shape = RoundedCornerShape(KlyroUiMetrics.cardCorner), color = colors.tile) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
-                                verticalArrangement = Arrangement.spacedBy(9.dp)
-                            ) {
-                                Text("Terminal font", fontWeight = FontWeight.SemiBold)
+                            HorizontalDivider(color = colors.muted.copy(alpha = 0.18f))
+                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                Text("Terminal font", color = colors.foreground,
+                                    fontWeight = FontWeight.SemiBold)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
                                 ) {
-                                    KlyroTerminalFonts.options.forEach { choice ->
-                                        Button(
-                                            onClick = { onFontFamilyChange(choice.id) },
-                                            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
-                                                .semantics { selected = fontFamilyId == choice.id },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (fontFamilyId == choice.id) colors.accent else colors.key,
-                                                contentColor = if (fontFamilyId == choice.id) colors.onAccent else colors.foreground
-                                            ),
-                                            shape = RoundedCornerShape(14.dp),
-                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                                horizontal = 6.dp, vertical = 6.dp
-                                            )
-                                        ) { Text(
-                                            (if (fontFamilyId == choice.id) "✓ " else "") + choice.label,
-                                            fontSize = 12.sp, maxLines = 2, lineHeight = 15.sp
-                                        ) }
+                                    KlyroTerminalFonts.options.forEach { option ->
+                                        val active = fontFamilyId == option.id
+                                        Surface(
+                                            modifier = Modifier.weight(1f)
+                                                .heightIn(min = KlyroUiMetrics.optionRow)
+                                                .clickable(role = Role.RadioButton,
+                                                    onClickLabel = "Use " + option.label) {
+                                                    onFontFamilyChange(option.id)
+                                                }.semantics { selected = active },
+                                            color = if (active) colors.accent.copy(alpha = .14f)
+                                                else colors.key,
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                            border = if (active) BorderStroke(
+                                                KlyroUiMetrics.selectedBorder, colors.accent
+                                            ) else null
+                                        ) {
+                                            Box(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(option.label, modifier = Modifier.padding(
+                                                    horizontal = KlyroUiMetrics.spaceSm,
+                                                    vertical = KlyroUiMetrics.spaceMd
+                                                ), color = colors.foreground,
+                                                    fontWeight = if (active) FontWeight.SemiBold
+                                                        else FontWeight.Normal,
+                                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                                    style = MaterialTheme.typography.labelMedium)
+                                            }
+                                        }
                                     }
                                 }
-                                Text("Terminal font size", fontWeight = FontWeight.SemiBold)
-                                Text(if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
-                                    color = colors.muted)
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Button(onClick = { onFontChange(-1f) }, enabled = fontSizeSp > 9f,
-                                        modifier = Modifier.semantics { contentDescription = "Decrease terminal font size" },
-                                        shape = RoundedCornerShape(25.dp)) { Text("A−") }
-                                    Button(onClick = { onFontChange(1f) }, enabled = fontSizeSp < 24f,
-                                        modifier = Modifier.semantics { contentDescription = "Increase terminal font size" },
-                                        shape = RoundedCornerShape(25.dp)) { Text("A+") }
-                                    TextButton(onClick = onResetFont,
-                                        enabled = fontSizeSp != 13.5f) { Text("Reset") }
+                                    Text("Font size", color = colors.foreground,
+                                        fontWeight = FontWeight.SemiBold)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            if (fontSizeSp % 1f == 0f) fontSizeSp.toInt().toString() + " sp"
+                                            else fontSizeSp.toString() + " sp",
+                                            color = colors.accent,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        if (fontSizeSp != 13.5f) {
+                                            TextButton(onClick = onResetFont) { Text("Reset") }
+                                        }
+                                    }
                                 }
-                                // Font changes are persisted without interrupting the terminal.
+                                Slider(
+                                    value = fontSizeSp.coerceIn(9f, 24f),
+                                    onValueChange = { onFontChange(it - fontSizeSp) },
+                                    valueRange = 9f..24f,
+                                    steps = 29,
+                                    modifier = Modifier.fillMaxWidth().semantics {
+                                        contentDescription = "Terminal font size"
+                                    },
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = colors.accent,
+                                        activeTrackColor = colors.accent,
+                                        inactiveTrackColor = colors.key,
+                                        activeTickColor = colors.onAccent,
+                                        inactiveTickColor = colors.muted
+                                    )
+                                )
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("9 sp", color = colors.muted,
+                                        style = MaterialTheme.typography.labelSmall)
+                                    Text("24 sp", color = colors.muted,
+                                        style = MaterialTheme.typography.labelSmall)
+                                }
                             }
                         }
                     }
