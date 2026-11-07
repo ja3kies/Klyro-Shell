@@ -11,6 +11,8 @@ public class KlyroCommandCatalogTest {
         assertEquals("pkg install", KlyroCommandCatalog.search("pkg install").get(0).command);
         assertEquals("termux-setup-storage",
                 KlyroCommandCatalog.search("setup-storage").get(0).command);
+        assertEquals("klyro-info", KlyroCommandCatalog.safeInsertion(
+                KlyroCommandCatalog.search("termux-info").get(0)));
     }
 
     @Test public void noDuplicateCommandsOrInjectedNewlines() {
