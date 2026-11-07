@@ -55,16 +55,7 @@ internal fun KlyroSessionSheet(
     var confirmClose by remember(sessionName) { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
-        ModalBottomSheet(
-            onDismissRequest = { if (!confirmClose) onDismiss() },
-            containerColor = colors.sheet,
-            contentColor = colors.foreground,
-            shape = RoundedCornerShape(
-                topStart = KlyroUiMetrics.sheetCorner,
-                topEnd = KlyroUiMetrics.sheetCorner
-            ),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
-        ) {
+        KlyroSheet(onDismissRequest = { if (!confirmClose) onDismiss() }) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
@@ -75,16 +66,16 @@ internal fun KlyroSessionSheet(
                     fontWeight = FontWeight.Bold)
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
-                        SheetAction("Rename", onRename, icon = R.drawable.hugeicons_pen_01)
-                        SheetAction("New terminal", onChooseShell, icon = R.drawable.hugeicons_plus_sign, trailing = true)
-                        if (!isActive) SheetAction("Switch to session", onActivate, icon = R.drawable.hugeicons_arrow_up_right_01)
+                        KlyroActionRow("Rename", R.drawable.hugeicons_pen_01, onRename)
+                        KlyroActionRow("New terminal", R.drawable.hugeicons_plus_sign, onChooseShell, trailing = true)
+                        if (!isActive) KlyroActionRow("Switch to session",
+                            R.drawable.hugeicons_arrow_up_right_01, onActivate)
                     }
                 }
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
-                        SheetAction("Close terminal", onClick = {
-                            confirmClose = true
-                        }, destructive = true, icon = R.drawable.hugeicons_cancel_circle)
+                        KlyroActionRow("Close terminal", R.drawable.hugeicons_cancel_circle,
+                            onClick = { confirmClose = true }, destructive = true)
                     }
                 }
             }
@@ -109,33 +100,6 @@ internal fun KlyroSessionSheet(
                 }
             )
         }
-    }
-}
-
-@Composable
-private fun SheetAction(
-    label: String,
-    onClick: () -> Unit,
-    icon: Int,
-    trailing: Boolean = false,
-    destructive: Boolean = false
-) {
-    val colors = LocalKlyroColors.current
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
-            .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
-             .padding(horizontal = KlyroUiMetrics.spaceLg, vertical = KlyroUiMetrics.spaceSm),
-        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(painterResource(icon), contentDescription = null,
-            tint = if (destructive) colors.danger else colors.muted,
-            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-        Text(label, color = if (destructive) colors.danger else colors.foreground,
-            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        if (trailing) Icon(painterResource(R.drawable.hugeicons_chevron_right),
-            contentDescription = null, tint = colors.muted,
-            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
     }
 }
 
@@ -176,7 +140,7 @@ internal fun KlyroRenameSessionDialog(
                 Button(
                     enabled = value.text.trim().isNotBlank() && value.text.trim() != name,
                     onClick = { onSave(value.text.trim()) },
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                 ) { Text("Save") }
             },
             dismissButton = {
@@ -200,16 +164,7 @@ internal fun KlyroChooseShellSheet(
 ) {
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            containerColor = colors.sheet,
-            contentColor = colors.foreground,
-            shape = RoundedCornerShape(
-                topStart = KlyroUiMetrics.sheetCorner,
-                topEnd = KlyroUiMetrics.sheetCorner
-            ),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
-        ) {
+        KlyroSheet(onDismissRequest = onDismiss) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
@@ -231,7 +186,7 @@ internal fun KlyroChooseShellSheet(
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable(
                             onClickLabel = "Start a Bash terminal", onClick = onNewBash
-                        ).padding(18.dp),
+                        ).padding(KlyroUiMetrics.spaceLg),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
