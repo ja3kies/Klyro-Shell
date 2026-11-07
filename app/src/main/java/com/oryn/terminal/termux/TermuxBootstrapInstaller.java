@@ -85,6 +85,7 @@ public final class TermuxBootstrapInstaller {
     public void migrateShellProfile() throws IOException {
         if (isInstalled()) {
             KlyroStorageCommandBridge.installHelper(paths.getPrefix());
+            KlyroTermuxInfo.installHelper(paths.getPrefix());
             writeKlyroBashProfile(new File(paths.getHome(), ".bashrc"));
         }
     }
@@ -171,6 +172,7 @@ public final class TermuxBootstrapInstaller {
         }
 
         KlyroStorageCommandBridge.installHelper(staging);
+        KlyroTermuxInfo.installHelper(staging);
         writeKlyroBashProfile(new File(paths.getHome(), ".bashrc"));
         writeIfAbsent(new File(paths.getHome(), ".profile"),
                 "[ -f \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\"\n");
@@ -538,6 +540,12 @@ public final class TermuxBootstrapInstaller {
                 .replace(legacyKlyro, THEMED_PROMPT);
     }
 
+    private static String augmentKlyroProfile(String content) {
+        return KlyroTermuxInfo.augmentGeneratedProfile(
+                KlyroStorageCommandBridge.augmentGeneratedProfile(
+                        KlyroWelcomeGuide.augmentGeneratedProfile(content)));
+    }
+
     /** Backup before a tightly scoped, atomic update of a generated prompt. */
     private static void writeKlyroBashProfile(File file) throws IOException {
         String defaultProfile =
@@ -546,14 +554,12 @@ public final class TermuxBootstrapInstaller {
                 + "export EDITOR=nano\nexport PAGER=less\n"
                 + "alias ll='ls -lah'\nalias la='ls -A'\n";
         if (!file.isFile()) {
-            writeIfAbsent(file, KlyroStorageCommandBridge.augmentGeneratedProfile(
-                    KlyroWelcomeGuide.augmentGeneratedProfile(defaultProfile)));
+            writeIfAbsent(file, augmentKlyroProfile(defaultProfile));
             return;
         }
 
         String existing = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-        String migrated = KlyroStorageCommandBridge.augmentGeneratedProfile(
-                KlyroWelcomeGuide.augmentGeneratedProfile(migrateGeneratedPrompt(existing)));
+        String migrated = augmentKlyroProfile(migrateGeneratedPrompt(existing));
         if (existing.equals(migrated)) return;
 
         File backup = new File(file.getParentFile(), ".bashrc.klyro-before-color.bak");
