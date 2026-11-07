@@ -70,14 +70,11 @@ internal fun KlyroSettingsSheet(
     onFontFamilyChange: (String) -> Unit,
     onFontChange: (Float) -> Unit,
     onResetFont: () -> Unit,
-    tabs: List<Pair<Long, String>>,
-    onEditSession: (Long, String) -> Unit,
     onResetModifiers: () -> Unit,
     onSetupStorage: () -> Unit,
     onImportStorageFolder: () -> Unit,
     onImportFile: () -> Unit,
     onExportFile: () -> Unit,
-    onSelectOutput: () -> Unit,
     diagnosticReport: String,
     onRecheckEnvironment: () -> Unit,
     onCopyDiagnostic: () -> Unit,
@@ -131,7 +128,6 @@ internal fun KlyroSettingsSheet(
                     "home" -> {
                         if (context.resources.getBoolean(R.bool.klyro_experimental_bento)) {
                             KlyroExperimentalBento(
-                                tabsCount = tabs.size,
                                 accentLabel = KlyroColors.selectedOption(accentId)?.label
                                     ?: "Custom",
                                 onOpen = { section = it }
@@ -147,20 +143,15 @@ internal fun KlyroSettingsSheet(
                                 Modifier.weight(1f)) { section = "keyboard" }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            SettingsTile("Sessions", "Switch, edit & manage",
-                                R.drawable.hugeicons_terminal,
-                                Modifier.weight(1f)) { section = "sessions" }
+                            SettingsTile("Privacy", "Clipboard & data",
+                                R.drawable.hugeicons_shield_01,
+                                Modifier.weight(1f)) { section = "privacy" }
                             SettingsTile("Files", "Android storage access",
                                 R.drawable.hugeicons_folder_01,
                                 Modifier.weight(1f)) { section = "files" }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            SettingsTile("Privacy", "Clipboard & data",
-                                R.drawable.hugeicons_shield_01,
-                                Modifier.weight(1f)) { section = "privacy" }
-                            SettingsTile("About", "Build & terminal engine",
-                                R.drawable.hugeicons_information_square,
-                                Modifier.weight(1f)) { section = "about" }
+                        SettingsRowLink("About", "Build information and licences") {
+                            section = "about"
                         }
                         }
                         SettingsRowLink(
@@ -316,18 +307,6 @@ internal fun KlyroSettingsSheet(
                         Text("In compact windows, swipe the shortcut row to reach the remaining keys.",
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
-                    "sessions" -> {
-                        SectionHeading("Sessions", "${tabs.size} active shell session(s).")
-                        tabs.forEach { (id, name) ->
-                            ActionTile(
-                                title = name.ifBlank { "Session" },
-                                subtitle = "Rename, switch or close with confirmation"
-                            ) {
-                                onDismiss()
-                                onEditSession(id, name)
-                            }
-                        }
-                    }
                     "files" -> {
                         SectionHeading("Files & storage", "Access only Android folders you authorize.")
                         ActionTile("Set up storage folder", "Choose a folder with Android's file picker") {
@@ -345,12 +324,9 @@ internal fun KlyroSettingsSheet(
                     }
                     "privacy" -> {
                         SectionHeading("Privacy", "Terminal output stays on your device by default.")
-                        ActionTile("Select terminal output", "Review and copy from the available transcript") {
-                            onDismiss(); onSelectOutput()
-                        }
-                        Text("Multi-line clipboard commands require confirmation before execution. " +
-                            "Copying terminal output may include secrets.",
-                            style = MaterialTheme.typography.bodySmall, color = colors.muted)
+                        Text("Copy output using the terminal's ALL key or native text selection. " +
+                            "Transcripts may contain secrets. Multiline pastes require confirmation.",
+                            style = MaterialTheme.typography.bodyMedium, color = colors.foreground)
                     }
                     "diagnostics" -> {
                         SectionHeading("Diagnostics",
