@@ -131,7 +131,12 @@ internal fun KlyroSettingsSheet(
                         Text("Settings", style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold)
                     } else {
-                        TextButton(onClick = { section = "home" }) { Text("‹  Settings") }
+                        TextButton(onClick = { section = "home" }) {
+                            Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
+                                contentDescription = null, tint = colors.accent,
+                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                            Text("Settings")
+                        }
                     }
                     TextButton(onClick = onDismiss) { Text("Done") }
                 }
