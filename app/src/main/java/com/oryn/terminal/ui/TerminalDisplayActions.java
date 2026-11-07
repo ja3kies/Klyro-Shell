@@ -17,7 +17,12 @@ public final class TerminalDisplayActions {
         // Only redraw an *idle* Klyro prompt. Replaying arbitrary process output
         // or partially typed commands would make the displayed PTY diverge from
         // Readline's real input buffer (and may expose hidden text).
-        if (!line.matches("^klyro [^\\\\p{Cntrl}\\\\r\\\\n]{1,96} \\\\$ ?$")) return "";
+        String normalized = line.trim();
+        if (!normalized.startsWith("klyro ") || !normalized.endsWith(" $")) return "";
+        if (normalized.indexOf('$') != normalized.lastIndexOf('$')) return "";
+        for (int i = 0; i < normalized.length(); i++) {
+            if (Character.isISOControl(normalized.charAt(i))) return "";
+        }
         return line.trim() + " ";
     }
 
