@@ -36,7 +36,6 @@ import com.oryn.terminal.R
  */
 @Composable
 internal fun KlyroExperimentalBento(
-    tabsCount: Int,
     accentLabel: String,
     onOpen: (String) -> Unit
 ) {
@@ -75,24 +74,13 @@ internal fun KlyroExperimentalBento(
                 }
             }
         }
-        Row(
+        BentoAction(
+            title = "Keyboard",
+            subtitle = "Extra keys and modifiers",
+            icon = R.drawable.hugeicons_keyboard,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            BentoAction(
-                title = "Sessions",
-                subtitle = "$tabsCount running",
-                icon = R.drawable.hugeicons_terminal,
-                modifier = Modifier.weight(1.12f),
-                emphasize = true
-            ) { onOpen("sessions") }
-            BentoAction(
-                title = "Keyboard",
-                subtitle = "Keys & modifiers",
-                icon = R.drawable.hugeicons_keyboard,
-                modifier = Modifier.weight(.88f)
-            ) { onOpen("keyboard") }
-        }
+            horizontal = true
+        ) { onOpen("keyboard") }
         BentoAction(
             title = "Files & storage",
             subtitle = "Private files · Android document picker",
