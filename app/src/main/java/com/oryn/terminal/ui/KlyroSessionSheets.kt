@@ -75,16 +75,16 @@ internal fun KlyroSessionSheet(
                     fontWeight = FontWeight.Bold)
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
-                        SheetAction("", "Rename", onRename, icon = R.drawable.hugeicons_pen_01)
-                        SheetAction("+", "New terminal", onChooseShell, trailing = "›")
-                        if (!isActive) SheetAction("↗", "Switch to session", onActivate)
+                        SheetAction("Rename", onRename, icon = R.drawable.hugeicons_pen_01)
+                        SheetAction("New terminal", onChooseShell, icon = R.drawable.hugeicons_plus_sign, trailing = true)
+                        if (!isActive) SheetAction("Switch to session", onActivate, icon = R.drawable.hugeicons_arrow_up_right_01)
                     }
                 }
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
-                        SheetAction("×", "Close terminal", onClick = {
+                        SheetAction("Close terminal", onClick = {
                             confirmClose = true
-                        }, destructive = true)
+                        }, destructive = true, icon = R.drawable.hugeicons_cancel_circle)
                     }
                 }
             }
@@ -114,12 +114,11 @@ internal fun KlyroSessionSheet(
 
 @Composable
 private fun SheetAction(
-    symbol: String,
     label: String,
     onClick: () -> Unit,
-    trailing: String? = null,
-    destructive: Boolean = false,
-    icon: Int? = null
+    icon: Int,
+    trailing: Boolean = false,
+    destructive: Boolean = false
 ) {
     val colors = LocalKlyroColors.current
     Row(
@@ -129,21 +128,14 @@ private fun SheetAction(
         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (icon != null) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = null,
-                tint = if (destructive) colors.danger else colors.muted,
-                modifier = Modifier.padding(2.dp)
-            )
-        } else {
-            Text(symbol, color = if (destructive) colors.danger else colors.muted,
-                style = MaterialTheme.typography.titleLarge)
-        }
+        Icon(painterResource(icon), contentDescription = null,
+            tint = if (destructive) colors.danger else colors.muted,
+            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
         Text(label, color = if (destructive) colors.danger else colors.foreground,
             style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        if (trailing != null) Text(trailing, color = colors.muted,
-            style = MaterialTheme.typography.titleLarge)
+        if (trailing) Icon(painterResource(R.drawable.hugeicons_chevron_right),
+            contentDescription = null, tint = colors.muted,
+            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
     }
 }
 
