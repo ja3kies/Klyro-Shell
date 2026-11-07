@@ -37,6 +37,27 @@ public class KlyroCommandCatalogTest {
         assertTrue(KlyroCommandCatalog.search("pkg upgrade").get(0).caution);
     }
 
+    @Test public void installedStateChecksPrivatePrefixOnly() throws Exception {
+        java.nio.file.Path root = java.nio.file.Files.createTempDirectory("klyro-catalog-test");
+        java.nio.file.Path bin = java.nio.file.Files.createDirectory(root.resolve("bin"));
+        try {
+            java.nio.file.Files.createFile(bin.resolve("pkg"));
+            KlyroCommandCatalog.Entry pkg = KlyroCommandCatalog.search("pkg upgrade").get(0);
+            KlyroCommandCatalog.Entry git = KlyroCommandCatalog.search("git status").get(0);
+            KlyroCommandCatalog.Entry pwd = KlyroCommandCatalog.search("pwd").get(0);
+            KlyroCommandCatalog.Entry storage = KlyroCommandCatalog.search("setup-storage").get(0);
+            assertTrue(KlyroCommandCatalog.isInstalled(pkg, root.toFile()));
+            assertFalse(KlyroCommandCatalog.isInstalled(git, root.toFile()));
+            assertTrue(KlyroCommandCatalog.isInstalled(pwd, root.toFile()));
+            assertFalse(KlyroCommandCatalog.isInstalled(storage, root.toFile()));
+            assertFalse(KlyroCommandCatalog.isInstalled(pkg, null));
+        } finally {
+            java.nio.file.Files.deleteIfExists(bin.resolve("pkg"));
+            java.nio.file.Files.deleteIfExists(bin);
+            java.nio.file.Files.deleteIfExists(root);
+        }
+    }
+
     @Test public void boundedQueriesAndCategories() {
         assertTrue(KlyroCommandCatalog.search("nonexistent-xyz").isEmpty());
         assertTrue(KlyroCommandCatalog.search("x".repeat(97)).isEmpty());
