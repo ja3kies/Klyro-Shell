@@ -159,7 +159,12 @@ class MainActivity : ComponentActivity() {
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
                 getSharedPreferences("klyro_storage", MODE_PRIVATE)
-                    .edit().putString("tree_uri", uri.toString()).apply()
+                    .edit()
+                    .putString("tree_uri", uri.toString())
+                    .putStringSet("tree_uris", (
+                        getSharedPreferences("klyro_storage", MODE_PRIVATE)
+                            .getStringSet("tree_uris", emptySet()).orEmpty() + uri.toString()
+                    ).toSet()).apply()
                 completeStorageRequest("OK")
                 Toast.makeText(this, "Storage folder authorized for Klyro", Toast.LENGTH_LONG).show()
             } catch (error: Exception) {
@@ -169,8 +174,10 @@ class MainActivity : ComponentActivity() {
         }
 
     private fun importFromAuthorizedFolder() {
-        val raw = getSharedPreferences("klyro_storage", MODE_PRIVATE).getString("tree_uri", null)
-        if (raw == null) {
+        val preferences = getSharedPreferences("klyro_storage", MODE_PRIVATE)
+        val folders = (preferences.getStringSet("tree_uris", emptySet()).orEmpty() +
+            listOfNotNull(preferences.getString("tree_uri", null))).distinct()
+        if (folders.isEmpty()) {
             Toast.makeText(this, "Choose a storage folder first", Toast.LENGTH_LONG).show()
             chooseStorageFolder()
             return
@@ -178,20 +185,19 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    val tree = Uri.parse(raw)
-                    val authorized = contentResolver.persistedUriPermissions.any { permission ->
-                        permission.uri == tree && permission.isReadPermission
-                    }
-                    if (!authorized) {
-                        throw SecurityException("Storage folder permission expired; authorize the folder again")
-                    }
-                    val documentId = DocumentsContract.getTreeDocumentId(tree)
-                    val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, documentId)
                     val paths = OrynPaths(applicationContext.filesDir,
                         File(applicationContext.applicationInfo.nativeLibraryDir))
                     val destination = File(paths.home, "storage-imports")
                     KlyroFileSafety.verifyDestination(destination)
                     var imported = 0
+                    for (raw in folders) {
+                    val tree = Uri.parse(raw)
+                    val authorized = contentResolver.persistedUriPermissions.any { permission ->
+                        permission.uri == tree && permission.isReadPermission
+                    }
+                    if (!authorized) continue
+                    val documentId = DocumentsContract.getTreeDocumentId(tree)
+                    val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, documentId)
                     contentResolver.query(children, arrayOf(
                         DocumentsContract.Document.COLUMN_DOCUMENT_ID,
                         DocumentsContract.Document.COLUMN_DISPLAY_NAME,
@@ -220,6 +226,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     } ?: throw IOException("Cannot read authorized folder")
+                    }
                     imported
                 }
             }
