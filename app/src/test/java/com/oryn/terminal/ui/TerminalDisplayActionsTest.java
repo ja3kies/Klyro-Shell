@@ -10,6 +10,12 @@ public class TerminalDisplayActionsTest {
         assertEquals("klyro ~/a $ ", TerminalDisplayActions.promptToRestore("klyro ~/a $ "));
     }
 
+    @Test public void keepsPromptDetectionIndependentOfAnsiColor() {
+        assertEquals("klyro ~ $ ", TerminalDisplayActions.promptToRestore("klyro ~ $ "));
+        assertEquals("", TerminalDisplayActions.promptToRestore("klyro ~ $ echo pending"));
+        assertEquals("", TerminalDisplayActions.promptToRestore("klyro ~ $\\u001b[36m"));
+    }
+
     @Test public void refusesActiveInputAndArbitraryOutput() {
         assertEquals("", TerminalDisplayActions.promptToRestore("klyro ~/a $ pwd"));
         assertEquals("", TerminalDisplayActions.promptToRestore("klyro ~ $ rm -rf /"));
