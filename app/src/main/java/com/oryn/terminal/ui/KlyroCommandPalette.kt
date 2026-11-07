@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -65,7 +67,7 @@ internal fun KlyroCommandPalette(
             dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().imePadding()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -114,7 +116,7 @@ internal fun KlyroCommandPalette(
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                     )
                     Text(
-                        "Tap a command to insert it without running it.",
+                        "Select to insert. Press Enter in Bash to run.",
                         color = colors.muted,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -130,7 +132,7 @@ internal fun KlyroCommandPalette(
                         }
                     }
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         if (matches.isEmpty()) {
@@ -163,31 +165,40 @@ internal fun KlyroCommandPalette(
                                 color = colors.tile,
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
-                                Column(Modifier.fillMaxWidth().padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(entry.command,
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .heightIn(min = KlyroUiMetrics.compactRow)
+                                        .padding(horizontal = KlyroUiMetrics.spaceMd,
+                                            vertical = KlyroUiMetrics.spaceSm),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(
+                                        KlyroUiMetrics.spaceMd)
+                                ) {
+                                    Text(">_", color = colors.accent,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold)
+                                    Column(Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(
+                                            KlyroUiMetrics.spaceXs)) {
+                                        Text(entry.command, color = colors.foreground,
                                             fontFamily = FontFamily.Monospace,
-                                            fontWeight = FontWeight.Bold,
-                                            color = colors.accent,
-                                            modifier = Modifier.weight(1f))
+                                            fontWeight = FontWeight.SemiBold,
+                                            style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            if (!available) "Info" else if (entry.caution) "Review"
-                                            else "Insert",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = if (entry.caution) colors.warningInk else colors.muted
+                                            if (available) entry.purpose
+                                            else "Not available · " + entry.note,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = colors.muted,
+                                            maxLines = 2
                                         )
                                     }
-                                    Text(entry.purpose,
-                                        color = colors.foreground,
-                                        style = MaterialTheme.typography.bodySmall)
-                                    Text(entry.category + " · " + entry.note,
-                                        color = colors.muted,
-                                        style = MaterialTheme.typography.labelSmall)
+                                    Text(
+                                        if (!available) "Info" else if (entry.caution)
+                                            "Review" else "Insert",
+                                        color = if (entry.caution) colors.warningInk
+                                            else colors.accent,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
                                 }
                             }
                         }
