@@ -19,6 +19,11 @@ public final class KlyroWelcomeGuide {
             " - Update:   pkg update\n" +
             " - Upgrade:  pkg upgrade\n" +
             "\n" +
+            "Optional Termux repositories (if supported):\n" +
+            " - Root: pkg install root-repo\n" +
+            " - X11:  pkg install x11-repo\n" +
+            " - Mirrors: termux-change-repo (if installed)\n" +
+            "\n" +
             "Common shell commands:\n" +
             " - Location: pwd\n" +
             " - Files:    ls -la\n" +
