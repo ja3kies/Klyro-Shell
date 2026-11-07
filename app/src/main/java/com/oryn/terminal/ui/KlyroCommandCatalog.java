@@ -71,6 +71,10 @@ public final class KlyroCommandCatalog {
         commands.add(utility("git status", "git status", "Show repository changes"));
         commands.add(utility("python", "python", "Open Python if installed"));
         commands.add(utility("node", "node", "Open Node.js if installed"));
+        commands.add(new Entry("termux-info", "klyro-info",
+                "Show private Klyro environment details", "Klyro Android integration",
+                "Read-only Klyro equivalent; does not inspect the separate Termux app.",
+                true, false));
         commands.add(new Entry("termux-change-repo", "termux-change-repo",
                 "Configure Termux repository mirrors", "Repository tools",
                 "Only if the command exists in Klyro's private prefix", true, true));
