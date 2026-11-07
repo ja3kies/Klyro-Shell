@@ -194,6 +194,12 @@ object KlyroUiMetrics {
     val glyphMedium = 24.dp
     val accentSwatch = 36.dp
     val iconWell = 40.dp
+    val bentoMinHeight = 112.dp
+    val bentoInnerPadding = 14.dp
+    val bentoGridGap = 10.dp
+    val iosSliderTrack = 4.dp
+    val iosSliderThumb = 24.dp
+    val iosSliderBorder = 1.dp
     val workspaceRow = 64.dp
     val sheetContentMax = 620.dp
     val paletteListMax = 420.dp
