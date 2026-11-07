@@ -93,7 +93,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         names = (
             "colors", "keyboard", "folder_01", "shield_01",
             "download_01", "upload_01", "chevron_right",
-            "more_vertical", "pen_01", "trash", "plus_sign",
+            "more_vertical", "pen_01", "trash", "plus_sign", "arrow_left_01",
             "arrow_up_right_01", "cancel_circle", "terminal",
         )
         ns = "{http://schemas.android.com/apk/res/android}"
@@ -113,6 +113,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("Icon(painterResource(icon)", settings)
         for token in ('"⌨"', '"▣"', '"◇"', 'glyph = "↓"', 'glyph = "↑"'):
             self.assertNotIn(token, settings)
+        self.assertNotIn('Text("‹  Settings")', settings)
+        self.assertIn("hugeicons_arrow_left_01", settings)
         self.assertIn("hugeicons-MIT.txt", settings)
         self.assertTrue((ROOT / "app/src/main/assets/licenses/hugeicons-MIT.txt").is_file())
 
@@ -121,11 +123,13 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("R.drawable.hugeicons_trash", workspaces)
         self.assertIn("R.drawable.hugeicons_more_vertical", workspaces)
         self.assertNotIn('leadingIcon = { Text(', workspaces)
+        self.assertNotIn('Text("+ New")', workspaces)
 
         sessions = src(UI / "KlyroSessionSheets.kt")
         self.assertIn("R.drawable.hugeicons_plus_sign", sessions)
         self.assertIn("R.drawable.hugeicons_cancel_circle", sessions)
         self.assertNotIn('SheetAction("×"', sessions)
+        self.assertNotIn('Text("←")', sessions)
 
         pane = src(UI / "TerminalPane.kt")
         menu = pane.split("val toolsMenu: @Composable () -> Unit =", 1)[1].split(
@@ -134,6 +138,10 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertEqual(menu.count("DropdownMenuItem("), 4)
         self.assertEqual(menu.count("leadingIcon ="), 4)
         self.assertIn("R.drawable.hugeicons_more_vertical", menu)
+        self.assertNotIn('Text("+", fontSize', pane)
+        palette = src(UI / "KlyroCommandPalette.kt")
+        self.assertIn("R.drawable.hugeicons_terminal", palette)
+        self.assertNotIn('Text(">_"', palette)
 
 if __name__ == "__main__":
     unittest.main()
