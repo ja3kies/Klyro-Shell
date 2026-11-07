@@ -939,8 +939,9 @@ private fun OrynTerminalApp(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = KlyroUiMetrics.sheetGutter,
+                        vertical = KlyroUiMetrics.spaceLg),
+                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceLg)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -974,10 +975,6 @@ private fun OrynTerminalApp(
                         color = ui.foreground, fontSize = 28.sp, lineHeight = 34.sp,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Text(
-                        "A standalone Android shell with its own private environment — separate from Termux.",
-                        color = ui.muted, fontSize = 14.sp, lineHeight = 21.sp
-                    )
                 }
 
                 Surface(
@@ -994,7 +991,7 @@ private fun OrynTerminalApp(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("PRIVATE ENVIRONMENT", color = ui.muted,
+                            Text("RUNTIME STATUS", color = ui.muted,
                                 style = MaterialTheme.typography.labelSmall,
                                 letterSpacing = .6.sp)
                             Surface(
@@ -1016,7 +1013,7 @@ private fun OrynTerminalApp(
                             status,
                             color = if (runtimeHasWarnings) ui.warningInk
                                 else if (technicalErrorDetails != null || sessionFailureMessage != null)
-                                    (if (ui.dark) Color(0xFFFFB3BE) else Color(0xFF9A2940))
+                                    ui.danger
                                 else ui.foreground,
                             fontSize = 13.sp,
                             lineHeight = 19.sp
