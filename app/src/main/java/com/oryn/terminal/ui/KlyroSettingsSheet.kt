@@ -119,8 +119,7 @@ internal fun KlyroSettingsSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     if (section == "home") {
-                        Text("Settings", style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold)
+                        KlyroSheetTitle("Settings")
                     } else {
                         TextButton(onClick = { section = "home" }) {
                             Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
