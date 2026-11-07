@@ -79,14 +79,14 @@ public class KlyroStorageCommandBridgeTest {
         try {
             KlyroStorageCommandBridge.installHelper(prefix.toFile());
             assertTrue(Files.isExecutable(target));
-            String script = Files.readString(target);
+            String script = new String(Files.readAllBytes(target), StandardCharsets.UTF_8);
             assertTrue(script.contains("KLYRO_STORAGE_BRIDGE_V1"));
             assertTrue(script.contains("storage.request"));
             assertFalse(script.contains("rm -rf"));
             assertTrue(script.contains("240; i++"));
-            Files.writeString(target, "#!/bin/sh\n# user custom\n");
+            Files.write(target, "#!/bin/sh\n# user custom\n".getBytes(StandardCharsets.UTF_8));
             KlyroStorageCommandBridge.installHelper(prefix.toFile());
-            assertTrue(Files.readString(target).contains("# user custom"));
+            assertTrue(new String(Files.readAllBytes(target), StandardCharsets.UTF_8).contains("# user custom"));
         } finally {
             Files.deleteIfExists(target);
             Files.deleteIfExists(bin);
