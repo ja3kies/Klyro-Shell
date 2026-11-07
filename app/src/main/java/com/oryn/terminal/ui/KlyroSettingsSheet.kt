@@ -84,6 +84,10 @@ internal fun KlyroSettingsSheet(
     onImportFile: () -> Unit,
     onExportFile: () -> Unit,
     onSelectOutput: () -> Unit,
+    diagnosticReport: String,
+    onRecheckEnvironment: () -> Unit,
+    onCopyDiagnostic: () -> Unit,
+    onShareDiagnostic: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var section by remember(initialSection) { mutableStateOf(initialSection) }
@@ -92,9 +96,6 @@ internal fun KlyroSettingsSheet(
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     val density = LocalDensity.current
-    val previewTypeface = remember(context, fontFamilyId) {
-        KlyroTerminalFonts.load(context, fontFamilyId)
-    }
     val version = remember(context) {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
             .getOrNull() ?: "development"
@@ -168,6 +169,10 @@ internal fun KlyroSettingsSheet(
                                 Modifier.weight(1f)) { section = "about" }
                         }
                         }
+                        SettingsRowLink(
+                            "Diagnostics",
+                            "Runtime health, permissions and report"
+                        ) { section = "diagnostics" }
                     }
                     "appearance" -> {
                         SectionHeading("Appearance", "Select a theme or follow Android's appearance.")
@@ -288,47 +293,6 @@ internal fun KlyroSettingsSheet(
                                         ) }
                                     }
                                 }
-                                Text("Preview each typeface before choosing.",
-                                    style = MaterialTheme.typography.bodySmall, color = colors.muted)
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = colors.terminal,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(14.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        // Native TextView uses the exact bundled font loaded
-                                        // by TerminalView, not Compose's system monospace.
-                                        AndroidView(
-                                            factory = { ctx -> TextView(ctx) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            update = { view ->
-                                                val preview = "klyro ~ $ echo \"Ready.\""
-                                                val styled = SpannableString(preview).apply {
-                                                    setSpan(
-                                                        ForegroundColorSpan(colors.accent.toArgb()),
-                                                        0, "klyro ~ $".length,
-                                                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                                                    )
-                                                }
-                                                view.text = styled
-                                                view.setTextColor(colors.foreground.toArgb())
-                                                view.typeface = previewTypeface
-                                                view.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp)
-                                                view.contentDescription = "Terminal font preview: $preview"
-                                            }
-                                        )
-                                        Text(
-                                            "Preview: ${KlyroTerminalFonts.options.firstOrNull {
-                                                it.id == fontFamilyId
-                                            }?.label ?: "System Mono"}",
-                                            color = colors.muted,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    }
-                                }
                                 Text("Terminal font size", fontWeight = FontWeight.SemiBold)
                                 Text(if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
                                     color = colors.muted)
@@ -393,6 +357,37 @@ internal fun KlyroSettingsSheet(
                         Text("Multi-line clipboard commands require confirmation before execution. " +
                             "Copying terminal output may include secrets.",
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
+                    }
+                    "diagnostics" -> {
+                        SectionHeading("Diagnostics",
+                            "A local status snapshot. No shell commands are run automatically.")
+                        Surface(
+                            color = colors.tile,
+                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                        ) {
+                            Text(
+                                diagnosticReport,
+                                modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                                color = colors.foreground,
+                                fontFamily = FontFamily.Monospace,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Button(
+                            onClick = onRecheckEnvironment,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = colors.onAccent
+                            )
+                        ) { Text("Recheck environment") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            TextButton(onClick = onCopyDiagnostic) { Text("Copy report") }
+                            TextButton(onClick = onShareDiagnostic) { Text("Share report") }
+                        }
+                        Text("Review before sharing. Raw errors and terminal transcripts are excluded.",
+                            color = colors.muted, style = MaterialTheme.typography.labelSmall)
                     }
                     "about" -> {
                         SectionHeading("About Klyro Shell", "Private terminal environment for Android.")
@@ -530,6 +525,30 @@ private fun ActionTile(title: String, subtitle: String, onClick: () -> Unit) {
         ) {
             Text(title, fontWeight = FontWeight.SemiBold, color = colors.foreground)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.muted)
+        }
+    }
+}
+
+@Composable
+private fun SettingsRowLink(title: String, subtitle: String, onClick: () -> Unit) {
+    val colors = LocalKlyroColors.current
+    Surface(
+        modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+            .clickable(role = Role.Button, onClickLabel = title, onClick = onClick),
+        color = colors.tile,
+        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, color = colors.foreground, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, color = colors.muted,
+                    style = MaterialTheme.typography.bodySmall)
+            }
+            Text("›", color = colors.accent, style = MaterialTheme.typography.titleLarge)
         }
     }
 }
