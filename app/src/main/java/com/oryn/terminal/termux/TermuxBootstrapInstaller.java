@@ -84,6 +84,7 @@ public final class TermuxBootstrapInstaller {
     /** Safely updates only the generated legacy prompt in an existing private profile. */
     public void migrateShellProfile() throws IOException {
         if (isInstalled()) {
+            KlyroStorageCommandBridge.installHelper(paths.getPrefix());
             writeKlyroBashProfile(new File(paths.getHome(), ".bashrc"));
         }
     }
@@ -169,6 +170,7 @@ public final class TermuxBootstrapInstaller {
             throw new IOException("Cannot create the private Termux TMPDIR.");
         }
 
+        KlyroStorageCommandBridge.installHelper(staging);
         writeKlyroBashProfile(new File(paths.getHome(), ".bashrc"));
         writeIfAbsent(new File(paths.getHome(), ".profile"),
                 "[ -f \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\"\n");
@@ -544,13 +546,14 @@ public final class TermuxBootstrapInstaller {
                 + "export EDITOR=nano\nexport PAGER=less\n"
                 + "alias ll='ls -lah'\nalias la='ls -A'\n";
         if (!file.isFile()) {
-            writeIfAbsent(file, KlyroWelcomeGuide.augmentGeneratedProfile(defaultProfile));
+            writeIfAbsent(file, KlyroStorageCommandBridge.augmentGeneratedProfile(
+                    KlyroWelcomeGuide.augmentGeneratedProfile(defaultProfile)));
             return;
         }
 
         String existing = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-        String migrated = KlyroWelcomeGuide.augmentGeneratedProfile(
-                migrateGeneratedPrompt(existing));
+        String migrated = KlyroStorageCommandBridge.augmentGeneratedProfile(
+                KlyroWelcomeGuide.augmentGeneratedProfile(migrateGeneratedPrompt(existing)));
         if (existing.equals(migrated)) return;
 
         File backup = new File(file.getParentFile(), ".bashrc.klyro-before-color.bak");
