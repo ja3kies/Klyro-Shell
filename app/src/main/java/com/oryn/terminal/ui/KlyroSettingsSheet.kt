@@ -131,38 +131,32 @@ internal fun KlyroSettingsSheet(
                 }
                 when (section) {
                     "home" -> {
-                        if (context.resources.getBoolean(R.bool.klyro_experimental_bento)) {
-                            KlyroExperimentalBento(
-                                accentLabel = KlyroColors.selectedOption(accentId)?.label
-                                    ?: "Custom",
-                                onOpen = { section = it }
-                            )
-                        } else {
-                        Text("Make Klyro yours",
-                            style = MaterialTheme.typography.bodyMedium, color = colors.muted)
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            SettingsTile("Appearance", "Themes & typography", null,
-                                Modifier.weight(1f), fallbackGlyph = "Aa") { section = "appearance" }
-                            SettingsTile("Keyboard", "Extra keys & modifiers",
-                                R.drawable.hugeicons_keyboard,
-                                Modifier.weight(1f)) { section = "keyboard" }
+                        Text("Terminal settings and Android integration",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.muted)
+                        SettingsRowLink("Appearance", "Theme, accent, font and size") {
+                            section = "appearance"
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            SettingsTile("Privacy", "Clipboard & data",
-                                R.drawable.hugeicons_shield_01,
-                                Modifier.weight(1f)) { section = "privacy" }
-                            SettingsTile("Files", "Android storage access",
-                                R.drawable.hugeicons_folder_01,
-                                Modifier.weight(1f)) { section = "files" }
+                        SettingsRowLink("Keyboard", "Extra keys and modifiers",
+                            R.drawable.hugeicons_keyboard) {
+                            section = "keyboard"
                         }
-                        SettingsRowLink("About", "Build information and licences") {
+                        SettingsRowLink("Files & storage", "Authorized folders and import/export",
+                            R.drawable.hugeicons_folder_01) {
+                            section = "files"
+                        }
+                        SettingsRowLink("Privacy", "Clipboard and local data",
+                            R.drawable.hugeicons_shield_01) {
+                            section = "privacy"
+                        }
+                        SettingsRowLink("Diagnostics", "Runtime health and shareable report",
+                            R.drawable.hugeicons_information_square) {
+                            section = "diagnostics"
+                        }
+                        SettingsRowLink("About", "Build information and licences",
+                            R.drawable.hugeicons_information_square) {
                             section = "about"
                         }
-                        }
-                        SettingsRowLink(
-                            "Diagnostics",
-                            "Runtime health, permissions and report"
-                        ) { section = "diagnostics" }
                     }
                     "appearance" -> {
                         SectionHeading("Appearance", "Changes apply to the terminal immediately.")
@@ -481,50 +475,6 @@ internal fun KlyroSettingsSheet(
 }
 
 @Composable
-private fun SettingsTile(
-    title: String,
-    subtitle: String,
-    icon: Int?,
-    modifier: Modifier,
-    fallbackGlyph: String = "Aa",
-    onClick: () -> Unit
-) {
-    val colors = LocalKlyroColors.current
-    Surface(
-        modifier = modifier.heightIn(min = 116.dp)
-            .clickable(role = Role.Button, onClickLabel = "Open $title settings", onClick = onClick),
-        color = colors.tile,
-        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
-    ) {
-        Column(
-            modifier = Modifier.padding(KlyroUiMetrics.cardPadding),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Box(
-                modifier = Modifier.size(40.dp)
-                    .background(colors.accent, RoundedCornerShape(24.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (icon == null) {
-                    Text(fallbackGlyph, color = colors.onAccent, fontSize = 19.sp)
-                } else {
-                    Icon(
-                        painter = painterResource(icon),
-                        tint = colors.onAccent,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-            Text(title, color = colors.foreground, fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(subtitle, color = colors.muted, fontSize = 12.sp,
-                maxLines = 2, lineHeight = 16.sp)
-        }
-    }
-}
-
-@Composable
 private fun SectionHeading(title: String, subtitle: String) {
     val colors = LocalKlyroColors.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -553,7 +503,7 @@ private fun ActionTile(title: String, subtitle: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SettingsRowLink(title: String, subtitle: String, onClick: () -> Unit) {
+private fun SettingsRowLink(title: String, subtitle: String, icon: Int? = null, onClick: () -> Unit) {
     val colors = LocalKlyroColors.current
     Surface(
         modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
@@ -566,8 +516,24 @@ private fun SettingsRowLink(title: String, subtitle: String, onClick: () -> Unit
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Box(
+                modifier = Modifier.size(40.dp)
+                    .background(colors.accent.copy(alpha = .09f),
+                        RoundedCornerShape(KlyroUiMetrics.controlCorner)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (icon != null) {
+                    Icon(painterResource(icon), null, tint = colors.accent,
+                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                } else {
+                    Text("Aa", fontWeight = FontWeight.SemiBold,
+                        color = colors.accent, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
             Column(Modifier.weight(1f)) {
-                Text(title, color = colors.foreground, fontWeight = FontWeight.SemiBold)
+                Text(title, color = colors.foreground,
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyMedium)
                 Text(subtitle, color = colors.muted,
                     style = MaterialTheme.typography.bodySmall)
             }
