@@ -22,8 +22,9 @@ public final class KlyroHealthReport {
         report.append("Private storage available: ").append(Math.max(0L, usableBytes) / (1024 * 1024))
                 .append(" MiB\n");
         if (lastError != null && !lastError.isBlank()) {
-            report.append("Last reported error: ")
-                    .append(KlyroDiagnostics.sanitize(lastError)).append('\n');
+            // The shareable report reveals presence of an error, not raw text:
+            // diagnostics can contain credentials, URLs, or clipboard snippets.
+            report.append("Last reported error: PRESENT (details hidden)\n");
         }
         report.append("Note: a snapshot does not test network access or running commands.\n");
         return report.toString();
