@@ -22,6 +22,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.oryn.terminal.R
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -176,9 +179,9 @@ internal fun KlyroCommandPalette(
                                     horizontalArrangement = Arrangement.spacedBy(
                                         KlyroUiMetrics.spaceMd)
                                 ) {
-                                    Text(">_", color = colors.accent,
-                                        fontFamily = FontFamily.Monospace,
-                                        fontWeight = FontWeight.Bold)
+                                    Icon(painterResource(R.drawable.hugeicons_terminal),
+                                        contentDescription = null, tint = colors.accent,
+                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                     Column(Modifier.weight(1f),
                                         verticalArrangement = Arrangement.spacedBy(
                                             KlyroUiMetrics.spaceXs)) {
