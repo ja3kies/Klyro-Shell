@@ -143,8 +143,8 @@ internal fun KlyroActionRow(
 internal fun KlyroMenuItem(
     label: String,
     icon: Int,
-    onClick: () -> Unit,
-    destructive: Boolean = false
+    destructive: Boolean = false,
+    onClick: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
     val ink = if (destructive) colors.danger else colors.foreground
