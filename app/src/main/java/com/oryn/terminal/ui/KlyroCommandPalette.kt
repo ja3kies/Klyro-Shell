@@ -73,12 +73,7 @@ internal fun KlyroCommandPalette(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        if (showingGuide) "Welcome to Klyro" else "Command Palette",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = colors.foreground
-                    )
+                    KlyroSheetTitle(if (showingGuide) "Welcome to Klyro" else "Command Palette")
                     TextButton(onClick = {
                         keyboard?.hide()
                         showingGuide = !showingGuide
