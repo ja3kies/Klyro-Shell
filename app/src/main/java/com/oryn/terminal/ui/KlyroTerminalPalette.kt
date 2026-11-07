@@ -15,7 +15,8 @@ object KlyroTerminalPalette {
     private fun rgb(color: Color): String = "#%06X".format(color.toArgb() and 0xFFFFFF)
 
     internal fun properties(colors: KlyroColors): Properties = Properties().apply {
-        setProperty("foreground", rgb(colors.foreground))
+        setProperty("foreground", if (colors.accentId == "mono-contrast") "#FFFFFF"
+            else rgb(colors.foreground))
         setProperty("background", rgb(colors.terminal))
         setProperty("cursor", rgb(colors.accent))
         val ansi = if (colors.accentId.startsWith("mono-")) {
