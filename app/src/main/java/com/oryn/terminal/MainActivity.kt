@@ -377,10 +377,11 @@ class MainActivity : ComponentActivity() {
                     themePreferences.getString("accent_id", "mint")
                 ))
             }
-            val darkTheme = themeMode == "dark" ||
+            val darkTheme = themeMode == "dark" || themeMode == "mono-black" ||
                 (themeMode == "system" && isSystemInDarkTheme())
-            val palette = remember(darkTheme, accentId) {
-                KlyroColors.create(darkTheme, accentId)
+            val palette = remember(darkTheme, accentId, themeMode) {
+                if (themeMode.startsWith("mono-")) KlyroColors.monochrome(themeMode)
+                else KlyroColors.create(darkTheme, accentId)
             }
             SideEffect {
                 activePalette = palette
