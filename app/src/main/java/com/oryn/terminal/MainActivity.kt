@@ -350,19 +350,29 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(LocalKlyroColors provides palette) {
                 MaterialTheme(
                     colorScheme = if (darkTheme) darkColorScheme(
-                        background = palette.background,
                         surface = palette.chrome,
                         primary = palette.accent,
                         onPrimary = palette.onAccent,
                         secondary = palette.accent,
+                        onSecondary = palette.onAccent,
+                        surfaceVariant = palette.tile,
+                        onSurfaceVariant = palette.muted,
+                        outline = palette.muted,
+                        error = palette.danger,
+                        background = palette.background,
                         onBackground = palette.foreground,
                         onSurface = palette.foreground
                     ) else lightColorScheme(
-                        background = palette.background,
                         surface = palette.chrome,
                         primary = palette.accent,
                         onPrimary = palette.onAccent,
                         secondary = palette.accent,
+                        onSecondary = palette.onAccent,
+                        surfaceVariant = palette.tile,
+                        onSurfaceVariant = palette.muted,
+                        outline = palette.muted,
+                        error = palette.danger,
+                        background = palette.background,
                         onBackground = palette.foreground,
                         onSurface = palette.foreground
                     )
