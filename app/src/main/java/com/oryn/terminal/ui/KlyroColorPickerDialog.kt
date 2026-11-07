@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -252,19 +253,21 @@ internal fun KlyroColorPickerDialog(
                     // Draw an actual rainbow under the native slider: the
                     // Material3 default accent track gives no hue feedback.
                     Box(modifier = Modifier.fillMaxWidth()) {
-                        Canvas(Modifier.fillMaxWidth().height(36.dp)) {
-                            drawRect(
+                        Canvas(Modifier.fillMaxWidth().height(KlyroUiMetrics.minTouch)) {
+                            val track = KlyroUiMetrics.iosSliderTrack.toPx()
+                            drawRoundRect(
                                 brush = Brush.horizontalGradient(
                                     listOf(
                                         Color.Red, Color.Yellow, Color.Green,
                                         Color.Cyan, Color.Blue, Color.Magenta, Color.Red
                                     )
                                 ),
-                                topLeft = Offset(0f, size.height * .36f),
-                                size = Size(size.width, size.height * .28f)
+                                topLeft = Offset(0f, (size.height - track) / 2f),
+                                size = Size(size.width, track),
+                                cornerRadius = CornerRadius(track / 2f)
                             )
                         }
-                        Slider(
+                        KlyroThinSlider(
                             value = hue,
                             onValueChange = {
                                 pendingPreset = null
@@ -272,10 +275,7 @@ internal fun KlyroColorPickerDialog(
                                 hexInput = "#%06X".format(rgb() and 0xFFFFFF)
                             },
                             valueRange = 0f..360f,
-                            colors = SliderDefaults.colors(
-                                activeTrackColor = Color.Transparent,
-                                inactiveTrackColor = Color.Transparent
-                            ),
+                            showTrack = false,
                             modifier = Modifier.semantics { contentDescription = "Hue in degrees" }
                         )
                     }
@@ -347,11 +347,13 @@ internal fun KlyroColorPickerDialog(
                     ) {
                         Text("Opacity · " + (alpha * 100f).roundToInt() + "%",
                             style = MaterialTheme.typography.labelMedium)
-                        Slider(
+                        KlyroThinSlider(
                             value = alpha,
                             onValueChange = { alpha = it },
                             valueRange = 0f..1f,
-                            modifier = Modifier.semantics { contentDescription = "Opacity" }
+                            modifier = Modifier.fillMaxWidth().semantics {
+                                contentDescription = "Opacity"
+                            }
                         )
                         Text("My colors", style = MaterialTheme.typography.titleSmall)
                         OutlinedTextField(
