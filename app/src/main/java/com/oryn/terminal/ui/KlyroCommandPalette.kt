@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -67,7 +68,8 @@ internal fun KlyroCommandPalette(
             dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) }
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().imePadding()
+                modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
+                    .fillMaxWidth().imePadding()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -132,7 +134,7 @@ internal fun KlyroCommandPalette(
                         }
                     }
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.paletteListMax),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         if (matches.isEmpty()) {
@@ -147,7 +149,7 @@ internal fun KlyroCommandPalette(
                                 modifier = Modifier.fillMaxWidth().clickable(
                                     role = Role.Button,
                                     onClickLabel = if (available) "Insert " + entry.command
-                                        else "Read storage instructions",
+                                        else "Show command requirements",
                                     onClick = {
                                         if (available) {
                                             val snippet = KlyroCommandCatalog.safeInsertion(entry)
