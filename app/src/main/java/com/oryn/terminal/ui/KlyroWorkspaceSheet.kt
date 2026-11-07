@@ -25,6 +25,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
@@ -86,16 +88,27 @@ internal fun KlyroWorkspaceSheet(
                         modifier = Modifier.fillMaxWidth().clickable { onSelectProject(entry.id) }
                     ) {
                         Column(Modifier.padding(12.dp)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(entry.name, modifier = Modifier.weight(1f),
-                                    fontWeight = if (entry.id == selected.id) FontWeight.Bold
-                                    else FontWeight.Medium)
-                                Text("$number tabs",
-                                    style = MaterialTheme.typography.labelMedium, color = colors.muted)
-                                if (entry.id == selected.id) Text("✓", color = colors.accent)
-                            }
+                            Text(
+                                entry.name,
+                                modifier = Modifier.fillMaxWidth(),
+                                color = colors.foreground,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                "$number tabs" +
+                                if (entry.id == selected.id) " · Selected" else "",
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (entry.id == selected.id) colors.accent else colors.muted,
+                                textAlign = TextAlign.Center
+                            )
                             if (entry.id != KlyroWorkspaceCatalog.GENERAL) {
-                                Row {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
                                     TextButton(onClick = {
                                         editorId = entry.id
                                         editorText = entry.name
@@ -114,6 +127,50 @@ internal fun KlyroWorkspaceSheet(
                     enabled = entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Create project") }
+
+                if (editorId != null) {
+                    val editing = !editorId.isNullOrEmpty()
+                    Surface(
+                        color = colors.tile,
+                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                if (editing) "Rename project" else "New project",
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.foreground
+                            )
+                            OutlinedTextField(
+                                value = editorText,
+                                onValueChange = {
+                                    editorText = it.take(KlyroWorkspaceCatalog.MAX_NAME_CHARS)
+                                    editorError = false
+                                },
+                                label = { Text("Project name") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                            )
+                            if (editorError) {
+                                Text("Choose a unique, non-empty name.",
+                                    color = colors.danger,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(onClick = {
+                                    val saved = if (editing)
+                                        onRenameProject(editorId!!, editorText)
+                                    else onCreateProject(editorText)
+                                    if (saved) editorId = null else editorError = true
+                                }) { Text("Save") }
+                                TextButton(onClick = { editorId = null }) { Text("Cancel") }
+                            }
+                        }
+                    }
+                }
 
                 Text("Sessions in " + selected.name, fontWeight = FontWeight.SemiBold)
                 val projectTabs = tabs.filter {
@@ -145,38 +202,6 @@ internal fun KlyroWorkspaceSheet(
                     }
                 }
             }
-        }
-
-        if (editorId != null) {
-            val editing = !editorId.isNullOrEmpty()
-            AlertDialog(
-                onDismissRequest = { editorId = null },
-                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
-                containerColor = colors.sheet,
-                title = { Text(if (editing) "Rename project" else "New project") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = editorText,
-                            onValueChange = {
-                                editorText = it.take(KlyroWorkspaceCatalog.MAX_NAME_CHARS)
-                                editorError = false
-                            },
-                            label = { Text("Project name") }, singleLine = true
-                        )
-                        if (editorError) Text("Name unavailable, empty or already in use.",
-                            color = colors.danger, style = MaterialTheme.typography.bodySmall)
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val valid = if (editing) onRenameProject(editorId!!, editorText)
-                            else onCreateProject(editorText)
-                        if (valid) editorId = null else editorError = true
-                    }) { Text("Save") }
-                },
-                dismissButton = { TextButton(onClick = { editorId = null }) { Text("Cancel") } }
-            )
         }
 
         deletingId?.let { id ->
