@@ -171,6 +171,12 @@ object KlyroUiMetrics {
     val selectedBorder = 1.5.dp
     val glyphSmall = 20.dp
     val glyphMedium = 24.dp
+    val accentSwatch = 36.dp
+    val iconWell = 40.dp
+    val workspaceRow = 64.dp
+    val sheetContentMax = 620.dp
+    val paletteListMax = 420.dp
+    val sheetContentWidth = 540.dp
 }
 
 val LocalKlyroColors = compositionLocalOf { KlyroColors.create(true, "lime") }
