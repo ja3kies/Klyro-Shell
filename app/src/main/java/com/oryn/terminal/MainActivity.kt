@@ -17,7 +17,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -104,9 +103,7 @@ class MainActivity : ComponentActivity() {
     private var showWelcomeScreen by mutableStateOf(false)
     private var isVerifyingRuntime by mutableStateOf(false)
     private var observingPreviousInstall = false
-    private val terminalState: TerminalSessionViewModel by lazy {
-        ViewModelProvider(this)[TerminalSessionViewModel::class.java]
-    }
+    private val terminalState: TerminalSessionViewModel get() = KlyroSessionRuntime.sessions
     private val storageFolderLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri == null) return@registerForActivityResult
@@ -272,6 +269,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        KlyroSessionRuntime.expireIfIdle()
+        if (terminalState.hasLiveSessions()) KlyroSessionService.ensureRunning(this)
         // Navigation is Activity UI state, independent of live PTY ownership.
         showWelcomeScreen = savedInstanceState?.getBoolean("klyro_show_welcome", false) ?: false
         enableEdgeToEdge(
@@ -406,7 +405,10 @@ class MainActivity : ComponentActivity() {
                     activeTabId = terminalState.activeTabId,
                     onSelectTab = terminalState::selectTab,
                     onRenameTab = terminalState::renameTab,
-                    onCloseTab = terminalState::closeTab,
+                    onCloseTab = { id ->
+                        terminalState.closeTab(id)
+                        if (!terminalState.hasLiveSessions()) KlyroSessionService.stopIfEmpty(this)
+                    },
                     onNewTab = ::launchBash,
                     onReturnHome = { showWelcomeScreen = true },
                     onImportFile = ::chooseFileToImport,
@@ -439,6 +441,16 @@ class MainActivity : ComponentActivity() {
         } else if (bootstrapInstalled) {
             installProotRuntime()
         }
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        KlyroSessionRuntime.noteInteraction()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        KlyroSessionRuntime.expireIfIdle()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -646,6 +658,8 @@ class MainActivity : ComponentActivity() {
             val newViewClient = OrynTerminalViewClient(applicationContext)
             val newSession = manager.startBash("Bash", newSessionClient)
             terminalState.attachSession(newSession, newSessionClient, newViewClient, tabId)
+            KlyroSessionRuntime.noteInteraction()
+            KlyroSessionService.ensureRunning(this)
             showWelcomeScreen = false
             statusMessage = "Starting private Bash session…"
         } catch (error: Exception) {
@@ -659,6 +673,7 @@ class MainActivity : ComponentActivity() {
 
     private fun closeBash() {
         terminalState.closeSession()
+        if (!terminalState.hasLiveSessions()) KlyroSessionService.stopIfEmpty(this)
         statusMessage = "Bash session closed."
     }
 
