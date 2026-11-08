@@ -41,6 +41,12 @@ data class KlyroColors(
     val dangerContainer: Color get() = lerp(sheet, danger, .12f)
 
     companion object {
+        /** The persisted appearance contract includes every selectable monochrome scheme. */
+        val themeModes = setOf("system", "light", "dark",
+            "mono-contrast", "mono-black", "mono-paper")
+        fun normalizedThemeMode(id: String?): String =
+            id?.takeIf { it in themeModes } ?: "system"
+
         /** Distinct primary hues and intentionally darker light-mode counterparts. */
         data class AccentOption(
             val id: String,
