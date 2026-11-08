@@ -987,7 +987,10 @@ private fun OrynTerminalApp(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_klyro_launcher_foreground),
+                            painter = painterResource(
+                                if (com.oryn.terminal.ui.KlyroBrandChoice.selected(context) == "a")
+                                    R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
+                            ),
                             contentDescription = "Klyro Shell logo",
                             tint = Color.Unspecified,
                             modifier = Modifier.size(80.dp)
