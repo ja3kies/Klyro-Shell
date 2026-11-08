@@ -103,6 +103,19 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn("val bentoMinHeight = 86.dp", design)
         self.assertIn("val minTouch = 48.dp", design)
 
+    def test_keyboard_and_privacy_actions_are_meaningful(self):
+        settings = READ(UI / "KlyroSettingsSheet.kt")
+        terminal = READ(UI / "TerminalPane.kt")
+        self.assertIn("activeModifiers: Set<String>", settings)
+        self.assertIn("activeModifiers = buildSet", terminal)
+        self.assertIn("onClick = onResetModifiers", settings)
+        self.assertIn("enabled = activeModifiers.isNotEmpty()", settings)
+        self.assertIn('"All modifiers released"', settings)
+        self.assertIn('stateDescription = if (active) "Active" else "Inactive"', settings)
+        self.assertIn('Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)', settings)
+        self.assertIn('Uri.parse("package:', settings)
+        self.assertIn("if (cannotOpenPermissions)", settings)
+
     def test_theme_cards_are_distinct_and_six_modes_persist(self):
         settings = READ(UI / "KlyroSettingsSheet.kt")
         design = READ(UI / "KlyroDesign.kt")
