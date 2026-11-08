@@ -171,7 +171,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertNotIn('TerminalExtraKey(\n                "PASTE"', terminal)
         self.assertIn("enabled = clipboardAvailable", terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
-        self.assertIn('pasteClipboard()', terminal) terminal)
+        self.assertIn('pasteClipboard()', terminal)
         self.assertNotIn("sessionClient.setOutputObserver(observer)", terminal)
 
         # Each workspace has a single full-row selectable action; its
@@ -226,7 +226,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn('TerminalExtraKey("CLEAR"', terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
         self.assertNotIn('TerminalExtraKey(\n                "PASTE"', terminal)
-        self.assertIn('pasteClipboard()', terminal) terminal)
+        self.assertIn('pasteClipboard()', terminal)
         self.assertNotIn('sessionClient.setOutputObserver(observer)', terminal)
         self.assertNotIn(' · Selected', workspace)
         self.assertIn('textAlign = TextAlign.Start', workspace)
