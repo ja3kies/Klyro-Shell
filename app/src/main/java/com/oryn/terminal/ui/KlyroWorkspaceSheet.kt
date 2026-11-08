@@ -128,46 +128,47 @@ internal fun KlyroWorkspaceSheet(
                                 .heightIn(min = KlyroUiMetrics.workspaceRow),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier.size(KlyroUiMetrics.minTouch)
-                                    .clickable(role = Role.Button,
-                                        onClickLabel = "Select workspace " + entry.name) {
-                                        onSelectProject(entry.id)
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.hugeicons_folder_01),
-                                    contentDescription = null,
-                                    tint = if (active) c.accent else c.muted,
-                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
-                                )
-                            }
-                            Column(
+                            Row(
                                 modifier = Modifier.weight(1f)
-                                    .heightIn(min = KlyroUiMetrics.minTouch)
-                                    .clickable(role = Role.Button,
+                                    .heightIn(min = KlyroUiMetrics.workspaceRow)
+                                    .clickable(role = Role.RadioButton,
                                         onClickLabel = "Select workspace " + entry.name) {
                                         onSelectProject(entry.id)
                                     }.semantics { this.selected = active },
-                                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs),
-                                horizontalAlignment = Alignment.Start
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    entry.name, modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Start,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = c.foreground,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    if (count == 1) "1 session" else count.toString() + " sessions",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Start,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (active) c.accent else c.muted
-                                )
+                                Box(
+                                    modifier = Modifier.size(KlyroUiMetrics.minTouch),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painterResource(R.drawable.hugeicons_folder_01),
+                                        contentDescription = null,
+                                        tint = if (active) c.accent else c.muted,
+                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
+                                    )
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Text(
+                                        entry.name, modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Start,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = c.foreground,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        if (count == 1) "1 session" else count.toString() + " sessions",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Start,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (active) c.accent else c.muted
+                                    )
+                                }
                             }
                             Box(
                                 modifier = Modifier.size(KlyroUiMetrics.minTouch),
