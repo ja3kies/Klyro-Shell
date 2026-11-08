@@ -38,7 +38,7 @@ class KlyroPluginManager(context: Context) {
             "git log", "git log -5 --oneline", "pkg list-installed",
             "uname", "uname -a", "whoami", "date", "id"
         )
-        private val safePackageSearch = Regex("pkg search [A-Za-z0-9._-]{1,40}")
+        private val safePackageSearch = Regex("pkg search [A-Za-z0-9][A-Za-z0-9._-]{0,39}")
 
         fun safeInsertion(text: String): Boolean {
             val value = text.trim()
