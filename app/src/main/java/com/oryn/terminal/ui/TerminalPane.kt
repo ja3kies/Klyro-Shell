@@ -17,6 +17,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -1050,6 +1052,8 @@ fun TerminalPane(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
+private enum class ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }
+
 private fun TerminalExtraKey(
     label: String,
     active: Boolean = false,
@@ -1065,9 +1069,26 @@ private fun TerminalExtraKey(
     onClick: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
-    val accentTint = colors.accent
-    val inkTint = colors.foreground
-    val backgroundTint = colors.key
+    val interaction = remember { MutableInteractionSource() }
+    val held by interaction.collectIsPressedAsState()
+    val keyState = when {
+        !enabled -> ShortcutState.INACTIVE
+        held -> ShortcutState.HOLD
+        active -> ShortcutState.ACTIVE
+        else -> ShortcutState.DEFAULT
+    }
+    val stateInk = when (keyState) {
+        ShortcutState.ACTIVE -> colors.accent
+        ShortcutState.HOLD -> colors.onAccent
+        ShortcutState.INACTIVE -> colors.muted
+        ShortcutState.DEFAULT -> colors.foreground
+    }
+    val stateBackground = when (keyState) {
+        ShortcutState.ACTIVE -> colors.accent.copy(alpha = .18f)
+        ShortcutState.HOLD -> colors.accent
+        ShortcutState.INACTIVE -> colors.key.copy(alpha = .50f)
+        ShortcutState.DEFAULT -> colors.key
+    }
     val keyContents: @Composable () -> Unit = {
         if (glyph != null) {
             Column(
@@ -1078,10 +1099,9 @@ private fun TerminalExtraKey(
                     painter = painterResource(glyph),
                     contentDescription = null,
                     modifier = Modifier.size(KlyroUiMetrics.glyphSmall),
-                    tint = if (active) accentTint else inkTint
+                    tint = stateInk
                 )
-                Text(label, fontSize = KlyroUiMetrics.shortcutCaption, lineHeight = 12.sp,
-                    fontFamily = FontFamily.Monospace, maxLines = 1)
+                // Icon-only affordance: full action name is exposed to accessibility.
             }
         } else if (arrow != null) {
             // Thin chevrons, inspired by the reference terminal keyboard.
@@ -1114,7 +1134,7 @@ private fun TerminalExtraKey(
                 }
                 ends.forEach { end ->
                     drawLine(
-                        color = inkTint, start = end, end = tip,
+                        color = stateInk, start = end, end = tip,
                         strokeWidth = 1.75.dp.toPx(),
                         cap = androidx.compose.ui.graphics.StrokeCap.Round
                     )
@@ -1131,13 +1151,18 @@ private fun TerminalExtraKey(
             modifier = Modifier
                 .height(50.dp)
                 .width(keyWidth)
-                .semantics { contentDescription = description ?: label },
+                .semantics {
+                    contentDescription = description ?: label
+                    stateDescription = keyState.name.lowercase()
+                },
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
             contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
+            interactionSource = interaction,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (active) accentTint.copy(alpha = 0.18f)
-                    else backgroundTint,
-                contentColor = if (active) accentTint else inkTint
+                containerColor = stateBackground,
+                contentColor = stateInk,
+                disabledContainerColor = stateBackground,
+                disabledContentColor = stateInk
             )
         ) {
             keyContents()
@@ -1150,6 +1175,8 @@ private fun TerminalExtraKey(
             modifier = Modifier.height(50.dp).width(keyWidth)
                 .clip(shape)
                 .combinedClickable(
+                    interactionSource = interaction,
+                    indication = null,
                     enabled = enabled,
                     role = Role.Button,
                     onClickLabel = description ?: label,
@@ -1157,10 +1184,13 @@ private fun TerminalExtraKey(
                     onLongClick = onLongClick,
                     onClick = onClick
                 )
-                .semantics { contentDescription = description ?: label },
+                .semantics {
+                    contentDescription = description ?: label
+                    stateDescription = keyState.name.lowercase()
+                },
             shape = shape,
-            color = if (active) accentTint.copy(alpha = 0.18f) else backgroundTint,
-            contentColor = if (active) accentTint else inkTint
+            color = stateBackground,
+            contentColor = stateInk
         ) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 keyContents()
