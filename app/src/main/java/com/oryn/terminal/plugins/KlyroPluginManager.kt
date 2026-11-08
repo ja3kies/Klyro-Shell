@@ -36,7 +36,10 @@ class KlyroPluginManager(context: Context) {
         private val readOnlyCommands = setOf(
             "pwd", "ls", "ls -la", "git status", "git diff", "git diff --stat",
             "git log", "git log -5 --oneline", "pkg list-installed",
-            "uname", "uname -a", "whoami", "date", "id"
+            "uname", "uname -a", "whoami", "date", "id",
+            "git branch", "git remote -v", "git diff --cached --stat",
+            "git status --short", "git log -1 --oneline", "git rev-parse --show-toplevel",
+            "ls -lh", "df -h", "du -sh .", "pkg list-installed"
         )
         private val safePackageSearch = Regex("pkg search [A-Za-z0-9][A-Za-z0-9._-]{0,39}")
 
@@ -68,6 +71,31 @@ class KlyroPluginManager(context: Context) {
                     KlyroPluginCommand("Architecture", "uname -a", "Kernel and architecture"),
                     KlyroPluginCommand("Identity", "whoami", "Active shell user"),
                     KlyroPluginCommand("Date", "date", "Shell clock")
+                ), source = "bundled"
+            ),
+            KlyroPluginRecord(
+                "app.klyro.git-review", "Git review", "Inspect branches and remote state", "1.0",
+                listOf(
+                    KlyroPluginCommand("Branches", "git branch", "Local branches"),
+                    KlyroPluginCommand("Remotes", "git remote -v", "Configured remotes"),
+                    KlyroPluginCommand("Staged summary", "git diff --cached --stat", "Staged changes"),
+                    KlyroPluginCommand("Short status", "git status --short", "Concise working tree")
+                ), source = "bundled"
+            ),
+            KlyroPluginRecord(
+                "app.klyro.storage", "Storage overview", "Inspect available disk space", "1.0",
+                listOf(
+                    KlyroPluginCommand("Disk usage", "df -h", "Mounted volume space"),
+                    KlyroPluginCommand("Project size", "du -sh .", "Current folder size"),
+                    KlyroPluginCommand("Detailed files", "ls -lh", "File sizes")
+                ), source = "bundled"
+            ),
+            KlyroPluginRecord(
+                "app.klyro.project", "Project context", "Inspect active Git repository", "1.0",
+                listOf(
+                    KlyroPluginCommand("Project root", "git rev-parse --show-toplevel", "Git root"),
+                    KlyroPluginCommand("Latest commit", "git log -1 --oneline", "Latest commit"),
+                    KlyroPluginCommand("Installed packages", "pkg list-installed", "Available packages")
                 ), source = "bundled"
             )
         )
