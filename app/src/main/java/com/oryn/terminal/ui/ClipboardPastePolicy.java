@@ -6,8 +6,16 @@ public final class ClipboardPastePolicy {
     public static final int MAX_UTF8_BYTES = 65536;
     private ClipboardPastePolicy() {}
 
+    private static boolean isWhitespaceOnly(String value) {
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (!Character.isWhitespace(c) && !Character.isSpaceChar(c)) return false;
+        }
+        return true;
+    }
+
     public static boolean canPaste(String value) {
-        if (value == null || value.isEmpty() || value.length() > MAX_CHARS || value.isBlank()) return false;
+        if (value == null || value.isEmpty() || value.length() > MAX_CHARS || isWhitespaceOnly(value)) return false;
         // Large multibyte pastes are bounded by bytes as well as UTF-16 code units.
         if (value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_UTF8_BYTES) return false;
         for (int i = 0; i < value.length(); i++) {
