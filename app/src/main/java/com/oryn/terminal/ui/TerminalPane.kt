@@ -707,7 +707,7 @@ fun TerminalPane(
                                     setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
                                     // Selection preview shares the current terminal ink,
                                     // including light mode; no isolated black subpanel.
-                                    setTextColor(ui.foreground.toArgb())
+                                    setTextColor(ui.terminalInk.toArgb())
                                     setBackgroundColor(ui.terminal.toArgb())
                                     typeface = android.graphics.Typeface.MONOSPACE
                                     setPadding(12, 8, 12, 8)
