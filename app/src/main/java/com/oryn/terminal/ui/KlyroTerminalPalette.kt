@@ -15,15 +15,18 @@ object KlyroTerminalPalette {
     private fun rgb(color: Color): String = "#%06X".format(color.toArgb() and 0xFFFFFF)
 
     internal fun properties(colors: KlyroColors): Properties = Properties().apply {
-        setProperty("foreground", if (colors.accentId == "mono-contrast") "#FFFFFF"
-            else rgb(colors.foreground))
+        // Contrast is a white application with a BLACK terminal. Native ANSI
+        // colours must follow the terminal canvas, not the system-bar theme.
+        val blackTerminal = colors.accentId == "mono-contrast"
+        val terminalIsDark = colors.dark || blackTerminal
+        val terminalAccent = if (blackTerminal) "#FFFFFF" else rgb(colors.accent)
+        setProperty("foreground", if (blackTerminal) "#FFFFFF" else rgb(colors.foreground))
         setProperty("background", rgb(colors.terminal))
-        setProperty("cursor", rgb(colors.accent))
+        setProperty("cursor", terminalAccent)
         val ansi = if (colors.accentId.startsWith("mono-")) {
-            val dark = colors.dark
-            val foreground = if (dark) "#FFFFFF" else "#101010"
-            val background = if (dark) "#000000" else "#FFFFFF"
-            val secondary = if (dark) "#BFBFBF" else "#555555"
+            val foreground = if (terminalIsDark) "#FFFFFF" else "#101010"
+            val background = if (terminalIsDark) "#000000" else "#FFFFFF"
+            val secondary = if (terminalIsDark) "#BFBFBF" else "#555555"
             listOf(
                 background, foreground, foreground, secondary,
                 secondary, foreground, secondary, foreground,
@@ -44,7 +47,7 @@ object KlyroTerminalPalette {
         ansi.forEachIndexed { i, value -> setProperty("color$i", value) }
         // Bash uses ANSI 36 (palette color6) for the prompt; selected
         // accent remains readable on both light and dark terminal canvases.
-        setProperty("color6", rgb(colors.accent))
+        setProperty("color6", terminalAccent)
     }
 
     fun apply(colors: KlyroColors, sessions: Iterable<TerminalSession> = emptyList()) {
