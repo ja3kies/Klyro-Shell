@@ -283,6 +283,15 @@ fun TerminalPane(
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
     val compact = maxHeight < 300.dp
+    fun selectTerminalOutput() {
+        val output = session.emulator?.screen?.transcriptText.orEmpty()
+        if (TerminalActionPolicy.hasCopyableOutput(output)) {
+            outputSelectionView = null
+            selectedOutput = output
+        } else {
+            Toast.makeText(context, "No terminal output to select", Toast.LENGTH_SHORT).show()
+        }
+    }
     // Fit seven 48dp+ touch targets across a Pixel-width screen; scroll on narrower devices.
     val keyWidth = if (compact) 48.dp else ((maxWidth - 36.dp) / 7).coerceIn(40.dp, 56.dp)
     val toolsMenu: @Composable () -> Unit = {
@@ -308,17 +317,6 @@ fun TerminalPane(
                     KlyroMenuItem("Workspaces", R.drawable.hugeicons_grid2x2) {
                         showToolsMenu = false
                         showWorkspaceSheet = true
-                    }
-                    KlyroMenuItem("Select output", R.drawable.hugeicons_clipboard_list) {
-                        showToolsMenu = false
-                        val output = session.emulator?.screen?.transcriptText.orEmpty()
-                        if (TerminalActionPolicy.hasCopyableOutput(output)) {
-                            outputSelectionView = null
-                            selectedOutput = output
-                        } else {
-                            Toast.makeText(context, "No terminal output to select",
-                                Toast.LENGTH_SHORT).show()
-                        }
                     }
                     KlyroMenuItem("Settings", R.drawable.hugeicons_settings_01) {
                         showToolsMenu = false
@@ -529,8 +527,7 @@ fun TerminalPane(
                     // subclass the terminal or replace its selection engine.
                     setOnCreateContextMenuListener { menu, _, _ ->
                         menu.add("Select all").setOnMenuItemClickListener {
-                            outputSelectionView = null
-                            selectedOutput = session.emulator?.screen?.transcriptText.orEmpty()
+                            selectTerminalOutput()
                             true
                         }
                     }
@@ -582,12 +579,10 @@ fun TerminalPane(
                 viewClient.setFnDown(fnActive)
             }
             TerminalExtraKey(
-                "PASTE",
-                description = "Paste clipboard text",
-                glyph = R.drawable.hugeicons_clipboard_paste,
-                keyWidth = keyWidth, darkChrome = darkChrome,
-                enabled = clipboardAvailable
-            ) { pasteClipboard() }
+                "ALL", description = "Select all terminal output",
+                glyph = R.drawable.hugeicons_clipboard_list,
+                keyWidth = keyWidth, darkChrome = darkChrome
+            ) { selectTerminalOutput() }
         }
         val secondRow: @Composable () -> Unit = {
             TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome,
@@ -607,9 +602,12 @@ fun TerminalPane(
                 searchIndex = 0
                 showTranscriptSearch = true
             }
-            TerminalExtraKey("END", description = "Move cursor to end of line", keyWidth = keyWidth, darkChrome = darkChrome) {
-                write(session, TerminalNavigationPolicy.end(controlActive, altActive, shiftActive))
-            }
+            TerminalExtraKey(
+                "PASTE", description = "Paste clipboard text",
+                glyph = R.drawable.hugeicons_clipboard_paste,
+                keyWidth = keyWidth, darkChrome = darkChrome,
+                enabled = clipboardAvailable
+            ) { pasteClipboard() }
             TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser, keyWidth = keyWidth, darkChrome = darkChrome) {
                 // Clear emulator display and scrollback without injecting input into Bash.
                 TerminalDisplayActions.clear(session)
