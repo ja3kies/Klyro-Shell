@@ -32,7 +32,9 @@ class KlyroOperationalReadinessTest(unittest.TestCase):
         ui = (ROOT /
               "app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt"
               ).read_text()
-        self.assertIn("pendingMultilinePaste = nativePasteRequest", ui)
+        self.assertIn("ClipboardPastePolicy.canPaste(incoming)", ui)
+        self.assertIn("ClipboardPastePolicy.requiresConfirmation(incoming)", ui)
+        self.assertIn("pendingMultilinePaste = incoming", ui)
 
     def test_operational_gate_no_package_mutations(self):
         source = (ROOT / "scripts/klyro-operational-gate.sh").read_text()
