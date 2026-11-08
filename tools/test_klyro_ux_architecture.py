@@ -47,7 +47,7 @@ class KlyroUxArchitectureTest(unittest.TestCase):
         workspaces = read(UI / "KlyroWorkspaceSheet.kt")
         palette = read(UI / "KlyroCommandPalette.kt")
         self.assertEqual(main.count("surfaceVariant = palette.tile"), 2)
-        self.assertIn("textAlign = TextAlign.Center", workspaces)
+        self.assertIn("textAlign = TextAlign.Start", workspaces)
         self.assertIn("fontWeight = FontWeight.Bold", workspaces)
         self.assertIn("KlyroModalTheme", palette)
         self.assertIn("KlyroModalTheme", workspaces)
