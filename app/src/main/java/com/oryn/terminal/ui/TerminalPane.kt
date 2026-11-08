@@ -582,7 +582,7 @@ fun TerminalPane(
                 viewClient.setFnDown(fnActive)
             }
             TerminalExtraKey(
-                if (hasCopyableOutput) "ALL" else "PASTE",
+                if (hasCopyableOutput) "SELECT" else "PASTE",
                 description = if (hasCopyableOutput) "Select and copy terminal output" else "Paste clipboard text",
                 glyph = if (hasCopyableOutput) R.drawable.hugeicons_clipboard_list else R.drawable.hugeicons_clipboard_paste,
                 keyWidth = keyWidth, darkChrome = darkChrome,
