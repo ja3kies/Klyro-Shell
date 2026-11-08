@@ -189,51 +189,74 @@ class MainActivity : ComponentActivity() {
                         File(applicationContext.applicationInfo.nativeLibraryDir))
                     val destination = File(paths.home, "storage-imports")
                     KlyroFileSafety.verifyDestination(destination)
+                    val grants = contentResolver.persistedUriPermissions
+                        .filter { it.isReadPermission }.map { it.uri }.toSet()
                     var imported = 0
+                    var skippedFolders = 0
+                    var readableFolders = 0
                     for (raw in folders) {
-                    val tree = Uri.parse(raw)
-                    val authorized = contentResolver.persistedUriPermissions.any { permission ->
-                        permission.uri == tree && permission.isReadPermission
-                    }
-                    if (!authorized) continue
-                    val documentId = DocumentsContract.getTreeDocumentId(tree)
-                    val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, documentId)
-                    contentResolver.query(children, arrayOf(
-                        DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                        DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                        DocumentsContract.Document.COLUMN_MIME_TYPE,
-                        DocumentsContract.Document.COLUMN_SIZE
-                    ), null, null, null)?.use { cursor ->
-                        while (cursor.moveToNext() && imported < 30) {
-                            val mime = cursor.getString(2) ?: continue
-                            if (mime == DocumentsContract.Document.MIME_TYPE_DIR) continue
-                            val size = if (cursor.isNull(3)) -1L else cursor.getLong(3)
-                            if (size > KlyroFileSafety.MAX_FILE_BYTES) continue
-                            val name = KlyroFileSafety.safeName(cursor.getString(1), "file")
-                            val target = KlyroFileSafety.availableName(destination, name)
-                            val item = DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0))
-                            val temporary = File.createTempFile(".klyro-", ".tmp", destination)
-                            try {
-                                contentResolver.openInputStream(item)?.use { input ->
-                                    FileOutputStream(temporary).use { output ->
-                                        KlyroFileSafety.copyLimited(input, output)
-                                    }
-                                } ?: continue
-                                java.nio.file.Files.move(temporary.toPath(), target.toPath())
-                                imported++
-                            } finally {
-                                if (temporary.exists()) temporary.delete()
-                            }
+                        // The limit applies across ALL granted folders, not per folder.
+                        if (imported >= 30) break
+                        val tree = Uri.parse(raw)
+                        if (tree !in grants) {
+                            skippedFolders++
+                            continue
                         }
-                    } ?: throw IOException("Cannot read authorized folder")
+                        try {
+                            val documentId = DocumentsContract.getTreeDocumentId(tree)
+                            val children = DocumentsContract.buildChildDocumentsUriUsingTree(
+                                tree, documentId)
+                            val projection = arrayOf(
+                                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                                DocumentsContract.Document.COLUMN_MIME_TYPE,
+                                DocumentsContract.Document.COLUMN_SIZE
+                            )
+                            contentResolver.query(children, projection, null, null, null)?.use { cursor ->
+                                readableFolders++
+                                while (imported < 30 && cursor.moveToNext()) {
+                                    val mime = cursor.getString(2) ?: continue
+                                    if (mime == DocumentsContract.Document.MIME_TYPE_DIR) continue
+                                    val size = if (cursor.isNull(3)) -1L else cursor.getLong(3)
+                                    if (size > KlyroFileSafety.MAX_FILE_BYTES) continue
+                                    val name = KlyroFileSafety.safeName(cursor.getString(1), "file")
+                                    val target = KlyroFileSafety.availableName(destination, name)
+                                    val item = DocumentsContract.buildDocumentUriUsingTree(
+                                        tree, cursor.getString(0))
+                                    val temporary = File.createTempFile(".klyro-", ".tmp", destination)
+                                    try {
+                                        contentResolver.openInputStream(item)?.use { input ->
+                                            FileOutputStream(temporary).use { output ->
+                                                KlyroFileSafety.copyLimited(input, output)
+                                            }
+                                        } ?: continue
+                                        java.nio.file.Files.move(
+                                            temporary.toPath(), target.toPath())
+                                        imported++
+                                    } finally {
+                                        if (temporary.exists()) temporary.delete()
+                                    }
+                                }
+                            } ?: throw IOException("Cannot read authorized folder")
+                        } catch (_: Exception) {
+                            // A revoked or broken provider must not block other grants.
+                            skippedFolders++
+                        }
                     }
-                    imported
+                    if (readableFolders == 0) {
+                        throw IOException("No readable authorized folders; reconnect a folder")
+                    }
+                    Pair(imported, skippedFolders)
                 }
             }
-            Toast.makeText(this@MainActivity,
-                result.fold({ "Imported $it files to ~/storage-imports" },
-                    { "Storage import failed: " + (it.message ?: "unknown error") }),
-                Toast.LENGTH_LONG).show()
+            val message = result.fold(
+                onSuccess = { (count, skipped) ->
+                    "Imported $count files to ~/storage-imports" +
+                        if (skipped > 0) " ($skipped folders skipped)" else ""
+                },
+                onFailure = { "Storage import failed: " + (it.message ?: "unknown error") }
+            )
+            Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
         }
     }
 
