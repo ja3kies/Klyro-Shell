@@ -164,10 +164,13 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("Copy up to 30 files", settings)
         self.assertIn("Export klyro-export.txt", settings)
 
+        # The Select all action must never be a paste alias.
+        self.assertIn('"ALL", description = "Select all terminal output"', terminal)
+        self.assertIn('selectTerminalOutput()', terminal)
         # User can always paste irrespective of terminal transcript state.
         self.assertIn('TerminalExtraKey(\n                "PASTE"', terminal)
         self.assertIn("enabled = clipboardAvailable", terminal)
-        self.assertIn('KlyroMenuItem("Select output"', terminal)
+        self.assertNotIn('KlyroMenuItem("Select output"', terminal)
         self.assertNotIn('if (hasCopyableOutput) "SELECT" else "PASTE"', terminal)
         self.assertNotIn("sessionClient.setOutputObserver(observer)", terminal)
 
@@ -192,12 +195,9 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn('R.drawable.hugeicons_palette', settings)
         self.assertIn('R.drawable.ic_klyro_keyboard_keys', settings)
         self.assertIn('R.drawable.hugeicons_pulse_rectangle_01', settings)
-        self.assertIn('R.drawable.hugeicons_contrast', settings)
-        self.assertIn('R.drawable.hugeicons_moon_01', settings)
-        self.assertIn('R.drawable.hugeicons_file_01', settings)
-        self.assertIn('AndroidView(', settings)
-        self.assertIn('KlyroTerminalFonts.load(context, fontFamilyId)', settings)
-        self.assertIn('view.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp)', settings)
+        self.assertIn("KlyroThemePreviewCard(", settings)
+        self.assertNotIn('Text("9 sp"', settings)
+        self.assertNotIn('Text("24 sp"', settings)
         for glyph in ('"◩"', '"●"', '"○"'):
             self.assertNotIn(glyph, settings)
         self.assertNotIn('Text("Selected: " + chosen', settings)
@@ -219,11 +219,12 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertNotIn(
             'KlyroMenuItem("Home", R.drawable.hugeicons_terminal)', menu)
 
-        # Copy / clear key glyphs must have visible words, not just TalkBack
-        # descriptions, at the same keyboard target size as all other keys.
-        self.assertIn("Text(label, fontSize = KlyroUiMetrics.shortcutCaption", terminal)
+        # Icon-only CTAs have TalkBack names and explicit interaction states.
+        self.assertNotIn("Text(label, fontSize = KlyroUiMetrics.shortcutCaption", terminal)
+        self.assertIn("ShortcutState.HOLD", terminal)
+        self.assertIn("stateDescription = keyState.name.lowercase()", terminal)
         self.assertIn('TerminalExtraKey("CLEAR"', terminal)
-        self.assertIn('KlyroMenuItem("Select output"', terminal)
+        self.assertNotIn('KlyroMenuItem("Select output"', terminal)
         self.assertIn('TerminalExtraKey(\n                "PASTE"', terminal)
         self.assertNotIn('if (hasCopyableOutput) "SELECT" else "PASTE"', terminal)
         self.assertNotIn('sessionClient.setOutputObserver(observer)', terminal)
