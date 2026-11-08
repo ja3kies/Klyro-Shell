@@ -19,8 +19,8 @@ object KlyroTerminalPalette {
         // colours must follow the terminal canvas, not the system-bar theme.
         val blackTerminal = colors.accentId == "mono-contrast"
         val terminalIsDark = colors.dark || blackTerminal
-        val terminalAccent = if (blackTerminal) "#FFFFFF" else rgb(colors.accent)
-        setProperty("foreground", if (blackTerminal) "#FFFFFF" else rgb(colors.foreground))
+        val terminalAccent = rgb(colors.terminalPrompt)
+        setProperty("foreground", rgb(colors.terminalInk))
         setProperty("background", rgb(colors.terminal))
         setProperty("cursor", terminalAccent)
         val ansi = if (colors.accentId.startsWith("mono-")) {
