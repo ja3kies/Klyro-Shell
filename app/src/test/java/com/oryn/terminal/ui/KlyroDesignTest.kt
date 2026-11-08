@@ -25,6 +25,18 @@ class KlyroDesignTest {
         return (maxOf(x, y) + .05) / (minOf(x, y) + .05)
     }
 
+    @Test fun monochromeModesSurvivePersistedThemeValidation() {
+        assertEquals(6, KlyroColors.themeModes.size)
+        for (mode in KlyroColors.themeModes) {
+            assertEquals(mode, KlyroColors.normalizedThemeMode(mode))
+        }
+        assertEquals("system", KlyroColors.normalizedThemeMode(null))
+        assertEquals("system", KlyroColors.normalizedThemeMode("malformed"))
+        assertEquals(true, KlyroColors.monochrome("mono-black").dark)
+        assertEquals(false, KlyroColors.monochrome("mono-paper").dark)
+        assertEquals(false, KlyroColors.monochrome("mono-contrast").dark)
+    }
+
     @Test fun runtimeReadinessAndWarningInkRemainReadableOnBothThemes() {
         for (dark in listOf(false, true)) {
             val surface = KlyroColors.create(dark, "lime").chrome
