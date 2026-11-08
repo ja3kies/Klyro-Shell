@@ -1,5 +1,6 @@
 package com.oryn.terminal.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -29,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,9 +54,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     val context = LocalContext.current
     val manager = remember(context) { KlyroPluginManager(context) }
     var installed by remember { mutableStateOf(manager.installed()) }
-    var page by remember { mutableStateOf("explore") }
+    var page by rememberSaveable { mutableStateOf(if (installed.isEmpty()) "explore" else "installed") }
     var error by remember { mutableStateOf<String?>(null) }
     var removeId by remember { mutableStateOf<String?>(null) }
+    var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
+    BackHandler { onBack() }
     fun applyChange(action: () -> Unit) {
         runCatching(action).onSuccess {
             installed = manager.installed()
@@ -63,7 +68,13 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         }
     }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) applyChange { manager.importManifest(uri) }
+        if (uri != null) {
+            runCatching { manager.previewManifest(uri) }
+                .onSuccess { pendingImport = it; error = null }
+                .onFailure { failure ->
+                    error = failure.message?.take(160) ?: "Invalid plugin manifest"
+                }
+        }
     }
 
     Column(
@@ -98,7 +109,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 val selected = page == id
                 Surface(
                     modifier = Modifier.weight(1f).clickable(role = Role.Tab,
-                        onClickLabel = "Show $label") { page = id },
+                        onClickLabel = "Show $label") { page = id }
+                        .semantics { this.selected = selected },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                     color = if (selected) colors.accent else colors.key,
                     contentColor = if (selected) colors.onAccent else colors.foreground
@@ -173,7 +185,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             Text("Bundled · Offline", color = colors.muted, fontSize = 12.sp)
                             Button(
                                 enabled = !isInstalled,
-                                onClick = { applyChange { manager.installBundled(plugin.id) } },
+                                onClick = {
+                                    applyChange { manager.installBundled(plugin.id) }
+                                    if (error == null) page = "installed"
+                                },
                                 colors = ButtonDefaults.buttonColors(containerColor = colors.accent,
                                     contentColor = colors.onAccent),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
@@ -189,17 +204,51 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Local manifest", color = colors.foreground,
                         fontWeight = FontWeight.SemiBold)
-                    Text("Import a declarative JSON command pack (16 KiB maximum). No JavaScript or shell code is executed by the plugin manager.",
+                    Text("Review and confirm a local JSON command pack (up to 16 KiB). Extensions cannot run JavaScript or execute shell commands.",
                         color = colors.muted, fontSize = 12.sp)
                     OutlinedButton(onClick = { importPicker.launch(arrayOf("*/*")) },
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
-                        Icon(painterResource(R.drawable.hugeicons_download_01),
+                        Icon(painterResource(R.drawable.hugeicons_file_01),
                             contentDescription = null, modifier = Modifier.size(18.dp))
                         Text("Import JSON")
                     }
                 }
             }
         }
+    }
+
+    pendingImport?.let { record ->
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            containerColor = colors.sheet,
+            title = { Text("Install ${record.name}?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("${record.commands.size} proposed command shortcuts · v${record.version}",
+                        color = colors.muted)
+                    record.commands.forEach { item ->
+                        Text(item.insert, color = colors.foreground,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            fontSize = 12.sp)
+                    }
+                    Text("Commands are inserted only. Review them before pressing Enter.",
+                        color = colors.warningInk, fontSize = 12.sp)
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    pendingImport = null
+                    applyChange { manager.installPreview(record) }
+                    if (error == null) page = "installed"
+                }, shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.accent, contentColor = colors.onAccent
+                    )) { Text("Install") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null }) { Text("Cancel") }
+            }
+        )
     }
 
     removeId?.let { id ->
@@ -230,7 +279,12 @@ private fun PluginHeading(plugin: KlyroPluginRecord, detail: String) {
         verticalAlignment = Alignment.CenterVertically) {
         Surface(color = colors.accent.copy(alpha = .12f),
             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
-            Icon(painterResource(R.drawable.hugeicons_grid2x2),
+            Icon(painterResource(when (plugin.id) {
+                "app.klyro.files" -> R.drawable.hugeicons_folder_01
+                "app.klyro.git" -> R.drawable.hugeicons_terminal
+                "app.klyro.system" -> R.drawable.hugeicons_pulse_rectangle_01
+                else -> R.drawable.ic_klyro_plugins
+            }),
                 contentDescription = null, tint = colors.accent,
                 modifier = Modifier.padding(12.dp).size(24.dp))
         }
