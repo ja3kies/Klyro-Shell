@@ -195,7 +195,10 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         # descriptions, at the same keyboard target size as all other keys.
         self.assertIn("Text(label, fontSize = KlyroUiMetrics.shortcutCaption", terminal)
         self.assertIn('TerminalExtraKey("CLEAR"', terminal)
-        self.assertIn('if (hasCopyableOutput) "SELECT" else "PASTE"', terminal)
+        self.assertIn('KlyroMenuItem("Select output"', terminal)
+        self.assertIn('TerminalExtraKey(\n                "PASTE"', terminal)
+        self.assertNotIn('if (hasCopyableOutput) "SELECT" else "PASTE"', terminal)
+        self.assertNotIn('sessionClient.setOutputObserver(observer)', terminal)
         self.assertNotIn(' · Selected', workspace)
         self.assertIn('textAlign = TextAlign.Start', workspace)
         self.assertIn('Text(\n                    "Sessions"', workspace)
@@ -251,7 +254,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         menu = pane.split("val toolsMenu: @Composable () -> Unit =", 1)[1].split(
             "\n    Column(", 1
         )[0]
-        self.assertEqual(menu.count("KlyroMenuItem("), 4)
+        self.assertEqual(menu.count("KlyroMenuItem("), 5)
         shared = src(UI / "KlyroUiComponents.kt")
         self.assertEqual(shared.count("DropdownMenuItem("), 1)
         self.assertIn("leadingIcon =", shared)
