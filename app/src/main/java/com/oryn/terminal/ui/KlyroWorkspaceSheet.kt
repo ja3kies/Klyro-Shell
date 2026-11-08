@@ -74,9 +74,12 @@ internal fun KlyroWorkspaceSheet(
     }
     // Avoid scrolling short sheets; preserve reachability for long session lists and accessibility scaling.
     // A short combined list fits at once; count workspaces and visible session rows together.
-    val needsScroll = entries.size + projectTabs.size > 6 || editorId != null ||
-        androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 700 ||
-        androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f
+    val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
+        rows = entries.size + projectTabs.size,
+        screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp,
+        fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale,
+        editing = editorId != null
+    )
     fun editProject(id: String, title: String) {
         editorId = id
         editorText = title
