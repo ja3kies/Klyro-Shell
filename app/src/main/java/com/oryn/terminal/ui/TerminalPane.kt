@@ -668,7 +668,8 @@ fun TerminalPane(
             ) {
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) { firstRow() }
-                Row(modifier = Modifier.fillMaxWidth(),
+                Row(modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) { secondRow() }
             }
         }
