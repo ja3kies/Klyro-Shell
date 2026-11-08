@@ -59,6 +59,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn('"ALL", description = "Select all terminal output"', pane)
         self.assertIn('"PASTE", description = "Paste clipboard text"', pane)
         self.assertIn("keyListener = null", pane)
+        self.assertIn("ui.terminalInk.toArgb()", pane)
         self.assertIn("setTextIsSelectable(true)", pane)
         self.assertNotIn('KlyroMenuItem("Select output"', pane)
 
