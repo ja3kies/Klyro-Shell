@@ -90,8 +90,13 @@ internal fun KlyroSettingsSheet(
     var showHugeiconsLicense by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
     var cannotOpenPermissions by remember { mutableStateOf(false) }
+    var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
+    var brandSwitchError by remember { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(context) {
+        selectedBrand = KlyroBrandChoice.selected(context)
+    }
     val density = LocalDensity.current
     val version = remember(context) {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
@@ -169,6 +174,58 @@ internal fun KlyroSettingsSheet(
                     "appearance" -> {
                         KlyroSectionHeading("Appearance")
                         Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)) {
+                            Text("Launcher icon", fontWeight = FontWeight.SemiBold,
+                                color = colors.foreground)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                            ) {
+                                listOf(
+                                    KlyroBrandChoice.DEFAULT to "B · Default",
+                                    KlyroBrandChoice.ALTERNATIVE to "A · Animal"
+                                ).forEach { (choice, title) ->
+                                    Surface(
+                                        modifier = Modifier.weight(1f)
+                                            .heightIn(min = 96.dp)
+                                            .clickable {
+                                                brandSwitchError = !KlyroBrandChoice.select(context, choice)
+                                                if (!brandSwitchError) selectedBrand = choice
+                                            }.semantics {
+                                                contentDescription = "Launcher icon $title"
+                                                selected = selectedBrand == choice
+                                            },
+                                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+                                        color = if (selectedBrand == choice)
+                                            colors.accent.copy(alpha = .14f) else colors.tile,
+                                        border = BorderStroke(1.dp,
+                                            if (selectedBrand == choice) colors.accent else colors.outline)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(8.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                painterResource(
+                                                    if (choice == KlyroBrandChoice.DEFAULT)
+                                                        R.drawable.ic_klyro_brand_b
+                                                    else R.drawable.ic_klyro_brand_a
+                                                ),
+                                                contentDescription = null,
+                                                tint = Color.Unspecified,
+                                                modifier = Modifier.size(58.dp)
+                                            )
+                                            Text(title, color = colors.foreground,
+                                                style = MaterialTheme.typography.labelMedium)
+                                        }
+                                    }
+                                }
+                            }
+                            if (brandSwitchError) {
+                                Text("Android could not change the launcher icon.",
+                                    color = colors.danger,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
                             Text("App theme", fontWeight = FontWeight.SemiBold,
                                 color = colors.foreground)
                             Row(
@@ -553,7 +610,11 @@ internal fun KlyroSettingsSheet(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            painterResource(R.drawable.ic_klyro_launcher_foreground),
+                                            painterResource(
+                                                if (selectedBrand == KlyroBrandChoice.ALTERNATIVE)
+                                                    R.drawable.ic_klyro_brand_a
+                                                else R.drawable.ic_klyro_brand_b
+                                            ),
                                             contentDescription = "Klyro Shell logo",
                                             tint = Color.Unspecified,
                                             modifier = Modifier.size(76.dp)
