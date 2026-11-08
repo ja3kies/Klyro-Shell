@@ -95,11 +95,11 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         design = READ(UI / "KlyroDesign.kt")
         spaces = READ(UI / "KlyroWorkspaceSheet.kt")
         self.assertIn("val needsScroll =", settings)
-        self.assertIn("density.fontScale > 1.2f", settings)
+        self.assertIn("KlyroSheetLayoutPolicy.needsScroll(", settings)
         self.assertIn("if (needsScroll) Modifier.verticalScroll(", settings)
         self.assertIn("heightIn(max = 260.dp)", settings)
-        self.assertIn("entries.size + projectTabs.size > 6", spaces)
-        self.assertIn("editorId != null", spaces)
+        self.assertIn("rows = entries.size + projectTabs.size", spaces)
+        self.assertIn("editing = editorId != null", spaces)
         self.assertIn("val bentoMinHeight = 86.dp", design)
         self.assertIn("val minTouch = 48.dp", design)
 
@@ -125,8 +125,9 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         for action in ("Increase saturation", "Decrease saturation",
                        "Increase brightness", "Decrease brightness"):
             self.assertIn('CustomAccessibilityAction("' + action + '"', picker)
-        self.assertIn('LocalDensity.current.fontScale > 1.15f', picker)
+        self.assertIn('density.fontScale > 1.15f', picker)
         self.assertIn('stateDescription =', picker)
+        self.assertIn("WindowInsets.ime.getBottom(density) > 0", picker)
         self.assertIn("pendingPreset = null", picker)
         self.assertIn("KlyroHexInput.isComplete(hexInput)", picker)
 
