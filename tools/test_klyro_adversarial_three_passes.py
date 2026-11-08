@@ -37,7 +37,7 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
     def test_pass_two_shortcuts_preserve_selection_without_accidental_paste(self):
         terminal = READ(UI / "TerminalPane.kt")
         actions = terminal.split("val firstRow:", 1)[1].split("if (compact)", 1)[0]
-        self.assertIn('"ALL", description = "Select terminal output, or paste when empty"', actions)
+        self.assertIn('"ALL",\n                description = if (canSelect) "Select all terminal output" else "Paste clipboard"', actions)
         self.assertIn(") { selectTerminalOutput() }", actions)
         self.assertNotIn('"PASTE", description = "Paste clipboard text"', actions)
         self.assertIn("pasteClipboard()", terminal)
