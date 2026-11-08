@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
@@ -41,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -395,7 +397,7 @@ internal fun KlyroSettingsSheet(
                     }
                     "privacy" -> {
                         KlyroSectionHeading("Privacy")
-                        Text("Transcripts can contain secrets. Use Select output in the terminal menu to copy text; multiline pastes require confirmation.",
+                        Text("Terminal output may contain secrets. Use the ALL shortcut to select and copy it. Multiline pastes require confirmation; diagnostics exclude transcripts.",
                             style = MaterialTheme.typography.bodyMedium, color = colors.foreground)
                     }
                     "diagnostics" -> {
@@ -424,9 +426,34 @@ internal fun KlyroSettingsSheet(
                                 contentColor = colors.onAccent
                             )
                         ) { Text("Recheck environment") }
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            TextButton(onClick = onCopyDiagnostic) { Text("Copy report") }
-                            TextButton(onClick = onShareDiagnostic) { Text("Share report") }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                        ) {
+                            OutlinedButton(
+                                onClick = onCopyDiagnostic,
+                                modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
+                                border = BorderStroke(1.dp, colors.accent.copy(alpha = .35f))
+                            ) {
+                                Icon(painterResource(R.drawable.hugeicons_clipboard_list),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                Text("Copy")
+                            }
+                            OutlinedButton(
+                                onClick = onShareDiagnostic,
+                                modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
+                                border = BorderStroke(1.dp, colors.accent.copy(alpha = .35f))
+                            ) {
+                                Icon(painterResource(R.drawable.hugeicons_upload_01),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                Text("Share")
+                            }
                         }
                         Text("Review before sharing. Raw errors and terminal transcripts are excluded.",
                             color = colors.muted, style = MaterialTheme.typography.labelSmall)
@@ -435,15 +462,40 @@ internal fun KlyroSettingsSheet(
                         KlyroSectionHeading("About Klyro Shell")
                         Surface(shape = RoundedCornerShape(KlyroUiMetrics.cardCorner), color = colors.tile) {
                             Column(
-                                modifier = Modifier.fillMaxWidth().padding(18.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
                             ) {
-                                Text("Version $version", fontWeight = FontWeight.SemiBold)
-                                Text("Terminal engine: Termux TerminalView / TerminalSession",
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(64.dp).background(
+                                            Color(0xFF0C0B13),
+                                            RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                        ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painterResource(R.drawable.ic_klyro_launcher_foreground),
+                                            contentDescription = "Klyro Shell logo",
+                                            tint = Color.Unspecified,
+                                            modifier = Modifier.size(76.dp)
+                                        )
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Klyro Shell", fontWeight = FontWeight.Bold,
+                                            color = colors.foreground)
+                                        Text("Version $version · ARM64", color = colors.accent,
+                                            style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
+                                Text("Termux TerminalView / TerminalSession",
+                                    color = colors.foreground,
                                     style = MaterialTheme.typography.bodyMedium)
-                                Text("Linux runtime: isolated ARM64 environment", color = colors.muted,
+                                Text("Private ARM64 Linux runtime · stored in the app sandbox",
+                                    color = colors.muted,
                                     style = MaterialTheme.typography.bodySmall)
-
                             }
                         }
                         SettingsRowLink(
