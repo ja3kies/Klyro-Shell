@@ -68,7 +68,9 @@ class KlyroSessionService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(check)
-        KlyroSessionRuntime.sessions.closeAllSessions()
+        // The service is a notification owner, not the PTY owner. Android may
+        // recreate or stop this service while the process and sessions survive.
+        // Explicit session close and the idle policy own PTY termination.
         super.onDestroy()
     }
 
