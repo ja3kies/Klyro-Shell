@@ -459,7 +459,7 @@ internal fun KlyroSettingsSheet(
                             )
                         ) { Text(if (authorized) "Add another folder" else "Choose a folder") }
                         SettingsRowLink("Import from folder",
-                            "Copy selected folder files into ~/storage-imports.",
+                            "Copy up to 30 files into ~/storage-imports.",
                             R.drawable.hugeicons_folder_01) {
                             onDismiss()
                             onImportStorageFolder()
@@ -481,7 +481,7 @@ internal fun KlyroSettingsSheet(
                     }
                     "privacy" -> {
                         KlyroSectionHeading("Privacy")
-                        Text("Transcripts may contain secrets. Use ALL or text selection to copy output; multiline pastes require confirmation.",
+                        Text("Transcripts can contain secrets. Use SELECT to copy output; multiline pastes require confirmation.",
                             style = MaterialTheme.typography.bodyMedium, color = colors.foreground)
                     }
                     "diagnostics" -> {
