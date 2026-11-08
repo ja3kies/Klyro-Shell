@@ -2,7 +2,7 @@ name: Android build
 
 on:
   push:
-    branches: [main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108]
+    branches: [main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108]
   pull_request:
     branches: [main, feat/klyro-0110]
   workflow_dispatch:
