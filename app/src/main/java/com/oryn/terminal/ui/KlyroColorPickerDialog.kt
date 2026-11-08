@@ -11,6 +11,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -97,8 +99,9 @@ internal fun KlyroColorPickerDialog(
     var showAdvanced by remember { mutableStateOf(false) }
     // Preset buttons preview an intent. Only Apply changes the app theme.
     var pendingPreset by remember(initialArgb) { mutableStateOf<String?>(null) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
     val smallWindow = LocalConfiguration.current.screenHeightDp < 700 ||
-        androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.15f
+        density.fontScale > 1.15f || WindowInsets.ime.getBottom(density) > 0
     var hexInput by remember(initialArgb) {
         mutableStateOf("#%06X".format(initialArgb and 0xFFFFFF))
     }
