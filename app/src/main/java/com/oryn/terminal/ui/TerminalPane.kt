@@ -21,6 +21,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
@@ -350,6 +351,18 @@ fun TerminalPane(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    Box(
+                        modifier = Modifier.size(35.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                            .background(Color(0xFF0C0B13)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_klyro_launcher_foreground),
+                            contentDescription = null, tint = Color.Unspecified,
+                            modifier = Modifier.size(44.dp)
+                        )
+                    }
                     Text("KLYRO", color = TerminalAccent, fontSize = 12.sp,
                         fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                 }
@@ -903,12 +916,17 @@ fun TerminalPane(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = findMatchCase, onCheckedChange = {
-                            findMatchCase = it
-                            searchIndex = 0
-                        })
-                        Text("Match case", fontSize = 13.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(min = KlyroUiMetrics.minTouch)
+                            .toggleable(value = findMatchCase, role = Role.Checkbox) {
+                                findMatchCase = it
+                                searchIndex = 0
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = findMatchCase, onCheckedChange = null)
+                        Text("Match case", fontSize = 13.sp, color = ui.foreground)
                     }
                     Text(
                         if (transcriptQuery.isBlank()) "Enter text to search"
