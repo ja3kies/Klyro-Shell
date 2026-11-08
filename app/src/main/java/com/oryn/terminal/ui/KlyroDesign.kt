@@ -202,7 +202,7 @@ object KlyroUiMetrics {
     val iosSliderTrack = 4.dp
     val iosSliderThumb = 24.dp
     val iosSliderBorder = 1.dp
-    val workspaceRow = 64.dp
+    val workspaceRow = 56.dp
     val sheetContentMax = 620.dp
     val paletteListMax = 420.dp
     val menuWidth = 246.dp
