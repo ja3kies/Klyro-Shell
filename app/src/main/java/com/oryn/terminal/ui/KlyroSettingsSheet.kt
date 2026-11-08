@@ -2,6 +2,8 @@ package com.oryn.terminal.ui
 
 import android.content.Context
 import android.graphics.Color as AndroidColor
+import android.util.TypedValue
+import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.material3.HorizontalDivider
@@ -38,6 +40,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -363,12 +367,25 @@ internal fun KlyroSettingsSheet(
                                     Column(Modifier.fillMaxWidth().padding(
                                         horizontal = KlyroUiMetrics.spaceLg,
                                         vertical = KlyroUiMetrics.spaceSm)) {
-                                        Text("Aa  The quick brown fox",
-                                            color = colors.foreground,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = fontSizeSp.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis)
+                                        val previewTypeface = remember(context, fontFamilyId) {
+                                            KlyroTerminalFonts.load(context, fontFamilyId)
+                                        }
+                                        AndroidView(
+                                            factory = { ctx ->
+                                                TextView(ctx).apply {
+                                                    text = "Aa  The quick brown fox"
+                                                    setSingleLine(true)
+                                                    ellipsize = android.text.TextUtils.TruncateAt.END
+                                                    includeFontPadding = false
+                                                }
+                                            },
+                                            update = { view ->
+                                                view.typeface = previewTypeface
+                                                view.setTextColor(colors.foreground.toArgb())
+                                                view.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp)
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
                                         KlyroThinSlider(
                                             value = fontSizeSp.coerceIn(9f, 24f),
                                             onValueChange = { onFontChange(it - fontSizeSp) },
