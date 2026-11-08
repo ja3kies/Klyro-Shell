@@ -10,6 +10,9 @@ public class TerminalActionPolicyTest {
         assertFalse(TerminalActionPolicy.hasCopyableOutput("   "));
         assertFalse(TerminalActionPolicy.hasCopyableOutput("klyro ~ $"));
         assertFalse(TerminalActionPolicy.hasCopyableOutput("klyro ~/imports $   "));
+        assertFalse(TerminalActionPolicy.hasCopyableOutput("klyro ~ $\nklyro ~ $"));
+        assertFalse(TerminalActionPolicy.hasCopyableOutput("klyro ~ $\r\nklyro ~/imports $"));
+        assertTrue(TerminalActionPolicy.hasCopyableOutput("klyro ~ $\nhello\nklyro ~ $"));
     }
 
     @Test public void outputOrTypedCommandsUsesSelectionAction() {

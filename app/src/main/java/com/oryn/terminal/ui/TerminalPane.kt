@@ -27,6 +27,7 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -112,6 +113,7 @@ fun TerminalPane(
     title: String,
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
+    outputRevision: Long,
     workspaces: List<KlyroWorkspaceCatalog.Entry>,
     selectedWorkspaceId: String,
     tabWorkspaces: Map<Long, String>,
@@ -161,6 +163,9 @@ fun TerminalPane(
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
     val context = LocalContext.current
+    val selectedBrandIcon = remember(context, showTerminalSettings) {
+        KlyroBrandChoice.selected(context)
+    }
     val clipboardManager = remember(context) {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     }
@@ -368,11 +373,11 @@ fun TerminalPane(
                     ) {
                         Icon(
                             painter = painterResource(
-                                if (com.oryn.terminal.ui.KlyroBrandChoice.selected(context) == "a")
+                                if (selectedBrandIcon == KlyroBrandChoice.ALTERNATIVE)
                                     R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
                             ),
                             contentDescription = null, tint = Color.Unspecified,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(30.dp)
                         )
                     }
                     Text("KLYRO", color = TerminalAccent, fontSize = 12.sp,
@@ -606,9 +611,11 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
-            val canSelect = TerminalActionPolicy.hasCopyableOutput(
-                session.emulator?.screen?.transcriptText.orEmpty()
-            )
+            val canSelect = remember(session, outputRevision) {
+                TerminalActionPolicy.hasCopyableOutput(
+                    session.emulator?.screen?.transcriptText.orEmpty()
+                )
+            }
             TerminalExtraKey(
                 "ALL",
                 description = if (canSelect) "Select all terminal output" else "Paste clipboard",
@@ -683,7 +690,12 @@ fun TerminalPane(
     selectedOutput?.let { output ->
         val selectionLimit = 2 * 1024 * 1024
         val truncated = output.length > selectionLimit
-        val visibleOutput = output.takeLast(selectionLimit)
+        val start = (output.length - selectionLimit).coerceAtLeast(0)
+        // Never start a UTF-16 preview with the low half of a surrogate pair.
+        val safeStart = if (start in 1 until output.length &&
+            Character.isLowSurrogate(output[start]) &&
+            Character.isHighSurrogate(output[start - 1])) start + 1 else start
+        val visibleOutput = output.substring(safeStart)
         fun closeSelection() {
             outputSelectionView = null
             selectedOutput = null
@@ -698,7 +710,7 @@ fun TerminalPane(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (truncated) {
                         Text(
-                            "Only the latest 2 MiB are selectable; older output is omitted for memory safety.",
+                            "Only the latest 2 million UTF-16 characters are selectable; older output is omitted for memory safety.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -844,14 +856,14 @@ fun TerminalPane(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Pasting multiple lines can execute commands. Review the clipboard content before continuing.")
                     Text(
-                        pendingMultilinePaste.orEmpty().take(500),
+                        pendingMultilinePaste.orEmpty(),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
+                            .verticalScroll(rememberScrollState()),
                         fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 8
+                        style = MaterialTheme.typography.bodySmall
                     )
-                    if ((pendingMultilinePaste?.length ?: 0) > 500) {
-                        Text("Preview truncated; cancel if the remaining content is unknown.")
-                    }
+                    Text("Entire paste shown; scroll to review all lines before confirming.",
+                        style = MaterialTheme.typography.labelSmall)
                 }
             },
             confirmButton = {

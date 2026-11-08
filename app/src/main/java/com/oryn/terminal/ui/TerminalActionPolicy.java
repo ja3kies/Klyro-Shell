@@ -8,7 +8,8 @@ public final class TerminalActionPolicy {
 
     // Empty default prompt is not useful terminal output to copy.
     private static final Pattern EMPTY_KLYRO_PROMPT =
-            Pattern.compile("^klyro\\s+[^\\r\\n]*\\$\\s*$", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("^(?:klyro[ \\t]+[^\\r\\n]*\\$[ \\t]*(?:\\r?\\n|\\r|$))+$",
+                    Pattern.CASE_INSENSITIVE);
 
     public static boolean hasCopyableOutput(String transcript) {
         if (transcript == null) return false;
