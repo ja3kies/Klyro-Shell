@@ -150,6 +150,54 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertNotIn('Text("Preview")', picker)
         self.assertIn('Text("Edit")', picker)
 
+    def test_adversarial_visual_semantics_and_screen_readability(self):
+        settings = src(UI / "KlyroSettingsSheet.kt")
+        workspace = src(UI / "KlyroWorkspaceSheet.kt")
+        terminal = src(UI / "TerminalPane.kt")
+        drawable = ROOT / "app/src/main/res/drawable"
+
+        # When switching from the Bento home grid to a subsection, reset
+        # scroll: the title/back button must not remain above the viewport.
+        self.assertIn("remember(section) { ScrollState(0) }", settings)
+        self.assertIn('Text("Settings")', settings)
+        self.assertNotIn("prominent = true", settings)
+        self.assertIn('R.drawable.hugeicons_palette', settings)
+        self.assertIn('R.drawable.ic_klyro_keyboard_keys', settings)
+        self.assertIn('R.drawable.hugeicons_pulse_rectangle_01', settings)
+        self.assertIn('R.drawable.hugeicons_contrast', settings)
+        self.assertIn('R.drawable.hugeicons_moon_01', settings)
+        self.assertIn('R.drawable.hugeicons_file_01', settings)
+        for glyph in ('"◩"', '"●"', '"○"'):
+            self.assertNotIn(glyph, settings)
+        self.assertNotIn('Text("Selected: " + chosen', settings)
+        self.assertTrue((drawable / "ic_klyro_keyboard_keys.xml").is_file())
+        keyboard = ET.parse(drawable / "ic_klyro_keyboard_keys.xml").getroot()
+        self.assertEqual(keyboard.tag, "vector")
+        self.assertGreaterEqual(len(keyboard.findall("path")), 3)
+
+        # Distinct destination icons: search, workspace grid, home and gear.
+        menu = terminal.split("val toolsMenu: @Composable () -> Unit =", 1)[1].split(
+            "\\n    Column(", 1
+        )[0]
+        for label, icon in (("Command Palette", "search_01"),
+                            ("Workspaces", "grid2x2"),
+                            ("Settings", "settings_01"),
+                            ("Home", "home_03")):
+            self.assertIn('KlyroMenuItem("' + label +
+                          '", R.drawable.hugeicons_' + icon, menu)
+        self.assertNotIn(
+            'KlyroMenuItem("Home", R.drawable.hugeicons_terminal)', menu)
+
+        # Copy / clear key glyphs must have visible words, not just TalkBack
+        # descriptions, at the same keyboard target size as all other keys.
+        self.assertIn("Text(label, fontSize = 9.sp", terminal)
+        self.assertIn('TerminalExtraKey("CLEAR"', terminal)
+        self.assertIn('if (hasCopyableOutput) "ALL" else "PASTE"', terminal)
+        self.assertNotIn(' · Selected', workspace)
+        self.assertIn('textAlign = TextAlign.Start', workspace)
+        self.assertIn('Text(\n                    "Sessions"', workspace)
+        self.assertNotIn('"Sessions (" + projectTabs.size', workspace)
+
     def test_hugeicons_assets_are_vectorized_and_ui_actions_use_real_icons(self):
         drawable = ROOT / "app/src/main/res/drawable"
         names = (
@@ -157,6 +205,9 @@ class KlyroMobileDesignAudit(unittest.TestCase):
             "download_01", "upload_01", "chevron_right",
             "more_vertical", "pen_01", "trash", "plus_sign", "arrow_left_01",
             "arrow_up_right_01", "cancel_circle", "terminal",
+            "palette", "pulse_rectangle_01", "home_03", "grid2x2",
+            "contrast", "moon_01", "file_01", "search_01",
+            "checkmark_circle_01",
         )
         ns = "{http://schemas.android.com/apk/res/android}"
         for name in names:
