@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import com.oryn.terminal.R
 
 /**
@@ -66,10 +67,11 @@ internal fun KlyroSheet(
 
 /** Consistent 22sp title for all root Klyro bottom sheets. */
 @Composable
-internal fun KlyroSheetTitle(title: String) {
+internal fun KlyroSheetTitle(title: String, modifier: Modifier = Modifier) {
     val colors = LocalKlyroColors.current
-    Text(title, style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold, color = colors.foreground)
+    Text(title, modifier = modifier, style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold, color = colors.foreground,
+        maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
