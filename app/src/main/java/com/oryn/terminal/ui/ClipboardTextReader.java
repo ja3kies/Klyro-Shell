@@ -9,18 +9,20 @@ import androidx.annotation.Nullable;
 public final class ClipboardTextReader {
     private ClipboardTextReader() {}
 
+    /** Availability must mean that the exact same payload can actually be pasted. */
     public static boolean hasPlainText(@Nullable ClipboardManager manager) {
-        if (manager == null || !manager.hasPrimaryClip()) return false;
-        ClipDescription description = manager.getPrimaryClipDescription();
-        return description != null &&
-                (description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
-                 description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML));
+        return readPlainText(manager) != null;
     }
 
     @Nullable
     public static String readPlainText(@Nullable ClipboardManager manager) {
-        if (!hasPlainText(manager)) return null;
+        if (manager == null || !manager.hasPrimaryClip()) return null;
+        ClipDescription description = manager.getPrimaryClipDescription();
+        if (description == null ||
+                !(description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
+                  description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML))) return null;
         ClipData clip = manager.getPrimaryClip();
+        // Never paste a silently truncated multi-item clipboard or an attached resource.
         if (clip == null || clip.getItemCount() != 1) return null;
         ClipData.Item item = clip.getItemAt(0);
         if (item == null || item.getIntent() != null || item.getUri() != null) return null;
