@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Reference A: angular horned animal silhouette with sweeping lime mane. -->
+    <path android:fillColor="#D8F653"
+        android:pathData="M12,98 Q17,69 39,51 Q56,37 72,37 Q60,20 44,20 Q25,19 15,39 Q20,18 43,14 Q69,10 83,36 L92,49 L78,52 Q60,47 45,61 Q29,77 28,98 Z"/>
+    <path android:fillColor="#FFF9F1"
+        android:pathData="M33,95 Q40,67 58,53 Q68,45 81,47 L69,40 L63,32 Q78,33 88,45 L98,55 L101,62 L95,69 L91,77 L87,70 Q80,64 70,65 Q53,65 45,78 L38,95 Z"/>
+    <path android:fillColor="#0C1118"
+        android:pathData="M81,52 Q86,51 90,56 Q85,57 81,52 Z"/>
+    <path android:fillColor="#A3D72B"
+        android:pathData="M28,98 Q36,73 52,61 Q44,76 43,98 Z"/>
+</vector>
