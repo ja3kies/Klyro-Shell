@@ -224,10 +224,9 @@ internal fun KlyroSettingsSheet(
                                             Row(
                                                 modifier = Modifier.fillMaxWidth()
                                                     .padding(horizontal = 6.dp, vertical = 12.dp),
-                                                horizontalArrangement = Arrangement.Center,
-                                                verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(
-                                                    KlyroUiMetrics.spaceXs)
+                                                    KlyroUiMetrics.spaceXs, Alignment.CenterHorizontally),
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Icon(painterResource(icon), contentDescription = null,
                                                     tint = colors.foreground,
