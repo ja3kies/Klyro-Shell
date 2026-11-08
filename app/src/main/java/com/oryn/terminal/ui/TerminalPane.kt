@@ -783,6 +783,12 @@ fun TerminalPane(
                 viewClient.setShiftDown(false)
                 viewClient.setFnDown(false)
             },
+            activeModifiers = buildSet {
+                if (controlActive) add("Ctrl")
+                if (altActive) add("Alt")
+                if (shiftActive) add("Shift")
+                if (fnActive) add("Fn")
+            },
             onSetupStorage = onSetupStorage,
             onImportStorageFolder = onImportStorageFolder,
             onImportFile = onImportFile,
