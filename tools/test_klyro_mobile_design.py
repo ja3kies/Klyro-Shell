@@ -42,7 +42,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         sheet = src(UI / "KlyroWorkspaceSheet.kt")
         self.assertIn("KlyroUiMetrics.workspaceRow", sheet)
         self.assertIn("KlyroUiMetrics.minTouch", sheet)
-        self.assertIn("textAlign = TextAlign.Center", sheet)
+        self.assertIn("textAlign = TextAlign.Start", sheet)
         self.assertIn("DropdownMenu(", sheet)
         self.assertIn("hugeicons_folder_01", sheet)
         self.assertNotIn('Text("Create project")', sheet)
