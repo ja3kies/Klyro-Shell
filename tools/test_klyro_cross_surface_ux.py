@@ -56,7 +56,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         selection = pane.split("fun selectTerminalOutput()", 1)[1].split("// Fit seven", 1)[0]
         self.assertIn("selectedOutput = output", selection)
         self.assertNotIn(".paste(", selection)
-        self.assertIn('"ALL", description = "Select terminal output, or paste when empty"', pane)
+        self.assertIn('"ALL",\n                description = if (canSelect) "Select all terminal output" else "Paste clipboard"', pane)
         self.assertNotIn('"PASTE", description = "Paste clipboard text"', pane)
         self.assertIn("keyListener = null", pane)
         self.assertIn("ui.terminalInk.toArgb()", pane)
