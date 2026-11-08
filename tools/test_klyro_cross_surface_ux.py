@@ -13,7 +13,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
     def test_home_uses_launcher_identity_and_plugins_have_system_back(self):
         home = READ(APP / "MainActivity.kt")
         plugins = READ(UI / "KlyroPluginsPage.kt")
-        self.assertIn('ic_klyro_launcher_foreground', home)
+        self.assertIn('ic_klyro_brand_b', home)
         self.assertIn('Text("ARM64"', home)
         self.assertIn('ic_klyro_plugins', home)
         self.assertIn('rememberSaveable { mutableStateOf(false) }', home)
@@ -56,8 +56,8 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         selection = pane.split("fun selectTerminalOutput()", 1)[1].split("// Fit seven", 1)[0]
         self.assertIn("selectedOutput = output", selection)
         self.assertNotIn(".paste(", selection)
-        self.assertIn('"ALL", description = "Select all terminal output"', pane)
-        self.assertIn('"PASTE", description = "Paste clipboard text"', pane)
+        self.assertIn('"ALL", description = "Select terminal output, or paste when empty"', pane)
+        self.assertNotIn('"PASTE", description = "Paste clipboard text"', pane)
         self.assertIn("keyListener = null", pane)
         self.assertIn("ui.terminalInk.toArgb()", pane)
         self.assertIn("setTextIsSelectable(true)", pane)
@@ -77,7 +77,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
 
     def test_terminal_toolbar_and_shortcuts_share_identity_and_states(self):
         pane = READ(UI / "TerminalPane.kt")
-        self.assertIn("R.drawable.ic_klyro_launcher_foreground", pane)
+        self.assertIn("R.drawable.ic_klyro_brand_b", pane)
         self.assertIn("ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }", pane)
         self.assertIn("collectIsPressedAsState()", pane)
         self.assertIn("stateDescription = keyState.name.lowercase()", pane)
@@ -150,7 +150,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         pane = READ(UI / "TerminalPane.kt")
         self.assertIn("Use the ALL shortcut", settings)
         self.assertNotIn("Select output in the terminal menu", settings)
-        self.assertIn('R.drawable.ic_klyro_launcher_foreground', settings)
+        self.assertIn('R.drawable.ic_klyro_brand_b', settings)
         self.assertIn('Text("Copy")', settings)
         self.assertIn('Text("Share")', settings)
         self.assertIn("if (copied) \"Report copied\" else \"Clipboard unavailable\"", pane)
