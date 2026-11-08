@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -145,6 +147,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             Text(if (plugin.enabled) "Enabled" else "Disabled",
                                 color = colors.muted, fontSize = 12.sp)
                             Switch(checked = plugin.enabled,
+                                modifier = Modifier.semantics { contentDescription = "Enable " + plugin.name },
                                 onCheckedChange = { checked ->
                                     applyChange { manager.setEnabled(plugin.id, checked) }
                                 })
