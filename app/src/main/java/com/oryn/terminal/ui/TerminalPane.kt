@@ -188,8 +188,17 @@ fun TerminalPane(
         }
     }
     LaunchedEffect(nativePasteRequest, session) {
-        if (nativePasteRequest != null) {
-            pendingMultilinePaste = nativePasteRequest
+        nativePasteRequest?.let { incoming ->
+            // Imported single-line text behaves like the clipboard action;
+            // only lines capable of submitting shell commands need confirmation.
+            if (!ClipboardPastePolicy.canPaste(incoming)) {
+                Toast.makeText(context, "Unsupported or unsafe pasted text",
+                    Toast.LENGTH_SHORT).show()
+            } else if (ClipboardPastePolicy.requiresConfirmation(incoming)) {
+                pendingMultilinePaste = incoming
+            } else {
+                session.emulator?.paste(incoming)
+            }
             onNativePasteConsumed()
         }
     }
@@ -691,6 +700,8 @@ fun TerminalPane(
                                 EditText(activityContext).apply {
                                     setText(visibleOutput)
                                     setTextIsSelectable(true)
+                                    // Select and copy, but never edit the transcript preview.
+                                    keyListener = null
                                     setShowSoftInputOnFocus(false)
                                     setHorizontallyScrolling(false)
                                     setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
