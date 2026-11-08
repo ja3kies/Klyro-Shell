@@ -72,6 +72,10 @@ internal fun KlyroWorkspaceSheet(
     val projectTabs = tabs.filter {
         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == selected.id
     }
+    // Avoid scrolling short sheets; preserve reachability for long session lists and accessibility scaling.
+    val needsScroll = entries.size > 6 || projectTabs.size > 2 || editorId != null ||
+        androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 700 ||
+        androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f
     fun editProject(id: String, title: String) {
         editorId = id
         editorText = title
@@ -84,7 +88,7 @@ internal fun KlyroWorkspaceSheet(
             Column(
                 Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
-                    .verticalScroll(rememberScrollState())
+                    .then(if (needsScroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                     .imePadding()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
