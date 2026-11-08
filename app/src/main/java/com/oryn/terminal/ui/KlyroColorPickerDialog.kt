@@ -48,6 +48,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontFamily
@@ -189,7 +192,39 @@ internal fun KlyroColorPickerDialog(
                     Box(
                         modifier = Modifier.fillMaxWidth().height(112.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .semantics { contentDescription = "Saturation and brightness area, drag to choose" }
+                            .semantics {
+                                contentDescription = "Saturation and brightness area, drag to choose"
+                                stateDescription =
+                                    "Saturation ${(saturation * 100).roundToInt()} percent, " +
+                                    "brightness ${(brightness * 100).roundToInt()} percent"
+                                // Two-dimensional picker also works with TalkBack without touch dragging.
+                                customActions = listOf(
+                                    CustomAccessibilityAction("Increase saturation") {
+                                        pendingPreset = null
+                                        saturation = (saturation + .05f).coerceIn(0f, 1f)
+                                        hexInput = "#%06X".format(rgb() and 0xFFFFFF)
+                                        true
+                                    },
+                                    CustomAccessibilityAction("Decrease saturation") {
+                                        pendingPreset = null
+                                        saturation = (saturation - .05f).coerceIn(0f, 1f)
+                                        hexInput = "#%06X".format(rgb() and 0xFFFFFF)
+                                        true
+                                    },
+                                    CustomAccessibilityAction("Increase brightness") {
+                                        pendingPreset = null
+                                        brightness = (brightness + .05f).coerceIn(0f, 1f)
+                                        hexInput = "#%06X".format(rgb() and 0xFFFFFF)
+                                        true
+                                    },
+                                    CustomAccessibilityAction("Decrease brightness") {
+                                        pendingPreset = null
+                                        brightness = (brightness - .05f).coerceIn(0f, 1f)
+                                        hexInput = "#%06X".format(rgb() and 0xFFFFFF)
+                                        true
+                                    }
+                                )
+                            }
                     ) {
                         Canvas(
                             modifier = Modifier.fillMaxWidth().height(112.dp)
