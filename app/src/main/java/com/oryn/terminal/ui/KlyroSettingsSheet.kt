@@ -95,8 +95,7 @@ internal fun KlyroSettingsSheet(
     }
 
     // Compact content stays fixed; long reports, large fonts and small screens retain scrolling.
-    val needsScroll = section == "files" || section == "diagnostics" ||
-        androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 700 ||
+    val needsScroll = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 700 ||
         density.fontScale > 1.2f
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onDismiss) {
@@ -405,13 +404,16 @@ internal fun KlyroSettingsSheet(
                             color = colors.tile,
                             shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                         ) {
-                            Text(
-                                diagnosticReport,
-                                modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
-                                color = colors.foreground,
-                                fontFamily = FontFamily.Monospace,
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            Column(Modifier.fillMaxWidth().heightIn(max = 260.dp)
+                                .verticalScroll(rememberScrollState())) {
+                                Text(
+                                    diagnosticReport,
+                                    modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                                    color = colors.foreground,
+                                    fontFamily = FontFamily.Monospace,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                         Button(
                             onClick = onRecheckEnvironment,
