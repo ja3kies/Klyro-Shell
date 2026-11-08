@@ -16,6 +16,7 @@ Périmètre : toutes les surfaces Compose de Klyro, les interactions native Term
 
 | Surface | Défaut ou attaque | Correctif | Vérification |
 |---|---|---|---|
+| Android Privacy | `allowBackup=false` insuffisant pour garantir certains transferts appareil Android 12+ | Exclusions explicites `root` et `device_root` en cloud et transfert | `test_klyro_cross_surface_ux.py`, manifest + AAPT |
 | Plugins / import SAF | Installation silencieuse depuis JSON externe | Prévisualisation des commandes, confirmation explicite avant persistance | `test_klyro_cross_surface_ux.py` |
 | Plugins / CLI | Un argument `git diff --ext-diff` peut déclencher un programme externe | Liste blanche de gabarits littéraux relus, seulement recherche pkg avec motif borné | `KlyroPluginPolicyTest.kt` |
 | Palette / listes | Deux packs avec la même commande et le même label peuvent provoquer une collision de clé Compose | Déduplication des suggestions actives | Tests de contrat + compilation |
