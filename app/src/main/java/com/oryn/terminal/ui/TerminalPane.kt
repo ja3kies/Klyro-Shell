@@ -790,16 +790,27 @@ fun TerminalPane(
             diagnosticReport = diagnosticReport,
             onRecheckEnvironment = onRecheck,
             onCopyDiagnostic = {
-                clipboardManager?.setPrimaryClip(
-                    ClipData.newPlainText("Klyro health snapshot", diagnosticReport))
-                Toast.makeText(context, "Report copied", Toast.LENGTH_SHORT).show()
+                val copied = runCatching {
+                    val clipboard = clipboardManager ?: error("Clipboard unavailable")
+                    clipboard.setPrimaryClip(
+                        ClipData.newPlainText("Klyro health snapshot", diagnosticReport)
+                    )
+                }.isSuccess
+                Toast.makeText(context,
+                    if (copied) "Report copied" else "Clipboard unavailable",
+                    Toast.LENGTH_SHORT).show()
             },
             onShareDiagnostic = {
                 val send = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, diagnosticReport)
                 }
-                context.startActivity(Intent.createChooser(send, "Share Klyro report"))
+                val shared = runCatching {
+                    context.startActivity(Intent.createChooser(send, "Share Klyro report"))
+                }.isSuccess
+                if (!shared) {
+                    Toast.makeText(context, "No sharing app available", Toast.LENGTH_SHORT).show()
+                }
             },
             onDismiss = { showTerminalSettings = false }
         )
