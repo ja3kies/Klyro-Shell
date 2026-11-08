@@ -11,7 +11,7 @@ Branch: `integration/cycle-01`. Reference: `main` remains unchanged.
 4. Display the actual active session count, with correct singular/plural.
 5. Classify the notification as a service and suppress repeated alerting on updates.
 
-## Terminal keyboard and paste (15)
+## Terminal keyboard and paste (16)
 6. Restore a dedicated, discoverable `END` shortcut.
 7. Route `END` through the existing modifier-aware and alternate-screen-safe navigation policy.
 8. Scroll the second portrait shortcut row rather than clipping the restored eighth action.
@@ -29,7 +29,7 @@ Branch: `integration/cycle-01`. Reference: `main` remains unchanged.
 20. Preserve UTF-16 surrogate-pair boundaries when truncating a transcript selection.
 21. Present the *entire* bounded multiline paste for review rather than hiding all commands after 500 characters.
 
-## Android brand switching and UX (11)
+## Android brand switching and UX (12)
 22. Interpret default-enabled launcher aliases according to their manifest defaults, not as disabled.
 23. Reject invalid alias combinations where both icons are enabled or both are disabled.
 24. On older Android releases, enable a replacement launcher alias before disabling its predecessor.
@@ -47,6 +47,6 @@ Branch: `integration/cycle-01`. Reference: `main` remains unchanged.
 
 ## Release gates
 - All specialist changes must be merged into `integration/cycle-01`.
-- Python adversarial checks, app and emulator JVM tests, Android lint, ARM64 debug/release builds, signed APK verification, native 16 KiB alignment and artifact availability must pass together on the final integration commit.
+- Python adversarial checks, app and terminal-emulator JVM tests, Android lint, ARM64 debug/release builds, signed APK verification, native 16 KiB alignment and artifact availability must pass together on the final integration commit.
 - Physical-device acceptance remains mandatory for PTY survival across recents, icon launcher refresh and switching A/B, live shortcut transitions, multiline paste and background service behavior. A successful CI run **does not prove** these.
 - Never merge into `main` without explicit user approval.
