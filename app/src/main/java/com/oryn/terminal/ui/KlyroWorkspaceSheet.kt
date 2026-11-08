@@ -100,7 +100,7 @@ internal fun KlyroWorkspaceSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    KlyroSheetTitle("Workspaces")
+                    KlyroSheetTitle("Workspaces", modifier = Modifier.weight(1f))
                     TextButton(
                         onClick = { editProject("", "") },
                         enabled = entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS
