@@ -481,7 +481,7 @@ internal fun KlyroSettingsSheet(
                     }
                     "privacy" -> {
                         KlyroSectionHeading("Privacy")
-                        Text("Transcripts can contain secrets. Use SELECT to copy output; multiline pastes require confirmation.",
+                        Text("Transcripts can contain secrets. Use Select output in the terminal menu to copy text; multiline pastes require confirmation.",
                             style = MaterialTheme.typography.bodyMedium, color = colors.foreground)
                     }
                     "diagnostics" -> {
