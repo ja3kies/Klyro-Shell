@@ -67,6 +67,17 @@ Compare semantic clarity, visual size, tappable targets and functional outcome.
 **PASS criteria:** Every check passes in the APK tied to the latest green CI commit.
 Screen recordings or screenshots must support visual observations; CI alone is insufficient.
 
+## Additional operational regression checks
+
+| ID | Steps | Expected result |
+| --- | --- | --- |
+| OPS-01 | In any terminal with output already visible, copy harmless text to Android clipboard, then press PASTE. | Clipboard text still pastes; output never hijacks PASTE into SELECT. Multiline clipboard prompts for confirmation. |
+| OPS-02 | Terminal menu > Select output after running `printf 'copy-me\\n'`. | Selection dialog opens without injecting commands. Copying selected text does not alter Bash state. |
+| OPS-03 | Configure two SAF folders; revoke access to one in Android settings; import from Settings. | Files from the remaining readable folder still import, skipped grants are counted, and no partial temporary file remains. Maximum 30 files total across folders. |
+| OPS-04 | In Appearance, select Contrast, OLED or Paper, then return to a colored theme. | Accent swatches are hidden when they cannot affect a monochrome palette; the previously chosen accent persists when the colored theme returns. |
+| OPS-05 | With TalkBack enabled, focus a workspace's folder/name row and its overflow. | Only one workspace-selection target is announced; overflow remains independently operable. |
+| OPS-06 | Open Files & storage > Export klyro-export.txt. | The app exports only the existing private `~/imports/klyro-export.txt`; an absent file returns a clear error and does not claim success. |
+
 ## Results log
 
 Record each item as `PASS`, `FAIL`, or `NOT TESTED` with screenshot/log evidence.
