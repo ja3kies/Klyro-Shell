@@ -192,7 +192,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         # descriptions, at the same keyboard target size as all other keys.
         self.assertIn("Text(label, fontSize = 9.sp", terminal)
         self.assertIn('TerminalExtraKey("CLEAR"', terminal)
-        self.assertIn('if (hasCopyableOutput) "ALL" else "PASTE"', terminal)
+        self.assertIn('if (hasCopyableOutput) "SELECT" else "PASTE"', terminal)
         self.assertNotIn(' · Selected', workspace)
         self.assertIn('textAlign = TextAlign.Start', workspace)
         self.assertIn('Text(\n                    "Sessions"', workspace)
