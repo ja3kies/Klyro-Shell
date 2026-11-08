@@ -87,6 +87,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.oryn.terminal.core.OrynPaths
+import com.oryn.terminal.plugins.KlyroPluginManager
 import java.io.File
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
@@ -1011,6 +1012,7 @@ fun TerminalPane(
         }
         KlyroCommandPalette(
             installedPrefix = privatePrefix,
+            pluginCommands = remember(context) { KlyroPluginManager(context).activeCommands() },
             onInsert = { snippet ->
                 // A curated command is pasted, never submitted with Enter.
                 // Full-screen applications retain their own keyboard focus.
