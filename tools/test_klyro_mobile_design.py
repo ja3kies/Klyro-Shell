@@ -167,6 +167,9 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn('R.drawable.hugeicons_contrast', settings)
         self.assertIn('R.drawable.hugeicons_moon_01', settings)
         self.assertIn('R.drawable.hugeicons_file_01', settings)
+        self.assertIn('AndroidView(', settings)
+        self.assertIn('KlyroTerminalFonts.load(context, fontFamilyId)', settings)
+        self.assertIn('view.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp)', settings)
         for glyph in ('"◩"', '"●"', '"○"'):
             self.assertNotIn(glyph, settings)
         self.assertNotIn('Text("Selected: " + chosen', settings)
