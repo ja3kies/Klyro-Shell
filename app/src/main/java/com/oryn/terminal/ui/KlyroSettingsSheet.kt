@@ -2,11 +2,8 @@ package com.oryn.terminal.ui
 
 import android.content.Context
 import android.graphics.Color as AndroidColor
-import android.util.TypedValue
-import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -97,8 +93,11 @@ internal fun KlyroSettingsSheet(
     }
 
     // Compact content stays fixed; long reports, large fonts and small screens retain scrolling.
-    val needsScroll = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 700 ||
-        density.fontScale > 1.2f
+    val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
+        rows = 6,
+        screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp,
+        fontScale = density.fontScale
+    )
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onDismiss) {
             Column(
