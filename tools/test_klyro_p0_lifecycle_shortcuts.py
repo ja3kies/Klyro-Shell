@@ -113,7 +113,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("return readPlainText(manager) != null;", self.clipboard_reader)
 
     def test_blank_clipboard_cannot_claim_paste_available(self):
-        self.assertIn("value.isBlank()", self.clipboard_policy)
+        self.assertIn("isWhitespaceOnly(value)", self.clipboard_policy)
 
     def test_unicode_noncharacters_cannot_reach_shell(self):
         self.assertIn("Character.toCodePoint(c, value.charAt(i))", self.clipboard_policy)
