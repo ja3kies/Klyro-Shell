@@ -1,6 +1,9 @@
 package com.oryn.terminal.ui
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
@@ -43,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
@@ -70,6 +74,7 @@ internal fun KlyroSettingsSheet(
     onFontChange: (Float) -> Unit,
     onResetFont: () -> Unit,
     onResetModifiers: () -> Unit,
+    activeModifiers: Set<String>,
     onSetupStorage: () -> Unit,
     onImportStorageFolder: () -> Unit,
     onImportFile: () -> Unit,
@@ -84,6 +89,7 @@ internal fun KlyroSettingsSheet(
     var showFontLicense by remember { mutableStateOf(false) }
     var showHugeiconsLicense by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
+    var cannotOpenPermissions by remember { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -323,12 +329,52 @@ internal fun KlyroSettingsSheet(
                     }
                     "keyboard" -> {
                         KlyroSectionHeading("Keyboard")
-                        SettingsRowLink("Release modifiers",
-                            "Clear Ctrl, Alt, Shift and Fn if they remain latched.",
-                            R.drawable.ic_klyro_keyboard_keys) {
-                            onResetModifiers()
+                        Text("Modifier status", color = colors.muted,
+                            style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                        ) {
+                            listOf("Ctrl", "Alt", "Shift", "Fn").forEach { label ->
+                                val active = label in activeModifiers
+                                Surface(
+                                    modifier = Modifier.weight(1f).heightIn(
+                                        min = KlyroUiMetrics.minTouch
+                                    ).semantics {
+                                        contentDescription = "$label modifier"
+                                        stateDescription = if (active) "Active" else "Inactive"
+                                    },
+                                    color = if (active) colors.accent.copy(alpha = .17f) else colors.key,
+                                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                    border = if (active) BorderStroke(
+                                        KlyroUiMetrics.selectedBorder, colors.accent
+                                    ) else null
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(label,
+                                            color = if (active) colors.accent else colors.muted,
+                                            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                                            style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
+                            }
                         }
-                        Text("Swipe the shortcuts row in compact layouts.",
+                        Button(
+                            onClick = onResetModifiers,
+                            enabled = activeModifiers.isNotEmpty(),
+                            modifier = Modifier.fillMaxWidth().heightIn(
+                                min = KlyroUiMetrics.minTouch
+                            ),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = colors.onAccent
+                            )
+                        ) {
+                            Text(if (activeModifiers.isEmpty()) "All modifiers released"
+                                else "Release active modifiers")
+                        }
+                        Text("Hold a direction key for its extended action; swipe the shortcut row in landscape.",
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "files" -> {
@@ -398,6 +444,37 @@ internal fun KlyroSettingsSheet(
                         KlyroSectionHeading("Privacy")
                         Text("Terminal output may contain secrets. Use the ALL shortcut to select and copy it. Multiline pastes require confirmation; diagnostics exclude transcripts.",
                             style = MaterialTheme.typography.bodyMedium, color = colors.foreground)
+                        Surface(color = colors.tile,
+                            shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
+                            ) {
+                                Icon(painterResource(R.drawable.hugeicons_shield_01),
+                                    contentDescription = null, tint = colors.accent,
+                                    modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
+                                Text("Shell files stay inside Klyro's private app storage.",
+                                    modifier = Modifier.weight(1f),
+                                    color = colors.foreground,
+                                    style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        SettingsRowLink("Android permissions",
+                            "Review app access in Android system settings.",
+                            R.drawable.hugeicons_settings_01) {
+                            cannotOpenPermissions = !runCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.parse("package:${context.packageName}")
+                                    }
+                                )
+                            }.isSuccess
+                        }
+                        if (cannotOpenPermissions) {
+                            Text("Android settings cannot be opened on this device.",
+                                color = colors.danger, style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                     "diagnostics" -> {
                         KlyroSectionHeading("Diagnostics", "Local checks; no commands run automatically.")
