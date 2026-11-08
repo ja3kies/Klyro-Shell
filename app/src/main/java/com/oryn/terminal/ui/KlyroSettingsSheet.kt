@@ -472,8 +472,8 @@ internal fun KlyroSettingsSheet(
                             onDismiss()
                             onImportFile()
                         }
-                        SettingsRowLink("Export a file",
-                            "Save a file using Android's document picker.",
+                        SettingsRowLink("Export klyro-export.txt",
+                            "Save ~/imports/klyro-export.txt using Android's picker.",
                             R.drawable.hugeicons_upload_01) {
                             onDismiss()
                             onExportFile()
