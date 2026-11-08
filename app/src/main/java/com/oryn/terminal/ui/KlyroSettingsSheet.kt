@@ -94,6 +94,10 @@ internal fun KlyroSettingsSheet(
             .getOrNull() ?: "development"
     }
 
+    // Compact content stays fixed; long reports, large fonts and small screens retain scrolling.
+    val needsScroll = section == "files" || section == "diagnostics" ||
+        androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 700 ||
+        density.fontScale > 1.2f
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onDismiss) {
             Column(
@@ -101,7 +105,7 @@ internal fun KlyroSettingsSheet(
                     .fillMaxWidth()
                     .heightIn(max = KlyroUiMetrics.sheetContentMax)
                     .imePadding()
-                    .verticalScroll(remember(section) { ScrollState(0) })
+                    .then(if (needsScroll) Modifier.verticalScroll(remember(section) { ScrollState(0) }) else Modifier)
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)
@@ -159,85 +163,34 @@ internal fun KlyroSettingsSheet(
                     "appearance" -> {
                         KlyroSectionHeading("Appearance")
                         Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)) {
-                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                Text("App theme", fontWeight = FontWeight.SemiBold,
-                                    color = colors.foreground)
-                                Row(
-                                    modifier = Modifier.fillMaxWidth()
-                                        .background(colors.key, RoundedCornerShape(KlyroUiMetrics.controlCorner))
-                                        .padding(KlyroUiMetrics.spaceXs),
-                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
-                                ) {
-                                    listOf(
-                                        "system" to "System", "light" to "Light", "dark" to "Dark"
-                                    ).forEach { (mode, title) ->
-                                        val active = themeMode == mode
-                                        Surface(
-                                            modifier = Modifier.weight(1f).heightIn(
-                                                min = KlyroUiMetrics.optionRow
-                                            ).clickable(role = Role.RadioButton,
-                                                onClickLabel = "Use " + title + " theme") {
-                                                onThemeModeChange(mode)
-                                            }.semantics { selected = active },
-                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                            color = if (active) colors.accent else colors.key,
-                                            contentColor = if (active) colors.onAccent else colors.foreground
-                                        ) {
-                                            Box(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    title,
-                                                    modifier = Modifier.padding(vertical = KlyroUiMetrics.spaceMd),
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
-                                                )
-                                            }
-                                        }
-                                    }
+                            Text("App theme", fontWeight = FontWeight.SemiBold,
+                                color = colors.foreground)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                            ) {
+                                listOf("system" to "System", "light" to "Light",
+                                    "dark" to "Dark").forEach { (mode, label) ->
+                                    KlyroThemePreviewCard(
+                                        mode = mode, label = label, active = themeMode == mode,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { onThemeModeChange(mode) }
+                                    )
                                 }
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                Text("Monochrome", fontWeight = FontWeight.SemiBold,
-                                    color = colors.foreground)
-                                Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                    listOf(
-                                        Triple("mono-contrast", "Contrast", R.drawable.hugeicons_contrast),
-                                        Triple("mono-black", "OLED", R.drawable.hugeicons_moon_01),
-                                        Triple("mono-paper", "Paper", R.drawable.hugeicons_file_01)
-                                    ).forEach { (id, label, icon) ->
-                                        val active = themeMode == id
-                                        Surface(
-                                            modifier = Modifier.weight(1f)
-                                                .heightIn(min = KlyroUiMetrics.optionRow)
-                                                .clickable(role = Role.RadioButton,
-                                                    onClickLabel = "Use " + label + " monochrome theme") {
-                                                    onThemeModeChange(id)
-                                                }.semantics { selected = active },
-                                            color = if (active) colors.accent.copy(alpha = .15f) else colors.tile,
-                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                            border = if (active) BorderStroke(
-                                                KlyroUiMetrics.selectedBorder, colors.accent
-                                            ) else null
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth()
-                                                    .padding(horizontal = 6.dp, vertical = 12.dp),
-                                                horizontalArrangement = Arrangement.spacedBy(
-                                                    KlyroUiMetrics.spaceXs, Alignment.CenterHorizontally),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(painterResource(icon), contentDescription = null,
-                                                    tint = colors.foreground,
-                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                                                Text(label, color = colors.foreground,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    fontWeight = if (active) FontWeight.Bold
-                                                        else FontWeight.Medium)
-                                            }
-                                        }
-                                    }
+                            Text("Monochrome", fontWeight = FontWeight.SemiBold,
+                                color = colors.foreground)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                            ) {
+                                listOf("mono-contrast" to "Contrast", "mono-black" to "OLED",
+                                    "mono-paper" to "Paper").forEach { (mode, label) ->
+                                    KlyroThemePreviewCard(
+                                        mode = mode, label = label, active = themeMode == mode,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { onThemeModeChange(mode) }
+                                    )
                                 }
                             }
                             if (!themeMode.startsWith("mono-")) {
@@ -351,59 +304,22 @@ internal fun KlyroSettingsSheet(
                                 ) {
                                     Text("Font size", color = colors.foreground,
                                         fontWeight = FontWeight.SemiBold)
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            if (fontSizeSp % 1f == 0f) fontSizeSp.toInt().toString() + " sp"
-                                            else fontSizeSp.toString() + " sp",
-                                            color = colors.accent,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        if (fontSizeSp != 13.5f) {
-                                            TextButton(onClick = onResetFont) { Text("Reset") }
-                                        }
-                                    }
+                                    Text(
+                                        if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
+                                        color = colors.accent, fontWeight = FontWeight.Bold
+                                    )
                                 }
-                                Surface(color = colors.tile,
-                                    shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
-                                    Column(Modifier.fillMaxWidth().padding(
-                                        horizontal = KlyroUiMetrics.spaceLg,
-                                        vertical = KlyroUiMetrics.spaceSm)) {
-                                        val previewTypeface = remember(context, fontFamilyId) {
-                                            KlyroTerminalFonts.load(context, fontFamilyId)
-                                        }
-                                        AndroidView(
-                                            factory = { ctx ->
-                                                TextView(ctx).apply {
-                                                    text = "Aa  The quick brown fox"
-                                                    setSingleLine(true)
-                                                    ellipsize = android.text.TextUtils.TruncateAt.END
-                                                    includeFontPadding = false
-                                                }
-                                            },
-                                            update = { view ->
-                                                view.typeface = previewTypeface
-                                                view.setTextColor(colors.foreground.toArgb())
-                                                view.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp)
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                        KlyroThinSlider(
-                                            value = fontSizeSp.coerceIn(9f, 24f),
-                                            onValueChange = { onFontChange(it - fontSizeSp) },
-                                            valueRange = 9f..24f,
-                                            steps = 29,
-                                            modifier = Modifier.fillMaxWidth().semantics {
-                                                contentDescription = "Terminal font size"
-                                            }
-                                        )
+                                KlyroThinSlider(
+                                    value = fontSizeSp.coerceIn(9f, 24f),
+                                    onValueChange = { onFontChange(it - fontSizeSp) },
+                                    valueRange = 9f..24f,
+                                    steps = 29,
+                                    modifier = Modifier.fillMaxWidth().semantics {
+                                        contentDescription = "Terminal font size"
                                     }
-                                }
-                                Row(modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("9 sp", color = colors.muted,
-                                        style = MaterialTheme.typography.labelSmall)
-                                    Text("24 sp", color = colors.muted,
-                                        style = MaterialTheme.typography.labelSmall)
+                                )
+                                if (fontSizeSp != 13.5f) {
+                                    TextButton(onClick = onResetFont) { Text("Reset font size") }
                                 }
                             }
                         }
