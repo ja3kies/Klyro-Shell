@@ -23,6 +23,17 @@ class KlyroPluginPolicyTest {
         }
     }
 
+    @Test fun rejectsReadOnlyLookingOptionsThatMayExecuteExternalHelpers() {
+        listOf("git diff --ext-diff", "git diff --output=foo",
+            "git status --porcelain=v2", "git log --format=x",
+            "ls -R /", "ls --help", "pkg search --script",
+            "pkg search -o", "pkg search " + "p".repeat(41),
+            "git diff -R", "git -c alias.a=!sh status").forEach {
+            assertFalse("Unreviewed command accepted: $it",
+                KlyroPluginManager.safeInsertion(it))
+        }
+    }
+
     @Test fun rejectsOverlongAndHiddenControlSuggestions() {
         assertFalse(KlyroPluginManager.safeInsertion("ls " + "a".repeat(160)))
         assertFalse(KlyroPluginManager.safeInsertion("ls\u0000"))
