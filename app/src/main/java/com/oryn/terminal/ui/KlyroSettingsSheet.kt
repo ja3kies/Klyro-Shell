@@ -3,6 +3,7 @@ package com.oryn.terminal.ui
 import android.content.Context
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ScrollState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -96,7 +97,7 @@ internal fun KlyroSettingsSheet(
                     .fillMaxWidth()
                     .heightIn(max = KlyroUiMetrics.sheetContentMax)
                     .imePadding()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(remember(section) { ScrollState(0) })
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)
@@ -122,11 +123,10 @@ internal fun KlyroSettingsSheet(
                     "home" -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)) {
                             Box(Modifier.weight(1f)) {
-                                SettingsBentoTile("Appearance", "Themes & type", R.drawable.hugeicons_colors,
-                                    prominent = true) { section = "appearance" }
+                                SettingsBentoTile("Appearance", "Themes & type", R.drawable.hugeicons_palette) { section = "appearance" }
                             }
                             Box(Modifier.weight(1f)) {
-                                SettingsBentoTile("Keyboard", "Keys & modifiers", R.drawable.hugeicons_keyboard) {
+                                SettingsBentoTile("Keyboard", "Keys & modifiers", R.drawable.ic_klyro_keyboard_keys) {
                                     section = "keyboard"
                                 }
                             }
@@ -143,8 +143,8 @@ internal fun KlyroSettingsSheet(
                                 }
                             }
                         }
-                        SettingsRowLink("Diagnostics", "Runtime health and shareable report",
-                            R.drawable.hugeicons_information_square) {
+                        SettingsRowLink("Diagnostics", "Environment checks and reports",
+                            R.drawable.hugeicons_pulse_rectangle_01) {
                             section = "diagnostics"
                         }
                         SettingsRowLink("About", "Build information and licences",
@@ -199,10 +199,10 @@ internal fun KlyroSettingsSheet(
                                     color = colors.foreground)
                                 Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                                     listOf(
-                                        Triple("mono-contrast", "Contrast", "◩"),
-                                        Triple("mono-black", "OLED", "●"),
-                                        Triple("mono-paper", "Paper", "○")
-                                    ).forEach { (id, label, glyph) ->
+                                        Triple("mono-contrast", "Contrast", R.drawable.hugeicons_contrast),
+                                        Triple("mono-black", "OLED", R.drawable.hugeicons_moon_01),
+                                        Triple("mono-paper", "Paper", R.drawable.hugeicons_file_01)
+                                    ).forEach { (id, label, icon) ->
                                         val active = themeMode == id
                                         Surface(
                                             modifier = Modifier.weight(1f)
@@ -221,10 +221,14 @@ internal fun KlyroSettingsSheet(
                                                 modifier = Modifier.fillMaxWidth()
                                                     .padding(horizontal = 6.dp, vertical = 12.dp),
                                                 horizontalArrangement = Arrangement.Center,
-                                                verticalAlignment = Alignment.CenterVertically
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(
+                                                    KlyroUiMetrics.spaceXs)
                                             ) {
-                                                Text(glyph + " " + label,
-                                                    color = colors.foreground,
+                                                Icon(painterResource(icon), contentDescription = null,
+                                                    tint = colors.foreground,
+                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                                Text(label, color = colors.foreground,
                                                     style = MaterialTheme.typography.labelMedium,
                                                     fontWeight = if (active) FontWeight.Bold
                                                         else FontWeight.Medium)
@@ -267,8 +271,9 @@ internal fun KlyroSettingsSheet(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 if (active) {
-                                                    Text("✓", color = swatch.onAccent,
-                                                        fontWeight = FontWeight.Bold)
+                                                    Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
+                                                        contentDescription = null, tint = swatch.onAccent,
+                                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                                 }
                                             }
                                         }
@@ -282,13 +287,14 @@ internal fun KlyroSettingsSheet(
                                             },
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text("+", color = colors.accent,
-                                            style = MaterialTheme.typography.titleLarge)
+                                        Icon(painterResource(R.drawable.hugeicons_plus_sign),
+                                            contentDescription = null, tint = colors.accent,
+                                            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                     }
                                 }
                                 val chosen = KlyroColors.selectedOption(accentId)?.label
                                     ?: if (accentId.startsWith("custom:")) "Custom" else "Lime"
-                                Text("Selected: " + chosen, color = colors.muted,
+                                Text(chosen, color = colors.muted,
                                     style = MaterialTheme.typography.bodySmall)
                             }
                             HorizontalDivider(color = colors.muted.copy(alpha = 0.18f))
@@ -388,7 +394,7 @@ internal fun KlyroSettingsSheet(
                         KlyroSectionHeading("Keyboard")
                         SettingsRowLink("Release modifiers",
                             "Clear Ctrl, Alt, Shift and Fn if they remain latched.",
-                            R.drawable.hugeicons_keyboard) {
+                            R.drawable.ic_klyro_keyboard_keys) {
                             onResetModifiers()
                         }
                         Text("Swipe the shortcuts row in compact layouts.",
@@ -564,7 +570,6 @@ private fun SettingsBentoTile(
     title: String,
     subtitle: String,
     icon: Int,
-    prominent: Boolean = false,
     onClick: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
@@ -572,8 +577,7 @@ private fun SettingsBentoTile(
         modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.bentoMinHeight)
             .clickable(role = Role.Button, onClickLabel = "Open " + title, onClick = onClick),
         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-        color = if (prominent) colors.accent.copy(alpha = .13f) else colors.tile,
-        border = if (prominent) BorderStroke(1.dp, colors.accent.copy(alpha = .35f)) else null
+        color = colors.tile
     ) {
         Column(Modifier.padding(KlyroUiMetrics.bentoInnerPadding),
             verticalArrangement = Arrangement.SpaceBetween) {
