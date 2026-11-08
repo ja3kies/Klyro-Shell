@@ -37,9 +37,9 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
     def test_pass_two_shortcuts_preserve_selection_without_accidental_paste(self):
         terminal = READ(UI / "TerminalPane.kt")
         actions = terminal.split("val firstRow:", 1)[1].split("if (compact)", 1)[0]
-        self.assertIn('"ALL", description = "Select all terminal output"', actions)
+        self.assertIn('"ALL", description = "Select terminal output, or paste when empty"', actions)
         self.assertIn(") { selectTerminalOutput() }", actions)
-        self.assertIn('"PASTE", description = "Paste clipboard text"', actions)
+        self.assertNotIn('"PASTE", description = "Paste clipboard text"', actions)
         self.assertIn(") { pasteClipboard() }", actions)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
         selection = terminal.split("fun selectTerminalOutput()", 1)[1].split(
@@ -77,7 +77,7 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
         self.assertNotIn('Text("9 sp"', settings)
         self.assertNotIn('Text("24 sp"', settings)
         self.assertIn("KlyroPluginsPage(onBack =", home)
-        self.assertIn("ic_klyro_launcher_foreground", home)
+        self.assertIn("ic_klyro_brand_b", home)
         self.assertIn('Text("ARM64"', home)
         fg = ROOT / "app/src/main/res/drawable/ic_klyro_launcher_foreground.xml"
         root = ET.parse(fg).getroot()
