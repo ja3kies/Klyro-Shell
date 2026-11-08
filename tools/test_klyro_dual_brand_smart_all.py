@@ -33,6 +33,9 @@ class DualBrandSmartAllTest(unittest.TestCase):
         self.assertIn("PackageManager.DONT_KILL_APP", source)
         self.assertIn("if (ok) context.getSharedPreferences", source)
         self.assertIn("fun selected(context: Context)", source)
+        self.assertIn("getComponentEnabledSetting(alternative)", source)
+        self.assertIn("getComponentEnabledSetting(primary)", source)
+        self.assertIn("val verified = ok && selected(context) == choice", source)
 
     def test_all_selects_transcript_or_pastes_and_paste_key_is_gone(self):
         source = (SRC / "ui/TerminalPane.kt").read_text()
