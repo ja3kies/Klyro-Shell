@@ -128,6 +128,25 @@ class KlyroDesignTest {
         }
     }
 
+    @Test fun everyMonochromeTerminalHasReadablePromptCursorAndAnsi() {
+        val expected = mapOf(
+            "mono-black" to Triple("#000000", "#FFFFFF", "#FFFFFF"),
+            "mono-paper" to Triple("#FFFFFF", "#101010", "#101010"),
+            "mono-contrast" to Triple("#000000", "#FFFFFF", "#FFFFFF")
+        )
+        for ((mode, values) in expected) {
+            val properties = KlyroTerminalPalette.properties(KlyroColors.monochrome(mode))
+            assertEquals(mode + " canvas", values.first, properties.getProperty("background"))
+            assertEquals(mode + " text", values.second, properties.getProperty("foreground"))
+            assertEquals(mode + " prompt", values.third, properties.getProperty("color6"))
+            assertEquals(mode + " caret", values.third, properties.getProperty("cursor"))
+            assertEquals(mode + " ANSI 7", values.third, properties.getProperty("color7"))
+            val background = Color(android.graphics.Color.parseColor(values.first))
+            val text = Color(android.graphics.Color.parseColor(values.second))
+            assertTrue(mode + " text contrast", contrast(text, background) >= 7.0)
+        }
+    }
+
     @Test fun nativeTerminalSchemeTracksComposeDefaultsAndLightAnsiContrast() {
         for (dark in listOf(false, true)) {
             for (id in KlyroColors.accents) {
