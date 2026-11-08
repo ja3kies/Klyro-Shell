@@ -38,7 +38,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("KlyroUiMetrics.accentSwatch", settings)
         self.assertIn("Role.RadioButton", settings)
 
-    def test_workspaces_use_compact_centered_rows_with_contextual_actions(self):
+    def test_workspaces_use_compact_left_aligned_rows_with_contextual_actions(self):
         sheet = src(UI / "KlyroWorkspaceSheet.kt")
         self.assertIn("KlyroUiMetrics.workspaceRow", sheet)
         self.assertIn("KlyroUiMetrics.minTouch", sheet)
@@ -149,6 +149,34 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         picker = src(UI / "KlyroColorPickerDialog.kt")
         self.assertNotIn('Text("Preview")', picker)
         self.assertIn('Text("Edit")', picker)
+
+    def test_operational_release_gates_for_storage_clipboard_and_workspace_accessibility(self):
+        activity = src(APP / "MainActivity.kt")
+        terminal = src(UI / "TerminalPane.kt")
+        settings = src(UI / "KlyroSettingsSheet.kt")
+        workspace = src(UI / "KlyroWorkspaceSheet.kt")
+
+        # One inaccessible provider may not abort remaining SAF grants.
+        self.assertIn("if (imported >= 30) break", activity)
+        self.assertIn("readableFolders == 0", activity)
+        self.assertIn("skippedFolders++", activity)
+        self.assertIn("folders skipped", activity)
+        self.assertIn("Copy up to 30 files", settings)
+        self.assertIn("Export klyro-export.txt", settings)
+
+        # User can always paste irrespective of terminal transcript state.
+        self.assertIn('TerminalExtraKey(\n                "PASTE"', terminal)
+        self.assertIn("enabled = clipboardAvailable", terminal)
+        self.assertIn('KlyroMenuItem("Select output"', terminal)
+        self.assertNotIn('if (hasCopyableOutput) "SELECT" else "PASTE"', terminal)
+        self.assertNotIn("sessionClient.setOutputObserver(observer)", terminal)
+
+        # Each workspace has a single full-row selectable action; its
+        # independent overflow remains a separate TalkBack target.
+        self.assertEqual(workspace.count('onClickLabel = "Select workspace "'), 1)
+        self.assertIn("role = Role.RadioButton", workspace)
+        self.assertIn("Options for ", workspace)
+        self.assertIn('if (!themeMode.startsWith("mono-"))', settings)
 
     def test_adversarial_visual_semantics_and_screen_readability(self):
         settings = src(UI / "KlyroSettingsSheet.kt")
