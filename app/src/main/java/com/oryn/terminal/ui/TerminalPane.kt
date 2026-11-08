@@ -172,17 +172,6 @@ fun TerminalPane(
         onDispose { clipboardManager?.removePrimaryClipChangedListener(listener) }
     }
     var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
-    var hasCopyableOutput by remember(session) {
-        mutableStateOf(TerminalActionPolicy.hasCopyableOutput(session.emulator?.screen?.transcriptText))
-    }
-    DisposableEffect(sessionClient, session) {
-        val observer = Runnable {
-            hasCopyableOutput = TerminalActionPolicy.hasCopyableOutput(session.emulator?.screen?.transcriptText)
-        }
-        sessionClient.setOutputObserver(observer)
-        observer.run()
-        onDispose { sessionClient.setOutputObserver(null) }
-    }
     fun pasteClipboard() {
         val content = ClipboardTextReader.readPlainText(clipboardManager)
         if (!ClipboardPastePolicy.canPaste(content)) {
@@ -319,6 +308,17 @@ fun TerminalPane(
                     KlyroMenuItem("Workspaces", R.drawable.hugeicons_grid2x2) {
                         showToolsMenu = false
                         showWorkspaceSheet = true
+                    }
+                    KlyroMenuItem("Select output", R.drawable.hugeicons_clipboard_list) {
+                        showToolsMenu = false
+                        val output = session.emulator?.screen?.transcriptText.orEmpty()
+                        if (TerminalActionPolicy.hasCopyableOutput(output)) {
+                            outputSelectionView = null
+                            selectedOutput = output
+                        } else {
+                            Toast.makeText(context, "No terminal output to select",
+                                Toast.LENGTH_SHORT).show()
+                        }
                     }
                     KlyroMenuItem("Settings", R.drawable.hugeicons_settings_01) {
                         showToolsMenu = false
@@ -582,18 +582,12 @@ fun TerminalPane(
                 viewClient.setFnDown(fnActive)
             }
             TerminalExtraKey(
-                if (hasCopyableOutput) "SELECT" else "PASTE",
-                description = if (hasCopyableOutput) "Select and copy terminal output" else "Paste clipboard text",
-                glyph = if (hasCopyableOutput) R.drawable.hugeicons_clipboard_list else R.drawable.hugeicons_clipboard_paste,
+                "PASTE",
+                description = "Paste clipboard text",
+                glyph = R.drawable.hugeicons_clipboard_paste,
                 keyWidth = keyWidth, darkChrome = darkChrome,
-                enabled = hasCopyableOutput || clipboardAvailable
-            ) {
-                val output = session.emulator?.screen?.transcriptText.orEmpty()
-                if (TerminalActionPolicy.hasCopyableOutput(output)) {
-                    outputSelectionView = null
-                    selectedOutput = output
-                } else pasteClipboard()
-            }
+                enabled = clipboardAvailable
+            ) { pasteClipboard() }
         }
         val secondRow: @Composable () -> Unit = {
             TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome,
@@ -621,7 +615,6 @@ fun TerminalPane(
                 TerminalDisplayActions.clear(session)
                 activeTerminalView?.setTopRow(0)
                 activeTerminalView?.invalidate()
-                hasCopyableOutput = false
             }
         }
         if (compact) {
