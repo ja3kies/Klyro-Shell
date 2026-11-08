@@ -156,6 +156,24 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn("if (copied) \"Report copied\" else \"Clipboard unavailable\"", pane)
         self.assertIn('Toast.makeText(context, "No sharing app available"', pane)
 
+    def test_android_backup_and_device_migration_cannot_export_shell_data(self):
+        a = "{http://schemas.android.com/apk/res/android}"
+        manifest = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()
+        app = manifest.find("application")
+        self.assertEqual(app.attrib[a + "allowBackup"], "false")
+        self.assertEqual(app.attrib[a + "dataExtractionRules"],
+                         "@xml/klyro_data_extraction_rules")
+        path = ROOT / "app/src/main/res/xml/klyro_data_extraction_rules.xml"
+        root = ET.parse(path).getroot()
+        self.assertEqual(root.tag, "data-extraction-rules")
+        for transfer in ("cloud-backup", "device-transfer"):
+            rules = root.find(transfer)
+            self.assertIsNotNone(rules)
+            excluded = {(e.attrib.get("domain"), e.attrib.get("path"))
+                        for e in rules.findall("exclude")}
+            self.assertIn(("root", "."), excluded)
+            self.assertIn(("device_root", "."), excluded)
+
     def test_sessions_shell_picker_and_launcher_remain_safe(self):
         sessions = READ(UI / "KlyroSessionSheets.kt")
         manifest = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()
