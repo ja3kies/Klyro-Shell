@@ -2,6 +2,7 @@ package com.oryn.terminal.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,14 +67,37 @@ internal fun KlyroThemePreviewCard(
                     .padding(5.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().height(29.dp)
-                        .background(preview.second, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("› _", color = preview.third, fontFamily = FontFamily.Monospace,
-                        fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                if (mode == "system") {
+                    // One preview for BOTH device appearances, never inherit a stale mono preview.
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(29.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                    ) {
+                        listOf(
+                            Color(0xFFF2F7F5) to Color(0xFF56620C),
+                            Color(0xFF11191D) to Color(0xFFBDCC64)
+                        ).forEach { (background, ink) ->
+                            Box(
+                                modifier = Modifier.weight(1f)
+                                    .background(background)
+                                    .padding(start = 6.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text("›_", color = ink, fontFamily = FontFamily.Monospace,
+                                    fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(29.dp)
+                            .background(preview.second, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("› _", color = preview.third, fontFamily = FontFamily.Monospace,
+                            fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
             Text(label, modifier = Modifier.fillMaxWidth(),
