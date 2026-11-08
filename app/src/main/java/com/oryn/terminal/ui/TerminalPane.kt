@@ -606,14 +606,17 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
+            val canSelect = TerminalActionPolicy.hasCopyableOutput(
+                session.emulator?.screen?.transcriptText.orEmpty()
+            )
             TerminalExtraKey(
-                "ALL", description = "Select terminal output, or paste when empty",
-                glyph = R.drawable.hugeicons_clipboard_list,
+                "ALL",
+                description = if (canSelect) "Select all terminal output" else "Paste clipboard",
+                glyph = if (canSelect) R.drawable.hugeicons_clipboard_list
+                    else R.drawable.hugeicons_clipboard_paste,
                 keyWidth = keyWidth, darkChrome = darkChrome,
                 active = selectedOutput != null,
-                enabled = TerminalActionPolicy.hasCopyableOutput(
-                    session.emulator?.screen?.transcriptText.orEmpty()
-                ) || clipboardAvailable
+                enabled = canSelect || clipboardAvailable
             ) { selectTerminalOutput() }
         }
         val secondRow: @Composable () -> Unit = {
@@ -629,6 +632,12 @@ fun TerminalPane(
                 onLongClick = { write(session, TerminalNavigationPolicy.horizontalLongPress(true,
                     session.emulator?.isAlternateBufferActive == true, controlActive, altActive, shiftActive)) }
             ) { write(session, TerminalNavigationPolicy.arrow('C', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("END", description = "Go to end of line",
+                keyWidth = keyWidth, darkChrome = darkChrome) {
+                write(session, TerminalNavigationPolicy.horizontalLongPress(true,
+                    session.emulator?.isAlternateBufferActive == true,
+                    controlActive, altActive, shiftActive))
+            }
             TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth, darkChrome = darkChrome) {
                 transcriptQuery = ""
                 searchIndex = 0
