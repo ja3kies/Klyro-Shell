@@ -394,8 +394,9 @@ class MainActivity : ComponentActivity() {
             }
             var themeMode by remember {
                 mutableStateOf(
-                    themePreferences.getString("theme_mode", "system")
-                        ?.takeIf { it in setOf("system", "light", "dark") } ?: "system"
+                    KlyroColors.normalizedThemeMode(
+                        themePreferences.getString("theme_mode", "system")
+                    )
                 )
             }
             var accentId by remember {
@@ -467,7 +468,7 @@ class MainActivity : ComponentActivity() {
                         themePreferences.edit().putString("accent_id", accentId).apply()
                     },
                     onThemeModeChange = { selected ->
-                        if (selected in setOf("system", "light", "dark")) {
+                        if (selected in KlyroColors.themeModes) {
                             themeMode = selected
                             themePreferences.edit().putString("theme_mode", selected).apply()
                         }
