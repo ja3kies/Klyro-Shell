@@ -193,7 +193,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
 
         # Copy / clear key glyphs must have visible words, not just TalkBack
         # descriptions, at the same keyboard target size as all other keys.
-        self.assertIn("Text(label, fontSize = 9.sp", terminal)
+        self.assertIn("Text(label, fontSize = KlyroUiMetrics.shortcutCaption", terminal)
         self.assertIn('TerminalExtraKey("CLEAR"', terminal)
         self.assertIn('if (hasCopyableOutput) "SELECT" else "PASTE"', terminal)
         self.assertNotIn(' · Selected', workspace)
