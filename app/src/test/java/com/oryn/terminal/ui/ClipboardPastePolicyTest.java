@@ -23,6 +23,7 @@ public class ClipboardPastePolicyTest {
 
     @Test public void rejectsBlankAndOversizedUtf8Payloads() {
         assertFalse(ClipboardPastePolicy.canPaste("   "));
+        assertFalse(ClipboardPastePolicy.canPaste("\\u00A0\\u2007"));
         assertFalse(ClipboardPastePolicy.canPaste("\\t\\n"));
         assertFalse(ClipboardPastePolicy.canPaste("😀".repeat(20000)));
         assertTrue(ClipboardPastePolicy.canPaste("😀".repeat(1000)));
