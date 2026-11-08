@@ -852,14 +852,14 @@ fun TerminalPane(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Pasting multiple lines can execute commands. Review the clipboard content before continuing.")
                     Text(
-                        pendingMultilinePaste.orEmpty().take(500),
+                        pendingMultilinePaste.orEmpty(),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
+                            .verticalScroll(rememberScrollState()),
                         fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 8
+                        style = MaterialTheme.typography.bodySmall
                     )
-                    if ((pendingMultilinePaste?.length ?: 0) > 500) {
-                        Text("Preview truncated; cancel if the remaining content is unknown.")
-                    }
+                    Text("Entire paste shown; scroll to review all lines before confirming.",
+                        style = MaterialTheme.typography.labelSmall)
                 }
             },
             confirmButton = {
