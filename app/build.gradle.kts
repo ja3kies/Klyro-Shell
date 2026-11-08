@@ -13,8 +13,8 @@ android {
         applicationId = "com.klyro.shell"
         minSdk = 26
         targetSdk = 36
-        versionCode = 15
-        versionName = "0.4.8-dev"
+        versionCode = 16
+        versionName = "0.4.9-dev"
 
         ndk {
             abiFilters += setOf("arm64-v8a")
