@@ -165,13 +165,13 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("Export klyro-export.txt", settings)
 
         # The Select all action must never be a paste alias.
-        self.assertIn('"ALL", description = "Select all terminal output"', terminal)
+        self.assertIn('"ALL", description = "Select terminal output, or paste when empty"', terminal)
         self.assertIn('selectTerminalOutput()', terminal)
         # User can always paste irrespective of terminal transcript state.
-        self.assertIn('TerminalExtraKey(\n                "PASTE"', terminal)
+        self.assertNotIn('TerminalExtraKey(\n                "PASTE"', terminal)
         self.assertIn("enabled = clipboardAvailable", terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
-        self.assertNotIn('if (hasCopyableOutput) "SELECT" else "PASTE"', terminal)
+        self.assertIn('pasteClipboard()', terminal) terminal)
         self.assertNotIn("sessionClient.setOutputObserver(observer)", terminal)
 
         # Each workspace has a single full-row selectable action; its
@@ -225,8 +225,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("stateDescription = keyState.name.lowercase()", terminal)
         self.assertIn('TerminalExtraKey("CLEAR"', terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
-        self.assertIn('TerminalExtraKey(\n                "PASTE"', terminal)
-        self.assertNotIn('if (hasCopyableOutput) "SELECT" else "PASTE"', terminal)
+        self.assertNotIn('TerminalExtraKey(\n                "PASTE"', terminal)
+        self.assertIn('pasteClipboard()', terminal) terminal)
         self.assertNotIn('sessionClient.setOutputObserver(observer)', terminal)
         self.assertNotIn(' · Selected', workspace)
         self.assertIn('textAlign = TextAlign.Start', workspace)
