@@ -155,6 +155,9 @@ fun TerminalPane(
     var showCommandPalette by remember(session) { mutableStateOf(false) }
     val currentProject = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
     var showTerminalSettings by remember(session) { mutableStateOf(false) }
+    val selectedBrandIcon = remember(context, showTerminalSettings) {
+        KlyroBrandChoice.selected(context)
+    }
     var initialSettingsSection by remember(session) { mutableStateOf("home") }
     var sessionSheetId by remember(session) { mutableStateOf<Long?>(null) }
     var renameDialogId by remember(session) { mutableStateOf<Long?>(null) }
@@ -369,11 +372,11 @@ fun TerminalPane(
                     ) {
                         Icon(
                             painter = painterResource(
-                                if (com.oryn.terminal.ui.KlyroBrandChoice.selected(context) == "a")
+                                if (selectedBrandIcon == KlyroBrandChoice.ALTERNATIVE)
                                     R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
                             ),
                             contentDescription = null, tint = Color.Unspecified,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(30.dp)
                         )
                     }
                     Text("KLYRO", color = TerminalAccent, fontSize = 12.sp,
