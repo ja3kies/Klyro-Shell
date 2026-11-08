@@ -222,10 +222,12 @@ internal fun KlyroSettingsSheet(
                                 }
                             }
                             if (brandSwitchError) {
-                                Text("Android could not change the launcher icon.",
+                                Text("Icon switch failed. Both launcher entries were restored where possible; retry from Settings.",
                                     color = colors.danger,
                                     style = MaterialTheme.typography.bodySmall)
                             }
+                            Text("Some launchers refresh home-screen icons after reopening the launcher.",
+                                color = colors.muted, style = MaterialTheme.typography.labelSmall)
                             Text("App theme", fontWeight = FontWeight.SemiBold,
                                 color = colors.foreground)
                             Row(
@@ -617,7 +619,7 @@ internal fun KlyroSettingsSheet(
                                             ),
                                             contentDescription = "Klyro Shell logo",
                                             tint = Color.Unspecified,
-                                            modifier = Modifier.size(76.dp)
+                                            modifier = Modifier.size(56.dp)
                                         )
                                     }
                                     Column(Modifier.weight(1f)) {
