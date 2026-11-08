@@ -69,6 +69,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -880,7 +881,8 @@ private fun OrynTerminalApp(
     // Each role keeps its contrast in both Klyro Soft Mint and Klyro Dark.
     val ui = LocalKlyroColors.current
     val context = androidx.compose.ui.platform.LocalContext.current
-    var showPlugins by remember { mutableStateOf(false) }
+    // Preserve the plugin route across rotation; navigating back never stops a PTY.
+    var showPlugins by rememberSaveable { mutableStateOf(false) }
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
@@ -1029,7 +1031,7 @@ private fun OrynTerminalApp(
                                 ui.accent.copy(alpha = .12f), RoundedCornerShape(13.dp)
                             ), contentAlignment = Alignment.Center
                         ) {
-                            Icon(painterResource(R.drawable.hugeicons_grid2x2),
+                            Icon(painterResource(R.drawable.ic_klyro_plugins),
                                 contentDescription = null, tint = ui.accent,
                                 modifier = Modifier.size(23.dp))
                         }
