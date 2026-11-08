@@ -165,7 +165,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("Export klyro-export.txt", settings)
 
         # The Select all action must never be a paste alias.
-        self.assertIn('"ALL", description = "Select terminal output, or paste when empty"', terminal)
+        self.assertIn('"ALL",\n                description = if (canSelect) "Select all terminal output" else "Paste clipboard"', terminal)
         self.assertIn('selectTerminalOutput()', terminal)
         # User can always paste irrespective of terminal transcript state.
         self.assertNotIn('TerminalExtraKey(\n                "PASTE"', terminal)
