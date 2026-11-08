@@ -97,7 +97,8 @@ internal fun KlyroColorPickerDialog(
     var showAdvanced by remember { mutableStateOf(false) }
     // Preset buttons preview an intent. Only Apply changes the app theme.
     var pendingPreset by remember(initialArgb) { mutableStateOf<String?>(null) }
-    val smallWindow = LocalConfiguration.current.screenHeightDp < 680
+    val smallWindow = LocalConfiguration.current.screenHeightDp < 700 ||
+        androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.15f
     var hexInput by remember(initialArgb) {
         mutableStateOf("#%06X".format(initialArgb and 0xFFFFFF))
     }
