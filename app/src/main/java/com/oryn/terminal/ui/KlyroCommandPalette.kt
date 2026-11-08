@@ -37,6 +37,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.termux.KlyroWelcomeGuide
+import com.oryn.terminal.plugins.KlyroPluginManager
+import com.oryn.terminal.plugins.KlyroPluginCommand
 import java.io.File
 
 /**
@@ -47,6 +49,7 @@ import java.io.File
 @Composable
 internal fun KlyroCommandPalette(
     installedPrefix: File?,
+    pluginCommands: List<KlyroPluginCommand>,
     onInsert: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -56,6 +59,12 @@ internal fun KlyroCommandPalette(
     var showingGuide by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<String?>(null) }
     val matches = remember(query) { KlyroCommandCatalog.search(query) }
+    val pluginMatches = remember(query, pluginCommands) {
+        pluginCommands.filter { command ->
+            KlyroCommandSearch.matches(query, command.label,
+                command.description + " " + command.insert)
+        }
+    }
 
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onDismiss) {
@@ -124,10 +133,55 @@ internal fun KlyroCommandPalette(
                         modifier = Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.paletteListMax),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        if (matches.isEmpty()) {
+                        if (matches.isEmpty() && pluginMatches.isEmpty()) {
                             item {
                                 Text("No matching commands.", color = colors.muted,
                                     modifier = Modifier.padding(12.dp))
+                            }
+                        }
+                        if (pluginMatches.isNotEmpty()) {
+                            item {
+                                Text("Installed plugins", color = colors.muted,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 8.dp))
+                            }
+                        }
+                        items(pluginMatches, key = { "plugin:" + it.label + ":" + it.insert }) { command ->
+                            Surface(
+                                modifier = Modifier.fillMaxWidth().clickable(
+                                    role = Role.Button,
+                                    onClickLabel = "Insert " + command.label,
+                                    onClick = {
+                                        if (KlyroPluginManager.safeInsertion(command.insert)) {
+                                            keyboard?.hide()
+                                            onDismiss()
+                                            onInsert(command.insert)
+                                        }
+                                    }
+                                ),
+                                color = colors.tile,
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().heightIn(
+                                        min = KlyroUiMetrics.compactRow
+                                    ).padding(KlyroUiMetrics.spaceMd),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
+                                ) {
+                                    Icon(painterResource(R.drawable.hugeicons_grid2x2),
+                                        contentDescription = null, tint = colors.accent,
+                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(command.label, fontWeight = FontWeight.SemiBold,
+                                            color = colors.foreground)
+                                        Text(command.insert, color = colors.muted,
+                                            fontFamily = FontFamily.Monospace,
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Text("Insert", color = colors.accent,
+                                        style = MaterialTheme.typography.labelSmall)
+                                }
                             }
                         }
                         items(matches, key = { it.command }) { entry ->
