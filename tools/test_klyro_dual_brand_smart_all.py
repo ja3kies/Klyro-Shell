@@ -31,7 +31,7 @@ class DualBrandSmartAllTest(unittest.TestCase):
         source = (SRC / "ui/KlyroBrandChoice.kt").read_text()
         self.assertIn("setComponentEnabledSettings(", source)
         self.assertIn("PackageManager.DONT_KILL_APP", source)
-        self.assertIn("if (ok) context.getSharedPreferences", source)
+        self.assertIn("if (verified) context.getSharedPreferences", source)
         self.assertIn("fun selected(context: Context)", source)
         self.assertIn("getComponentEnabledSetting(alternative)", source)
         self.assertIn("getComponentEnabledSetting(primary)", source)
