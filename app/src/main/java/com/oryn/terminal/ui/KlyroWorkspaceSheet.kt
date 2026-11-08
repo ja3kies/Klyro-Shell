@@ -151,21 +151,20 @@ internal fun KlyroWorkspaceSheet(
                                         onSelectProject(entry.id)
                                     }.semantics { this.selected = active },
                                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                horizontalAlignment = Alignment.Start
                             ) {
                                 Text(
                                     entry.name, modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
+                                    textAlign = TextAlign.Start,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.titleSmall,
                                     color = c.foreground,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    (if (count == 1) "1 session" else count.toString() + " sessions") +
-                                        if (active) " · Selected" else "",
+                                    if (count == 1) "1 session" else count.toString() + " sessions",
                                     modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
+                                    textAlign = TextAlign.Start,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (active) c.accent else c.muted
                                 )
@@ -252,7 +251,7 @@ internal fun KlyroWorkspaceSheet(
                 }
 
                 Text(
-                    "Sessions (" + projectTabs.size + ")",
+                    "Sessions",
                     fontWeight = FontWeight.SemiBold,
                     color = c.foreground,
                     style = MaterialTheme.typography.titleSmall
