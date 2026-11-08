@@ -60,7 +60,7 @@ Compare semantic clarity, visual size, tappable targets and functional outcome.
 | COMP-04 | Check monochrome theme options. | Contrast has contrast icon, OLED has moon, Paper has document; no Unicode placeholder characters. |
 | COMP-05 | Open terminal overflow. | Search icon for Command Palette, grid for Workspaces, gear for Settings, house for Home. Every label and icon match its destination. |
 | COMP-06 | Open workspace sheet with active and zero-session projects. | Project names align left, list scans naturally, 'Selected' text and repeated section count are removed; selected/current state remains clearly indicated. |
-| COMP-07 | Inspect terminal shortcut toolbar on idle and with output. | Paste/Select and Clear keys display their **visible** text labels under their icons. Test that CLEAR clears output rather than shell input. |
+| COMP-07 | Inspect terminal shortcut toolbar on idle and with output. | Paste and Clear keys display their **visible** labels under their icons; Select output is a separate menu action. Paste remains available after terminal output appears. Test that CLEAR clears output rather than shell input. |
 | COMP-08 | Open and dismiss all affected sheets (Settings, Appearance, Workspaces). | No clipping, white-on-white glyphs, giant unintentional whitespace or navigation regressions. Keyboard/taps and shell state remain functional. |
 | COMP-09 | Turn TalkBack on; focus each icon-only action and contrast option. | Each action announces a meaningful label exactly once; decorative icons are excluded; selections announced. |
 
