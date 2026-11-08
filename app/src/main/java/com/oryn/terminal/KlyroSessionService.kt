@@ -2,6 +2,7 @@ package com.oryn.terminal
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -40,12 +41,24 @@ class KlyroSessionService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         KlyroSessionRuntime.expireIfIdle()
         if (!KlyroSessionRuntime.sessions.hasLiveSessions()) {
-            stopSelf()
+            stopSelf(startId)
             return START_NOT_STICKY
         }
+        val sessionCount = KlyroSessionRuntime.sessions.sessions.size
+        val openApp = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java).apply {
+                this.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         val notification = NotificationCompat.Builder(this, CHANNEL)
             .setContentTitle("Klyro Shell")
-            .setContentText("Terminal sessions active")
+            .setContentText("$sessionCount active terminal session" +
+                if (sessionCount == 1) "" else "s")
+            .setContentIntent(openApp)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setOnlyAlertOnce(true)
             .setSmallIcon(R.drawable.ic_klyro_mark_monochrome)
             .setOngoing(true)
             .setSilent(true)

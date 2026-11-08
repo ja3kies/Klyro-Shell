@@ -18,6 +18,25 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertNotIn("closeAllSessions()", body)
         self.assertIn("handler.removeCallbacks(check)", body)
 
+    def test_foreground_notification_reopens_terminal(self):
+        self.assertIn("PendingIntent.getActivity(", self.service)
+        self.assertIn("MainActivity::class.java", self.service)
+        self.assertIn(".setContentIntent(openApp)", self.service)
+
+    def test_notification_reports_actual_session_count(self):
+        self.assertIn("KlyroSessionRuntime.sessions.sessions.size", self.service)
+        self.assertIn('if (sessionCount == 1) "" else "s"', self.service)
+
+    def test_foreground_notification_refresh_does_not_realert(self):
+        self.assertIn(".setOnlyAlertOnce(true)", self.service)
+        self.assertIn(".setCategory(NotificationCompat.CATEGORY_SERVICE)", self.service)
+
+    def test_stop_without_sessions_uses_start_id(self):
+        self.assertIn("stopSelf(startId)", self.service)
+
+    def test_notification_uses_immutable_pending_intent(self):
+        self.assertIn("PendingIntent.FLAG_IMMUTABLE", self.service)
+
     def test_idle_policy_remains_authorized_to_close_sessions(self):
         self.assertIn("KlyroIdlePolicy.isExpired", self.runtime)
         self.assertIn("sessions.closeAllSessions()", self.runtime)
