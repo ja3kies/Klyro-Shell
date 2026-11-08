@@ -49,7 +49,7 @@ internal fun KlyroThemePreviewCard(
     val shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
     Surface(
         modifier = modifier
-            .height(91.dp)
+            .height(78.dp)
             .clickable(role = Role.RadioButton, onClickLabel = "Use $label theme", onClick = onClick)
             .semantics { selected = active },
         shape = shape,
@@ -61,13 +61,13 @@ internal fun KlyroThemePreviewCard(
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(51.dp)
+                modifier = Modifier.fillMaxWidth().height(40.dp)
                     .background(preview.first, RoundedCornerShape(9.dp))
                     .padding(5.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(39.dp)
+                    modifier = Modifier.fillMaxWidth().height(29.dp)
                         .background(preview.second, RoundedCornerShape(6.dp))
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
