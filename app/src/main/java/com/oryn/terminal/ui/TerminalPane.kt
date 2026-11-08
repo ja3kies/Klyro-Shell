@@ -312,11 +312,11 @@ fun TerminalPane(
                     ),
                     containerColor = ui.sheet
                 ) {
-                    KlyroMenuItem("Command Palette", R.drawable.hugeicons_terminal) {
+                    KlyroMenuItem("Command Palette", R.drawable.hugeicons_search_01) {
                         showToolsMenu = false
                         showCommandPalette = true
                     }
-                    KlyroMenuItem("Workspaces", R.drawable.hugeicons_folder_01) {
+                    KlyroMenuItem("Workspaces", R.drawable.hugeicons_grid2x2) {
                         showToolsMenu = false
                         showWorkspaceSheet = true
                     }
@@ -325,7 +325,7 @@ fun TerminalPane(
                         initialSettingsSection = "home"
                         showTerminalSettings = true
                     }
-                    KlyroMenuItem("Home", R.drawable.hugeicons_terminal) {
+                    KlyroMenuItem("Home", R.drawable.hugeicons_home_03) {
                         showToolsMenu = false
                         onReturnHome()
                     }
@@ -1079,12 +1079,19 @@ private fun TerminalExtraKey(
     val backgroundTint = colors.key
     val keyContents: @Composable () -> Unit = {
         if (glyph != null) {
-            Icon(
-                painter = painterResource(glyph),
-                contentDescription = null,
-                modifier = Modifier.width(24.dp).height(24.dp),
-                tint = if (active) accentTint else inkTint
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                Icon(
+                    painter = painterResource(glyph),
+                    contentDescription = null,
+                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall),
+                    tint = if (active) accentTint else inkTint
+                )
+                Text(label, fontSize = 9.sp, lineHeight = 10.sp,
+                    fontFamily = FontFamily.Monospace, maxLines = 1)
+            }
         } else if (arrow != null) {
             // Thin chevrons, inspired by the reference terminal keyboard.
             Canvas(modifier = Modifier.width(22.dp).height(22.dp)) {
