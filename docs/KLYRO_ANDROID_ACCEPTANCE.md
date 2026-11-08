@@ -24,7 +24,7 @@ Do not label the delivery PASS until all required device checks are recorded.
 | ICON-05 | Open session actions for a disposable session. | Rename, New terminal, Switch (when applicable), Close terminal and chevron use vectors. Cancelling Close preserves running shell. |
 | ICON-06 | Change light/dark and each monochrome theme. | Icons remain readable and follow accent/foreground/danger tokens; none are invisible or rendered as emoji. |
 | LIC-01 | Open Settings > About > Hugeicons licence. | The full MIT notice appears, scrolls and closes. |
-| SLIDER-01 | Open Appearance > Font size, drag slider to 9, 13.5 and 24 sp. | Thin rounded track, white circular handle, accurate half-sp steps, immediate text preview and terminal resize. |
+| SLIDER-01 | Open Appearance > Font size, drag slider to 9, 13.5 and 24 sp. | Thin rounded track, white circular handle, accurate half-sp steps, immediate text preview in the selected System/JetBrains Mono font, and terminal resize. |
 | SLIDER-02 | Close and reopen Settings after changing font size. | Chosen value persists and handle is correctly positioned; no oversized Material Expressive track. |
 | THEME-01 | Change Contrast / OLED / Paper modes; run `printf '\\033[31mANSI test\\033[0m\\n'` in a disposable Klyro shell. | Terminal text/background retain contrast; ANSI sample is grayscale in monochrome themes. |
 | SAF-01 | Authorize two distinct, permissible folders via Klyro setup-storage; restart the app; inspect Files & storage. | Both persisted SAF grants remain, and files can be imported to Klyro private storage. |
