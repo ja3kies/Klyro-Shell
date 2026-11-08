@@ -12,6 +12,10 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         cls.service = (APP / "KlyroSessionService.kt").read_text()
         cls.runtime = (APP / "KlyroSessionRuntime.kt").read_text()
         cls.pane = (APP / "ui/TerminalPane.kt").read_text()
+        cls.viewmodel = (APP / "TerminalSessionViewModel.kt").read_text()
+        cls.activity = (APP / "MainActivity.kt").read_text()
+        cls.clipboard_reader = (APP / "ui/ClipboardTextReader.java").read_text()
+        cls.clipboard_policy = (APP / "ui/ClipboardPastePolicy.java").read_text()
 
     def test_service_destruction_does_not_kill_process_owned_ptys(self):
         body = self.service.split("override fun onDestroy()", 1)[1].split("override fun onBind", 1)[0]
@@ -96,6 +100,36 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
 
     def test_back_handler_preserves_unsaved_dialog_flow(self):
         self.assertIn("pendingMultilinePaste == null && selectedOutput == null", self.pane)
+
+    def test_active_output_updates_selectable_action(self):
+        self.assertIn("outputRevision = terminalState.outputRevision(terminalState.activeTabId)", self.activity)
+        self.assertIn("remember(session, outputRevision)", self.pane)
+        self.assertIn("outputRevisions[tabId]", self.viewmodel)
+
+    def test_output_subscription_is_released_on_close(self):
+        self.assertIn("outputRevisions.remove(id)", self.viewmodel)
+
+    def test_clipboard_availability_uses_actual_validated_text(self):
+        self.assertIn("return readPlainText(manager) != null;", self.clipboard_reader)
+
+    def test_blank_clipboard_cannot_claim_paste_available(self):
+        self.assertIn("value.isBlank()", self.clipboard_policy)
+
+    def test_unicode_noncharacters_cannot_reach_shell(self):
+        self.assertIn("Character.toCodePoint(c, value.charAt(i))", self.clipboard_policy)
+        self.assertIn("(cp & 0xFFFE) == 0xFFFE", self.clipboard_policy)
+
+    def test_multiline_paste_preview_not_truncated_at_500_chars(self):
+        self.assertIn("pendingMultilinePaste.orEmpty(),", self.pane)
+        self.assertNotIn("pendingMultilinePaste.orEmpty().take(500)", self.pane)
+
+    def test_transcript_preview_does_not_split_surrogate_pairs(self):
+        self.assertIn("Character.isLowSurrogate(output[start])", self.pane)
+        self.assertIn("Character.isHighSurrogate(output[start - 1])", self.pane)
+
+    def test_terminal_brand_header_does_not_overflow(self):
+        self.assertIn("KlyroBrandChoice.selected(context)", self.pane)
+        self.assertIn("modifier = Modifier.size(30.dp)", self.pane)
 
     def test_service_start_is_guarded_by_live_sessions(self):
         self.assertIn("if (!KlyroSessionRuntime.sessions.hasLiveSessions()) return", self.service)
