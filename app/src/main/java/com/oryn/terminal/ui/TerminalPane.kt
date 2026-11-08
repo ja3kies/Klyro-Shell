@@ -302,7 +302,7 @@ fun TerminalPane(
             outputSelectionView = null
             selectedOutput = output
         } else {
-            Toast.makeText(context, "No terminal output to select", Toast.LENGTH_SHORT).show()
+            pasteClipboard()
         }
     }
     // Fit seven 48dp+ touch targets across a Pixel-width screen; scroll on narrower devices.
@@ -367,7 +367,10 @@ fun TerminalPane(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_klyro_launcher_foreground),
+                            painter = painterResource(
+                                if (com.oryn.terminal.ui.KlyroBrandChoice.selected(context) == "a")
+                                    R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
+                            ),
                             contentDescription = null, tint = Color.Unspecified,
                             modifier = Modifier.size(44.dp)
                         )
@@ -604,9 +607,13 @@ fun TerminalPane(
                 viewClient.setFnDown(fnActive)
             }
             TerminalExtraKey(
-                "ALL", description = "Select all terminal output",
+                "ALL", description = "Select terminal output, or paste when empty",
                 glyph = R.drawable.hugeicons_clipboard_list,
-                keyWidth = keyWidth, darkChrome = darkChrome
+                keyWidth = keyWidth, darkChrome = darkChrome,
+                active = selectedOutput != null,
+                enabled = TerminalActionPolicy.hasCopyableOutput(
+                    session.emulator?.screen?.transcriptText.orEmpty()
+                ) || clipboardAvailable
             ) { selectTerminalOutput() }
         }
         val secondRow: @Composable () -> Unit = {
@@ -627,12 +634,6 @@ fun TerminalPane(
                 searchIndex = 0
                 showTranscriptSearch = true
             }
-            TerminalExtraKey(
-                "PASTE", description = "Paste clipboard text",
-                glyph = R.drawable.hugeicons_clipboard_paste,
-                keyWidth = keyWidth, darkChrome = darkChrome,
-                enabled = clipboardAvailable
-            ) { pasteClipboard() }
             TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser, keyWidth = keyWidth, darkChrome = darkChrome) {
                 // Clear emulator display and scrollback without injecting input into Bash.
                 TerminalDisplayActions.clear(session)
