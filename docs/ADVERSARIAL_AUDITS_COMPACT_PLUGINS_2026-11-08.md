@@ -56,9 +56,10 @@ lisibilité à grand facteur de police, preview factice, duplication des valeurs
 de l'identité de marque dans Home.
 
 **Constats / corrections :**
-- Réduction centralisée des espacements et bento tiles. Les sections Settings courtes ont un
-  contenu fixe dans le cas nominal ; les contenus longs, les petits écrans et les polices agrandies
-  conservent un repli scrollable **pour éviter les contrôles inaccessibles**.
+- Réduction centralisée des espacements et bento tiles. Les sheets Settings courtes (y compris
+  Files et Diagnostics) gardent une hauteur fixe en configuration nominale. Le rapport de diagnostic
+  défile **dans sa carte uniquement** quand il dépasse 260 dp ; les petits écrans et les polices
+  agrandies conservent un repli scrollable **pour éviter les contrôles inaccessibles**.
 - Workspaces désactive le scroll quand la liste est courte et garde un repli pour de nombreux
   onglets, la saisie inline ou les configurations contraintes.
 - 6 thèmes présentés en cartes d'aperçu cohérentes (trois système/couleur et trois monochromes),
