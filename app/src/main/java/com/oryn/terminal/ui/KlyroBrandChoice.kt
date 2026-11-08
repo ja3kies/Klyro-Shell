@@ -12,9 +12,15 @@ object KlyroBrandChoice {
     private const val PREFS = "klyro_brand_v1"
     private const val KEY = "launcher_logo"
 
-    fun selected(context: Context): String =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY, DEFAULT)?.takeIf { it == ALTERNATIVE } ?: DEFAULT
+    fun selected(context: Context): String {
+        val pm = context.packageManager
+        val primary = ComponentName(context.packageName, context.packageName + ".LauncherB")
+        val alternative = ComponentName(context.packageName, context.packageName + ".LauncherA")
+        val a = pm.getComponentEnabledSetting(alternative)
+        val b = pm.getComponentEnabledSetting(primary)
+        return if (a == PackageManager.COMPONENT_ENABLED_STATE_ENABLED &&
+            b != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) ALTERNATIVE else DEFAULT
+    }
 
     fun select(context: Context, choice: String): Boolean {
         if (choice != DEFAULT && choice != ALTERNATIVE) return false
@@ -46,8 +52,9 @@ object KlyroBrandChoice {
                 }
             }
         }.isSuccess
-        if (ok) context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val verified = ok && selected(context) == choice
+        if (verified) context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY, choice).apply()
-        return ok
+        return verified
     }
 }
