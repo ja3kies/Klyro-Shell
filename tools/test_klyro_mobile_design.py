@@ -180,7 +180,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
 
         # Distinct destination icons: search, workspace grid, home and gear.
         menu = terminal.split("val toolsMenu: @Composable () -> Unit =", 1)[1].split(
-            "\\n    Column(", 1
+            "\n    Column(", 1
         )[0]
         for label, icon in (("Command Palette", "search_01"),
                             ("Workspaces", "grid2x2"),
