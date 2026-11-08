@@ -47,6 +47,26 @@ Do not label the delivery PASS until all required device checks are recorded.
 | REG-01 | Rename a test session and workspace, switch tabs, open and dismiss all dialogs. | Existing session state and names persist; no unexpected process termination. |
 | REG-02 | Import a file from Android picker and export a harmless test file. | Both workflows remain functional after UI refactor. |
 
+## Adversarial screenshot acceptance — icon recognition and visual hierarchy
+
+For each screenshot, take both standard and monochrome theme captures.
+Compare semantic clarity, visual size, tappable targets and functional outcome.
+
+| ID | Steps | Required acceptance |
+| --- | --- | --- |
+| COMP-01 | Open Settings home from terminal. | Appearance uses a palette, Keyboard looks like actual keyboard keys (not robot), Storage a folder, Privacy a shield; all Bento tiles share identical surface/selection styling. |
+| COMP-02 | Inspect bottom Settings links. | Diagnostics uses an activity monitor, About uses information; never identical glyphs. |
+| COMP-03 | Enter Appearance after scrolling the Settings home page; go back and re-enter. | Settings back control and Appearance heading are visible at top each time; no inherited scroll offset. |
+| COMP-04 | Check monochrome theme options. | Contrast has contrast icon, OLED has moon, Paper has document; no Unicode placeholder characters. |
+| COMP-05 | Open terminal overflow. | Search icon for Command Palette, grid for Workspaces, gear for Settings, house for Home. Every label and icon match its destination. |
+| COMP-06 | Open workspace sheet with active and zero-session projects. | Project names align left, list scans naturally, 'Selected' text and repeated section count are removed; selected/current state remains clearly indicated. |
+| COMP-07 | Inspect terminal shortcut toolbar on idle and with output. | Paste/Select All and Clear keys display their **visible** text labels under their icons. Test that CLEAR clears output rather than shell input. |
+| COMP-08 | Open and dismiss all affected sheets (Settings, Appearance, Workspaces). | No clipping, white-on-white glyphs, giant unintentional whitespace or navigation regressions. Keyboard/taps and shell state remain functional. |
+| COMP-09 | Turn TalkBack on; focus each icon-only action and contrast option. | Each action announces a meaningful label exactly once; decorative icons are excluded; selections announced. |
+
+**PASS criteria:** Every check passes in the APK tied to the latest green CI commit.
+Screen recordings or screenshots must support visual observations; CI alone is insufficient.
+
 ## Results log
 
 Record each item as `PASS`, `FAIL`, or `NOT TESTED` with screenshot/log evidence.
