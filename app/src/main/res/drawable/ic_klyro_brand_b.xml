@@ -2,6 +2,7 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54" android:scaleX=".78" android:scaleY=".78">
     <!-- Reference B: rounded lime prompt-chevron, cream K arm and underscore. -->
     <path android:fillColor="#D7F850" android:strokeColor="#D7F850"
         android:strokeWidth="2" android:strokeLineJoin="round"
@@ -10,4 +11,5 @@
         android:pathData="M78,26 L88,26 Q92,26 89,31 L68,54 L90,77 Q93,82 88,82 L76,82 Q73,82 70,78 L51,58 Q47,54 51,49 L72,29 Q75,26 78,26 Z"/>
     <path android:fillColor="#FFF9F1"
         android:pathData="M47,87 L66,87 Q70,87 70,91 Q70,95 66,95 L47,95 Q43,95 43,91 Q43,87 47,87 Z"/>
+    </group>
 </vector>
