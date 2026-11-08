@@ -1052,10 +1052,10 @@ fun TerminalPane(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
 private enum class ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
 private fun TerminalExtraKey(
     label: String,
     active: Boolean = false,
