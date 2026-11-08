@@ -198,7 +198,7 @@ internal fun KlyroSettingsSheet(
                                         color = if (selectedBrand == choice)
                                             colors.accent.copy(alpha = .14f) else colors.tile,
                                         border = BorderStroke(1.dp,
-                                            if (selectedBrand == choice) colors.accent else colors.outline)
+                                            if (selectedBrand == choice) colors.accent else colors.muted.copy(alpha = .35f))
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(8.dp),
