@@ -161,6 +161,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         manifest = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()
         app = manifest.find("application")
         self.assertEqual(app.attrib[a + "allowBackup"], "false")
+        self.assertEqual(app.attrib[a + "fullBackupContent"], "false")
         self.assertEqual(app.attrib[a + "dataExtractionRules"],
                          "@xml/klyro_data_extraction_rules")
         path = ROOT / "app/src/main/res/xml/klyro_data_extraction_rules.xml"
