@@ -249,12 +249,7 @@ internal fun KlyroSettingsSheet(
                                                 modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                         }
                                     }
-                                    val chosen = KlyroColors.selectedOption(accentId)?.label
-                                        ?: if (accentId.startsWith("custom:")) "Custom" else "Lime"
-                                    Text(chosen, color = colors.muted,
-                                        style = MaterialTheme.typography.bodySmall)
                                 }
-                                HorizontalDivider(color = colors.muted.copy(alpha = 0.18f))
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                                 Text("Terminal font", color = colors.foreground,
@@ -304,10 +299,15 @@ internal fun KlyroSettingsSheet(
                                 ) {
                                     Text("Font size", color = colors.foreground,
                                         fontWeight = FontWeight.SemiBold)
-                                    Text(
-                                        if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
-                                        color = colors.accent, fontWeight = FontWeight.Bold
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
+                                            color = colors.accent, fontWeight = FontWeight.Bold
+                                        )
+                                        if (fontSizeSp != 13.5f) {
+                                            TextButton(onClick = onResetFont) { Text("Reset") }
+                                        }
+                                    }
                                 }
                                 KlyroThinSlider(
                                     value = fontSizeSp.coerceIn(9f, 24f),
@@ -318,9 +318,6 @@ internal fun KlyroSettingsSheet(
                                         contentDescription = "Terminal font size"
                                     }
                                 )
-                                if (fontSizeSp != 13.5f) {
-                                    TextButton(onClick = onResetFont) { Text("Reset font size") }
-                                }
                             }
                         }
                     }
