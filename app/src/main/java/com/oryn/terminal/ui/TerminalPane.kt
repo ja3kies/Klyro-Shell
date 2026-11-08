@@ -112,6 +112,7 @@ fun TerminalPane(
     title: String,
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
+    outputRevision: Long,
     workspaces: List<KlyroWorkspaceCatalog.Entry>,
     selectedWorkspaceId: String,
     tabWorkspaces: Map<Long, String>,
@@ -606,9 +607,11 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
-            val canSelect = TerminalActionPolicy.hasCopyableOutput(
-                session.emulator?.screen?.transcriptText.orEmpty()
-            )
+            val canSelect = remember(session, outputRevision) {
+                TerminalActionPolicy.hasCopyableOutput(
+                    session.emulator?.screen?.transcriptText.orEmpty()
+                )
+            }
             TerminalExtraKey(
                 "ALL",
                 description = if (canSelect) "Select all terminal output" else "Paste clipboard",
@@ -683,7 +686,12 @@ fun TerminalPane(
     selectedOutput?.let { output ->
         val selectionLimit = 2 * 1024 * 1024
         val truncated = output.length > selectionLimit
-        val visibleOutput = output.takeLast(selectionLimit)
+        val start = (output.length - selectionLimit).coerceAtLeast(0)
+        // Never start a UTF-16 preview with the low half of a surrogate pair.
+        val safeStart = if (start in 1 until output.length &&
+            Character.isLowSurrogate(output[start]) &&
+            Character.isHighSurrogate(output[start - 1])) start + 1 else start
+        val visibleOutput = output.substring(safeStart)
         fun closeSelection() {
             outputSelectionView = null
             selectedOutput = null
@@ -698,7 +706,7 @@ fun TerminalPane(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (truncated) {
                         Text(
-                            "Only the latest 2 MiB are selectable; older output is omitted for memory safety.",
+                            "Only the latest 2 million UTF-16 characters are selectable; older output is omitted for memory safety.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
