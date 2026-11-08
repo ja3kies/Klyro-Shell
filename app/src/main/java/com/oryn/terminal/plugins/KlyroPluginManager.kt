@@ -162,6 +162,9 @@ class KlyroPluginManager(context: Context) {
         val objectJson = JSONObject(String(bytes, StandardCharsets.UTF_8))
         val record = parse(objectJson) ?: error("Unsupported manifest or unsafe commands")
         require(record.id !in bundled.map { it.id }) { "Reserved plugin identifier" }
+        require(installed().none { it.id == record.id }) {
+            "Plugin already installed. Remove it before importing a replacement."
+        }
         upsert(record.copy(enabled = true, source = "local"))
     }
 
