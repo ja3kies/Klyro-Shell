@@ -240,67 +240,69 @@ internal fun KlyroSettingsSheet(
                                     }
                                 }
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                Text("Accent", color = colors.foreground,
-                                    fontWeight = FontWeight.SemiBold)
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    KlyroColors.primary.forEach { preset ->
-                                        val swatch = KlyroColors.create(colors.dark, preset.id)
-                                        val active = accentId == preset.id
-                                        Box(
-                                            modifier = Modifier.size(KlyroUiMetrics.minTouch)
-                                                .clickable(role = Role.RadioButton,
-                                                    onClickLabel = "Select " + preset.label + " accent") {
-                                                    onAccentIdChange(preset.id)
-                                                }
-                                                .semantics {
-                                                    selected = active
-                                                    contentDescription = preset.label + " accent"
-                                                },
-                                            contentAlignment = Alignment.Center
-                                        ) {
+                            if (!themeMode.startsWith("mono-")) {
+                                Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                    Text("Accent", color = colors.foreground,
+                                        fontWeight = FontWeight.SemiBold)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        KlyroColors.primary.forEach { preset ->
+                                            val swatch = KlyroColors.create(colors.dark, preset.id)
+                                            val active = accentId == preset.id
                                             Box(
-                                                modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
-                                                    .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
-                                                    .then(if (active) Modifier.border(
-                                                        KlyroUiMetrics.selectedBorder,
-                                                        colors.foreground,
-                                                        androidx.compose.foundation.shape.CircleShape
-                                                    ) else Modifier),
+                                                modifier = Modifier.size(KlyroUiMetrics.minTouch)
+                                                    .clickable(role = Role.RadioButton,
+                                                        onClickLabel = "Select " + preset.label + " accent") {
+                                                        onAccentIdChange(preset.id)
+                                                    }
+                                                    .semantics {
+                                                        selected = active
+                                                        contentDescription = preset.label + " accent"
+                                                    },
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                if (active) {
-                                                    Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
-                                                        contentDescription = null, tint = swatch.onAccent,
-                                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                                Box(
+                                                    modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
+                                                        .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
+                                                        .then(if (active) Modifier.border(
+                                                            KlyroUiMetrics.selectedBorder,
+                                                            colors.foreground,
+                                                            androidx.compose.foundation.shape.CircleShape
+                                                        ) else Modifier),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    if (active) {
+                                                        Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
+                                                            contentDescription = null, tint = swatch.onAccent,
+                                                            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                                    }
                                                 }
                                             }
                                         }
+                                        Box(
+                                            modifier = Modifier.size(KlyroUiMetrics.minTouch)
+                                                .background(colors.key, androidx.compose.foundation.shape.CircleShape)
+                                                .clickable(role = Role.Button,
+                                                    onClickLabel = "Choose custom accent") {
+                                                    showColorPicker = true
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(painterResource(R.drawable.hugeicons_plus_sign),
+                                                contentDescription = null, tint = colors.accent,
+                                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                        }
                                     }
-                                    Box(
-                                        modifier = Modifier.size(KlyroUiMetrics.minTouch)
-                                            .background(colors.key, androidx.compose.foundation.shape.CircleShape)
-                                            .clickable(role = Role.Button,
-                                                onClickLabel = "Choose custom accent") {
-                                                showColorPicker = true
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(painterResource(R.drawable.hugeicons_plus_sign),
-                                            contentDescription = null, tint = colors.accent,
-                                            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                                    }
+                                    val chosen = KlyroColors.selectedOption(accentId)?.label
+                                        ?: if (accentId.startsWith("custom:")) "Custom" else "Lime"
+                                    Text(chosen, color = colors.muted,
+                                        style = MaterialTheme.typography.bodySmall)
                                 }
-                                val chosen = KlyroColors.selectedOption(accentId)?.label
-                                    ?: if (accentId.startsWith("custom:")) "Custom" else "Lime"
-                                Text(chosen, color = colors.muted,
-                                    style = MaterialTheme.typography.bodySmall)
+                                HorizontalDivider(color = colors.muted.copy(alpha = 0.18f))
                             }
-                            HorizontalDivider(color = colors.muted.copy(alpha = 0.18f))
                             Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                                 Text("Terminal font", color = colors.foreground,
                                     fontWeight = FontWeight.SemiBold)
