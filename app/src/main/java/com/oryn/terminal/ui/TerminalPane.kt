@@ -27,6 +27,7 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -155,9 +156,6 @@ fun TerminalPane(
     var showCommandPalette by remember(session) { mutableStateOf(false) }
     val currentProject = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
     var showTerminalSettings by remember(session) { mutableStateOf(false) }
-    val selectedBrandIcon = remember(context, showTerminalSettings) {
-        KlyroBrandChoice.selected(context)
-    }
     var initialSettingsSection by remember(session) { mutableStateOf("home") }
     var sessionSheetId by remember(session) { mutableStateOf<Long?>(null) }
     var renameDialogId by remember(session) { mutableStateOf<Long?>(null) }
@@ -165,6 +163,9 @@ fun TerminalPane(
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
     val context = LocalContext.current
+    val selectedBrandIcon = remember(context, showTerminalSettings) {
+        KlyroBrandChoice.selected(context)
+    }
     val clipboardManager = remember(context) {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     }
