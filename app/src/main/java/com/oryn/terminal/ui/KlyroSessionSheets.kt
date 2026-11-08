@@ -1,10 +1,13 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,10 +52,18 @@ internal fun KlyroSessionSheet(
 ) {
     var confirmClose by remember(sessionName) { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
+    val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
+        rows = 4,
+        screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp,
+        fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
+    )
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = { if (!confirmClose) onDismiss() }) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = KlyroUiMetrics.sheetGutter)
+                modifier = Modifier.fillMaxWidth()
+                    .heightIn(max = KlyroUiMetrics.sheetContentMax)
+                    .then(if (needsScroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                    .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
             ) {
