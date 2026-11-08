@@ -9,6 +9,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Klyro-only visual tokens. One source of truth for the status/navigation bars,
@@ -194,6 +195,7 @@ object KlyroUiMetrics {
     val glyphMedium = 24.dp
     val accentSwatch = 36.dp
     val iconWell = 40.dp
+    val shortcutCaption = 10.sp
     val bentoMinHeight = 112.dp
     val bentoInnerPadding = 14.dp
     val bentoGridGap = 10.dp
