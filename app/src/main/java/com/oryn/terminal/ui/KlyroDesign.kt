@@ -34,6 +34,10 @@ data class KlyroColors(
     val onAccent: Color,
     val danger: Color
 ) {
+    // Terminal canvas can differ from application chrome (Contrast uses black on white).
+    val terminalInk: Color get() = if (accentId == "mono-contrast") Color.White else foreground
+    val terminalPrompt: Color get() = if (accentId == "mono-contrast") Color.White else accent
+
     // Semantic statuses used by every screen, regardless of current accent.
     val readyInk: Color get() = if (dark) Color(0xFFACF3BE) else Color(0xFF12603E)
     val warningInk: Color get() = if (dark) Color(0xFFF2CD8F) else Color(0xFF885017)
