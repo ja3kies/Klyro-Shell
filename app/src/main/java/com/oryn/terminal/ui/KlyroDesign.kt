@@ -180,7 +180,7 @@ object KlyroUiMetrics {
     val controlCorner = 14.dp
     val minTouch = 48.dp
     val sheetGutter = 16.dp
-    val cardPadding = 14.dp
+    val cardPadding = 12.dp
     val spaceXs = 4.dp
     val spaceSm = 8.dp
     val spaceMd = 12.dp
@@ -188,7 +188,7 @@ object KlyroUiMetrics {
     val spaceXl = 24.dp
     val compactRow = 52.dp
     val optionRow = 48.dp
-    val sectionGap = 20.dp
+    val sectionGap = 12.dp
     val selectedCorner = 16.dp
     val selectedBorder = 1.5.dp
     val glyphSmall = 20.dp
@@ -196,9 +196,9 @@ object KlyroUiMetrics {
     val accentSwatch = 36.dp
     val iconWell = 40.dp
     val shortcutCaption = 10.sp
-    val bentoMinHeight = 112.dp
-    val bentoInnerPadding = 14.dp
-    val bentoGridGap = 10.dp
+    val bentoMinHeight = 86.dp
+    val bentoInnerPadding = 12.dp
+    val bentoGridGap = 8.dp
     val iosSliderTrack = 4.dp
     val iosSliderThumb = 24.dp
     val iosSliderBorder = 1.dp
