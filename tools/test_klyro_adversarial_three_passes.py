@@ -64,8 +64,9 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
         self.assertIn("KlyroUiMetrics.minTouch", settings)
         self.assertIn("val bentoMinHeight = 86.dp", design)
         self.assertEqual(settings.count("KlyroThemePreviewCard("), 2)
-        for key in ("mono-black", "mono-paper", "mono-contrast", "system", "light", "dark"):
+        for key in ("mono-black", "mono-paper", "mono-contrast", "light", "dark"):
             self.assertIn('"' + key + '"', previews)
+        self.assertIn('"system" to "System"', settings)
         self.assertIn("Color.Black", previews)
         self.assertIn("Color.White", previews)
         self.assertNotIn('Text("9 sp"', settings)
