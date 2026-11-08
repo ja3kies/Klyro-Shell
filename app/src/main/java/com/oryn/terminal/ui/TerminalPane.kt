@@ -1089,7 +1089,7 @@ private fun TerminalExtraKey(
                     modifier = Modifier.size(KlyroUiMetrics.glyphSmall),
                     tint = if (active) accentTint else inkTint
                 )
-                Text(label, fontSize = 9.sp, lineHeight = 10.sp,
+                Text(label, fontSize = KlyroUiMetrics.shortcutCaption, lineHeight = 12.sp,
                     fontFamily = FontFamily.Monospace, maxLines = 1)
             }
         } else if (arrow != null) {
