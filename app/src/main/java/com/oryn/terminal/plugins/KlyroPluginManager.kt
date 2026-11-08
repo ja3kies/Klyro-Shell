@@ -31,15 +31,19 @@ class KlyroPluginManager(context: Context) {
         const val MAX_MANIFEST_BYTES = 16 * 1024
         private val validId = Regex("[a-z][a-z0-9._-]{2,60}")
         private val safeText = Regex("[A-Za-z0-9_./~ -]{1,160}")
-        private val readOnlyCommands = listOf(
-            "pwd", "ls", "git status", "git diff", "git log",
-            "pkg search", "pkg list-installed", "uname", "whoami", "date", "id"
+        // Exact reviewed templates only: allowing arbitrary arguments to "git diff"
+        // admits --ext-diff, which can execute a configured helper.
+        private val readOnlyCommands = setOf(
+            "pwd", "ls", "ls -la", "git status", "git diff", "git diff --stat",
+            "git log", "git log -5 --oneline", "pkg list-installed",
+            "uname", "uname -a", "whoami", "date", "id"
         )
+        private val safePackageSearch = Regex("pkg search [A-Za-z0-9._-]{1,40}")
 
         fun safeInsertion(text: String): Boolean {
             val value = text.trim()
             return value == text && safeText.matches(value) &&
-                readOnlyCommands.any { value == it || value.startsWith("$it ") }
+                (readOnlyCommands.contains(value) || safePackageSearch.matches(value))
         }
 
         val bundled: List<KlyroPluginRecord> = listOf(
@@ -76,8 +80,10 @@ class KlyroPluginManager(context: Context) {
         }.distinctBy { it.id }
     }.getOrDefault(emptyList())
 
+    // A LazyColumn key must be unique even if different packs reuse a label.
     fun activeCommands(): List<KlyroPluginCommand> = installed()
         .filter { it.enabled }.flatMap { it.commands }
+        .distinctBy { it.label to it.insert }
 
     private fun parse(json: JSONObject?): KlyroPluginRecord? {
         if (json == null) return null
@@ -146,7 +152,7 @@ class KlyroPluginManager(context: Context) {
         upsert(item)
     }
 
-    fun importManifest(uri: Uri) {
+    fun previewManifest(uri: Uri): KlyroPluginRecord {
         val bytes = resolver.openInputStream(uri)?.use { input ->
             val output = ByteArrayOutputStream()
             val chunk = ByteArray(2048)
@@ -165,6 +171,15 @@ class KlyroPluginManager(context: Context) {
         require(installed().none { it.id == record.id }) {
             "Plugin already installed. Remove it before importing a replacement."
         }
+        return record.copy(enabled = true, source = "local")
+    }
+
+    /** Explicit user confirmation is required between parsing and committing. */
+    fun installPreview(record: KlyroPluginRecord) {
+        require(record.id !in bundled.map { it.id }) { "Reserved plugin identifier" }
+        require(record.commands.size in 1..MAX_COMMANDS &&
+            record.commands.all { safeInsertion(it.insert) }) { "Unsafe command template" }
+        require(installed().none { it.id == record.id }) { "Plugin already installed" }
         upsert(record.copy(enabled = true, source = "local"))
     }
 
