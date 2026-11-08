@@ -28,6 +28,10 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
 
     private val tabs = mutableStateListOf<ShellTab>()
     private val unreadActivity = mutableStateMapOf<Long, Boolean>()
+    // Native TerminalView draws outside Compose. Notify the smart ALL key when
+    // the active terminal transcript changes, including output from child jobs.
+    private val outputRevisions = mutableStateMapOf<Long, Long>()
+    fun outputRevision(tabId: Long?): Long = tabId?.let { outputRevisions[it] } ?: 0L
     val tabsWithUnreadOutput: Set<Long> get() = unreadActivity.keys.toSet()
     private val invalidTitleCharacters = Regex("[\\p{Cntrl}\\p{Cf}]")
     val sessions: List<ShellTab> get() = tabs
@@ -88,8 +92,9 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     fun listenerFor(tabId: Long): OrynTerminalSessionClient.Listener =
         object : OrynTerminalSessionClient.Listener {
             override fun onOutputActivity() {
-                if (activeTabId != tabId && tabs.any { it.id == tabId }) {
-                    unreadActivity[tabId] = true
+                if (tabs.any { it.id == tabId }) {
+                    outputRevisions[tabId] = (outputRevisions[tabId] ?: 0L) + 1L
+                    if (activeTabId != tabId) unreadActivity[tabId] = true
                 }
             }
             override fun onTitleChanged(title: String?) {
@@ -160,6 +165,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (pendingNativePaste?.tabId == id) pendingNativePaste = null
         val entry = tabs.removeAt(index)
         unreadActivity.remove(id)
+        outputRevisions.remove(id)
         entry.client.dispose()
         entry.viewClient.attachView(null)
         entry.session.finishIfRunning()
