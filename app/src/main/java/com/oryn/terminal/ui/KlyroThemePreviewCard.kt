@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,6 +41,7 @@ internal fun KlyroThemePreviewCard(
 ) {
     val current = LocalKlyroColors.current
     val preview = when (mode) {
+        "system" -> Triple(Color(0xFFE5F0E9), Color.White, Color(0xFF56620C))
         "light" -> Triple(Color(0xFFF2F7F5), Color.White, Color(0xFF56620C))
         "dark" -> Triple(Color(0xFF11191D), Color(0xFF202A2F), Color(0xFFBDCC64))
         "mono-black" -> Triple(Color.Black, Color(0xFF101010), Color.White)
@@ -78,7 +80,7 @@ internal fun KlyroThemePreviewCard(
                             Color(0xFF11191D) to Color(0xFFBDCC64)
                         ).forEach { (background, ink) ->
                             Box(
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).fillMaxHeight()
                                     .background(background)
                                     .padding(start = 6.dp),
                                 contentAlignment = Alignment.CenterStart
