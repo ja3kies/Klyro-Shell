@@ -23,6 +23,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -90,6 +92,7 @@ import android.os.Looper
 import com.oryn.terminal.ui.KlyroTerminalPalette
 import com.oryn.terminal.ui.OrynTerminalViewClient
 import com.oryn.terminal.ui.TerminalPane
+import com.oryn.terminal.ui.KlyroPluginsPage
 import com.termux.terminal.TerminalSession
 import java.io.IOException
 
@@ -876,6 +879,7 @@ private fun OrynTerminalApp(
     // Each role keeps its contrast in both Klyro Soft Mint and Klyro Dark.
     val ui = LocalKlyroColors.current
     val context = androidx.compose.ui.platform.LocalContext.current
+    var showPlugins by remember { mutableStateOf(false) }
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
@@ -909,7 +913,9 @@ private fun OrynTerminalApp(
             .imePadding(),
         color = screenChrome
     ) {
-        if (session != null && sessionClient != null && viewClient != null) {
+        if (showPlugins) {
+            KlyroPluginsPage(onBack = { showPlugins = false })
+        } else if (session != null && sessionClient != null && viewClient != null) {
             TerminalPane(
                 session = session,
                 darkChrome = darkChrome,
@@ -972,24 +978,69 @@ private fun OrynTerminalApp(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(44.dp)
-                            .background(ui.accent.copy(alpha = .10f), RoundedCornerShape(14.dp)),
+                        modifier = Modifier.size(60.dp)
+                            .clip(RoundedCornerShape(19.dp))
+                            .background(Color(0xFF0C0B13)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_klyro_mark_monochrome),
-                            contentDescription = "Klyro Shell",
-                            tint = ui.accent,
-                            modifier = Modifier.size(36.dp)
+                            painter = painterResource(R.drawable.ic_klyro_launcher_foreground),
+                            contentDescription = "Klyro Shell logo",
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(80.dp)
                         )
                     }
-                    Column {
-                        Text("KLYRO", color = ui.foreground, fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Text("KLYRO", color = ui.foreground, fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                            Surface(
+                                color = ui.accent.copy(alpha = .14f),
+                                shape = RoundedCornerShape(7.dp)
+                            ) {
+                                Text("ARM64", color = ui.accent,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                         Text("SHELL", color = ui.muted, fontSize = 11.sp,
                             letterSpacing = 2.5.sp)
                     }
                     Spacer(Modifier.weight(1f))
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable(onClickLabel = "Open Klyro plugins") { showPlugins = true },
+                    color = ui.tile,
+                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+                    border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(42.dp).background(
+                                ui.accent.copy(alpha = .12f), RoundedCornerShape(13.dp)
+                            ), contentAlignment = Alignment.Center
+                        ) {
+                            Icon(painterResource(R.drawable.hugeicons_grid2x2),
+                                contentDescription = null, tint = ui.accent,
+                                modifier = Modifier.size(23.dp))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("Plugins", color = ui.foreground, fontWeight = FontWeight.SemiBold)
+                            Text("Extend the command palette", color = ui.muted,
+                                fontSize = 12.sp)
+                        }
+                        Icon(painterResource(R.drawable.hugeicons_arrow_up_right_01),
+                            contentDescription = null, tint = ui.accent,
+                            modifier = Modifier.size(20.dp))
+                    }
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
