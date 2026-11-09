@@ -908,6 +908,7 @@ private fun OrynTerminalApp(
         else -> ui.accent
     }
 
+    val homeAction = KlyroHomeActionPolicy.decide(runtimeVerified, hasRunningSessions)
     val screenChrome = ui.chrome
     Surface(
         // Paint before insets; the transparent status bar must show Klyro, not
@@ -1182,6 +1183,24 @@ private fun OrynTerminalApp(
                             Text("$progress%", color = ui.accent, fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace)
                         }
+                        // An existing PTY remains reachable while runtime checks fail or run.
+                        if (homeAction != KlyroHomeAction.NONE) {
+                            Button(
+                                onClick = onLaunch,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = ui.accent,
+                                    contentColor = ui.onAccent
+                                ),
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                            ) {
+                                Text(
+                                    if (homeAction == KlyroHomeAction.RESUME_SESSION)
+                                        "Return to terminal" else "Launch Bash",
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                         if (!runtimeVerified) {
                             Button(
                                 onClick = onInstall,
@@ -1210,18 +1229,6 @@ private fun OrynTerminalApp(
                             }
                         }
                         if (runtimeVerified) {
-                            Button(
-                                onClick = onLaunch,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = ui.accent,
-                                    contentColor = ui.onAccent
-                                ),
-                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                            ) {
-                                Text(if (hasRunningSessions) "Return to terminal" else "Launch Bash",
-                                    fontWeight = FontWeight.SemiBold)
-                            }
                             TextButton(
                                 onClick = onRecheck,
                                 enabled = !verifyingRuntime && !installing,
