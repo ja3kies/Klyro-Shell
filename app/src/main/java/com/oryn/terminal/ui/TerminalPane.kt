@@ -530,7 +530,7 @@ fun TerminalPane(
                         onClick = onReturnHome,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                     ) {
-                        Text("Home", color = TerminalAccent, fontSize = 12.sp)
+                        Text("Home", color = TerminalText, fontSize = 12.sp)
                     }
                 }
             }
@@ -558,7 +558,7 @@ fun TerminalPane(
                         onClick = { warningNoteDismissed = true },
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                     ) {
-                        Text("Dismiss", color = TerminalAccent, fontSize = 12.sp)
+                        Text("Dismiss", color = TerminalText, fontSize = 12.sp)
                     }
                 }
             }
