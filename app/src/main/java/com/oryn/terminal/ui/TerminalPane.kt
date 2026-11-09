@@ -272,10 +272,10 @@ fun TerminalPane(
         terminalFontSp = (terminalFontSp + delta).coerceIn(9f, 24f)
         fontPreferences.edit().putFloat("font_size_sp", terminalFontSp).apply()
     }
-    var showTranscriptSearch by remember(session) { mutableStateOf(false) }
-    var transcriptQuery by remember(session) { mutableStateOf("") }
-    var findMatchCase by remember(session) { mutableStateOf(false) }
-    var searchIndex by remember(session) { mutableStateOf(0) }
+    var showTranscriptSearch by rememberSaveable(session) { mutableStateOf(false) }
+    var transcriptQuery by rememberSaveable(session) { mutableStateOf("") }
+    var findMatchCase by rememberSaveable(session) { mutableStateOf(false) }
+    var searchIndex by rememberSaveable(session) { mutableStateOf(0) }
     var pendingSearch by remember(session) { mutableStateOf<Int?>(null) }
     val keyboard = LocalSoftwareKeyboardController.current
     val ime = WindowInsets.ime
