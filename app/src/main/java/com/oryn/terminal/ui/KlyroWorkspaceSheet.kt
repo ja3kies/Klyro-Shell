@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import androidx.activity.compose.BackHandler
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +70,11 @@ internal fun KlyroWorkspaceSheet(
     var editorError by remember { mutableStateOf(false) }
     var deletingId by remember { mutableStateOf<String?>(null) }
     var menuId by remember { mutableStateOf<String?>(null) }
+    // Treat inline editing as a navigation layer, not as a reason to close the sheet.
+    BackHandler(enabled = editorId != null && deletingId == null && menuId == null) {
+        editorId = null
+        editorError = false
+    }
     val selected = entries.firstOrNull { it.id == selectedId } ?: entries.firstOrNull()
     if (selected == null) {
         KlyroModalTheme {
