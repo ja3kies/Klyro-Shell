@@ -74,7 +74,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn('"Select all terminal output"', self.pane)
 
     def test_all_disabled_only_if_both_actions_unavailable(self):
-        self.assertIn("enabled = canSelect || (session.isRunning() && clipboardAvailable)", self.pane)
+        self.assertIn("enabled = canSelect || (session.isRunning() && session.emulator != null && clipboardAvailable)", self.pane)
 
     def test_all_reports_active_selection(self):
         self.assertIn("active = selectedOutput != null", self.pane)
