@@ -676,7 +676,7 @@ fun TerminalPane(
                     controlActive, altActive, shiftActive))
             }
             TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth, darkChrome = darkChrome) {
-                transcriptQuery = ""
+                // Keep the previous query for successive searches in this session.
                 searchIndex = 0
                 showTranscriptSearch = true
             }
