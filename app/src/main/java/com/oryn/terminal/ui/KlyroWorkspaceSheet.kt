@@ -149,6 +149,14 @@ internal fun KlyroWorkspaceSheet(
                         }
                     }
                 }
+                if (entries.size >= KlyroWorkspaceCatalog.MAX_PROJECTS) {
+                    Text(
+                        "Workspace limit reached. Remove an unused workspace to add another.",
+                        color = c.muted,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 entries.forEach { entry ->
                     val count = tabs.count {
                         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == entry.id
