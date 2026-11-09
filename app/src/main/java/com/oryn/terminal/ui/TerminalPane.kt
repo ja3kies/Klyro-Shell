@@ -503,10 +503,14 @@ fun TerminalPane(
                     .clickable(
                         enabled = tabs.size < 8,
                         role = Role.Button,
-                        onClickLabel = "New terminal",
+                        onClickLabel = if (tabs.size < 8) "New terminal" else
+                            "Maximum 8 terminal sessions",
                         onClick = onNewTab
                     )
-                    .semantics { contentDescription = "New terminal" },
+                    .semantics {
+                        contentDescription = if (tabs.size < 8) "New terminal" else
+                            "Maximum 8 terminal sessions"
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
@@ -520,9 +524,14 @@ fun TerminalPane(
                     ) else null
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.hugeicons_plus_sign),
-                            contentDescription = null,
-                            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                        if (tabs.size < 8) {
+                            Icon(painterResource(R.drawable.hugeicons_plus_sign),
+                                contentDescription = null,
+                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                        } else {
+                            Text("8/8", fontSize = 10.sp, color = TerminalMuted,
+                                fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
             }
