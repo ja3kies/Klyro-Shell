@@ -1023,15 +1023,19 @@ private fun OrynTerminalApp(
                             modifier = Modifier.size(52.dp)
                         )
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                             Text("KLYRO", color = ui.foreground, fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
-                                maxLines = 1)
+                                modifier = Modifier.weight(1f), maxLines = 1,
+                                overflow = TextOverflow.Ellipsis)
                             Surface(
                                 color = ui.accent.copy(alpha = .14f),
-                                shape = RoundedCornerShape(7.dp)
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
                                 Text("ARM64", color = ui.accent,
                                     modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
@@ -1040,9 +1044,8 @@ private fun OrynTerminalApp(
                             }
                         }
                         Text("SHELL", color = ui.muted, fontSize = 11.sp,
-                            letterSpacing = 2.5.sp)
+                            letterSpacing = 2.5.sp, maxLines = 1)
                     }
-                    Spacer(Modifier.weight(1f))
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
