@@ -59,7 +59,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
 
     def test_all_action_selects_only_when_output_is_copyable(self):
         self.assertIn("TerminalActionPolicy.hasCopyableOutput(output)", self.pane)
-        self.assertIn("selectedOutput = output", self.pane)
+        self.assertIn("selectedOutput = TerminalActionPolicy.selectionTail(output)", self.pane)
 
     def test_all_action_falls_back_to_clipboard(self):
         self.assertIn("fun selectTerminalOutput(expectedSelection: Boolean)", self.pane)
