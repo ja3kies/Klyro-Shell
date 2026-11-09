@@ -1112,7 +1112,7 @@ private fun OrynTerminalApp(
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 color = ui.warningContainer,
-                                shape = RoundedCornerShape(10.dp)
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
                                 Column(
                                     modifier = Modifier.padding(12.dp),
@@ -1125,11 +1125,18 @@ private fun OrynTerminalApp(
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
-                                        warningLines.first(),
+                                        if (showAllWarnings) warningLines.joinToString("\n") else warningLines.first(),
                                         color = ui.muted, fontSize = 12.sp, lineHeight = 17.sp,
                                         fontFamily = FontFamily.Monospace,
-                                        maxLines = 3
+                                        maxLines = if (showAllWarnings) 24 else 3,
+                                        overflow = TextOverflow.Ellipsis
                                     )
+                                    if (warningLines.size > 1) {
+                                        TextButton(
+                                            onClick = { showAllWarnings = !showAllWarnings },
+                                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                        ) { Text(if (showAllWarnings) "Show less" else "Show all warnings") }
+                                    }
                                 }
                             }
                         }
@@ -1154,8 +1161,9 @@ private fun OrynTerminalApp(
                                 if (showTechnicalDetails) {
                                     TextButton(
                                         onClick = onCopyTechnicalDetails,
-                                        modifier = Modifier.heightIn(min = 48.dp),
-                                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+                                        modifier = Modifier.fillMaxWidth()
+                                            .heightIn(min = KlyroUiMetrics.minTouch),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                                     ) {
                                         Text("Copy", color = ui.accent, fontSize = 13.sp)
                                     }
@@ -1173,13 +1181,17 @@ private fun OrynTerminalApp(
                                             .verticalScroll(rememberScrollState())
                                     ) {
                                         Text(
-                                            technicalErrorDetails,
+                                            technicalErrorDetails.take(16_000),
                                             color = ui.muted,
                                             fontSize = 12.sp,
                                             lineHeight = 17.sp,
                                             fontFamily = FontFamily.Monospace
                                         )
                                     }
+                                }
+                                if (showTechnicalDetails && technicalErrorDetails.length > 16_000) {
+                                    Text("Preview shortened. Copy technical details for the complete report.",
+                                        color = ui.muted, style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
