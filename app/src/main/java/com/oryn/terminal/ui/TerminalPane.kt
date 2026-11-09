@@ -277,11 +277,15 @@ fun TerminalPane(
     var findMatchCase by rememberSaveable(session) { mutableStateOf(false) }
     var searchIndex by rememberSaveable(session) { mutableStateOf(0) }
     var pendingSearch by remember(session) { mutableStateOf<Int?>(null) }
+    var pendingSearchQuery by remember(session) { mutableStateOf("") }
+    var pendingSearchCase by remember(session) { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
     val ime = WindowInsets.ime
     val density = LocalDensity.current
     LaunchedEffect(pendingSearch, session, activeTerminalView) {
         val index = pendingSearch ?: return@LaunchedEffect
+        val requestedQuery = pendingSearchQuery
+        val requestedCase = pendingSearchCase
         val view = activeTerminalView ?: return@LaunchedEffect
         // Dialog dismissal and IME animation resize the PTY and reset TerminalView's top row.
         var stableFrames = 0
@@ -294,7 +298,7 @@ fun TerminalPane(
             lastHeight = view.height
         }
         session.emulator?.let { emulator ->
-            val matches = TranscriptSearch.findRows(emulator.screen, emulator.mColumns, emulator.mRows, transcriptQuery, findMatchCase)
+            val matches = TranscriptSearch.findRows(emulator.screen, emulator.mColumns, emulator.mRows, requestedQuery, requestedCase)
             if (matches.isNotEmpty()) {
                 view.setTopRow(TranscriptSearch.topRow(matches[index.coerceAtMost(matches.lastIndex)],
                     emulator.mRows, emulator.screen.activeTranscriptRows))
@@ -1099,6 +1103,9 @@ fun TerminalPane(
             confirmButton = {
                 Button(
                     onClick = {
+                        // Snapshot the exact query/case accepted before IME animation.
+                        pendingSearchQuery = transcriptQuery
+                        pendingSearchCase = findMatchCase
                         pendingSearch = position
                         keyboard?.hide()
                         showTranscriptSearch = false
