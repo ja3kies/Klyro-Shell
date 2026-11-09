@@ -38,11 +38,11 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
         terminal = READ(UI / "TerminalPane.kt")
         actions = terminal.split("val firstRow:", 1)[1].split("if (compact)", 1)[0]
         self.assertIn('"ALL",\n                description = if (canSelect) "Select all terminal output" else "Paste clipboard"', actions)
-        self.assertIn(") { selectTerminalOutput() }", actions)
+        self.assertIn(") { selectTerminalOutput(canSelect) }", actions)
         self.assertNotIn('"PASTE", description = "Paste clipboard text"', actions)
         self.assertIn("pasteClipboard()", terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
-        selection = terminal.split("fun selectTerminalOutput()", 1)[1].split(
+        selection = terminal.split("fun selectTerminalOutput(expectedSelection: Boolean)", 1)[1].split(
             "// Fit seven", 1
         )[0]
         self.assertIn("selectedOutput = output", selection)
