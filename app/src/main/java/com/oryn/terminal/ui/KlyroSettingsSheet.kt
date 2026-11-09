@@ -188,7 +188,7 @@ internal fun KlyroSettingsSheet(
                                         modifier = Modifier.weight(1f)
                                             .heightIn(min = 96.dp)
                                             .clickable {
-                                                if (selectedBrand != choice) {
+                                                if (!KlyroBrandChoice.isVerifiedSelection(context, choice)) {
                                                     brandSwitchError = !KlyroBrandChoice.select(context, choice)
                                                     selectedBrand = KlyroBrandChoice.selected(context)
                                                 }

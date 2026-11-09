@@ -47,7 +47,11 @@ class LauncherAliasHardening(unittest.TestCase):
         self.assertLess(self.source.index("if (!switched)"), self.source.index(".edit().putString(KEY, choice).apply()"))
 
     def test_old_alias_is_not_repeatedly_switched(self):
-        self.assertIn("if (selectedBrand != choice)", self.settings)
+        self.assertIn("if (!KlyroBrandChoice.isVerifiedSelection(context, choice))", self.settings)
+
+    def test_invalid_os_alias_configuration_is_recoverable(self):
+        self.assertIn("fun isVerifiedSelection(context: Context, choice: String): Boolean", self.source)
+        self.assertIn("verifiedChoice(context) == choice", self.source)
 
     def test_ui_reflects_actual_os_state_after_attempt(self):
         self.assertIn("selectedBrand = KlyroBrandChoice.selected(context)", self.settings)
