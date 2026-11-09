@@ -18,6 +18,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -64,9 +67,11 @@ internal fun KlyroCommandPalette(
     var query by rememberSaveable { mutableStateOf("") }
     var showingGuide by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = showingGuide) { showingGuide = false }
+    BackHandler(enabled = pendingCautionCommand != null) { pendingCautionCommand = null }
 
     var info by remember { mutableStateOf<String?>(null) }
     var unsafeFeedback by remember { mutableStateOf(false) }
+    var pendingCautionCommand by rememberSaveable { mutableStateOf<String?>(null) }
     val matches = remember(query) { KlyroCommandCatalog.search(query) }
     val pluginMatches = remember(query, pluginCommands) {
         pluginCommands.filter { command ->
@@ -77,7 +82,11 @@ internal fun KlyroCommandPalette(
 
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = {
-            if (showingGuide) showingGuide = false else onDismiss()
+            when {
+                pendingCautionCommand != null -> pendingCautionCommand = null
+                showingGuide -> showingGuide = false
+                else -> onDismiss()
+            }
         }) {
             Column(
                 modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
@@ -225,9 +234,14 @@ internal fun KlyroCommandPalette(
                                         if (available) {
                                             val snippet = KlyroCommandCatalog.safeInsertion(entry)
                                             if (snippet.isNotEmpty()) {
-                                                keyboard?.hide()
-                                                onDismiss()
-                                                onInsert(snippet)
+                                                if (entry.caution) {
+                                                    keyboard?.hide()
+                                                    pendingCautionCommand = snippet
+                                                } else {
+                                                    keyboard?.hide()
+                                                    onDismiss()
+                                                    onInsert(snippet)
+                                                }
                                             }
                                         } else {
                                             unsafeFeedback = false
@@ -278,6 +292,44 @@ internal fun KlyroCommandPalette(
                     }
                 }
             }
+        }
+        pendingCautionCommand?.let { command ->
+            AlertDialog(
+                onDismissRequest = { pendingCautionCommand = null },
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+                containerColor = colors.sheet,
+                title = { Text("Review command") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("This command may change installed packages or files. " +
+                            "It will be inserted into the terminal, not run automatically.",
+                            color = colors.foreground)
+                        Surface(color = colors.key,
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
+                            Text(command, fontFamily = FontFamily.Monospace,
+                                color = colors.foreground,
+                                modifier = Modifier.fillMaxWidth().padding(12.dp))
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            pendingCautionCommand = null
+                            onDismiss()
+                            onInsert(command)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.accent, contentColor = colors.onAccent
+                        )
+                    ) { Text("Insert command") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingCautionCommand = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
