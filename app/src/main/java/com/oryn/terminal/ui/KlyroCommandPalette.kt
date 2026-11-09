@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,11 +61,12 @@ internal fun KlyroCommandPalette(
 ) {
     val colors = LocalKlyroColors.current
     val keyboard = LocalSoftwareKeyboardController.current
-    var query by remember { mutableStateOf("") }
-    var showingGuide by remember { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var showingGuide by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = showingGuide) { showingGuide = false }
 
     var info by remember { mutableStateOf<String?>(null) }
+    var unsafeFeedback by remember { mutableStateOf(false) }
     val matches = remember(query) { KlyroCommandCatalog.search(query) }
     val pluginMatches = remember(query, pluginCommands) {
         pluginCommands.filter { command ->
@@ -134,14 +136,14 @@ internal fun KlyroCommandPalette(
                         style = MaterialTheme.typography.bodySmall
                     )
                     if (info != null) {
-                        Surface(color = colors.warningContainer,
+                        Surface(color = if (unsafeFeedback) colors.warningContainer else colors.key,
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
                             Text(
                                 info.orEmpty(),
                                 modifier = Modifier.fillMaxWidth().padding(12.dp)
                                     .semantics { liveRegion = LiveRegionMode.Polite },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = colors.foreground
+                                color = if (unsafeFeedback) colors.warningInk else colors.foreground
                             )
                         }
                     }
@@ -178,6 +180,7 @@ internal fun KlyroCommandPalette(
                                             onDismiss()
                                             onInsert(command.insert)
                                         } else {
+                                            unsafeFeedback = true
                                             info = "This plugin command cannot be inserted safely."
                                         }
                                     }
@@ -193,7 +196,7 @@ internal fun KlyroCommandPalette(
                                     horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
                                 ) {
                                     Icon(painterResource(R.drawable.hugeicons_grid2x2),
-                                        contentDescription = null, tint = colors.accent,
+                                        contentDescription = null, tint = colors.muted,
                                         modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                     Column(Modifier.weight(1f)) {
                                         Text(command.label, fontWeight = FontWeight.SemiBold,
@@ -223,6 +226,7 @@ internal fun KlyroCommandPalette(
                                                 onInsert(snippet)
                                             }
                                         } else {
+                                            unsafeFeedback = false
                                             info = if (!entry.insertable) entry.note else
                                                 "Command not installed in Klyro's private prefix. " + entry.note
                                         }
@@ -241,7 +245,7 @@ internal fun KlyroCommandPalette(
                                         KlyroUiMetrics.spaceMd)
                                 ) {
                                     Icon(painterResource(R.drawable.hugeicons_terminal),
-                                        contentDescription = null, tint = colors.accent,
+                                        contentDescription = null, tint = colors.muted,
                                         modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                     Column(Modifier.weight(1f),
                                         verticalArrangement = Arrangement.spacedBy(

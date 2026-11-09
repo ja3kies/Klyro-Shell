@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
@@ -88,7 +89,7 @@ internal fun KlyroSettingsSheet(
     onShareDiagnostic: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var section by remember(initialSection) {
+    var section by rememberSaveable(initialSection) {
         mutableStateOf(initialSection.takeIf {
             it in setOf("home", "appearance", "keyboard", "files",
                 "privacy", "diagnostics", "about")
@@ -96,7 +97,7 @@ internal fun KlyroSettingsSheet(
     }
     var showFontLicense by remember { mutableStateOf(false) }
     var showHugeiconsLicense by remember { mutableStateOf(false) }
-    var showColorPicker by remember { mutableStateOf(false) }
+    var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var cannotOpenPermissions by remember { mutableStateOf(false) }
     var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
     var brandSwitchError by remember { mutableStateOf(false) }
@@ -146,7 +147,7 @@ internal fun KlyroSettingsSheet(
                             modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                         ) {
                             Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
-                                contentDescription = null, tint = colors.accent,
+                                contentDescription = null, tint = colors.muted,
                                 modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                             Text("Settings")
                         }
