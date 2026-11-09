@@ -237,24 +237,6 @@ fun TerminalPane(
         }
     }
     var activeTerminalView by remember(session) { mutableStateOf<TerminalView?>(null) }
-    LaunchedEffect(
-        activeTabId, activeTerminalView, sessionSheetId, renameDialogId,
-        shellChooserSourceId, showWorkspaceSheet, showCommandPalette,
-        showTerminalSettings, showTranscriptSearch, showEndSessionConfirmation,
-        selectedOutput, pendingMultilinePaste
-    ) {
-        if (sessionSheetId == null && renameDialogId == null &&
-            shellChooserSourceId == null && !showWorkspaceSheet &&
-            !showCommandPalette && !showTerminalSettings &&
-            !showTranscriptSearch && !showEndSessionConfirmation &&
-            selectedOutput == null && pendingMultilinePaste == null
-        ) {
-            activeTerminalView?.let { view ->
-                view.isFocusableInTouchMode = true
-                view.requestFocus()
-            }
-        }
-    }
     val fontPreferences = remember(context) {
         context.getSharedPreferences("klyro_terminal_preferences", Context.MODE_PRIVATE)
     }
@@ -331,6 +313,25 @@ fun TerminalPane(
     var fnActive by remember(viewClient) { mutableStateOf(viewClient.isFnDown()) }
     var showEndSessionConfirmation by rememberSaveable(session) { mutableStateOf(false) }
     var warningNoteDismissed by rememberSaveable(session) { mutableStateOf(false) }
+
+    LaunchedEffect(
+        activeTabId, activeTerminalView, sessionSheetId, renameDialogId,
+        shellChooserSourceId, showWorkspaceSheet, showCommandPalette,
+        showTerminalSettings, showTranscriptSearch, showEndSessionConfirmation,
+        selectedOutput, pendingMultilinePaste
+    ) {
+        if (sessionSheetId == null && renameDialogId == null &&
+            shellChooserSourceId == null && !showWorkspaceSheet &&
+            !showCommandPalette && !showTerminalSettings &&
+            !showTranscriptSearch && !showEndSessionConfirmation &&
+            selectedOutput == null && pendingMultilinePaste == null
+        ) {
+            activeTerminalView?.let { view ->
+                view.isFocusableInTouchMode = true
+                view.requestFocus()
+            }
+        }
+    }
 
     BackHandler(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&

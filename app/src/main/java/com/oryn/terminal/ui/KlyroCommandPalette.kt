@@ -66,12 +66,11 @@ internal fun KlyroCommandPalette(
     val keyboard = LocalSoftwareKeyboardController.current
     var query by rememberSaveable { mutableStateOf("") }
     var showingGuide by rememberSaveable { mutableStateOf(false) }
-    BackHandler(enabled = showingGuide) { showingGuide = false }
-    BackHandler(enabled = pendingCautionCommand != null) { pendingCautionCommand = null }
-
     var info by remember { mutableStateOf<String?>(null) }
     var unsafeFeedback by remember { mutableStateOf(false) }
     var pendingCautionCommand by rememberSaveable { mutableStateOf<String?>(null) }
+    BackHandler(enabled = showingGuide) { showingGuide = false }
+    BackHandler(enabled = pendingCautionCommand != null) { pendingCautionCommand = null }
     val matches = remember(query) { KlyroCommandCatalog.search(query) }
     val pluginMatches = remember(query, pluginCommands) {
         pluginCommands.filter { command ->
