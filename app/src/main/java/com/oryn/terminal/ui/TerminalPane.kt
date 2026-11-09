@@ -1060,8 +1060,8 @@ fun TerminalPane(
                         val line = screen.getSelectedText(
                             0, matchRow, emulator.mColumns - 1, matchRow, false, false
                         ).orEmpty()
-                        val highlightBackground = MaterialTheme.colorScheme.primary
-                        val highlightForeground = MaterialTheme.colorScheme.onPrimary
+                        val highlightBackground = ui.accent
+                        val highlightForeground = ui.onAccent
                         val preview = buildAnnotatedString {
                             var offset = 0
                             while (offset < line.length && transcriptQuery.isNotEmpty()) {
@@ -1079,7 +1079,7 @@ fun TerminalPane(
                             append(line.substring(offset))
                         }
                         Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            color = ui.tile,
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
                         ) {
                             Text(
