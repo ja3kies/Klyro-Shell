@@ -420,16 +420,19 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 if (!mutationBusy) { removeId = null; error = null }
             },
             containerColor = colors.sheet,
-            title = { Text("Remove ${item?.name ?: "plugin"}?") },
+            title = { Text(if (item != null) "Remove ${item.name}?" else "Plugin unavailable") },
             text = {
                 Column {
-                    Text("This removes its command suggestions. Terminal sessions and user files are not affected.")
+                    Text(if (item != null)
+                        "This removes its command suggestions. Terminal sessions and user files are not affected."
+                        else "This plugin is no longer installed. Close this dialog.")
                     if (error != null) Text(error.orEmpty(), color = colors.danger,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
             },
             confirmButton = {
-                TextButton(enabled = !mutationBusy, onClick = {
+                TextButton(enabled = item != null && !mutationBusy, onClick = {
+                    if (item == null) return@TextButton
                     applyChange({ manager.uninstall(id) }) {
                         removeId = null
                     }
