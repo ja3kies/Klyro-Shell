@@ -74,9 +74,10 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewTreeLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.stateDescription
@@ -181,11 +182,11 @@ fun TerminalPane(
     var clipboardAvailable by remember(session) {
         mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
-    DisposableEffect(clipboardManager, session, context) {
+    val lifecycleOwner = ViewTreeLifecycleOwner.get(LocalView.current)
+    DisposableEffect(clipboardManager, session, lifecycleOwner) {
         val listener = ClipboardManager.OnPrimaryClipChangedListener {
             clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
         }
-        val lifecycleOwner = context as? LifecycleOwner
         val observer = LifecycleEventObserver { _, event ->
             // Clipboard access is restricted in the background on modern
             // Android; refresh availability when the terminal regains focus.
