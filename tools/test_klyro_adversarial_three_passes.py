@@ -45,7 +45,7 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
         selection = terminal.split("fun selectTerminalOutput(expectedSelection: Boolean)", 1)[1].split(
             "// Fit seven", 1
         )[0]
-        self.assertIn("selectedOutput = output", selection)
+        self.assertIn("selectedOutput = TerminalActionPolicy.selectionTail(output)", selection)
         self.assertNotIn("paste(", selection)
         self.assertIn("ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }", terminal)
         self.assertIn("collectIsPressedAsState()", terminal)
