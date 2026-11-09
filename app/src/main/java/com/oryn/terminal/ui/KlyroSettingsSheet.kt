@@ -117,7 +117,7 @@ internal fun KlyroSettingsSheet(
 
     // Compact content stays fixed; long reports, large fonts and small screens retain scrolling.
     val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
-        rows = 6,
+        rows = if (section == "home") 6 else 7,
         screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp,
         fontScale = density.fontScale
     )
@@ -141,7 +141,10 @@ internal fun KlyroSettingsSheet(
                     if (section == "home") {
                         KlyroSheetTitle("Settings")
                     } else {
-                        TextButton(onClick = { section = "home" }) {
+                        TextButton(
+                            onClick = { section = "home" },
+                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                        ) {
                             Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
                                 contentDescription = null, tint = colors.accent,
                                 modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
