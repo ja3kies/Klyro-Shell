@@ -106,7 +106,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         }
     }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null && !previewBusy) {
+        if (uri != null && !previewBusy && !mutationBusy) {
             pendingImport = null
             error = null
             pendingImportUri = uri.toString()
@@ -287,7 +287,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         color = colors.muted, fontSize = 12.sp)
                     OutlinedButton(
                         onClick = { importPicker.launch(arrayOf("*/*")) },
-                        enabled = !previewBusy && !mutationBusy,
+                        enabled = !previewBusy && !mutationBusy &&
+                            pendingImportUri == null,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                     ) {
