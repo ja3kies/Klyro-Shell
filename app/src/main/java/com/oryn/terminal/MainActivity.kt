@@ -636,16 +636,12 @@ class MainActivity : ComponentActivity() {
             result.onSuccess { verification ->
                 bashStarted = verification.bashStarted
                 runtimeVerified = verification.isEnvironmentReady()
-                // Termux bootstrap may emit a harmless mandoc database warning.
-                // Suppress only this exact warning when all runtime checks passed.
-                val warningLines = verification.diagnostics.lines()
-                    .map { it.trim() }
-                    .filter { it.startsWith("WARNING", ignoreCase = true) ||
-                        it.startsWith("update-alternatives: warning:", ignoreCase = true) }
-                val onlyMissingMandoc = warningLines.isNotEmpty() &&
-                    warningLines.all { it.contains("makewhatis") && it.contains("mandoc") }
+                // Only the known mandoc line can be ignored; every other stderr
+                // line remains a warning, even without a "WARNING" prefix.
                 runtimeHasWarnings = verification.hasWarnings &&
-                    !(runtimeVerified && onlyMissingMandoc)
+                    !KlyroVerificationWarnings.suppressHarmlessWarning(
+                        verification.diagnostics, verification.hasWarnings, runtimeVerified
+                    )
                 val cleanStderr = !runtimeHasWarnings
                 technicalErrorDetails = if (runtimeVerified && cleanStderr) null else verification.diagnostics
                 showTechnicalDetails = false
@@ -884,10 +880,7 @@ private fun OrynTerminalApp(
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
     val warningLines = remember(technicalErrorDetails) {
-        technicalErrorDetails.orEmpty().lines()
-            .map { it.trim() }
-            .filter { it.startsWith("WARNING", ignoreCase = true) }
-            .distinct()
+        KlyroVerificationWarnings.unexpectedLines(technicalErrorDetails.orEmpty()).distinct()
     }
     val stateLabel = when {
         runtimeVerified && runtimeHasWarnings -> "READY WITH WARNINGS"
