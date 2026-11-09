@@ -55,6 +55,8 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -136,7 +138,7 @@ internal fun KlyroColorPickerDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            modifier = Modifier.weight(1f).height(44.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
                             shape = RoundedCornerShape(12.dp),
                             color = colors.tile,
                             border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
@@ -179,7 +181,7 @@ internal fun KlyroColorPickerDialog(
                             }
                         }
                         Surface(
-                            modifier = Modifier.size(44.dp),
+                            modifier = Modifier.size(KlyroUiMetrics.minTouch),
                             color = androidx.compose.ui.graphics.lerp(
                                 colors.sheet, Color(argb()).copy(alpha = 1f), alpha
                             ),
@@ -190,7 +192,8 @@ internal fun KlyroColorPickerDialog(
                     if (hexInput.length != 7) {
                         Text("Enter six hexadecimal digits (0–9, A–F).",
                             style = MaterialTheme.typography.labelSmall,
-                            color = colors.danger)
+                            color = colors.danger,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     }
                     // Native HSV area: white/saturated along X, black/bright along Y.
                     Box(
@@ -350,9 +353,10 @@ internal fun KlyroColorPickerDialog(
                             }
                         }
                     }
-                    TextButton(onClick = { showAdvanced = true }) {
-                        Text("Opacity & saved colors")
-                    }
+                    TextButton(
+                        onClick = { showAdvanced = true },
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                    ) { Text("Opacity & saved colors") }
                 }
             },
             confirmButton = {
@@ -393,6 +397,7 @@ internal fun KlyroColorPickerDialog(
                             value = favoriteName,
                             onValueChange = { favoriteName = it.take(22) },
                             label = { Text("Color name") },
+                            supportingText = { Text("${22 - favoriteName.length} characters remaining") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -404,12 +409,14 @@ internal fun KlyroColorPickerDialog(
                             },
                             enabled = KlyroHexInput.isComplete(hexInput),
                             modifier = Modifier.fillMaxWidth()
+                                .heightIn(min = KlyroUiMetrics.minTouch)
                         ) { Text("Save current color") }
                         favorites.forEach { favorite ->
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth()
+                                    .heightIn(min = KlyroUiMetrics.minTouch),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
                             ) {
                                 Surface(
                                     modifier = Modifier.size(24.dp),
@@ -422,7 +429,9 @@ internal fun KlyroColorPickerDialog(
                                     maxLines = 1,
                                     style = MaterialTheme.typography.bodySmall
                                 )
-                                TextButton(onClick = {
+                                TextButton(
+                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                    onClick = {
                                     favoriteName = favorite.label
                                     val favArgb = AndroidColor.parseColor(favorite.hex)
                                     val hsv = FloatArray(3)
@@ -435,16 +444,20 @@ internal fun KlyroColorPickerDialog(
                                     pendingPreset = null
                                     showAdvanced = false
                                 }) { Text("Edit") }
-                                TextButton(onClick = {
-                                    pendingFavoriteDeletion = favorite
-                                }) { Text("Remove") }
+                                TextButton(
+                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                    onClick = { pendingFavoriteDeletion = favorite }
+                                ) { Text("Remove", color = colors.danger) }
                             }
                         }
 
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { showAdvanced = false }) { Text("Done") }
+                    TextButton(onClick = { showAdvanced = false },
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                        Text("Done")
+                    }
                 }
             )
         }
