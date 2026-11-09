@@ -44,7 +44,7 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
         self.assertIn("pasteClipboard()", terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
         selection = terminal.split("fun selectTerminalOutput(expectedSelection: Boolean)", 1)[1].split(
-            "// Fit seven", 1
+            "val keyWidth =", 1
         )[0]
         self.assertIn("selectedOutput = TerminalActionPolicy.selectionTail(output)", selection)
         self.assertNotIn("paste(", selection)

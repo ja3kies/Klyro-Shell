@@ -23,9 +23,12 @@ class KlyroPairQaTest(unittest.TestCase):
     def test_terminal_transient_ui_is_scoped_by_session(self):
         pane = (APP / "ui/TerminalPane.kt").read_text()
         for name in ("sessionSheetId", "renameDialogId", "shellChooserSourceId",
-                     "pendingMultilinePaste", "outputSelectionView",
-                     "showTranscriptSearch", "showEndSessionConfirmation"):
+                     "pendingMultilinePaste", "outputSelectionView"):
             self.assertIn(f"var {name} by remember(session)", pane)
+        for name in ("showTranscriptSearch", "showEndSessionConfirmation",
+                     "transcriptQuery", "findMatchCase", "searchIndex",
+                     "warningNoteDismissed"):
+            self.assertIn(f"var {name} by rememberSaveable(session)", pane)
         model = (APP / "TerminalSessionViewModel.kt").read_text()
         self.assertIn("pendingNativePaste = null", model)
         self.assertIn("isSessionActive(tabId)", model)

@@ -7,8 +7,10 @@ CODE = FILE.read_text(encoding="utf-8")
 
 class PluginOperationUXContract(unittest.TestCase):
     def test_back_and_home_are_blocked_while_writing(self):
-        self.assertIn("if (mutationBusy) return@BackHandler", CODE)
-        self.assertIn("onClick = onBack,\n                enabled = !mutationBusy,", CODE)
+        self.assertIn("fun navigateBack()", CODE)
+        self.assertIn("if (mutationBusy) return", CODE)
+        self.assertIn("BackHandler { navigateBack() }", CODE)
+        self.assertIn("onClick = ::navigateBack,\n                enabled = !mutationBusy,", CODE)
         self.assertIn("enabled = !mutationBusy, role = Role.Tab,", CODE)
 
     def test_every_confirmation_cannot_dismiss_during_mutation(self):
