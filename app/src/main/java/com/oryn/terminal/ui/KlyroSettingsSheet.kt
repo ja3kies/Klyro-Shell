@@ -448,17 +448,18 @@ internal fun KlyroSettingsSheet(
                                 }
                             }
                         }
-                        Button(
+                        OutlinedButton(
                             onClick = onResetModifiers,
                             enabled = activeModifiers.isNotEmpty(),
                             modifier = Modifier.fillMaxWidth().heightIn(
                                 min = KlyroUiMetrics.minTouch
                             ),
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.accent,
-                                contentColor = colors.onAccent
-                            )
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = colors.foreground,
+                                disabledContentColor = colors.muted
+                            ),
+                            border = BorderStroke(1.dp, colors.muted.copy(alpha = .35f))
                         ) {
                             Text(if (activeModifiers.isEmpty()) "All modifiers released"
                                 else "Release active modifiers")
@@ -716,7 +717,7 @@ private fun SettingsBentoTile(
         Column(Modifier.padding(KlyroUiMetrics.bentoInnerPadding),
             verticalArrangement = Arrangement.SpaceBetween) {
             Icon(painterResource(icon), contentDescription = null,
-                tint = colors.accent, modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
+                tint = colors.muted, modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
             Column {
                 Text(title, color = colors.foreground,
                     fontWeight = FontWeight.Bold,
