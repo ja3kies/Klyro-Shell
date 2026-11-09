@@ -40,7 +40,7 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn("if (pasteTone) colors.warningContainer else colors.key", self.pane)
 
     def test_all_action_behavior_is_preserved(self):
-        self.assertIn(") { selectTerminalOutput() }", self.pane)
+        self.assertIn(") { selectTerminalOutput(canSelect) }", self.pane)
 
     def test_end_and_arrow_navigation_kept(self):
         self.assertIn('TerminalExtraKey("END"', self.pane)
