@@ -65,9 +65,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var installed by remember { mutableStateOf(manager.installed()) }
     var page by rememberSaveable { mutableStateOf(if (installed.isEmpty()) "explore" else "installed") }
     var error by remember { mutableStateOf<String?>(null) }
-    var removeId by remember { mutableStateOf<String?>(null) }
+    var removeId by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
-    var pendingBundledId by remember { mutableStateOf<String?>(null) }
+    var pendingBundledId by rememberSaveable { mutableStateOf<String?>(null) }
     BackHandler {
         when {
             pendingImport != null -> { pendingImport = null; error = null }
