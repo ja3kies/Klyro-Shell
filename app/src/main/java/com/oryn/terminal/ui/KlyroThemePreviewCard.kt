@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 /** Preview palettes use the exact same generator as Klyro's active themes. */
 internal object KlyroThemePreviewPalette {
     fun forMode(mode: String, accentId: String): KlyroColors = when (mode) {
+        "system", "light" -> KlyroColors.create(false, accentId)
         "dark" -> KlyroColors.create(true, accentId)
         "mono-black", "mono-paper", "mono-contrast" -> KlyroColors.monochrome(mode)
         else -> KlyroColors.create(false, accentId)

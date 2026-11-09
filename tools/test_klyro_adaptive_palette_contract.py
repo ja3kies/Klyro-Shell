@@ -21,8 +21,8 @@ class AdaptivePaletteContract(unittest.TestCase):
         for path in SURFACES:
             with self.subTest(file=path.name):
                 code = path.read_text(encoding="utf-8")
-                self.assertNotRegex(code, r'Color\\s*\\(\\s*0x[0-9a-fA-F]{6,8}\\b')
-                self.assertNotRegex(code, r'android\\.graphics\\.Color\\.rgb\\s*\\(')
+                self.assertNotRegex(code, r'Color\s*\(\s*0x[0-9a-fA-F]{6,8}\b')
+                self.assertNotRegex(code, r'android\.graphics\.Color\.rgb\s*\(')
 
     def test_slider_and_brand_surfaces_use_theme_tokens(self):
         terminal = (ROOT / "ui/TerminalPane.kt").read_text(encoding="utf-8")
