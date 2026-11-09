@@ -422,7 +422,7 @@ private fun PluginHeading(plugin: KlyroPluginRecord, detail: String) {
     Row(modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
         verticalAlignment = Alignment.CenterVertically) {
-        Surface(color = colors.accent.copy(alpha = .12f),
+        Surface(color = colors.key,
             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
             Icon(painterResource(when (plugin.id) {
                 "app.klyro.files" -> R.drawable.hugeicons_folder_01
@@ -430,13 +430,13 @@ private fun PluginHeading(plugin: KlyroPluginRecord, detail: String) {
                 "app.klyro.system" -> R.drawable.hugeicons_pulse_rectangle_01
                 else -> R.drawable.ic_klyro_plugins
             }),
-                contentDescription = null, tint = colors.accent,
+                contentDescription = null, tint = colors.muted,
                 modifier = Modifier.padding(12.dp).size(24.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(plugin.name, fontWeight = FontWeight.SemiBold, color = colors.foreground)
             Text(plugin.description, color = colors.muted, fontSize = 12.sp)
-            Text(detail, color = colors.accent, fontSize = 11.sp)
+            Text(detail, color = colors.muted, fontSize = 11.sp)
         }
     }
 }

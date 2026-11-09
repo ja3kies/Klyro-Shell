@@ -103,7 +103,7 @@ internal fun KlyroActionRow(
     iconWell: Boolean = false
 ) {
     val colors = LocalKlyroColors.current
-    val ink = if (destructive) colors.danger else if (iconWell) colors.accent else colors.muted
+    val ink = if (destructive) colors.danger else colors.muted
     Row(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)

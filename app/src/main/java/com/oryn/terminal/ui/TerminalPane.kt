@@ -350,7 +350,7 @@ fun TerminalPane(
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
                     Icon(painterResource(R.drawable.hugeicons_more_vertical),
-                        contentDescription = "More actions", tint = TerminalAccent,
+                        contentDescription = "More actions", tint = TerminalMuted,
                         modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
                 }
                 DropdownMenu(

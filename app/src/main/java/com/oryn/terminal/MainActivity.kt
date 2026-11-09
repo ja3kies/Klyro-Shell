@@ -1040,10 +1040,10 @@ private fun OrynTerminalApp(
                             Text("KLYRO", color = ui.foreground, fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                             Surface(
-                                color = ui.accent.copy(alpha = .14f),
+                                color = ui.key,
                                 shape = RoundedCornerShape(7.dp)
                             ) {
-                                Text("ARM64", color = ui.accent,
+                                Text("ARM64", color = ui.muted,
                                     modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 10.sp, fontWeight = FontWeight.Bold)
