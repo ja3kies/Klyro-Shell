@@ -9,7 +9,8 @@ UI = ROOT / "app/src/main/java/com/oryn/terminal/ui"
 class KlyroPairABTest(unittest.TestCase):
     def test_color_is_staged_until_apply(self):
         picker = (UI/"KlyroColorPickerDialog.kt").read_text()
-        self.assertIn("var pendingPreset by remember(initialArgb)", picker)
+        self.assertIn("var pendingPreset by rememberSaveable(initialArgb)", picker)
+        self.assertIn("onValueChange = { alpha = it; pendingPreset = null }", picker)
         self.assertIn("pendingPreset = preset.id", picker)
         self.assertIn('onApply(pendingPreset ?: KlyroColors.customId(argb()))', picker)
         self.assertIn('pendingPreset = null', picker)

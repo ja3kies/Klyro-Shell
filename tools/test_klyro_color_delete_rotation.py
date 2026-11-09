@@ -7,7 +7,9 @@ class FavoriteDeleteRotationTest(unittest.TestCase):
         self.assertIn("var pendingFavoriteDeletionHex by rememberSaveable",S)
         self.assertIn("favorites.firstOrNull { it.hex == pendingFavoriteDeletionHex }",S)
         self.assertIn("pendingFavoriteDeletionHex = favorite.hex",S)
-        self.assertNotIn("pendingFavoriteDeletion = favorite",S)
+        self.assertNotIn("var pendingFavoriteDeletion by remember",S)
+        self.assertNotIn("pendingFavoriteDeletion = null",S)
+        self.assertNotIn("pendingFavoriteDeletion = favorite.hex",S)
         self.assertIn("saveFavorites(favorites.filterNot { it.hex == favorite.hex })",S)
     def test_confirmation_stays_explicit(self):
         self.assertIn('title = { Text("Remove saved color?") }',S)
