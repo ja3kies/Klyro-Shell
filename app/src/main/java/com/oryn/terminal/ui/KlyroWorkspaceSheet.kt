@@ -68,7 +68,17 @@ internal fun KlyroWorkspaceSheet(
     var editorError by remember { mutableStateOf(false) }
     var deletingId by remember { mutableStateOf<String?>(null) }
     var menuId by remember { mutableStateOf<String?>(null) }
-    val selected = entries.firstOrNull { it.id == selectedId } ?: entries.first()
+    val selected = entries.firstOrNull { it.id == selectedId } ?: entries.firstOrNull()
+    if (selected == null) {
+        KlyroModalTheme {
+            KlyroSheet(onDismissRequest = onDismiss) {
+                KlyroSectionHeading("Workspaces unavailable",
+                    "The workspace list is empty. Reopen this page after the workspace catalog loads.")
+                TextButton(onClick = onDismiss) { Text("Close") }
+            }
+        }
+        return
+    }
     val projectTabs = tabs.filter {
         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == selected.id
     }
@@ -234,6 +244,9 @@ internal fun KlyroWorkspaceSheet(
                                 label = { Text("Workspace name") },
                                 singleLine = true,
                                 isError = editorError,
+                                supportingText = {
+                                    Text("${KlyroWorkspaceCatalog.MAX_NAME_CHARS - editorText.length} characters remaining")
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             )
@@ -245,6 +258,9 @@ internal fun KlyroWorkspaceSheet(
                             ) {
                                 TextButton(onClick = { editorId = null }) { Text("Cancel") }
                                 Button(
+                                    enabled = editorText.trim().isNotEmpty() &&
+                                        (!editing || editorText.trim() !=
+                                            entries.firstOrNull { it.id == editorId }?.name),
                                     onClick = {
                                         val saved = if (editing) onRenameProject(editorId!!, editorText)
                                             else onCreateProject(editorText)
@@ -273,7 +289,7 @@ internal fun KlyroWorkspaceSheet(
                     projectTabs.forEach { (id, name) ->
                         val current = id == activeTabId
                         Surface(
-                            modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.compactRow)
+                            modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
                                 .clickable(
                                     enabled = !current,
                                     role = Role.Button,
@@ -317,6 +333,7 @@ internal fun KlyroWorkspaceSheet(
                     TextButton(
                         onClick = { onAssignCurrentTab(selected.id) },
                         modifier = Modifier.fillMaxWidth()
+                            .heightIn(min = KlyroUiMetrics.minTouch)
                     ) { Text("Move current session here") }
                 }
             }
