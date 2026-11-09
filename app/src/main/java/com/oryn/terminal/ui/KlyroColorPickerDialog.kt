@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,7 +84,7 @@ internal fun KlyroColorPickerDialog(
     var favorites by remember(context) {
         mutableStateOf(KlyroFavoriteColors.decode(prefs.getString("custom_favorites", "")))
     }
-    var favoriteName by remember { mutableStateOf("Custom") }
+    var favoriteName by rememberSaveable { mutableStateOf("Custom") }
     var pendingFavoriteDeletion by remember { mutableStateOf<KlyroFavoriteColors.Favorite?>(null) }
     fun saveFavorites(value: List<KlyroFavoriteColors.Favorite>) {
         favorites = value
@@ -92,19 +93,19 @@ internal fun KlyroColorPickerDialog(
     val initialHsv = remember(initialArgb) {
         FloatArray(3).also { AndroidColor.colorToHSV(initialArgb or -0x1000000, it) }
     }
-    var hue by remember(initialArgb) { mutableFloatStateOf(initialHsv[0]) }
-    var saturation by remember(initialArgb) { mutableFloatStateOf(initialHsv[1]) }
-    var brightness by remember(initialArgb) { mutableFloatStateOf(initialHsv[2]) }
-    var alpha by remember(initialArgb) {
+    var hue by rememberSaveable(initialArgb) { mutableFloatStateOf(initialHsv[0]) }
+    var saturation by rememberSaveable(initialArgb) { mutableFloatStateOf(initialHsv[1]) }
+    var brightness by rememberSaveable(initialArgb) { mutableFloatStateOf(initialHsv[2]) }
+    var alpha by rememberSaveable(initialArgb) {
         mutableFloatStateOf((initialArgb ushr 24) / 255f)
     }
-    var showAdvanced by remember { mutableStateOf(false) }
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
     // Preset buttons preview an intent. Only Apply changes the app theme.
-    var pendingPreset by remember(initialArgb) { mutableStateOf<String?>(null) }
+    var pendingPreset by rememberSaveable(initialArgb) { mutableStateOf<String?>(null) }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val smallWindow = LocalConfiguration.current.screenHeightDp < 700 ||
         density.fontScale > 1.15f || WindowInsets.ime.getBottom(density) > 0
-    var hexInput by remember(initialArgb) {
+    var hexInput by rememberSaveable(initialArgb) {
         mutableStateOf("#%06X".format(initialArgb and 0xFFFFFF))
     }
     fun rgb(): Int = AndroidColor.HSVToColor(floatArrayOf(hue, saturation, brightness))
