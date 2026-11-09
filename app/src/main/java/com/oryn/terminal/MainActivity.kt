@@ -24,6 +24,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -885,6 +891,7 @@ private fun OrynTerminalApp(
     val context = androidx.compose.ui.platform.LocalContext.current
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
+    var showAllWarnings by rememberSaveable { mutableStateOf(false) }
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
@@ -981,12 +988,12 @@ private fun OrynTerminalApp(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
                 ) {
                     Box(
                         modifier = Modifier.size(60.dp)
-                            .clip(RoundedCornerShape(19.dp))
-                            .background(Color(0xFF0C0B13)),
+                            .clip(RoundedCornerShape(KlyroUiMetrics.cardCorner))
+                            .background(ui.tile),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -994,16 +1001,17 @@ private fun OrynTerminalApp(
                                 if (com.oryn.terminal.ui.KlyroBrandChoice.selected(context) == "a")
                                     R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
                             ),
-                            contentDescription = "Klyro Shell logo",
+                            contentDescription = null,
                             tint = Color.Unspecified,
-                            modifier = Modifier.size(80.dp)
+                            modifier = Modifier.size(52.dp)
                         )
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             Text("KLYRO", color = ui.foreground, fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                                fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
+                                maxLines = 1)
                             Surface(
                                 color = ui.accent.copy(alpha = .14f),
                                 shape = RoundedCornerShape(7.dp)
@@ -1022,7 +1030,8 @@ private fun OrynTerminalApp(
 
                 Surface(
                     modifier = Modifier.fillMaxWidth()
-                        .clickable(onClickLabel = "Open Klyro plugins") { showPlugins = true },
+                        .clickable(role = Role.Button,
+                            onClickLabel = "Open Klyro plugins") { showPlugins = true },
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
                     border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
