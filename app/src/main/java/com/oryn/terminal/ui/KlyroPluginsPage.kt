@@ -168,7 +168,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         .clickable(
                             enabled = !mutationBusy, role = Role.Tab,
                             onClickLabel = "Show $label"
-                        ) { page = id }
+                        ) {
+                            page = id
+                            error = null
+                        }
                         .semantics { this.selected = selected },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                     color = if (selected) colors.accent else colors.key,
