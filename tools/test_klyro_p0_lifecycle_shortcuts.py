@@ -144,7 +144,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
 
     def test_transcript_preview_does_not_split_surrogate_pairs(self):
         self.assertIn("Character.isLowSurrogate(text.charAt(start))", (APP / "ui/TerminalActionPolicy.java").read_text())
-        self.assertIn("Character.isHighSurrogate(output[start - 1])", self.pane)
+        self.assertIn("Character.isHighSurrogate(text.charAt(start - 1))", (APP / "ui/TerminalActionPolicy.java").read_text())
 
     def test_terminal_brand_header_does_not_overflow(self):
         self.assertIn("KlyroBrandChoice.selected(context)", self.pane)
