@@ -22,6 +22,13 @@ class HomeScreenUX(unittest.TestCase):
         self.assertIn("modifier = Modifier.size(52.dp)", self.ui)
         self.assertIn(".clip(RoundedCornerShape(KlyroUiMetrics.cardCorner))", self.ui)
 
+    def test_brand_title_shrinks_before_device_badge(self):
+        self.assertIn("modifier = Modifier.weight(1f), maxLines = 1", self.ui)
+        self.assertIn('Text("ARM64"', self.ui)
+
+    def test_brand_device_badge_uses_shared_corner_token(self):
+        self.assertIn("shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)", self.ui)
+
     def test_home_logo_uses_current_os_selection(self):
         self.assertIn("KlyroBrandChoice.selected(context)", self.ui)
         self.assertIn("R.drawable.ic_klyro_brand_a", self.ui)
