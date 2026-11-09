@@ -123,7 +123,11 @@ internal fun KlyroSettingsSheet(
         fontScale = density.fontScale
     )
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = onDismiss) {
+        KlyroSheet(onDismissRequest = {
+            if (section != "home" && !showColorPicker &&
+                !showFontLicense && !showHugeiconsLicense
+            ) section = "home" else onDismiss()
+        }) {
             Column(
                 modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth()
