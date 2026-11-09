@@ -986,7 +986,7 @@ private fun OrynTerminalApp(
                     Box(
                         modifier = Modifier.size(60.dp)
                             .clip(RoundedCornerShape(19.dp))
-                            .background(Color(0xFF0C0B13)),
+                            .background(ui.tile),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -996,7 +996,7 @@ private fun OrynTerminalApp(
                             ),
                             contentDescription = "Klyro Shell logo",
                             tint = Color.Unspecified,
-                            modifier = Modifier.size(80.dp)
+                            modifier = Modifier.size(60.dp)
                         )
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
