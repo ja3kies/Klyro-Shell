@@ -25,6 +25,10 @@ import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -1010,7 +1014,7 @@ private fun OrynTerminalApp(
 
                 Surface(
                     modifier = Modifier.fillMaxWidth()
-                        .clickable(onClickLabel = "Open Klyro plugins") { showPlugins = true },
+                        .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true },
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
                     border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
@@ -1082,6 +1086,7 @@ private fun OrynTerminalApp(
                         }
                         Text(
                             homeStatus.runtimeMessage,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                             color = if (runtimeHasWarnings) ui.warningInk
                                 else if (technicalErrorDetails != null)
                                     ui.danger
