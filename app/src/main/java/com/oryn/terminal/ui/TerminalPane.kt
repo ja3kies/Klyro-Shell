@@ -653,7 +653,9 @@ fun TerminalPane(
                 iconCaption = if (canSelect) "SELECT" else "PASTE",
                 pasteTone = !canSelect,
                 active = selectedOutput != null,
-                enabled = session.isRunning() && (canSelect || clipboardAvailable)
+                // Allow copying a finished session's transcript; only pasting
+                // requires a live PTY.
+                enabled = canSelect || (session.isRunning() && clipboardAvailable)
             ) { selectTerminalOutput(canSelect) }
         }
         val secondRow: @Composable () -> Unit = {
