@@ -786,16 +786,22 @@ fun TerminalPane(
                         val view = outputSelectionView
                         if (view != null) {
                             val value = view.text.toString()
-                            val left = view.selectionStart.coerceIn(0, value.length)
-                            val right = view.selectionEnd.coerceIn(0, value.length)
-                            val selection = if (left < right) value.substring(left, right) else value
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val start = view.selectionStart.coerceIn(0, value.length)
+                            val end = view.selectionEnd.coerceIn(0, value.length)
+                            val left = minOf(start, end)
+                            val right = maxOf(start, end)
+                            val hasSelection = left < right
+                            val selection = if (hasSelection) value.substring(left, right) else value
                             val copied = runCatching {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                                    as? ClipboardManager ?: error("Clipboard unavailable")
                                 clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", selection))
                             }.isSuccess
                             Toast.makeText(
                                 context,
-                                if (copied) "Selection copied" else "Clipboard unavailable",
+                                if (copied) {
+                                    if (hasSelection) "Selection copied" else "All visible output copied"
+                                } else "Clipboard unavailable",
                                 Toast.LENGTH_SHORT
                             ).show()
                             if (copied) closeSelection()
