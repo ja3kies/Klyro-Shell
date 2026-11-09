@@ -314,7 +314,7 @@ fun TerminalPane(
     var shiftActive by remember(viewClient) { mutableStateOf(viewClient.isShiftDown()) }
     var fnActive by remember(viewClient) { mutableStateOf(viewClient.isFnDown()) }
     var showEndSessionConfirmation by rememberSaveable(session) { mutableStateOf(false) }
-    var warningNoteDismissed by remember(session) { mutableStateOf(false) }
+    var warningNoteDismissed by rememberSaveable(session) { mutableStateOf(false) }
 
     BackHandler(
         enabled = !showEndSessionConfirmation && !showToolsMenu &&
