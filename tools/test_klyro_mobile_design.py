@@ -169,7 +169,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn('selectTerminalOutput(canSelect)', terminal)
         # User can always paste irrespective of terminal transcript state.
         self.assertNotIn('TerminalExtraKey(\n                "PASTE"', terminal)
-        self.assertIn("enabled = canSelect || (session.isRunning() && clipboardAvailable)", terminal)
+        self.assertIn("enabled = canSelect || (session.isRunning() && session.emulator != null && clipboardAvailable)", terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
         self.assertIn('pasteClipboard()', terminal)
         self.assertNotIn("sessionClient.setOutputObserver(observer)", terminal)
