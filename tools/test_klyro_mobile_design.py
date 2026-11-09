@@ -166,10 +166,10 @@ class KlyroMobileDesignAudit(unittest.TestCase):
 
         # The Select all action must never be a paste alias.
         self.assertIn('"ALL",\n                description = if (canSelect) "Select all terminal output" else "Paste clipboard"', terminal)
-        self.assertIn('selectTerminalOutput()', terminal)
+        self.assertIn('selectTerminalOutput(canSelect)', terminal)
         # User can always paste irrespective of terminal transcript state.
         self.assertNotIn('TerminalExtraKey(\n                "PASTE"', terminal)
-        self.assertIn("enabled = canSelect || clipboardAvailable", terminal)
+        self.assertIn("enabled = canSelect || (session.isRunning() && clipboardAvailable)", terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
         self.assertIn('pasteClipboard()', terminal)
         self.assertNotIn("sessionClient.setOutputObserver(observer)", terminal)
