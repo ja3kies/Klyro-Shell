@@ -85,7 +85,8 @@ internal fun KlyroColorPickerDialog(
         mutableStateOf(KlyroFavoriteColors.decode(prefs.getString("custom_favorites", "")))
     }
     var favoriteName by rememberSaveable { mutableStateOf("Custom") }
-    var pendingFavoriteDeletion by remember { mutableStateOf<KlyroFavoriteColors.Favorite?>(null) }
+    var pendingFavoriteDeletionHex by rememberSaveable { mutableStateOf<String?>(null) }
+    val pendingFavoriteDeletion = favorites.firstOrNull { it.hex == pendingFavoriteDeletionHex }
     fun saveFavorites(value: List<KlyroFavoriteColors.Favorite>) {
         favorites = value
         prefs.edit().putString("custom_favorites", KlyroFavoriteColors.encode(value)).apply()
@@ -457,7 +458,7 @@ internal fun KlyroColorPickerDialog(
                                 }) { Text("Edit") }
                                 TextButton(
                                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
-                                    onClick = { pendingFavoriteDeletion = favorite }
+                                    onClick = { pendingFavoriteDeletionHex = favorite.hex }
                                 ) { Text("Remove", color = colors.danger) }
                             }
                         }
@@ -474,7 +475,7 @@ internal fun KlyroColorPickerDialog(
         }
         pendingFavoriteDeletion?.let { favorite ->
             AlertDialog(
-                onDismissRequest = { pendingFavoriteDeletion = null },
+                onDismissRequest = { pendingFavoriteDeletionHex = null },
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 containerColor = colors.sheet,
                 title = { Text("Remove saved color?") },
@@ -482,11 +483,11 @@ internal fun KlyroColorPickerDialog(
                 confirmButton = {
                     TextButton(onClick = {
                         saveFavorites(favorites.filterNot { it.hex == favorite.hex })
-                        pendingFavoriteDeletion = null
+                        pendingFavoriteDeletionHex = null
                     }) { Text("Remove", color = colors.danger) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { pendingFavoriteDeletion = null }) { Text("Cancel") }
+                    TextButton(onClick = { pendingFavoriteDeletionHex = null }) { Text("Cancel") }
                 }
             )
         }
