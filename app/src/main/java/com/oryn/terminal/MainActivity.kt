@@ -564,19 +564,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // Re-verify packaged hashes and refresh private SONAME copies after APK updates.
-        if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
-            observePreviousInstall()
-        } else if (bootstrapInstalled) {
-            val savedFailure = KlyroSetupLedger.snapshot()?.takeIf {
-                savedInstanceState != null && it.success == false
+        // A completed setup failure must not trigger an automatic retry on rotation.
+        val previousSetup = KlyroSetupLedger.snapshot()
+        when (KlyroSetupResumePolicy.decide(
+            TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy(),
+            bootstrapInstalled, previousSetup
+        )) {
+            KlyroSetupResumeAction.OBSERVE -> observePreviousInstall()
+            KlyroSetupResumeAction.SHOW_FAILURE -> {
+                technicalErrorDetails = previousSetup?.details
+                statusMessage = previousSetup?.message ?: "Setup failed. Review diagnostics."
             }
-            if (savedFailure != null) {
-                technicalErrorDetails = savedFailure.details
-                statusMessage = savedFailure.message
-            } else {
-                installProotRuntime()
-            }
+            KlyroSetupResumeAction.VERIFY_PROOT -> installProotRuntime()
+            KlyroSetupResumeAction.IDLE -> Unit
         }
     }
 
