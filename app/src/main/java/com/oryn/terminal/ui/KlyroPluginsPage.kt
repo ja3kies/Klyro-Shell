@@ -29,6 +29,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +54,7 @@ import com.oryn.terminal.R
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginRecord
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -72,15 +74,49 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
     var pendingImportUri by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingBundledId by rememberSaveable { mutableStateOf<String?>(null) }
+    // These IDs identify a confirmed operation after Activity recreation.
+    var confirmedImportId by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmedRemovalId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    DisposableEffect(manager) {
+        // Another Activity's confirmed IO commit can complete after rotation.
+        val stopObserving = manager.observeRegistry {
+            scope.launch {
+                installed = withContext(Dispatchers.IO) { manager.installed() }
+            }
+        }
+        onDispose { stopObserving() }
+    }
+    LaunchedEffect(installed, pendingBundledId, confirmedImportId, confirmedRemovalId) {
+        val installedIds = installed.map { it.id }.toSet()
+        if (pendingBundledId in installedIds) {
+            pendingBundledId = null
+            page = "installed"
+            error = null
+        }
+        if (confirmedImportId != null && confirmedImportId in installedIds) {
+            pendingImport = null
+            pendingImportUri = null
+            confirmedImportId = null
+            page = "installed"
+            error = null
+        }
+        if (confirmedRemovalId != null && confirmedRemovalId !in installedIds) {
+            removeId = null
+            confirmedRemovalId = null
+            error = null
+        }
+    }
     fun navigateBack() {
         // Visible Home and Android Back must unwind the same dialog stack.
         if (mutationBusy) return
         when {
             pendingImport != null || pendingImportUri != null -> {
-                pendingImport = null; pendingImportUri = null; error = null
+                pendingImport = null; pendingImportUri = null
+                confirmedImportId = null; error = null
             }
             pendingBundledId != null -> { pendingBundledId = null; error = null }
-            removeId != null -> { removeId = null; error = null }
+            removeId != null -> { removeId = null; confirmedRemovalId = null; error = null }
             else -> onBack()
         }
     }
@@ -89,7 +125,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         if (mutationBusy) return
         mutationBusy = true
         scope.launch {
-            val result = withContext(Dispatchers.IO) {
+            // A confirmed registry transaction must finish even if this
+            // Composable is destroyed by rotation. Cross-instance writes are locked.
+            val result = withContext(Dispatchers.IO + NonCancellable) {
                 runCatching {
                     action()
                     manager.installed()
@@ -409,9 +447,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             },
             confirmButton = {
                 Button(enabled = !mutationBusy, onClick = {
+                    confirmedImportId = record.id
                     applyChange({ manager.installPreview(record) }) {
                         pendingImport = null
                         pendingImportUri = null
+                        confirmedImportId = null
                         page = "installed"
                     }
                 }, shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
@@ -421,7 +461,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             },
             dismissButton = {
                 TextButton(
-                    onClick = { pendingImport = null; pendingImportUri = null; error = null },
+                    onClick = {
+                        pendingImport = null; pendingImportUri = null
+                        confirmedImportId = null; error = null
+                    },
                     enabled = !mutationBusy,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                 ) { Text("Cancel") }
@@ -450,14 +493,18 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             confirmButton = {
                 TextButton(enabled = item != null && !mutationBusy, onClick = {
                     if (item == null) return@TextButton
+                    confirmedRemovalId = id
                     applyChange({ manager.uninstall(id) }) {
                         removeId = null
+                        confirmedRemovalId = null
                     }
                 }) { Text("Remove", color = colors.danger) }
             },
             dismissButton = {
                 TextButton(
-                    onClick = { removeId = null; error = null },
+                    onClick = {
+                        removeId = null; confirmedRemovalId = null; error = null
+                    },
                     enabled = !mutationBusy,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                 ) { Text("Cancel") }
