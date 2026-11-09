@@ -1069,10 +1069,10 @@ private fun OrynTerminalApp(
                         modifier = Modifier.padding(KlyroUiMetrics.cardPadding),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            horizontalAlignment = Alignment.Start
                         ) {
                             Text("RUNTIME STATUS", color = ui.muted,
                                 style = MaterialTheme.typography.labelSmall,
@@ -1088,7 +1088,7 @@ private fun OrynTerminalApp(
                                     color = stateColor,
                                     modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                                     style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1
+                                    maxLines = 2
                                 )
                             }
                         }
