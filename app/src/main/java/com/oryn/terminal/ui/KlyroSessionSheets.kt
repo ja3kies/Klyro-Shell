@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +54,7 @@ internal fun KlyroSessionSheet(
     onActivate: () -> Unit,
     onCloseSession: () -> Unit
 ) {
-    var confirmClose by remember(sessionName) { mutableStateOf(false) }
+    var confirmClose by rememberSaveable(sessionName) { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
         rows = 4,
