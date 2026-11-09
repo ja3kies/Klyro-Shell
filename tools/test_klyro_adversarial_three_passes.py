@@ -73,8 +73,12 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
         for key in ("mono-black", "mono-paper", "mono-contrast", "light", "dark"):
             self.assertIn('"' + key + '"', previews)
         self.assertIn('"system" to "System"', settings)
-        self.assertIn("Color.Black", previews)
-        self.assertIn("Color.White", previews)
+        # Monochrome previews must use the real theme palette, not hardcoded
+        # black/white literals in the component.
+        self.assertIn('KlyroColors.monochrome(mode)', previews)
+        self.assertIn('KlyroThemePreviewPalette.systemPair(accentId)', previews)
+        self.assertNotIn('Color.Black', previews)
+        self.assertNotIn('Color.White', previews)
         self.assertNotIn('Text("9 sp"', settings)
         self.assertNotIn('Text("24 sp"', settings)
         self.assertIn("KlyroPluginsPage(onBack =", home)
