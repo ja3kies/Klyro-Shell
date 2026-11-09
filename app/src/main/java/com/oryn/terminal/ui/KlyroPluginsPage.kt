@@ -61,10 +61,12 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var removeId by remember { mutableStateOf<String?>(null) }
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
+    var pendingBundledId by remember { mutableStateOf<String?>(null) }
     BackHandler {
         when {
-            pendingImport != null -> pendingImport = null
-            removeId != null -> removeId = null
+            pendingImport != null -> { pendingImport = null; error = null }
+            pendingBundledId != null -> { pendingBundledId = null; error = null }
+            removeId != null -> { removeId = null; error = null }
             else -> onBack()
         }
     }
@@ -200,9 +202,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             Button(
                                 enabled = !isInstalled,
                                 onClick = {
-                                    if (applyChange { manager.installBundled(plugin.id) }) {
-                                        page = "installed"
-                                    }
+                                    error = null
+                                    pendingBundledId = plugin.id
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = colors.accent,
                                     contentColor = colors.onAccent),
@@ -229,6 +230,61 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     }
                 }
             }
+        }
+    }
+
+    pendingBundledId?.let { id ->
+        val record = KlyroPluginManager.bundled.firstOrNull { it.id == id }
+        if (record != null) {
+            AlertDialog(
+                onDismissRequest = { pendingBundledId = null; error = null },
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+                containerColor = colors.sheet,
+                title = { Text("Add ${record.name}?") },
+                text = {
+                    Column(
+                        Modifier.fillMaxWidth().heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                    ) {
+                        Text("${record.commands.size} command suggestions · bundled offline pack",
+                            color = colors.muted)
+                        Text("Klyro inserts suggestions into Bash; commands are never run automatically.",
+                            color = colors.foreground)
+                        record.commands.forEach { command ->
+                            Text(command.insert, color = colors.muted,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                fontSize = 12.sp)
+                        }
+                        if (error != null) {
+                            Text(error.orEmpty(), color = colors.danger,
+                                modifier = Modifier.semantics {
+                                    liveRegion = LiveRegionMode.Polite
+                                })
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (applyChange { manager.installBundled(id) }) {
+                                pendingBundledId = null
+                                page = "installed"
+                            }
+                        },
+                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.accent,
+                            contentColor = colors.onAccent
+                        )
+                    ) { Text("Add pack") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingBundledId = null; error = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 
