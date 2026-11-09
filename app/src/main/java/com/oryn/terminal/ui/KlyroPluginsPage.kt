@@ -137,7 +137,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             Surface(color = colors.dangerContainer,
                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
                 Text(error.orEmpty(), color = colors.danger,
-                    modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd))
+                    modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd)
+                        .semantics { liveRegion = LiveRegionMode.Polite })
             }
         }
         if (page == "installed") {
@@ -170,7 +171,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             Text(if (plugin.enabled) "Enabled" else "Disabled",
                                 color = colors.muted, fontSize = 12.sp)
                             Switch(checked = plugin.enabled,
-                                modifier = Modifier.semantics { contentDescription = "Enable " + plugin.name },
+                                modifier = Modifier.semantics {
+                                    contentDescription = (if (plugin.enabled) "Disable " else "Enable ") + plugin.name
+                                },
                                 onCheckedChange = { checked ->
                                     applyChange { manager.setEnabled(plugin.id, checked) }
                                 })
@@ -197,8 +200,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             Button(
                                 enabled = !isInstalled,
                                 onClick = {
-                                    applyChange { manager.installBundled(plugin.id) }
-                                    if (error == null) page = "installed"
+                                    if (applyChange { manager.installBundled(plugin.id) }) {
+                                        page = "installed"
+                                    }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = colors.accent,
                                     contentColor = colors.onAccent),
@@ -246,13 +250,18 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     }
                     Text("Commands are inserted only. Review them before pressing Enter.",
                         color = colors.warningInk, fontSize = 12.sp)
+                    if (error != null) {
+                        Text(error.orEmpty(), color = colors.danger,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    }
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    pendingImport = null
-                    applyChange { manager.installPreview(record) }
-                    if (error == null) page = "installed"
+                    if (applyChange { manager.installPreview(record) }) {
+                        pendingImport = null
+                        page = "installed"
+                    }
                 }, shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.accent, contentColor = colors.onAccent
@@ -270,11 +279,18 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             onDismissRequest = { removeId = null },
             containerColor = colors.sheet,
             title = { Text("Remove ${item?.name ?: "plugin"}?") },
-            text = { Text("This removes its command suggestions. Terminal sessions and user files are not affected.") },
+            text = {
+                Column {
+                    Text("This removes its command suggestions. Terminal sessions and user files are not affected.")
+                    if (error != null) Text(error.orEmpty(), color = colors.danger,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    removeId = null
-                    applyChange { manager.uninstall(id) }
+                    if (applyChange { manager.uninstall(id) }) {
+                        removeId = null
+                    }
                 }) { Text("Remove", color = colors.danger) }
             },
             dismissButton = {
