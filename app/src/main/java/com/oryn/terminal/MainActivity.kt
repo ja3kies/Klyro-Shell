@@ -476,8 +476,8 @@ class MainActivity : ComponentActivity() {
                     },
                     progress = installProgress,
                     installing = isInstalling,
-                    status = terminalState.sessionFailureMessage ?: terminalState.sessionStatus.ifBlank { statusMessage },
-                    runtimeVerified = runtimeVerified && terminalState.sessionFailureMessage == null,
+                    status = statusMessage,
+                    runtimeVerified = runtimeVerified,
                     runtimeHasWarnings = runtimeHasWarnings,
                     bashStarted = bashStarted,
                     verifyingRuntime = isVerifyingRuntime,
@@ -768,7 +768,6 @@ class MainActivity : ComponentActivity() {
 
     private fun launchBash() {
         if (terminalState.sessions.size >= 8) {
-            statusMessage = "Eight sessions already running. Close a session before opening another."
             Toast.makeText(this, "Maximum of 8 sessions. Close one to continue.",
                 Toast.LENGTH_SHORT).show()
             return
@@ -785,7 +784,6 @@ class MainActivity : ComponentActivity() {
             KlyroSessionRuntime.noteInteraction()
             KlyroSessionService.ensureRunning(this)
             showWelcomeScreen = false
-            statusMessage = "Starting private Bash session…"
         } catch (error: Exception) {
             runtimeVerified = false
             bashStarted = false
@@ -798,7 +796,6 @@ class MainActivity : ComponentActivity() {
     private fun closeBash() {
         terminalState.closeSession()
         if (!terminalState.hasLiveSessions()) KlyroSessionService.stopIfEmpty(this)
-        statusMessage = "Bash session closed."
     }
 
     private fun refreshReadiness() {
@@ -883,6 +880,7 @@ private fun OrynTerminalApp(
     // Each role keeps its contrast in both Klyro Soft Mint and Klyro Dark.
     val ui = LocalKlyroColors.current
     val context = androidx.compose.ui.platform.LocalContext.current
+    val homeStatus = KlyroHomeStatusPolicy.resolve(status, sessionFailureMessage)
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
     val warningLines = remember(technicalErrorDetails) {
@@ -1094,14 +1092,34 @@ private fun OrynTerminalApp(
                             }
                         }
                         Text(
-                            status,
+                            homeStatus.runtimeMessage,
                             color = if (runtimeHasWarnings) ui.warningInk
-                                else if (technicalErrorDetails != null || sessionFailureMessage != null)
+                                else if (technicalErrorDetails != null)
                                     ui.danger
                                 else ui.foreground,
                             fontSize = 13.sp,
                             lineHeight = 19.sp
                         )
+                        homeStatus.terminalFailure?.let { failure ->
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = ui.dangerContainer,
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("TERMINAL SESSION",
+                                        color = ui.danger,
+                                        style = MaterialTheme.typography.labelSmall)
+                                    Text(failure,
+                                        color = ui.danger,
+                                        fontSize = 12.sp,
+                                        lineHeight = 17.sp)
+                                }
+                            }
+                        }
                         if (runtimeHasWarnings && warningLines.isNotEmpty()) {
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
