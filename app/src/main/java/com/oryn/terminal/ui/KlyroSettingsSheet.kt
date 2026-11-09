@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.graphics.Color as AndroidColor
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.BorderStroke
@@ -46,6 +47,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -85,7 +88,12 @@ internal fun KlyroSettingsSheet(
     onShareDiagnostic: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var section by remember(initialSection) { mutableStateOf(initialSection) }
+    var section by remember(initialSection) {
+        mutableStateOf(initialSection.takeIf {
+            it in setOf("home", "appearance", "keyboard", "files",
+                "privacy", "diagnostics", "about")
+        } ?: "home")
+    }
     var showFontLicense by remember { mutableStateOf(false) }
     var showHugeiconsLicense by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
@@ -97,6 +105,10 @@ internal fun KlyroSettingsSheet(
     androidx.compose.runtime.LaunchedEffect(context) {
         selectedBrand = KlyroBrandChoice.selected(context)
     }
+    BackHandler(
+        enabled = section != "home" && !showColorPicker &&
+            !showFontLicense && !showHugeiconsLicense
+    ) { section = "home" }
     val density = LocalDensity.current
     val version = remember(context) {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
@@ -136,7 +148,10 @@ internal fun KlyroSettingsSheet(
                             Text("Settings")
                         }
                     }
-                    TextButton(onClick = onDismiss) { Text("Done") }
+                    TextButton(onClick = onDismiss,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                        Text("Done")
+                    }
                 }
                 when (section) {
                     "home" -> {
@@ -225,6 +240,7 @@ internal fun KlyroSettingsSheet(
                             }
                             if (brandSwitchError) {
                                 Text("Icon switch failed. Both launcher entries were restored where possible; retry from Settings.",
+                                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                                     color = colors.danger,
                                     style = MaterialTheme.typography.bodySmall)
                             }
@@ -534,6 +550,7 @@ internal fun KlyroSettingsSheet(
                         }
                         if (cannotOpenPermissions) {
                             Text("Android settings cannot be opened on this device.",
+                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                                 color = colors.danger, style = MaterialTheme.typography.bodySmall)
                         }
                     }
