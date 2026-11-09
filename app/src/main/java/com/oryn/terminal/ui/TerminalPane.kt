@@ -74,6 +74,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.stateDescription
@@ -178,13 +181,25 @@ fun TerminalPane(
     var clipboardAvailable by remember(session) {
         mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
-    DisposableEffect(clipboardManager, session) {
+    DisposableEffect(clipboardManager, session, context) {
         val listener = ClipboardManager.OnPrimaryClipChangedListener {
             clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
         }
-        clipboardManager?.addPrimaryClipChangedListener(listener)
+        val lifecycleOwner = context as? LifecycleOwner
+        val observer = LifecycleEventObserver { _, event ->
+            // Clipboard access is restricted in the background on modern
+            // Android; refresh availability when the terminal regains focus.
+            if (event == Lifecycle.Event.ON_RESUME) {
+                clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
+            }
+        }
+        lifecycleOwner?.lifecycle?.addObserver(observer)
+        runCatching { clipboardManager?.addPrimaryClipChangedListener(listener) }
         clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
-        onDispose { clipboardManager?.removePrimaryClipChangedListener(listener) }
+        onDispose {
+            lifecycleOwner?.lifecycle?.removeObserver(observer)
+            runCatching { clipboardManager?.removePrimaryClipChangedListener(listener) }
+        }
     }
     var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
     fun pasteClipboard() {
