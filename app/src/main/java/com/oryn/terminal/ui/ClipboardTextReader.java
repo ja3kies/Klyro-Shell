@@ -16,7 +16,20 @@ public final class ClipboardTextReader {
 
     @Nullable
     public static String readPlainText(@Nullable ClipboardManager manager) {
-        if (manager == null || !manager.hasPrimaryClip()) return null;
+        if (manager == null) return null;
+        // Android can deny clipboard reads when the app loses focus, while
+        // clipboard-change callbacks and activity transitions are still firing.
+        // A denied read must disable Paste, never crash the terminal UI.
+        try {
+            return readAccessiblePlainText(manager);
+        } catch (SecurityException | IllegalStateException denied) {
+            return null;
+        }
+    }
+
+    @Nullable
+    private static String readAccessiblePlainText(ClipboardManager manager) {
+        if (!manager.hasPrimaryClip()) return null;
         ClipDescription description = manager.getPrimaryClipDescription();
         if (description == null ||
                 !(description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) ||
