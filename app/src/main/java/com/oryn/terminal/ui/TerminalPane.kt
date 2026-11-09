@@ -74,10 +74,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.LifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.stateDescription
@@ -182,7 +181,7 @@ fun TerminalPane(
     var clipboardAvailable by remember(session) {
         mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
-    val lifecycleOwner = ViewTreeLifecycleOwner.get(LocalView.current)
+    val lifecycleOwner = context as? LifecycleOwner
     DisposableEffect(clipboardManager, session, lifecycleOwner) {
         val listener = ClipboardManager.OnPrimaryClipChangedListener {
             clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
@@ -608,7 +607,8 @@ fun TerminalPane(
                     // subclass the terminal or replace its selection engine.
                     setOnCreateContextMenuListener { menu, _, _ ->
                         menu.add("Select all").setOnMenuItemClickListener {
-                            selectTerminalOutput()
+                            // Explicit native Select all must never activate clipboard Paste.
+                            selectTerminalOutput(expectedSelection = true)
                             true
                         }
                     }
