@@ -210,6 +210,8 @@ internal fun KlyroSettingsSheet(
                                                 if (!KlyroBrandChoice.isVerifiedSelection(context, choice)) {
                                                     brandSwitchError = !KlyroBrandChoice.select(context, choice)
                                                     selectedBrand = KlyroBrandChoice.selected(context)
+                                                } else {
+                                                    brandSwitchError = false
                                                 }
                                             }.semantics {
                                                 contentDescription = "Launcher icon $title"
@@ -392,7 +394,10 @@ internal fun KlyroSettingsSheet(
                                             color = colors.accent, fontWeight = FontWeight.Bold
                                         )
                                         if (fontSizeSp != 13.5f) {
-                                            TextButton(onClick = onResetFont) { Text("Reset") }
+                                            TextButton(
+                                                onClick = onResetFont,
+                                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                            ) { Text("Reset") }
                                         }
                                     }
                                 }
