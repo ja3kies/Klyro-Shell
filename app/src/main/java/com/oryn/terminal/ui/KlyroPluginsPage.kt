@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,6 +50,9 @@ import androidx.compose.ui.unit.sp
 import com.oryn.terminal.R
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginRecord
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Acode-inspired Installed / Explore manager, intentionally no remote code execution. */
 @Composable
@@ -56,6 +60,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     val manager = remember(context) { KlyroPluginManager(context) }
+    val scope = rememberCoroutineScope()
+    var previewBusy by remember { mutableStateOf(false) }
     var installed by remember { mutableStateOf(manager.installed()) }
     var page by rememberSaveable { mutableStateOf(if (installed.isEmpty()) "explore" else "installed") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -81,12 +87,18 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         }.isSuccess
     }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            runCatching { manager.previewManifest(uri) }
-                .onSuccess { pendingImport = it; error = null }
-                .onFailure { failure ->
-                    error = failure.message?.take(160) ?: "Invalid plugin manifest"
+        if (uri != null && !previewBusy) {
+            previewBusy = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching { manager.previewManifest(uri) }
                 }
+                previewBusy = false
+                result.onSuccess { pendingImport = it; error = null }
+                    .onFailure { failure ->
+                        error = failure.message?.take(160) ?: "Invalid plugin manifest"
+                    }
+            }
         }
     }
 
@@ -233,12 +245,13 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         color = colors.muted, fontSize = 12.sp)
                     OutlinedButton(
                         onClick = { importPicker.launch(arrayOf("*/*")) },
+                        enabled = !previewBusy,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                     ) {
                         Icon(painterResource(R.drawable.hugeicons_file_01),
                             contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("Import JSON")
+                        Text(if (previewBusy) "Reading manifest…" else "Import JSON")
                     }
                 }
             }
