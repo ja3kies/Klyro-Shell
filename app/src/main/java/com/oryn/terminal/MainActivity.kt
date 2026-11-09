@@ -1175,14 +1175,24 @@ private fun OrynTerminalApp(
                             Text("$progress%", color = ui.accent, fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace)
                         }
+                        if (hasRunningSessions) {
+                            Button(
+                                onClick = onLaunch,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = ui.accent, contentColor = ui.onAccent
+                                ),
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                            ) { Text("Return to terminal", fontWeight = FontWeight.SemiBold) }
+                        }
                         if (!runtimeVerified) {
                             Button(
                                 onClick = onInstall,
                                 enabled = !installing && !verifyingRuntime,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = ui.accent,
-                                    contentColor = ui.onAccent,
+                                    containerColor = if (hasRunningSessions) ui.tile else ui.accent,
+                                    contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
                                     disabledContainerColor = ui.tile,
                                     disabledContentColor = ui.muted
                                 ),
@@ -1193,7 +1203,7 @@ private fun OrynTerminalApp(
                                         installing -> "Installing environment…"
                                         verifyingRuntime -> "Checking Bash…"
                                         runtimeInstalled -> "Recheck environment"
-                                        technicalErrorDetails != null && !bootstrapInstalled -> "Clean & retry installation"
+                                        technicalErrorDetails != null && !bootstrapInstalled -> "Retry installation"
                                         technicalErrorDetails != null -> "Retry runtime setup"
                                         bootstrapInstalled -> "Verify packaged runtime"
                                         else -> "Install private environment"
@@ -1202,25 +1212,28 @@ private fun OrynTerminalApp(
                                 )
                             }
                         }
-                        if (runtimeVerified) {
+                        if (runtimeVerified && !hasRunningSessions) {
                             Button(
                                 onClick = onLaunch,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = ui.accent,
-                                    contentColor = ui.onAccent
+                                    containerColor = ui.accent, contentColor = ui.onAccent
                                 ),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                            ) {
-                                Text(if (hasRunningSessions) "Return to terminal" else "Launch Bash",
-                                    fontWeight = FontWeight.SemiBold)
-                            }
+                            ) { Text("Launch Bash", fontWeight = FontWeight.SemiBold) }
+                        }
+                        if (runtimeVerified) {
                             TextButton(
                                 onClick = onRecheck,
                                 enabled = !verifyingRuntime && !installing,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                                modifier = Modifier.fillMaxWidth()
+                                    .heightIn(min = KlyroUiMetrics.minTouch)
                             ) {
-                                Text("Recheck environment", color = ui.accent, fontSize = 13.sp)
+                                Text(
+                                    if (verifyingRuntime) "Checking environment…" else "Recheck environment",
+                                    color = if (verifyingRuntime || installing) ui.muted else ui.accent,
+                                    fontSize = 13.sp
+                                )
                             }
                         }
                     }
