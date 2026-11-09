@@ -106,10 +106,19 @@ internal fun KlyroSettingsSheet(
     androidx.compose.runtime.LaunchedEffect(context) {
         selectedBrand = KlyroBrandChoice.selected(context)
     }
+    fun navigateBack() {
+        when {
+            showColorPicker -> showColorPicker = false
+            showFontLicense -> showFontLicense = false
+            showHugeiconsLicense -> showHugeiconsLicense = false
+            section != "home" -> section = "home"
+            else -> onDismiss()
+        }
+    }
     BackHandler(
-        enabled = section != "home" && !showColorPicker &&
-            !showFontLicense && !showHugeiconsLicense
-    ) { section = "home" }
+        enabled = section != "home" || showColorPicker ||
+            showFontLicense || showHugeiconsLicense
+    ) { navigateBack() }
     val density = LocalDensity.current
     val version = remember(context) {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
@@ -123,11 +132,7 @@ internal fun KlyroSettingsSheet(
         fontScale = density.fontScale
     )
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = {
-            if (section != "home" && !showColorPicker &&
-                !showFontLicense && !showHugeiconsLicense
-            ) section = "home" else onDismiss()
-        }) {
+        KlyroSheet(onDismissRequest = ::navigateBack) {
             Column(
                 modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth()

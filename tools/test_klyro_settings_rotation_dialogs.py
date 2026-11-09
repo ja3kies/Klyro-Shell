@@ -8,6 +8,6 @@ class SettingsOverlayRotationTest(unittest.TestCase):
         for k in ("showFontLicense", "showHugeiconsLicense", "cannotOpenPermissions", "brandSwitchError"):
             self.assertIn(f"var {k} by rememberSaveable", S)
     def test_settings_back_routes_to_parent_and_keeps_dialog_open(self):
-        self.assertIn('section != "home" && !showColorPicker', S)
+        self.assertIn('enabled = section != "home" || showColorPicker', S)
         self.assertIn('!showFontLicense && !showHugeiconsLicense', S)
 if __name__=="__main__": unittest.main()
