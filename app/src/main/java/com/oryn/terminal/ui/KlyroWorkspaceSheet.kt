@@ -360,15 +360,24 @@ internal fun KlyroWorkspaceSheet(
         }
 
         deletingId?.let { id ->
-            val name = entries.firstOrNull { it.id == id }?.name ?: "workspace"
+            val target = entries.firstOrNull {
+                it.id == id && it.id != KlyroWorkspaceCatalog.GENERAL
+            }
+            val name = target?.name ?: "workspace"
             AlertDialog(
                 onDismissRequest = { deletingId = null },
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 containerColor = c.sheet,
                 title = { Text("Delete " + name + "?") },
-                text = { Text("Its sessions return to General. No shell or files are deleted.") },
+                text = {
+                    Text(if (target == null) "Workspace no longer available. Cancel this action."
+                        else "Its sessions return to General. No shell or files are deleted.")
+                },
                 confirmButton = {
-                    TextButton(onClick = { onDeleteProject(id); deletingId = null }) {
+                    TextButton(
+                        enabled = target != null,
+                        onClick = { if (target != null) { onDeleteProject(id); deletingId = null } }
+                    ) {
                         Text("Delete", color = c.danger)
                     }
                 },
