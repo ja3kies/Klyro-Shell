@@ -15,7 +15,9 @@ class KlyroFavoriteColorsTest {
         }
         assertEquals(6, saved.size)
         assertEquals(saved, KlyroFavoriteColors.decode(KlyroFavoriteColors.encode(saved)))
-        assertEquals("Color 8", saved.first().label)
+        assertEquals("Color 5", saved.first().label)
+        assertFalse(KlyroFavoriteColors.canSaveWithoutEviction(saved, "#FF000008"))
+        assertTrue(KlyroFavoriteColors.canSaveWithoutEviction(saved, "#FF000005"))
     }
 
     @Test fun duplicateHexUpdatesNameRatherThanAddingCopy() {

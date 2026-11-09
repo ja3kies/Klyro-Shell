@@ -402,13 +402,23 @@ internal fun KlyroColorPickerDialog(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
+                        val currentFavoriteHex = "#%08X".format(argb())
+                        val hasFavoriteSpace = KlyroFavoriteColors.canSaveWithoutEviction(
+                            favorites, currentFavoriteHex
+                        )
+                        if (!hasFavoriteSpace) {
+                            Text(
+                                "Saved colors are full (6/6). Remove a color before adding another.",
+                                color = colors.muted, style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                         Button(
                             onClick = {
                                 saveFavorites(KlyroFavoriteColors.save(
-                                    favorites, "#%08X".format(argb()), favoriteName
+                                    favorites, currentFavoriteHex, favoriteName
                                 ))
                             },
-                            enabled = KlyroHexInput.isComplete(hexInput),
+                            enabled = KlyroHexInput.isComplete(hexInput) && hasFavoriteSpace,
                             modifier = Modifier.fillMaxWidth()
                                 .heightIn(min = KlyroUiMetrics.minTouch)
                         ) { Text("Save current color") }

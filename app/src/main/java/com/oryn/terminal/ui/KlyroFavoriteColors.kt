@@ -36,8 +36,15 @@ internal object KlyroFavoriteColors {
             hex + "|" + normalizeLabel(favorite.label)
         }.joinToString("\n")
 
+    /** Do not silently delete a saved color when the six-slot collection is full. */
+    fun canSaveWithoutEviction(favorites: List<Favorite>, hex: String): Boolean {
+        val value = normalizeHex(hex) ?: return false
+        return favorites.size < MAX_FAVORITES || favorites.any { it.hex == value }
+    }
+
     fun save(favorites: List<Favorite>, hex: String, name: String): List<Favorite> {
         val value = normalizeHex(hex) ?: return favorites
+        if (!canSaveWithoutEviction(favorites, value)) return favorites
         val updated = Favorite(value, normalizeLabel(name))
         return (listOf(updated) + favorites.filterNot { it.hex == value })
             .take(MAX_FAVORITES)
