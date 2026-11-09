@@ -239,7 +239,6 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             AlertDialog(
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 onDismissRequest = { pendingBundledId = null; error = null },
-                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 containerColor = colors.sheet,
                 title = { Text("Add ${record.name}?") },
                 text = {
