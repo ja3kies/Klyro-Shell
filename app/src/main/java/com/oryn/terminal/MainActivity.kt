@@ -882,21 +882,17 @@ private fun OrynTerminalApp(
     val warningLines = remember(technicalErrorDetails) {
         KlyroVerificationWarnings.unexpectedLines(technicalErrorDetails.orEmpty()).distinct()
     }
-    val stateLabel = when {
-        runtimeVerified && runtimeHasWarnings -> "READY WITH WARNINGS"
-        runtimeVerified -> "ENVIRONMENT READY"
-        verifyingRuntime -> "CHECKING ENVIRONMENT"
-        bashStarted -> "BASH STARTING"
-        runtimeInstalled -> "NOT VERIFIED"
-        bootstrapInstalled -> "BOOTSTRAP INSTALLED"
-        else -> "SETUP"
-    }
-    val stateColor = when {
-        runtimeVerified && runtimeHasWarnings -> ui.warningInk
-        runtimeVerified -> ui.readyInk
-        verifyingRuntime || bashStarted || runtimeInstalled || bootstrapInstalled ->
-            ui.warningInk
-        else -> ui.accent
+    val badge = KlyroRuntimeBadgePolicy.resolve(
+        installing, verifyingRuntime, runtimeVerified, runtimeHasWarnings,
+        bashStarted, runtimeInstalled, bootstrapInstalled,
+        technicalErrorDetails != null || sessionFailureMessage != null
+    )
+    val stateLabel = badge.label
+    val stateColor = when (badge.severity) {
+        KlyroRuntimeBadgeSeverity.READY -> ui.readyInk
+        KlyroRuntimeBadgeSeverity.WARNING -> ui.warningInk
+        KlyroRuntimeBadgeSeverity.ERROR -> ui.danger
+        KlyroRuntimeBadgeSeverity.NEUTRAL -> ui.accent
     }
 
     val homeAction = KlyroHomeActionPolicy.decide(runtimeVerified, hasRunningSessions)
@@ -1075,7 +1071,7 @@ private fun OrynTerminalApp(
                                 border = BorderStroke(1.dp, stateColor.copy(alpha = .22f))
                             ) {
                                 Text(
-                                    (if (runtimeVerified && !runtimeHasWarnings) "✓ " else "") +
+                                    (if (badge.severity == KlyroRuntimeBadgeSeverity.READY) "✓ " else "") +
                                         stateLabel,
                                     color = stateColor,
                                     modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
