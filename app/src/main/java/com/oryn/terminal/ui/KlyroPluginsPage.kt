@@ -73,6 +73,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var pendingImportUri by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingBundledId by rememberSaveable { mutableStateOf<String?>(null) }
     BackHandler {
+        // Do not dismiss an in-flight registry write by leaving the screen.
+        if (mutationBusy) return@BackHandler
         when {
             pendingImport != null || pendingImportUri != null -> {
                 pendingImport = null; pendingImportUri = null; error = null
@@ -134,6 +136,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
             TextButton(
                 onClick = onBack,
+                enabled = !mutationBusy,
                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
             ) {
                 Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
@@ -161,8 +164,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 Surface(
                     modifier = Modifier.weight(1f)
                         .heightIn(min = KlyroUiMetrics.minTouch)
-                        .clickable(role = Role.Tab,
-                        onClickLabel = "Show $label") { page = id }
+                        .clickable(
+                            enabled = !mutationBusy, role = Role.Tab,
+                            onClickLabel = "Show $label"
+                        ) { page = id }
                         .semantics { this.selected = selected },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                     color = if (selected) colors.accent else colors.key,
@@ -173,6 +178,17 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         fontSize = 13.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
+            }
+        }
+        if (mutationBusy) {
+            Surface(
+                color = colors.key,
+                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+            ) {
+                Text("Updating local plugins…",
+                    modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                    color = colors.muted)
             }
         }
         if (error != null) {
@@ -270,7 +286,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         color = colors.muted, fontSize = 12.sp)
                     OutlinedButton(
                         onClick = { importPicker.launch(arrayOf("*/*")) },
-                        enabled = !previewBusy,
+                        enabled = !previewBusy && !mutationBusy,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                     ) {
@@ -288,7 +304,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         if (record != null) {
             AlertDialog(
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
-                onDismissRequest = { pendingBundledId = null; error = null },
+                onDismissRequest = {
+                    if (!mutationBusy) { pendingBundledId = null; error = null }
+                },
                 containerColor = colors.sheet,
                 title = { Text("Add ${record.name}?") },
                 text = {
@@ -331,7 +349,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     ) { Text("Add pack") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { pendingBundledId = null; error = null }) {
+                    TextButton(
+                        enabled = !mutationBusy,
+                        onClick = { pendingBundledId = null; error = null }
+                    ) {
                         Text("Cancel")
                     }
                 }
@@ -342,7 +363,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     pendingImport?.let { record ->
         AlertDialog(
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
-            onDismissRequest = { pendingImport = null; pendingImportUri = null; error = null },
+            onDismissRequest = {
+                if (!mutationBusy) {
+                    pendingImport = null; pendingImportUri = null; error = null
+                }
+            },
             containerColor = colors.sheet,
             title = { Text("Install ${record.name}?") },
             text = {
@@ -379,6 +404,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             dismissButton = {
                 TextButton(
                     onClick = { pendingImport = null; pendingImportUri = null; error = null },
+                    enabled = !mutationBusy,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                 ) { Text("Cancel") }
             }
@@ -389,7 +415,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         val item = installed.firstOrNull { it.id == id }
         AlertDialog(
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
-            onDismissRequest = { removeId = null; error = null },
+            onDismissRequest = {
+                if (!mutationBusy) { removeId = null; error = null }
+            },
             containerColor = colors.sheet,
             title = { Text("Remove ${item?.name ?: "plugin"}?") },
             text = {
@@ -409,6 +437,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             dismissButton = {
                 TextButton(
                     onClick = { removeId = null; error = null },
+                    enabled = !mutationBusy,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                 ) { Text("Cancel") }
             }
