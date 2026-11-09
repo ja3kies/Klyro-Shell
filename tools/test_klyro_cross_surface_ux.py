@@ -18,7 +18,10 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn('ic_klyro_plugins', home)
         self.assertIn('rememberSaveable { mutableStateOf(false) }', home)
         self.assertIn("KlyroPluginsPage(onBack =", home)
-        self.assertIn("BackHandler { onBack() }", plugins)
+        self.assertIn("BackHandler {", plugins)
+        self.assertIn("pendingImport != null -> pendingImport = null", plugins)
+        self.assertIn("removeId != null -> removeId = null", plugins)
+        self.assertIn("else -> onBack()", plugins)
         self.assertIn('var page by rememberSaveable', plugins)
 
     def test_plugins_confirm_import_and_protect_against_unsafe_commands(self):
@@ -43,7 +46,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         palette = READ(UI / "KlyroCommandPalette.kt")
         workspaces = READ(UI / "KlyroWorkspaceSheet.kt")
         self.assertIn("this.selected = selected", plugins)
-        self.assertIn('contentDescription = "Enable " + plugin.name', plugins)
+        self.assertIn('if (plugin.enabled) "Disable " else "Enable "', plugins)
         self.assertIn("maxLines = 1, overflow = TextOverflow.Ellipsis", components)
         self.assertIn("modifier = Modifier.weight(1f)", palette)
         self.assertIn('KlyroSheetTitle("Workspaces", modifier = Modifier.weight(1f))', workspaces)
