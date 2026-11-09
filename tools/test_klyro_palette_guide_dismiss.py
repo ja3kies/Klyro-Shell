@@ -5,6 +5,8 @@ P=(Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal/ui/K
 class GuideDismissParity(unittest.TestCase):
  def test_back_and_sheet_dismiss_return_to_commands(self):
   self.assertIn("BackHandler(enabled = showingGuide) { showingGuide = false }",P)
-  self.assertIn("if (showingGuide) showingGuide = false else onDismiss()",P)
+  self.assertIn("showingGuide -> showingGuide = false",P)
+  self.assertIn("pendingCautionCommand != null -> pendingCautionCommand = null",P)
+  self.assertIn("else -> onDismiss()",P)
   self.assertIn('Text(if (showingGuide) "Commands" else "Welcome guide")',P)
 if __name__=="__main__":unittest.main()
