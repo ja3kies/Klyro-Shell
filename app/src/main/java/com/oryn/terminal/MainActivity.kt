@@ -495,9 +495,14 @@ class MainActivity : ComponentActivity() {
                     onCopyTechnicalDetails = {
                         val details = technicalErrorDetails
                         if (!details.isNullOrBlank()) {
-                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Klyro technical details", details))
-                            Toast.makeText(this, "Technical details copied", Toast.LENGTH_SHORT).show()
+                            val copied = runCatching {
+                                val clipboard = getSystemService(CLIPBOARD_SERVICE)
+                                    as? ClipboardManager ?: error("Clipboard unavailable")
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Klyro technical details", details))
+                            }.isSuccess
+                            Toast.makeText(this,
+                                if (copied) "Technical details copied" else "Clipboard unavailable",
+                                Toast.LENGTH_SHORT).show()
                         }
                     },
                     bootstrapInstalled = bootstrapInstalled,
@@ -1118,7 +1123,7 @@ private fun OrynTerminalApp(
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 TextButton(
                                     onClick = onToggleTechnicalDetails,
-                                    modifier = Modifier.heightIn(min = 48.dp),
+                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                     contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
                                 ) {
                                     Text(
@@ -1142,7 +1147,7 @@ private fun OrynTerminalApp(
                                 Surface(
                                     modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
                                     color = ui.background,
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                                 ) {
                                     Box(
                                         modifier = Modifier
