@@ -187,6 +187,11 @@ fun TerminalPane(
     }
     var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
     fun pasteClipboard() {
+        if (!session.isRunning()) {
+            Toast.makeText(context, "Terminal session ended; start a new session to paste",
+                Toast.LENGTH_SHORT).show()
+            return
+        }
         val content = ClipboardTextReader.readPlainText(clipboardManager)
         if (!ClipboardPastePolicy.canPaste(content)) {
             Toast.makeText(context, "No supported clipboard text", Toast.LENGTH_SHORT).show()
@@ -199,6 +204,12 @@ fun TerminalPane(
     }
     LaunchedEffect(nativePasteRequest, session) {
         nativePasteRequest?.let { incoming ->
+            if (!session.isRunning()) {
+                Toast.makeText(context, "Terminal session ended; paste cancelled",
+                    Toast.LENGTH_SHORT).show()
+                onNativePasteConsumed()
+                return@let
+            }
             // Imported single-line text behaves like the clipboard action;
             // only lines capable of submitting shell commands need confirmation.
             if (!ClipboardPastePolicy.canPaste(incoming)) {
@@ -306,13 +317,20 @@ fun TerminalPane(
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
     val compact = maxHeight < 300.dp
-    fun selectTerminalOutput() {
+    fun selectTerminalOutput(expectedSelection: Boolean) {
+        // Honor the action shown at touch-down, not a different action caused
+        // by terminal output changing between composition and the tap.
+        if (!expectedSelection) {
+            pasteClipboard()
+            return
+        }
         val output = session.emulator?.screen?.transcriptText.orEmpty()
         if (TerminalActionPolicy.hasCopyableOutput(output)) {
             outputSelectionView = null
             selectedOutput = output
         } else {
-            pasteClipboard()
+            Toast.makeText(context, "Terminal output changed; nothing to select",
+                Toast.LENGTH_SHORT).show()
         }
     }
     // Fit seven 48dp+ touch targets across a Pixel-width screen; scroll on narrower devices.
@@ -635,8 +653,8 @@ fun TerminalPane(
                 iconCaption = if (canSelect) "SELECT" else "PASTE",
                 pasteTone = !canSelect,
                 active = selectedOutput != null,
-                enabled = canSelect || clipboardAvailable
-            ) { selectTerminalOutput() }
+                enabled = session.isRunning() && (canSelect || clipboardAvailable)
+            ) { selectTerminalOutput(canSelect) }
         }
         val secondRow: @Composable () -> Unit = {
             TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome,
