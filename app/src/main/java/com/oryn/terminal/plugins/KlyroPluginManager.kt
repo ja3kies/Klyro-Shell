@@ -184,16 +184,21 @@ class KlyroPluginManager(context: Context) {
         val bytes = resolver.openInputStream(uri)?.use { input ->
             val output = ByteArrayOutputStream()
             val chunk = ByteArray(2048)
+            var emptyReads = 0
             while (true) {
                 val n = input.read(chunk)
                 if (n < 0) break
-                if (n == 0) continue
+                if (n == 0) {
+                    require(++emptyReads <= 16) { "Document source stalled" }
+                    continue
+                }
+                emptyReads = 0
                 require(output.size() + n <= MAX_MANIFEST_BYTES) { "Manifest exceeds 16 KiB" }
                 output.write(chunk, 0, n)
             }
             output.toByteArray()
         } ?: error("Cannot read selected file")
-        val objectJson = JSONObject(String(bytes, StandardCharsets.UTF_8))
+        val objectJson = JSONObject(KlyroManifestText.decodeUtf8(bytes))
         val record = parse(objectJson) ?: error("Unsupported manifest or unsafe commands")
         require(record.id !in bundled.map { it.id }) { "Reserved plugin identifier" }
         require(installed().none { it.id == record.id }) {
