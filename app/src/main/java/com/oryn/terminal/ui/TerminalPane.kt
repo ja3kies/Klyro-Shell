@@ -291,15 +291,23 @@ fun TerminalPane(
             stableFrames = if (ime.getBottom(density) == 0 && view.height == lastHeight) stableFrames + 1 else 0
             lastHeight = view.height
         }
-        session.emulator?.let { emulator ->
-            val matches = TranscriptSearch.findRows(emulator.screen, emulator.mColumns, emulator.mRows, requestedQuery, requestedCase)
-            if (matches.isNotEmpty()) {
-                view.setTopRow(TranscriptSearch.topRow(matches[index.coerceAtMost(matches.lastIndex)],
-                    emulator.mRows, emulator.screen.activeTranscriptRows))
-                view.invalidate()
+        // A detached/closed PTY must never receive a deferred scroll or focus.
+        if (view.isAttachedToWindow) {
+            session.emulator?.let { emulator ->
+                val matches = TranscriptSearch.findRows(
+                    emulator.screen, emulator.mColumns, emulator.mRows, requestedQuery, requestedCase
+                )
+                if (matches.isNotEmpty()) {
+                    view.setTopRow(TranscriptSearch.topRow(
+                        matches[index.coerceAtMost(matches.lastIndex)],
+                        emulator.mRows, emulator.screen.activeTranscriptRows
+                    ))
+                    view.invalidate()
+                }
             }
         }
-        view.requestFocus()
+        // Focus restoration belongs to the modal-aware effect below. Never
+        // steal focus from a new dialog opened while the IME was resizing.
         pendingSearch = null
     }
     fun openSessionSheet(id: Long, name: String) {
@@ -312,7 +320,7 @@ fun TerminalPane(
     var shiftActive by remember(viewClient) { mutableStateOf(viewClient.isShiftDown()) }
     var fnActive by remember(viewClient) { mutableStateOf(viewClient.isFnDown()) }
     var showEndSessionConfirmation by rememberSaveable(session) { mutableStateOf(false) }
-    var warningNoteDismissed by rememberSaveable(session) { mutableStateOf(false) }
+    var warningNoteDismissed by rememberSaveable(session, runtimeHasWarnings) { mutableStateOf(false) }
 
     LaunchedEffect(
         activeTabId, activeTerminalView, sessionSheetId, renameDialogId,
