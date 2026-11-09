@@ -9,5 +9,7 @@ class SettingsOverlayRotationTest(unittest.TestCase):
             self.assertIn(f"var {k} by rememberSaveable", S)
     def test_settings_back_routes_to_parent_and_keeps_dialog_open(self):
         self.assertIn('enabled = section != "home" || showColorPicker', S)
-        self.assertIn('!showFontLicense && !showHugeiconsLicense', S)
+        self.assertIn('showFontLicense -> showFontLicense = false', S)
+        self.assertIn('showHugeiconsLicense -> showHugeiconsLicense = false', S)
+        self.assertIn('KlyroSheet(onDismissRequest = ::navigateBack)', S)
 if __name__=="__main__": unittest.main()

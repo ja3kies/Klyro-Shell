@@ -9,6 +9,8 @@ class FindIntentSnapshot(unittest.TestCase):
   fragment=S.split('LaunchedEffect(pendingSearch, session, activeTerminalView)',1)[1].split('fun openSessionSheet',1)[0]
   self.assertIn('val requestedQuery = pendingSearchQuery',fragment)
   self.assertIn('val requestedCase = pendingSearchCase',fragment)
-  self.assertIn('requestedQuery, requestedCase)',fragment)
+  self.assertIn('requestedQuery, requestedCase',fragment)
+  self.assertIn('if (view.isAttachedToWindow)',fragment)
+  self.assertNotIn('view.requestFocus()',fragment)
   self.assertIn('pendingSearchQuery = transcriptQuery\n                        pendingSearchCase = findMatchCase\n                        pendingSearch = position',S)
 if __name__=="__main__":unittest.main()

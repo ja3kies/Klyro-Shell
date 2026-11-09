@@ -26,9 +26,9 @@ class KlyroPairQaTest(unittest.TestCase):
                      "pendingMultilinePaste", "outputSelectionView"):
             self.assertIn(f"var {name} by remember(session)", pane)
         for name in ("showTranscriptSearch", "showEndSessionConfirmation",
-                     "transcriptQuery", "findMatchCase", "searchIndex",
-                     "warningNoteDismissed"):
+                     "transcriptQuery", "findMatchCase", "searchIndex"):
             self.assertIn(f"var {name} by rememberSaveable(session)", pane)
+        self.assertIn("var warningNoteDismissed by rememberSaveable(session, runtimeHasWarnings)", pane)
         model = (APP / "TerminalSessionViewModel.kt").read_text()
         self.assertIn("pendingNativePaste = null", model)
         self.assertIn("isSessionActive(tabId)", model)

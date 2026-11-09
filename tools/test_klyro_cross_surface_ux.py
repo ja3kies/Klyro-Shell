@@ -21,7 +21,8 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn("BackHandler {", plugins)
         self.assertIn("pendingImport != null || pendingImportUri != null -> {", plugins)
         self.assertIn("var pendingImportUri by rememberSaveable", plugins)
-        self.assertIn("removeId != null -> { removeId = null; error = null }", plugins)
+        self.assertIn("removeId != null -> { removeId = null; confirmedRemovalId = null; error = null }", plugins)
+        self.assertIn("var confirmedRemovalId by rememberSaveable", plugins)
         self.assertIn("else -> onBack()", plugins)
         self.assertIn('var page by rememberSaveable', plugins)
 

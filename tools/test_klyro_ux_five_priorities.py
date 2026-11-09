@@ -74,9 +74,11 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn(') { section = "home" }', self.settings)
 
     def test_settings_back_does_not_override_dialogs(self):
-        self.assertIn('!showColorPicker', self.settings)
-        self.assertIn('!showFontLicense', self.settings)
-        self.assertIn('!showHugeiconsLicense', self.settings)
+        route = self.settings.split("fun navigateBack()", 1)[1].split("BackHandler(", 1)[0]
+        self.assertIn('showColorPicker -> showColorPicker = false', route)
+        self.assertIn('showFontLicense -> showFontLicense = false', route)
+        self.assertIn('showHugeiconsLicense -> showHugeiconsLicense = false', route)
+        self.assertIn('section != "home" -> section = "home"', route)
 
     def test_launcher_action_uses_verified_os_state(self):
         self.assertIn("KlyroBrandChoice.isVerifiedSelection(context, choice)", self.settings)
