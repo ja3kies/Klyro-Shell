@@ -118,7 +118,7 @@ internal fun KlyroRenameSessionDialog(
     onSave: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var value by remember(name) {
+    var value by rememberSaveable(name, stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(name, selection = TextRange(0, name.length)))
     }
     val requester = remember { FocusRequester() }
