@@ -47,6 +47,11 @@ object KlyroBrandChoice {
     fun selected(context: Context): String =
         runCatching { verifiedChoice(context) }.getOrNull() ?: DEFAULT
 
+    /** A visual fallback is not proof of the current Android launcher component state. */
+    fun isVerifiedSelection(context: Context, choice: String): Boolean =
+        (choice == DEFAULT || choice == ALTERNATIVE) &&
+            runCatching { verifiedChoice(context) == choice }.getOrDefault(false)
+
     @Synchronized
     fun select(context: Context, choice: String): Boolean {
         if (choice != DEFAULT && choice != ALTERNATIVE) return false
