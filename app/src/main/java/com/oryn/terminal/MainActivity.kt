@@ -568,7 +568,15 @@ class MainActivity : ComponentActivity() {
         if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
             observePreviousInstall()
         } else if (bootstrapInstalled) {
-            installProotRuntime()
+            val savedFailure = KlyroSetupLedger.snapshot()?.takeIf {
+                savedInstanceState != null && it.success == false
+            }
+            if (savedFailure != null) {
+                technicalErrorDetails = savedFailure.details
+                statusMessage = savedFailure.message
+            } else {
+                installProotRuntime()
+            }
         }
     }
 
@@ -605,11 +613,17 @@ class MainActivity : ComponentActivity() {
         if (observingPreviousInstall) return
         observingPreviousInstall = true
         isInstalling = true
-        statusMessage = "Finishing previous environment setup…"
+        statusMessage = KlyroSetupLedger.snapshot()?.message ?: "Finishing previous environment setup…"
         lifecycleScope.launch {
             val started = android.os.SystemClock.elapsedRealtime()
             while ((TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy())
                     && android.os.SystemClock.elapsedRealtime() - started < 360_000L) {
+                KlyroSetupLedger.snapshot()?.let { snapshot ->
+                    if (snapshot.success == null) {
+                        statusMessage = snapshot.message
+                        installProgress = snapshot.progress
+                    }
+                }
                 delay(1000L)
             }
             observingPreviousInstall = false
@@ -617,11 +631,18 @@ class MainActivity : ComponentActivity() {
             if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
                 statusMessage = "Setup is still running. Reopen Klyro to check its result."
             } else {
+                val previous = KlyroSetupLedger.snapshot()
                 refreshReadiness()
-                when {
-                    bootstrapInstalled && !runtimeInstalled -> installProotRuntime()
-                    runtimeInstalled -> verifyRuntime()
-                    else -> statusMessage = "Setup stopped before completion. Retry installation."
+                if (previous?.success == false) {
+                    technicalErrorDetails = previous.details
+                    showTechnicalDetails = false
+                    statusMessage = previous.message
+                } else {
+                    when {
+                        bootstrapInstalled && !runtimeInstalled -> installProotRuntime()
+                        runtimeInstalled -> verifyRuntime()
+                        else -> statusMessage = "Setup stopped before completion. Retry installation."
+                    }
                 }
             }
         }
@@ -703,9 +724,11 @@ class MainActivity : ComponentActivity() {
         isInstalling = true
         installProgress = 0
         statusMessage = "Preparing Klyro's private environment…"
+        KlyroSetupLedger.begin("bootstrap", statusMessage)
 
         activeInstaller.install(object : TermuxBootstrapInstaller.Listener {
             override fun onProgress(stage: String, percent: Int) {
+                KlyroSetupLedger.progress("bootstrap", stage, percent)
                 runOnUiThread {
                     if (isDestroyed) return@runOnUiThread
                     installProgress = percent.coerceIn(0, 100)
@@ -714,6 +737,7 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onComplete(success: Boolean, message: String) {
+                KlyroSetupLedger.finish("bootstrap", success, message, activeInstaller.getLastErrorDetails())
                 runOnUiThread {
                     if (isDestroyed) return@runOnUiThread
                     bootstrapInstalled = success
@@ -751,9 +775,11 @@ class MainActivity : ComponentActivity() {
         isInstalling = true
         installProgress = 0
         statusMessage = "Installing Klyro's verified ARM64 PRoot runtime…"
+        KlyroSetupLedger.begin("proot", statusMessage)
 
         activeInstaller.install(object : ProotRuntimeInstaller.Listener {
             override fun onProgress(stage: String, percent: Int) {
+                KlyroSetupLedger.progress("proot", stage, percent)
                 runOnUiThread {
                     if (isDestroyed) return@runOnUiThread
                     installProgress = percent.coerceIn(0, 100)
@@ -762,6 +788,7 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onComplete(success: Boolean, message: String) {
+                KlyroSetupLedger.finish("proot", success, message, activeInstaller.getLastErrorDetails())
                 runOnUiThread {
                     if (isDestroyed) return@runOnUiThread
                     isInstalling = false
