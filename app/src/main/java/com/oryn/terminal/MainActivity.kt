@@ -1120,11 +1120,15 @@ private fun OrynTerminalApp(
                             }
                         }
                         if (technicalErrorDetails != null) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                            ) {
                                 TextButton(
                                     onClick = onToggleTechnicalDetails,
-                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
-                                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+                                    modifier = Modifier.fillMaxWidth()
+                                        .heightIn(min = KlyroUiMetrics.minTouch),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                                 ) {
                                     Text(
                                         if (showTechnicalDetails) "Hide technical details"
@@ -1166,14 +1170,28 @@ private fun OrynTerminalApp(
                             }
                         }
                         if (installing) {
-                            LinearProgressIndicator(
-                                progress = { (progress / 100f).coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth().height(6.dp),
+                            if (progress > 0) {
+                                LinearProgressIndicator(
+                                    progress = { (progress / 100f).coerceIn(0f, 1f) },
+                                    modifier = Modifier.fillMaxWidth().height(6.dp)
+                                        .semantics { contentDescription = "Installation progress" },
+                                    color = ui.accent,
+                                    trackColor = ui.tile
+                                )
+                            } else {
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth().height(6.dp)
+                                        .semantics { contentDescription = "Preparing installation" },
+                                    color = ui.accent,
+                                    trackColor = ui.tile
+                                )
+                            }
+                            Text(
+                                if (progress > 0) "$progress% complete" else "Preparing installation…",
                                 color = ui.accent,
-                                trackColor = ui.tile
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = FontFamily.Monospace
                             )
-                            Text("$progress%", color = ui.accent, fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace)
                         }
                         if (hasRunningSessions) {
                             Button(
