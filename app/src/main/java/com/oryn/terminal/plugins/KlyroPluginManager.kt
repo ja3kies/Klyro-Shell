@@ -1,6 +1,7 @@
 package com.oryn.terminal.plugins
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
@@ -30,6 +31,9 @@ class KlyroPluginManager(context: Context) {
         const val MAX_COMMANDS = 8
         const val MAX_MANIFEST_BYTES = 16 * 1024
         private val validId = Regex("[a-z][a-z0-9._-]{2,60}")
+        // Shared by all manager instances (including different Activity instances).
+        // A read-modify-write sequence must never race another registry update.
+        private val registryLock = Any()
         private val safeText = Regex("[A-Za-z0-9_./~ -]{1,160}")
         // Exact reviewed templates only: allowing arbitrary arguments to "git diff"
         // admits --ext-diff, which can execute a configured helper.
@@ -108,6 +112,15 @@ class KlyroPluginManager(context: Context) {
         }.distinctBy { it.id }
     }.getOrDefault(emptyList())
 
+    /** Listen to registry commits, including ones started by an Activity being rotated. */
+    fun observeRegistry(onChange: () -> Unit): () -> Unit {
+        val observer = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "manifest") onChange()
+        }
+        prefs.registerOnSharedPreferenceChangeListener(observer)
+        return { prefs.unregisterOnSharedPreferenceChangeListener(observer) }
+    }
+
     // A LazyColumn key must be unique even if different packs reuse a label.
     fun activeCommands(): List<KlyroPluginCommand> = installed()
         .filter { it.enabled }.flatMap { it.commands }
@@ -168,11 +181,13 @@ class KlyroPluginManager(context: Context) {
     }
 
     private fun upsert(record: KlyroPluginRecord) {
-        val existing = installed()
-        require(existing.any { it.id == record.id } || existing.size < MAX_PLUGINS) {
-            "At most $MAX_PLUGINS plugins may be installed"
+        synchronized(registryLock) {
+            val existing = installed()
+            require(existing.any { it.id == record.id } || existing.size < MAX_PLUGINS) {
+                "At most $MAX_PLUGINS plugins may be installed"
+            }
+            save(existing.filterNot { it.id == record.id } + record)
         }
-        save(existing.filterNot { it.id == record.id } + record)
     }
 
     fun installBundled(id: String) {
@@ -209,20 +224,27 @@ class KlyroPluginManager(context: Context) {
 
     /** Explicit user confirmation is required between parsing and committing. */
     fun installPreview(record: KlyroPluginRecord) {
-        require(record.id !in bundled.map { it.id }) { "Reserved plugin identifier" }
-        require(record.commands.size in 1..MAX_COMMANDS &&
-            record.commands.all { safeInsertion(it.insert) }) { "Unsafe command template" }
-        require(installed().none { it.id == record.id }) { "Plugin already installed" }
-        upsert(record.copy(enabled = true, source = "local"))
+        synchronized(registryLock) {
+            require(record.id !in bundled.map { it.id }) { "Reserved plugin identifier" }
+            require(record.commands.size in 1..MAX_COMMANDS &&
+                record.commands.all { safeInsertion(it.insert) }) { "Unsafe command template" }
+            // Revalidate inside the write lock: a preview can be stale by confirmation time.
+            require(installed().none { it.id == record.id }) { "Plugin already installed" }
+            upsert(record.copy(enabled = true, source = "local"))
+        }
     }
 
     fun setEnabled(id: String, enabled: Boolean) {
-        val current = installed()
-        require(current.any { it.id == id }) { "Plugin not installed" }
-        save(current.map { if (it.id == id) it.copy(enabled = enabled) else it })
+        synchronized(registryLock) {
+            val current = installed()
+            require(current.any { it.id == id }) { "Plugin not installed" }
+            save(current.map { if (it.id == id) it.copy(enabled = enabled) else it })
+        }
     }
 
     fun uninstall(id: String) {
-        save(installed().filterNot { it.id == id })
+        synchronized(registryLock) {
+            save(installed().filterNot { it.id == id })
+        }
     }
 }
