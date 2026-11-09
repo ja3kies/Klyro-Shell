@@ -362,6 +362,19 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     }
                 }
             )
+        } else {
+            AlertDialog(
+                onDismissRequest = { pendingBundledId = null; error = null },
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+                containerColor = colors.sheet,
+                title = { Text("Pack unavailable") },
+                text = { Text("This bundled pack is no longer available. Close this dialog.") },
+                confirmButton = {
+                    TextButton(onClick = { pendingBundledId = null; error = null }) {
+                        Text("Close")
+                    }
+                }
+            )
         }
     }
 
