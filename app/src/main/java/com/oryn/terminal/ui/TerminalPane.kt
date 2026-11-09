@@ -1159,6 +1159,7 @@ private fun TerminalExtraKey(
     onClick: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
+    val tooltipOffset = with(LocalDensity.current) { (-60).dp.roundToPx() }
     val interaction = remember { MutableInteractionSource() }
     val held by interaction.collectIsPressedAsState()
     val keyState = when {
@@ -1297,7 +1298,7 @@ private fun TerminalExtraKey(
     if (held && enabled) {
         Popup(
             alignment = Alignment.TopCenter,
-            offset = IntOffset(0, -64),
+            offset = IntOffset(0, tooltipOffset),
             properties = PopupProperties(focusable = false)
         ) {
             Surface(
