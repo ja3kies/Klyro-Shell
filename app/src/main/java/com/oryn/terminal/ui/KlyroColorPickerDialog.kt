@@ -387,7 +387,7 @@ internal fun KlyroColorPickerDialog(
                             style = MaterialTheme.typography.labelMedium)
                         KlyroThinSlider(
                             value = alpha,
-                            onValueChange = { alpha = it },
+                            onValueChange = { alpha = it; pendingPreset = null },
                             valueRange = 0f..1f,
                             modifier = Modifier.fillMaxWidth().semantics {
                                 contentDescription = "Opacity"
