@@ -1,6 +1,7 @@
 package com.oryn.terminal.ui
 
 import androidx.activity.compose.BackHandler
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -28,10 +29,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,7 +52,6 @@ import com.oryn.terminal.R
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginRecord
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Acode-inspired Installed / Explore manager, intentionally no remote code execution. */
@@ -60,17 +60,19 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     val manager = remember(context) { KlyroPluginManager(context) }
-    val scope = rememberCoroutineScope()
     var previewBusy by remember { mutableStateOf(false) }
     var installed by remember { mutableStateOf(manager.installed()) }
     var page by rememberSaveable { mutableStateOf(if (installed.isEmpty()) "explore" else "installed") }
     var error by remember { mutableStateOf<String?>(null) }
     var removeId by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
+    var pendingImportUri by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingBundledId by rememberSaveable { mutableStateOf<String?>(null) }
     BackHandler {
         when {
-            pendingImport != null -> { pendingImport = null; error = null }
+            pendingImport != null || pendingImportUri != null -> {
+                pendingImport = null; pendingImportUri = null; error = null
+            }
             pendingBundledId != null -> { pendingBundledId = null; error = null }
             removeId != null -> { removeId = null; error = null }
             else -> onBack()
@@ -88,18 +90,25 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && !previewBusy) {
-            previewBusy = true
-            scope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    runCatching { manager.previewManifest(uri) }
-                }
-                previewBusy = false
-                result.onSuccess { pendingImport = it; error = null }
-                    .onFailure { failure ->
-                        error = failure.message?.take(160) ?: "Invalid plugin manifest"
-                    }
-            }
+            pendingImport = null
+            error = null
+            pendingImportUri = uri.toString()
         }
+    }
+    // A rotation re-parses the same bounded local document, but never installs it.
+    LaunchedEffect(pendingImportUri) {
+        val selectedUri = pendingImportUri ?: return@LaunchedEffect
+        previewBusy = true
+        val result = withContext(Dispatchers.IO) {
+            runCatching { manager.previewManifest(Uri.parse(selectedUri)) }
+        }
+        previewBusy = false
+        if (pendingImportUri != selectedUri) return@LaunchedEffect
+        result.onSuccess { pendingImport = it; error = null }
+            .onFailure { failure ->
+                error = failure.message?.take(160) ?: "Invalid plugin manifest"
+                pendingImportUri = null
+            }
     }
 
     Column(
@@ -316,7 +325,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     pendingImport?.let { record ->
         AlertDialog(
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
-            onDismissRequest = { pendingImport = null; error = null },
+            onDismissRequest = { pendingImport = null; pendingImportUri = null; error = null },
             containerColor = colors.sheet,
             title = { Text("Install ${record.name}?") },
             text = {
@@ -342,6 +351,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 Button(onClick = {
                     if (applyChange { manager.installPreview(record) }) {
                         pendingImport = null
+                        pendingImportUri = null
                         page = "installed"
                     }
                 }, shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
@@ -351,7 +361,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             },
             dismissButton = {
                 TextButton(
-                    onClick = { pendingImport = null; error = null },
+                    onClick = { pendingImport = null; pendingImportUri = null; error = null },
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                 ) { Text("Cancel") }
             }
