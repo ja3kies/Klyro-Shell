@@ -900,11 +900,13 @@ private fun OrynTerminalApp(
     val warningLines = remember(technicalErrorDetails) {
         technicalErrorDetails.orEmpty().lines()
             .map { it.trim() }
-            .filter { it.startsWith("WARNING", ignoreCase = true) }
+            .filter { it.startsWith("WARNING", ignoreCase = true) ||
+                it.startsWith("update-alternatives: warning:", ignoreCase = true) }
             .distinct()
     }
     val stateLabel = when {
         sessionFailureMessage != null -> "SESSION ERROR"
+        hasRunningSessions && !runtimeVerified -> "SESSION AVAILABLE"
         runtimeVerified && runtimeHasWarnings -> "READY WITH WARNINGS"
         runtimeVerified -> "ENVIRONMENT READY"
         verifyingRuntime -> "CHECKING ENVIRONMENT"
@@ -915,6 +917,7 @@ private fun OrynTerminalApp(
     }
     val stateColor = when {
         sessionFailureMessage != null -> ui.danger
+        hasRunningSessions && !runtimeVerified -> ui.accent
         runtimeVerified && runtimeHasWarnings -> ui.warningInk
         runtimeVerified -> ui.readyInk
         verifyingRuntime || bashStarted || runtimeInstalled || bootstrapInstalled ->
@@ -1044,7 +1047,7 @@ private fun OrynTerminalApp(
                     )
                     if (hasRunningSessions) {
                         Text(
-                            "${tabs.size} active ${if (tabs.size == 1) "session" else "sessions"} · ${workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"} workspace",
+                            "${tabs.size} open ${if (tabs.size == 1) "session" else "sessions"} · ${workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"} workspace",
                             color = ui.muted,
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 2,
@@ -1055,7 +1058,7 @@ private fun OrynTerminalApp(
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = ui.chrome,
+                    color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
                     Column(
@@ -1079,7 +1082,8 @@ private fun OrynTerminalApp(
                                     (if (runtimeVerified && !runtimeHasWarnings) "✓ " else "") +
                                         stateLabel,
                                     color = stateColor,
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                                        .semantics { liveRegion = LiveRegionMode.Polite },
                                     style = MaterialTheme.typography.labelSmall,
                                     maxLines = 1
                                 )
