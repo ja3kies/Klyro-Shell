@@ -37,6 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.oryn.terminal.R
@@ -106,6 +109,10 @@ internal fun KlyroActionRow(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)
             .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
+            .semantics {
+                contentDescription = if (subtitle.isNullOrBlank()) label else "$label. $subtitle"
+                if (destructive) stateDescription = "Destructive action"
+            }
             .padding(horizontal = KlyroUiMetrics.spaceLg, vertical = KlyroUiMetrics.spaceSm),
         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
         verticalAlignment = Alignment.CenterVertically
@@ -154,7 +161,11 @@ internal fun KlyroMenuItem(
         text = { Text(label, color = ink) },
         leadingIcon = { Icon(painterResource(icon), contentDescription = null, tint = ink,
             modifier = Modifier.size(KlyroUiMetrics.glyphSmall)) },
-        modifier = Modifier.heightIn(min = KlyroUiMetrics.compactRow),
+        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+            .semantics {
+                contentDescription = label
+                if (destructive) stateDescription = "Destructive action"
+            },
         onClick = onClick
     )
 }
