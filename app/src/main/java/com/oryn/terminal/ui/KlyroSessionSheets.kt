@@ -179,15 +179,18 @@ internal fun KlyroChooseShellSheet(
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
+                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
                 ) {
-                    TextButton(onClick = onBack) {
+                    TextButton(
+                        onClick = onBack,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                    ) {
                         Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
-                            contentDescription = "Back",
+                            contentDescription = null,
                             modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                     }
                     KlyroSheetTitle("Choose shell")
@@ -201,7 +204,7 @@ internal fun KlyroChooseShellSheet(
                             .semantics { role = Role.Button }
                             .padding(KlyroUiMetrics.spaceLg),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
                     ) {
                         Icon(painterResource(R.drawable.hugeicons_terminal),
                             contentDescription = null, tint = colors.accent,
