@@ -347,6 +347,7 @@ fun TerminalPane(
     }
     // Never reduce key targets below Android's 48dp minimum: scroll narrow rows.
     val keyWidth = if (compact) 48.dp else ((maxWidth - 36.dp) / 7).coerceIn(48.dp, 56.dp)
+    val canSendKeys = session.isRunning() && session.emulator != null
     val toolsMenu: @Composable () -> Unit = {
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
@@ -619,21 +620,27 @@ fun TerminalPane(
 
         // Portrait: two fixed rows; compact height: one scrollable row to preserve PTY height.
         val firstRow: @Composable () -> Unit = {
-            TerminalExtraKey("ESC", keyWidth = keyWidth, darkChrome = darkChrome) { session.writeCodePoint(false, 27) }
-            TerminalExtraKey("TAB", keyWidth = keyWidth, darkChrome = darkChrome) { session.writeCodePoint(false, 9) }
-            TerminalExtraKey("CTRL", active = controlActive, keyWidth = keyWidth, darkChrome = darkChrome) {
+            TerminalExtraKey("ESC", keyWidth = keyWidth, darkChrome = darkChrome,
+                enabled = canSendKeys) { session.writeCodePoint(false, 27) }
+            TerminalExtraKey("TAB", keyWidth = keyWidth, darkChrome = darkChrome,
+                enabled = canSendKeys) { session.writeCodePoint(false, 9) }
+            TerminalExtraKey("CTRL", active = controlActive, keyWidth = keyWidth, darkChrome = darkChrome,
+                enabled = canSendKeys) {
                 controlActive = !controlActive
                 viewClient.setControlDown(controlActive)
             }
-            TerminalExtraKey("ALT", active = altActive, keyWidth = keyWidth, darkChrome = darkChrome) {
+            TerminalExtraKey("ALT", active = altActive, keyWidth = keyWidth, darkChrome = darkChrome,
+                enabled = canSendKeys) {
                 altActive = !altActive
                 viewClient.setAltDown(altActive)
             }
-            TerminalExtraKey("SHIFT", active = shiftActive, keyWidth = keyWidth, darkChrome = darkChrome) {
+            TerminalExtraKey("SHIFT", active = shiftActive, keyWidth = keyWidth, darkChrome = darkChrome,
+                enabled = canSendKeys) {
                 shiftActive = !shiftActive
                 viewClient.setShiftDown(shiftActive)
             }
-            TerminalExtraKey("FN", active = fnActive, keyWidth = keyWidth, darkChrome = darkChrome) {
+            TerminalExtraKey("FN", active = fnActive, keyWidth = keyWidth, darkChrome = darkChrome,
+                enabled = canSendKeys) {
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
@@ -657,20 +664,20 @@ fun TerminalPane(
             ) { selectTerminalOutput(canSelect) }
         }
         val secondRow: @Composable () -> Unit = {
-            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome,
+            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys,
                 longClickDescription = "Go to start of line",
                 onLongClick = { write(session, TerminalNavigationPolicy.horizontalLongPress(false,
                     session.emulator?.isAlternateBufferActive == true, controlActive, altActive, shiftActive)) }
             ) { write(session, TerminalNavigationPolicy.arrow('D', controlActive, altActive, shiftActive)) }
-            TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('A', controlActive, altActive, shiftActive)) }
-            TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth, darkChrome = darkChrome) { write(session, TerminalNavigationPolicy.arrow('B', controlActive, altActive, shiftActive)) }
-            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth, darkChrome = darkChrome,
+            TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys) { write(session, TerminalNavigationPolicy.arrow('A', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys) { write(session, TerminalNavigationPolicy.arrow('B', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys,
                 longClickDescription = "Go to end of line",
                 onLongClick = { write(session, TerminalNavigationPolicy.horizontalLongPress(true,
                     session.emulator?.isAlternateBufferActive == true, controlActive, altActive, shiftActive)) }
             ) { write(session, TerminalNavigationPolicy.arrow('C', controlActive, altActive, shiftActive)) }
             TerminalExtraKey("END", description = "Go to end of line",
-                keyWidth = keyWidth, darkChrome = darkChrome) {
+                keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys) {
                 write(session, TerminalNavigationPolicy.horizontalLongPress(true,
                     session.emulator?.isAlternateBufferActive == true,
                     controlActive, altActive, shiftActive))
