@@ -62,7 +62,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("selectedOutput = output", self.pane)
 
     def test_all_action_falls_back_to_clipboard(self):
-        self.assertIn("fun selectTerminalOutput()", self.pane)
+        self.assertIn("fun selectTerminalOutput(expectedSelection: Boolean)", self.pane)
         self.assertIn("pasteClipboard()", self.pane)
 
     def test_all_paste_icon_matches_paste_action(self):
@@ -74,7 +74,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn('"Select all terminal output"', self.pane)
 
     def test_all_disabled_only_if_both_actions_unavailable(self):
-        self.assertIn("enabled = canSelect || clipboardAvailable", self.pane)
+        self.assertIn("enabled = canSelect || (session.isRunning() && clipboardAvailable)", self.pane)
 
     def test_all_reports_active_selection(self):
         self.assertIn("active = selectedOutput != null", self.pane)
