@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,11 +66,11 @@ internal fun KlyroWorkspaceSheet(
     onDismiss: () -> Unit
 ) {
     val c = LocalKlyroColors.current
-    var editorId by remember { mutableStateOf<String?>(null) }
-    var editorText by remember { mutableStateOf("") }
-    var editorError by remember { mutableStateOf(false) }
-    var deletingId by remember { mutableStateOf<String?>(null) }
-    var menuId by remember { mutableStateOf<String?>(null) }
+    var editorId by rememberSaveable { mutableStateOf<String?>(null) }
+    var editorText by rememberSaveable { mutableStateOf("") }
+    var editorError by rememberSaveable { mutableStateOf(false) }
+    var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var menuId by rememberSaveable { mutableStateOf<String?>(null) }
     // Treat inline editing as a navigation layer, not as a reason to close the sheet.
     BackHandler(enabled = editorId != null && deletingId == null && menuId == null) {
         editorId = null
@@ -110,7 +111,14 @@ internal fun KlyroWorkspaceSheet(
     }
 
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = onDismiss) {
+        KlyroSheet(onDismissRequest = {
+            when {
+                deletingId != null -> deletingId = null
+                menuId != null -> menuId = null
+                editorId != null -> { editorId = null; editorError = false }
+                else -> onDismiss()
+            }
+        }) {
             Column(
                 Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
