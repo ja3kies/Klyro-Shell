@@ -167,9 +167,6 @@ fun TerminalPane(
     var selectedOutputTruncated by remember(session) { mutableStateOf(false) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
     val context = LocalContext.current
-    val selectedBrandIcon = remember(context, showTerminalSettings) {
-        KlyroBrandChoice.selected(context)
-    }
     val clipboardManager = remember(context) {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     }
@@ -397,29 +394,14 @@ fun TerminalPane(
                     .heightIn(min = 52.dp)
                     .padding(horizontal = 10.dp)
             ) {
-                Row(
+                Text(
+                    "TERMINAL",
                     modifier = Modifier.align(Alignment.CenterStart),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.size(35.dp)
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
-                            .background(ui.tile),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(
-                                if (selectedBrandIcon == KlyroBrandChoice.ALTERNATIVE)
-                                    R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
-                            ),
-                            contentDescription = null, tint = Color.Unspecified,
-                            modifier = Modifier.size(30.dp)
-                        )
-                    }
-                    Text("KLYRO", color = TerminalAccent, fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-                }
+                    color = TerminalMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 1.sp
+                )
                 Text(
                     currentProject,
                     modifier = Modifier.align(Alignment.Center).widthIn(max = 136.dp),

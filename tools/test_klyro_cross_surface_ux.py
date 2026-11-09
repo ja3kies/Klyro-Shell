@@ -82,7 +82,8 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
 
     def test_terminal_toolbar_and_shortcuts_share_identity_and_states(self):
         pane = READ(UI / "TerminalPane.kt")
-        self.assertIn("R.drawable.ic_klyro_brand_b", pane)
+        self.assertNotIn("R.drawable.ic_klyro_brand_b", pane)
+        self.assertIn('Text(\n                    "TERMINAL",', pane)
         self.assertIn("ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }", pane)
         self.assertIn("collectIsPressedAsState()", pane)
         self.assertIn("stateDescription = keyState.name.lowercase()", pane)

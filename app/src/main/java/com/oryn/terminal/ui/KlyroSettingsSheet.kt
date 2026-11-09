@@ -630,34 +630,13 @@ internal fun KlyroSettingsSheet(
                                 modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
                                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
                                 ) {
-                                    Box(
-                                        modifier = Modifier.size(64.dp).background(
-                                            colors.key,
-                                            RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                                        ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            painterResource(
-                                                if (selectedBrand == KlyroBrandChoice.ALTERNATIVE)
-                                                    R.drawable.ic_klyro_brand_a
-                                                else R.drawable.ic_klyro_brand_b
-                                            ),
-                                            contentDescription = "Klyro Shell logo",
-                                            tint = Color.Unspecified,
-                                            modifier = Modifier.size(56.dp)
-                                        )
-                                    }
-                                    Column(Modifier.weight(1f)) {
-                                        Text("Klyro Shell", fontWeight = FontWeight.Bold,
-                                            color = colors.foreground)
-                                        Text("Version $version · ARM64", color = colors.accent,
-                                            style = MaterialTheme.typography.labelMedium)
-                                    }
+                                    Text("Klyro Shell", fontWeight = FontWeight.Bold,
+                                        color = colors.foreground)
+                                    Text("Version $version · ARM64", color = colors.muted,
+                                        style = MaterialTheme.typography.labelMedium)
                                 }
                                 Text("Termux TerminalView / TerminalSession",
                                     color = colors.foreground,
