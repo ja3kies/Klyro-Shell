@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,6 +53,7 @@ import com.oryn.terminal.R
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginRecord
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Acode-inspired Installed / Explore manager, intentionally no remote code execution. */
@@ -60,6 +62,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     val manager = remember(context) { KlyroPluginManager(context) }
+    val scope = rememberCoroutineScope()
+    var mutationBusy by remember { mutableStateOf(false) }
     var previewBusy by remember { mutableStateOf(false) }
     var installed by remember { mutableStateOf(manager.installed()) }
     var page by rememberSaveable { mutableStateOf(if (installed.isEmpty()) "explore" else "installed") }
@@ -78,15 +82,25 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             else -> onBack()
         }
     }
-    fun applyChange(action: () -> Unit): Boolean {
-        return runCatching {
-            action()
-            installed = manager.installed()
-        }.onSuccess {
-            error = null
-        }.onFailure { failure ->
-            error = failure.message?.take(160) ?: "Action failed"
-        }.isSuccess
+    fun applyChange(action: () -> Unit, onSuccess: () -> Unit = {}) {
+        if (mutationBusy) return
+        mutationBusy = true
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    action()
+                    manager.installed()
+                }
+            }
+            mutationBusy = false
+            result.onSuccess { updated ->
+                installed = updated
+                error = null
+                onSuccess()
+            }.onFailure { failure ->
+                error = failure.message?.take(160) ?: "Action failed"
+            }
+        }
     }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && !previewBusy) {
@@ -203,10 +217,12 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                                     contentDescription = (if (plugin.enabled) "Disable " else "Enable ") + plugin.name
                                 },
                                 onCheckedChange = { checked ->
-                                    applyChange { manager.setEnabled(plugin.id, checked) }
-                                })
+                                    applyChange({ manager.setEnabled(plugin.id, checked) })
+                                },
+                                enabled = !mutationBusy)
                             TextButton(
                                 onClick = { error = null; removeId = plugin.id },
+                                enabled = !mutationBusy,
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                             ) {
                                 Text("Remove", color = colors.danger)
@@ -229,7 +245,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("Bundled · Offline", color = colors.muted, fontSize = 12.sp)
                             Button(
-                                enabled = !isInstalled,
+                                enabled = !isInstalled && !mutationBusy,
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
                                     error = null
@@ -300,8 +316,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 },
                 confirmButton = {
                     Button(
+                        enabled = !mutationBusy,
                         onClick = {
-                            if (applyChange { manager.installBundled(id) }) {
+                            applyChange({ manager.installBundled(id) }) {
                                 pendingBundledId = null
                                 page = "installed"
                             }
@@ -348,8 +365,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    if (applyChange { manager.installPreview(record) }) {
+                Button(enabled = !mutationBusy, onClick = {
+                    applyChange({ manager.installPreview(record) }) {
                         pendingImport = null
                         pendingImportUri = null
                         page = "installed"
@@ -383,8 +400,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    if (applyChange { manager.uninstall(id) }) {
+                TextButton(enabled = !mutationBusy, onClick = {
+                    applyChange({ manager.uninstall(id) }) {
                         removeId = null
                     }
                 }) { Text("Remove", color = colors.danger) }
