@@ -166,6 +166,7 @@ fun TerminalPane(
     var renameDialogId by remember(session) { mutableStateOf<Long?>(null) }
     var shellChooserSourceId by remember(session) { mutableStateOf<Long?>(null) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
+    var selectedOutputTruncated by remember(session) { mutableStateOf(false) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
     val context = LocalContext.current
     val selectedBrandIcon = remember(context, showTerminalSettings) {
@@ -327,7 +328,8 @@ fun TerminalPane(
         val output = session.emulator?.screen?.transcriptText.orEmpty()
         if (TerminalActionPolicy.hasCopyableOutput(output)) {
             outputSelectionView = null
-            selectedOutput = output
+            selectedOutputTruncated = output.length > TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS
+            selectedOutput = TerminalActionPolicy.selectionTail(output)
         } else {
             Toast.makeText(context, "Terminal output changed; nothing to select",
                 Toast.LENGTH_SHORT).show()
@@ -720,17 +722,12 @@ fun TerminalPane(
     // Selection is performed on a native read-only text surface, without
     // accidentally sending selected content to the running Bash session.
     selectedOutput?.let { output ->
-        val selectionLimit = 2 * 1024 * 1024
-        val truncated = output.length > selectionLimit
-        val start = (output.length - selectionLimit).coerceAtLeast(0)
-        // Never start a UTF-16 preview with the low half of a surrogate pair.
-        val safeStart = if (start in 1 until output.length &&
-            Character.isLowSurrogate(output[start]) &&
-            Character.isHighSurrogate(output[start - 1])) start + 1 else start
-        val visibleOutput = output.substring(safeStart)
+        val truncated = selectedOutputTruncated
+        val visibleOutput = output
         fun closeSelection() {
             outputSelectionView = null
             selectedOutput = null
+            selectedOutputTruncated = false
         }
         KlyroModalTheme {
         AlertDialog(
