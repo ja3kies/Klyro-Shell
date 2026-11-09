@@ -237,6 +237,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         val record = KlyroPluginManager.bundled.firstOrNull { it.id == id }
         if (record != null) {
             AlertDialog(
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 onDismissRequest = { pendingBundledId = null; error = null },
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 containerColor = colors.sheet,
@@ -290,6 +291,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
 
     pendingImport?.let { record ->
         AlertDialog(
+            shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             onDismissRequest = { pendingImport = null },
             containerColor = colors.sheet,
             title = { Text("Install ${record.name}?") },
@@ -332,6 +334,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     removeId?.let { id ->
         val item = installed.firstOrNull { it.id == id }
         AlertDialog(
+            shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             onDismissRequest = { removeId = null },
             containerColor = colors.sheet,
             title = { Text("Remove ${item?.name ?: "plugin"}?") },
