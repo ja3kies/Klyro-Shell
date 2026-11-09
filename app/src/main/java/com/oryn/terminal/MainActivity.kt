@@ -482,7 +482,14 @@ class MainActivity : ComponentActivity() {
                     },
                     progress = installProgress,
                     installing = isInstalling,
-                    status = terminalState.sessionFailureMessage ?: terminalState.sessionStatus.ifBlank { statusMessage },
+                    status = when {
+                        terminalState.sessionFailureMessage != null ->
+                            terminalState.sessionFailureMessage.orEmpty()
+                        isInstalling || isVerifyingRuntime || technicalErrorDetails != null ->
+                            statusMessage
+                        terminalState.sessions.isEmpty() -> statusMessage
+                        else -> terminalState.sessionStatus.ifBlank { statusMessage }
+                    },
                     runtimeVerified = runtimeVerified && terminalState.sessionFailureMessage == null,
                     runtimeHasWarnings = runtimeHasWarnings,
                     bashStarted = bashStarted,
