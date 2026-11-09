@@ -71,7 +71,10 @@ class UXFivePriorities(unittest.TestCase):
 
     def test_settings_back_returns_to_root(self):
         self.assertIn('BackHandler(', self.settings)
-        self.assertIn(') { section = "home" }', self.settings)
+        self.assertIn(') { navigateBack() }', self.settings)
+        route = self.settings.split("fun navigateBack()", 1)[1].split("BackHandler(", 1)[0]
+        self.assertIn('section != "home" -> section = "home"', route)
+        self.assertIn('else -> onDismiss()', route)
 
     def test_settings_back_does_not_override_dialogs(self):
         route = self.settings.split("fun navigateBack()", 1)[1].split("BackHandler(", 1)[0]
