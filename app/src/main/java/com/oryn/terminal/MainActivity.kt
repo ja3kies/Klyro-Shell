@@ -650,12 +650,19 @@ class MainActivity : ComponentActivity() {
 
     private fun handlePrimaryAction() {
         if (isInstalling || isVerifyingRuntime) return
-        if (runtimeInstalled) verifyRuntime() else installEnvironment()
+        if (runtimeInstalled) {
+            verifyRuntime()
+        } else if (terminalState.hasLiveSessions()) {
+            Toast.makeText(this, "Close running sessions before installing the runtime",
+                Toast.LENGTH_LONG).show()
+        } else {
+            installEnvironment()
+        }
     }
 
     private fun verifyRuntime() {
         if (isVerifyingRuntime || isInstalling || !runtimeInstalled) return
-        terminalState.clearSessionFailure()
+        // Runtime verification must not dismiss an unrelated PTY failure.
         isVerifyingRuntime = true
         runtimeVerified = false
         runtimeHasWarnings = false
@@ -932,7 +939,7 @@ private fun OrynTerminalApp(
     val badge = KlyroRuntimeBadgePolicy.resolve(
         installing, verifyingRuntime, runtimeVerified, runtimeHasWarnings,
         bashStarted, runtimeInstalled, bootstrapInstalled,
-        technicalErrorDetails != null || sessionFailureMessage != null
+        technicalErrorDetails != null
     )
     val stateLabel = badge.label
     val stateColor = when (badge.severity) {
@@ -1219,26 +1226,23 @@ private fun OrynTerminalApp(
                         if (!runtimeVerified) {
                             Button(
                                 onClick = onInstall,
-                                enabled = !installing && !verifyingRuntime,
+                                enabled = !installing && !verifyingRuntime &&
+                                    (!hasRunningSessions || runtimeInstalled),
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = ui.accent,
-                                    contentColor = ui.onAccent,
+                                    containerColor = if (hasRunningSessions) ui.tile else ui.accent,
+                                    contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
                                     disabledContainerColor = ui.tile,
                                     disabledContentColor = ui.muted
                                 ),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
                                 Text(
-                                    when {
-                                        installing -> "Installing environment…"
-                                        verifyingRuntime -> "Checking Bash…"
-                                        runtimeInstalled -> "Recheck environment"
-                                        technicalErrorDetails != null && !bootstrapInstalled -> "Clean & retry installation"
-                                        technicalErrorDetails != null -> "Retry runtime setup"
-                                        bootstrapInstalled -> "Verify packaged runtime"
-                                        else -> "Install private environment"
-                                    },
+                                    KlyroHomeSetupLabelPolicy.label(
+                                        installing, verifyingRuntime, runtimeInstalled,
+                                        bootstrapInstalled, technicalErrorDetails != null,
+                                        hasRunningSessions
+                                    ),
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
