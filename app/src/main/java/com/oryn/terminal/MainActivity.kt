@@ -493,9 +493,17 @@ class MainActivity : ComponentActivity() {
                     onCopyTechnicalDetails = {
                         val details = technicalErrorDetails
                         if (!details.isNullOrBlank()) {
-                            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Klyro technical details", details))
-                            Toast.makeText(this, "Technical details copied", Toast.LENGTH_SHORT).show()
+                            val copied = runCatching {
+                                val clipboard = getSystemService(CLIPBOARD_SERVICE) as? ClipboardManager
+                                    ?: error("Clipboard service unavailable")
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Klyro technical details", details))
+                                true
+                            }.getOrDefault(false)
+                            Toast.makeText(
+                                this,
+                                if (copied) "Technical details copied" else "Clipboard unavailable",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     },
                     bootstrapInstalled = bootstrapInstalled,
