@@ -97,7 +97,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-            TextButton(onClick = onBack) {
+            TextButton(
+                onClick = onBack,
+                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+            ) {
                 Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
                     contentDescription = null, modifier = Modifier.size(20.dp))
                 Text("Home")
@@ -121,7 +124,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 "explore" to "Explore").forEach { (id, label) ->
                 val selected = page == id
                 Surface(
-                    modifier = Modifier.weight(1f).clickable(role = Role.Tab,
+                    modifier = Modifier.weight(1f)
+                        .heightIn(min = KlyroUiMetrics.minTouch)
+                        .clickable(role = Role.Tab,
                         onClickLabel = "Show $label") { page = id }
                         .semantics { this.selected = selected },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
@@ -179,7 +184,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                                 onCheckedChange = { checked ->
                                     applyChange { manager.setEnabled(plugin.id, checked) }
                                 })
-                            TextButton(onClick = { removeId = plugin.id }) {
+                            TextButton(
+                                onClick = { error = null; removeId = plugin.id },
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                            ) {
                                 Text("Remove", color = colors.danger)
                             }
                         }
@@ -201,6 +209,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             Text("Bundled · Offline", color = colors.muted, fontSize = 12.sp)
                             Button(
                                 enabled = !isInstalled,
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
                                     error = null
                                     pendingBundledId = plugin.id
@@ -222,8 +231,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         fontWeight = FontWeight.SemiBold)
                     Text("Review and confirm a local JSON command pack (up to 16 KiB). Extensions cannot run JavaScript or execute shell commands.",
                         color = colors.muted, fontSize = 12.sp)
-                    OutlinedButton(onClick = { importPicker.launch(arrayOf("*/*")) },
-                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
+                    OutlinedButton(
+                        onClick = { importPicker.launch(arrayOf("*/*")) },
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                    ) {
                         Icon(painterResource(R.drawable.hugeicons_file_01),
                             contentDescription = null, modifier = Modifier.size(18.dp))
                         Text("Import JSON")
@@ -291,7 +303,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     pendingImport?.let { record ->
         AlertDialog(
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
-            onDismissRequest = { pendingImport = null },
+            onDismissRequest = { pendingImport = null; error = null },
             containerColor = colors.sheet,
             title = { Text("Install ${record.name}?") },
             text = {
@@ -325,7 +337,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     )) { Text("Install") }
             },
             dismissButton = {
-                TextButton(onClick = { pendingImport = null }) { Text("Cancel") }
+                TextButton(
+                    onClick = { pendingImport = null; error = null },
+                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                ) { Text("Cancel") }
             }
         )
     }
@@ -334,7 +349,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         val item = installed.firstOrNull { it.id == id }
         AlertDialog(
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
-            onDismissRequest = { removeId = null },
+            onDismissRequest = { removeId = null; error = null },
             containerColor = colors.sheet,
             title = { Text("Remove ${item?.name ?: "plugin"}?") },
             text = {
@@ -352,7 +367,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }) { Text("Remove", color = colors.danger) }
             },
             dismissButton = {
-                TextButton(onClick = { removeId = null }) { Text("Cancel") }
+                TextButton(
+                    onClick = { removeId = null; error = null },
+                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                ) { Text("Cancel") }
             }
         )
     }
