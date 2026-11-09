@@ -146,9 +146,11 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("Character.isLowSurrogate(text.charAt(start))", (APP / "ui/TerminalActionPolicy.java").read_text())
         self.assertIn("Character.isHighSurrogate(text.charAt(start - 1))", (APP / "ui/TerminalActionPolicy.java").read_text())
 
-    def test_terminal_brand_header_does_not_overflow(self):
-        self.assertIn("KlyroBrandChoice.selected(context)", self.pane)
-        self.assertIn("modifier = Modifier.size(30.dp)", self.pane)
+    def test_terminal_header_prioritizes_centered_workspace_without_duplicate_logo(self):
+        self.assertIn("modifier = Modifier.align(Alignment.Center).widthIn(max = 136.dp)", self.pane)
+        self.assertIn('"TERMINAL"', self.pane)
+        self.assertNotIn("KlyroBrandChoice.selected(context)", self.pane)
+        self.assertNotIn("R.drawable.ic_klyro_brand_b", self.pane)
 
     def test_service_start_is_guarded_by_live_sessions(self):
         self.assertIn("if (!KlyroSessionRuntime.sessions.hasLiveSessions()) return", self.service)

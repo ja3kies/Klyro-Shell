@@ -55,8 +55,11 @@ class LauncherAliasHardening(unittest.TestCase):
     def test_device_launcher_refresh_limitation_is_explained(self):
         self.assertIn("launchers refresh home-screen icons", self.settings)
 
-    def test_about_icon_fits_its_container(self):
-        self.assertIn("modifier = Modifier.size(56.dp)", self.settings)
+    def test_launcher_picker_icon_fits_and_about_avoids_duplicate_logo(self):
+        self.assertIn("modifier = Modifier.size(58.dp)", self.settings)
+        about = self.settings.split('"about" -> {', 1)[1]
+        self.assertNotIn('contentDescription = "Klyro Shell logo"', about)
+        self.assertNotIn("ic_klyro_brand_a", about)
 
 
 if __name__ == "__main__":

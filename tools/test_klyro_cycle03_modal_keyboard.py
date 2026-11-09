@@ -36,8 +36,12 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn('iconCaption = if (canSelect) "SELECT" else "PASTE"', self.pane)
 
     def test_visual_all_colors_follow_context(self):
-        self.assertIn("pasteTone = !canSelect", self.pane)
-        self.assertIn("if (pasteTone) colors.warningContainer else colors.key", self.pane)
+        self.assertIn(
+            "tone = if (canSelect) KlyroShortcutTone.SELECT else KlyroShortcutTone.PASTE",
+            self.pane
+        )
+        self.assertIn("KlyroShortcutTonePolicy.resolve(colors, tone, keyState)", self.pane)
+        self.assertNotIn("pasteTone", self.pane)
 
     def test_all_action_behavior_is_preserved(self):
         self.assertIn(") { selectTerminalOutput(canSelect) }", self.pane)
