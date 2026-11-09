@@ -384,7 +384,10 @@ fun TerminalPane(
     }
     val toolsMenu: @Composable () -> Unit = {
             Box {
-                TextButton(onClick = { showToolsMenu = true }) {
+                TextButton(
+                    onClick = { showToolsMenu = true },
+                    modifier = Modifier.size(KlyroUiMetrics.minTouch)
+                ) {
                     Icon(painterResource(R.drawable.hugeicons_more_vertical),
                         contentDescription = "More actions", tint = TerminalMuted,
                         modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
@@ -468,6 +471,7 @@ fun TerminalPane(
                 Box(
                     modifier = Modifier
                         .height(48.dp)
+                        .widthIn(min = KlyroUiMetrics.minTouch)
                         .combinedClickable(
                             onClickLabel = if (active) "Edit session" else "Switch session",
                             onLongClickLabel = "Edit session",
@@ -1265,6 +1269,16 @@ private fun TerminalExtraKey(
         active -> ShortcutState.ACTIVE
         else -> ShortcutState.DEFAULT
     }
+    val spokenState = when (keyState) {
+        ShortcutState.ACTIVE -> "Active"
+        ShortcutState.HOLD -> "Pressed"
+        ShortcutState.INACTIVE -> "Unavailable"
+        ShortcutState.DEFAULT -> when (tone) {
+            KlyroShortcutTone.SELECT -> "Selection available"
+            KlyroShortcutTone.PASTE -> "Clipboard available"
+            KlyroShortcutTone.NEUTRAL -> "Ready"
+        }
+    }
     // Neutral shortcuts by default. SELECT is a subtle accent, PASTE is a
     // neutral tile with its own outline: neither is a warning state.
     val visuals = KlyroShortcutTonePolicy.resolve(colors, tone, keyState)
@@ -1341,7 +1355,7 @@ private fun TerminalExtraKey(
                 .width(keyWidth)
                 .semantics {
                     contentDescription = description ?: label
-                    stateDescription = keyState.name.lowercase()
+                    stateDescription = spokenState
                 },
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
             contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
@@ -1375,7 +1389,7 @@ private fun TerminalExtraKey(
                 )
                 .semantics {
                     contentDescription = description ?: label
-                    stateDescription = keyState.name.lowercase()
+                    stateDescription = spokenState
                 },
             shape = shape,
             border = stateBorder,
