@@ -39,7 +39,7 @@ class DualBrandSmartAllTest(unittest.TestCase):
 
     def test_all_selects_transcript_or_pastes_and_paste_key_is_gone(self):
         source = (SRC / "ui/TerminalPane.kt").read_text()
-        method = source.split("fun selectTerminalOutput()", 1)[1].split("// Fit seven", 1)[0]
+        method = source.split("fun selectTerminalOutput(expectedSelection: Boolean)", 1)[1].split("// Fit seven", 1)[0]
         self.assertIn("selectedOutput = output", method)
         self.assertIn("pasteClipboard()", method)
         self.assertNotIn("No terminal output to select", method)
