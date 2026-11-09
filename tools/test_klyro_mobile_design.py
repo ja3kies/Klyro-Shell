@@ -222,7 +222,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         # Icon-only CTAs have TalkBack names and explicit interaction states.
         self.assertNotIn("Text(label, fontSize = KlyroUiMetrics.shortcutCaption", terminal)
         self.assertIn("ShortcutState.HOLD", terminal)
-        self.assertIn("stateDescription = keyState.name.lowercase()", terminal)
+        self.assertIn("stateDescription = spokenState", terminal)
+        self.assertIn('KlyroShortcutTone.SELECT -> "Selection available"', terminal)
         self.assertIn('TerminalExtraKey("CLEAR"', terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
         self.assertNotIn('TerminalExtraKey(\n                "PASTE"', terminal)

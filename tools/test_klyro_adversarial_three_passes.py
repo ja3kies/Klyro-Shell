@@ -51,7 +51,8 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
         self.assertIn("ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }", terminal)
         self.assertIn("collectIsPressedAsState()", terminal)
         self.assertIn("disabledContainerColor = stateBackground", terminal)
-        self.assertIn("stateDescription = keyState.name.lowercase()", terminal)
+        self.assertIn("stateDescription = spokenState", terminal)
+        self.assertIn('ShortcutState.INACTIVE -> "Unavailable"', terminal)
         self.assertIn("TerminalDisplayActions.clear(session)", terminal)
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(content)", terminal)
 

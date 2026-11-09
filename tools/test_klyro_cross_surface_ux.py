@@ -87,7 +87,8 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn('Text(\n                    "TERMINAL",', pane)
         self.assertIn("ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }", pane)
         self.assertIn("collectIsPressedAsState()", pane)
-        self.assertIn("stateDescription = keyState.name.lowercase()", pane)
+        self.assertIn("stateDescription = spokenState", pane)
+        self.assertIn('KlyroShortcutTone.PASTE -> "Clipboard available"', pane)
         self.assertIn("TerminalDisplayActions.clear(session)", pane)
         self.assertIn('R.drawable.hugeicons_eraser', pane)
 
@@ -188,7 +189,8 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn('Text("Keep session")', sessions)
         self.assertIn('onCloseSession()', sessions)
         self.assertIn('KlyroSheetTitle("Choose shell")', sessions)
-        self.assertIn('Text("/bin/bash"', sessions)
+        self.assertIn('Text(if (canStartBash) "/bin/bash"', sessions)
+        self.assertIn('.clickable(enabled = canStartBash', sessions)
         app_tag = manifest.find("application")
         a = "{http://schemas.android.com/apk/res/android}"
         self.assertEqual(app_tag.attrib[a + "icon"], "@mipmap/ic_launcher")

@@ -17,7 +17,8 @@ class UXFivePriorities(unittest.TestCase):
         cls.terminal = (UI / "TerminalPane.kt").read_text()
 
     def test_shared_actions_have_button_semantics(self):
-        self.assertIn(".clickable(role = Role.Button", self.shared)
+        self.assertIn(".clickable(enabled = enabled, role = Role.Button", self.shared)
+        self.assertIn('if (!enabled) stateDescription = "Unavailable"', self.shared)
 
     def test_shared_actions_expose_subtitle_to_screen_readers(self):
         self.assertIn('else "$label. $subtitle"', self.shared)
@@ -35,7 +36,8 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn("value.text.trim().isNotBlank()", self.sessions)
 
     def test_shell_selection_has_role_and_hit_target(self):
-        self.assertIn('onClickLabel = "Start a Bash terminal"', self.sessions)
+        self.assertIn('onClickLabel = if (canStartBash) "Start a Bash terminal"', self.sessions)
+        self.assertIn('canStartBash: Boolean = true', self.sessions)
         self.assertIn(".heightIn(min = KlyroUiMetrics.minTouch)", self.sessions)
 
     def test_search_can_be_cleared(self):
