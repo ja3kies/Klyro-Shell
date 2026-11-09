@@ -71,11 +71,15 @@ internal fun KlyroWorkspaceSheet(
     val selected = entries.firstOrNull { it.id == selectedId } ?: entries.firstOrNull()
     if (selected == null) {
         KlyroModalTheme {
-            KlyroSheet(onDismissRequest = onDismiss) {
-                KlyroSectionHeading("Workspaces unavailable",
-                    "The workspace list is empty. Reopen this page after the workspace catalog loads.")
-                TextButton(onClick = onDismiss) { Text("Close") }
-            }
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                containerColor = c.sheet,
+                title = { Text("Workspaces unavailable") },
+                text = { Text("The workspace list is empty. Reopen this page after the workspace catalog loads.") },
+                confirmButton = {
+                    TextButton(onClick = onDismiss) { Text("Close") }
+                }
+            )
         }
         return
     }
