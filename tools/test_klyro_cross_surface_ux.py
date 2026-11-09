@@ -19,7 +19,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn('rememberSaveable { mutableStateOf(false) }', home)
         self.assertIn("KlyroPluginsPage(onBack =", home)
         self.assertIn("BackHandler {", plugins)
-        self.assertIn("pendingImport != null -> pendingImport = null", plugins)
+        self.assertIn("pendingImport != null -> { pendingImport = null; error = null }", plugins)
         self.assertIn("removeId != null -> removeId = null", plugins)
         self.assertIn("else -> onBack()", plugins)
         self.assertIn('var page by rememberSaveable', plugins)
