@@ -204,8 +204,9 @@ fun TerminalPane(
     }
     var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
     fun pasteClipboard() {
-        if (!session.isRunning()) {
-            Toast.makeText(context, "Terminal session ended; start a new session to paste",
+        val emulator = session.emulator
+        if (!session.isRunning() || emulator == null) {
+            Toast.makeText(context, "Terminal unavailable; start or reopen a session to paste",
                 Toast.LENGTH_SHORT).show()
             return
         }
@@ -216,13 +217,14 @@ fun TerminalPane(
             pendingMultilinePaste = content
         } else {
             // Termux TerminalEmulator handles DECSET 2004 bracketed paste.
-            session.emulator?.paste(content!!)
+            emulator.paste(content!!)
         }
     }
     LaunchedEffect(nativePasteRequest, session) {
         nativePasteRequest?.let { incoming ->
-            if (!session.isRunning()) {
-                Toast.makeText(context, "Terminal session ended; paste cancelled",
+            val emulator = session.emulator
+            if (!session.isRunning() || emulator == null) {
+                Toast.makeText(context, "Terminal unavailable; paste cancelled",
                     Toast.LENGTH_SHORT).show()
                 onNativePasteConsumed()
                 return@let
@@ -235,7 +237,7 @@ fun TerminalPane(
             } else if (ClipboardPastePolicy.requiresConfirmation(incoming)) {
                 pendingMultilinePaste = incoming
             } else {
-                session.emulator?.paste(incoming)
+                emulator.paste(incoming)
             }
             onNativePasteConsumed()
         }
@@ -673,7 +675,7 @@ fun TerminalPane(
                 active = selectedOutput != null,
                 // Allow copying a finished session's transcript; only pasting
                 // requires a live PTY.
-                enabled = canSelect || (session.isRunning() && clipboardAvailable)
+                enabled = canSelect || (session.isRunning() && session.emulator != null && clipboardAvailable)
             ) { selectTerminalOutput(canSelect) }
         }
         val secondRow: @Composable () -> Unit = {
@@ -921,11 +923,12 @@ fun TerminalPane(
                 TextButton(onClick = {
                     val text = pendingMultilinePaste
                     pendingMultilinePaste = null
-                    if (!session.isRunning()) {
-                        Toast.makeText(context, "Terminal session ended; paste cancelled",
+                    val emulator = session.emulator
+                    if (!session.isRunning() || emulator == null) {
+                        Toast.makeText(context, "Terminal unavailable; paste cancelled",
                             Toast.LENGTH_SHORT).show()
                     } else if (ClipboardPastePolicy.canPaste(text)) {
-                        session.emulator?.paste(text!!)
+                        emulator.paste(text!!)
                     } else {
                         Toast.makeText(context, "Clipboard text rejected", Toast.LENGTH_SHORT).show()
                     }
