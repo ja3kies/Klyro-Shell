@@ -95,12 +95,12 @@ internal fun KlyroSettingsSheet(
                 "privacy", "diagnostics", "about")
         } ?: "home")
     }
-    var showFontLicense by remember { mutableStateOf(false) }
-    var showHugeiconsLicense by remember { mutableStateOf(false) }
+    var showFontLicense by rememberSaveable { mutableStateOf(false) }
+    var showHugeiconsLicense by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
-    var cannotOpenPermissions by remember { mutableStateOf(false) }
+    var cannotOpenPermissions by rememberSaveable { mutableStateOf(false) }
     var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
-    var brandSwitchError by remember { mutableStateOf(false) }
+    var brandSwitchError by rememberSaveable { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     androidx.compose.runtime.LaunchedEffect(context) {
