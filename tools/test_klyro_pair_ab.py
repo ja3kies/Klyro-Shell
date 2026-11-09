@@ -43,7 +43,8 @@ class KlyroPairABTest(unittest.TestCase):
 
     def test_alerts_and_errors_do_not_destroy_sessions(self):
         pane=(UI/"TerminalPane.kt").read_text()
-        self.assertIn('TextButton(onClick = onReturnHome)',pane)
+        self.assertIn('onClick = onReturnHome,',pane)
+        self.assertIn('modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)',pane)
         self.assertNotIn('Text("Back to setup"',pane)
         self.assertIn('color = ui.warningContainer',pane)
         self.assertIn('color = ui.dangerContainer',pane)
