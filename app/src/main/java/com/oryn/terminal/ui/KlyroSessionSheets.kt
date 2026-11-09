@@ -33,6 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -136,6 +139,10 @@ internal fun KlyroRenameSessionDialog(
                         }
                     },
                     modifier = Modifier.fillMaxWidth().focusRequester(requester),
+                    isError = value.text.trim().isBlank() && value.text.isNotEmpty(),
+                    supportingText = {
+                        Text("Maximum 32 characters. Empty names cannot be saved.")
+                    },
                     singleLine = true,
                     label = { Text("Session name") },
                 )
@@ -187,9 +194,12 @@ internal fun KlyroChooseShellSheet(
                 }
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable(
-                            onClickLabel = "Start a Bash terminal", onClick = onNewBash
-                        ).padding(KlyroUiMetrics.spaceLg),
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(min = KlyroUiMetrics.minTouch)
+                            .clickable(role = Role.Button,
+                                onClickLabel = "Start a Bash terminal", onClick = onNewBash)
+                            .semantics { role = Role.Button }
+                            .padding(KlyroUiMetrics.spaceLg),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
