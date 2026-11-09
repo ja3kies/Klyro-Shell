@@ -899,6 +899,7 @@ private fun OrynTerminalApp(
             .distinct()
     }
     val stateLabel = when {
+        sessionFailureMessage != null -> "SESSION ERROR"
         runtimeVerified && runtimeHasWarnings -> "READY WITH WARNINGS"
         runtimeVerified -> "ENVIRONMENT READY"
         verifyingRuntime -> "CHECKING ENVIRONMENT"
@@ -908,6 +909,7 @@ private fun OrynTerminalApp(
         else -> "SETUP"
     }
     val stateColor = when {
+        sessionFailureMessage != null -> ui.danger
         runtimeVerified && runtimeHasWarnings -> ui.warningInk
         runtimeVerified -> ui.readyInk
         verifyingRuntime || bashStarted || runtimeInstalled || bootstrapInstalled ->
