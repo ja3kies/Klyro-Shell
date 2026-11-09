@@ -1021,46 +1021,6 @@ private fun OrynTerminalApp(
                 }
 
                 Surface(
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true },
-                    color = ui.tile,
-                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-                    border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier.size(42.dp).background(
-                                ui.accent.copy(alpha = .12f), RoundedCornerShape(13.dp)
-                            ), contentAlignment = Alignment.Center
-                        ) {
-                            Icon(painterResource(R.drawable.ic_klyro_plugins),
-                                contentDescription = null, tint = ui.accent,
-                                modifier = Modifier.size(23.dp))
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text("Plugins", color = ui.foreground, fontWeight = FontWeight.SemiBold)
-                            Text("Extend the command palette", color = ui.muted,
-                                fontSize = 12.sp)
-                        }
-                        Icon(painterResource(R.drawable.hugeicons_arrow_up_right_01),
-                            contentDescription = null, tint = ui.accent,
-                            modifier = Modifier.size(20.dp))
-                    }
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Your shell.\nYour own space.",
-                        color = ui.foreground, fontSize = 28.sp, lineHeight = 34.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = ui.chrome,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
@@ -1258,6 +1218,45 @@ private fun OrynTerminalApp(
                             }
                         }
                     }
+                }
+                Surface(
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true },
+                    color = ui.tile,
+                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+                    border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(42.dp).background(
+                                ui.accent.copy(alpha = .12f), RoundedCornerShape(13.dp)
+                            ), contentAlignment = Alignment.Center
+                        ) {
+                            Icon(painterResource(R.drawable.ic_klyro_plugins),
+                                contentDescription = null, tint = ui.accent,
+                                modifier = Modifier.size(23.dp))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("Plugins", color = ui.foreground, fontWeight = FontWeight.SemiBold)
+                            Text("Extend the command palette", color = ui.muted,
+                                fontSize = 12.sp)
+                        }
+                        Icon(painterResource(R.drawable.hugeicons_arrow_up_right_01),
+                            contentDescription = null, tint = ui.accent,
+                            modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Your shell.\nYour own space.",
+                        color = ui.foreground, fontSize = 28.sp, lineHeight = 34.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
 
 
