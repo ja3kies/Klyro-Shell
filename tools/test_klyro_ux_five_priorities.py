@@ -84,6 +84,26 @@ class UXFivePriorities(unittest.TestCase):
     def test_launcher_and_permission_errors_announced(self):
         self.assertGreaterEqual(self.settings.count("liveRegion = LiveRegionMode.Polite"), 2)
 
+    def test_bundled_add_only_opens_confirmation(self):
+        section = self.plugins.split('KlyroPluginManager.bundled.forEach', 1)[1].split('pendingBundledId?.let', 1)[0]
+        self.assertIn('pendingBundledId = plugin.id', section)
+        self.assertNotIn('manager.installBundled(plugin.id)', section)
+
+    def test_bundled_confirm_is_explicit(self):
+        self.assertIn('title = { Text("Add ${record.name}?") }', self.plugins)
+        self.assertIn('Text("Add pack")', self.plugins)
+        self.assertIn('if (applyChange { manager.installBundled(id) })', self.plugins)
+
+    def test_bundled_cancel_does_not_install(self):
+        self.assertIn('Text("Cancel")', self.plugins)
+        self.assertIn('pendingBundledId = null; error = null', self.plugins)
+
+    def test_bundled_back_dismisses_before_navigation(self):
+        self.assertIn('pendingBundledId != null -> { pendingBundledId = null; error = null }', self.plugins)
+
+    def test_bundled_failed_install_keeps_confirmation_open(self):
+        self.assertIn('if (applyChange { manager.installBundled(id) }) {\n                                pendingBundledId = null', self.plugins)
+
     def test_plugins_keep_import_open_on_failure(self):
         self.assertIn('if (applyChange { manager.installPreview(record) })', self.plugins)
 
