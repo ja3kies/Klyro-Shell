@@ -52,7 +52,8 @@ class KlyroPairABTest(unittest.TestCase):
         root=(ROOT/"app/src/main/java/com/oryn/terminal/MainActivity.kt").read_text()
         self.assertIn("LinearProgressIndicator(",root)
         self.assertNotIn('val ui.accent = ui.accent',root)
-        self.assertIn('BOOTSTRAP INSTALLED',root)
+        self.assertIn('BOOTSTRAP INSTALLED',
+            (ROOT / 'app/src/main/java/com/oryn/terminal/KlyroRuntimeBadgePolicy.kt').read_text())
 
     def test_build_version_bumped(self):
         build=(ROOT/"app/build.gradle.kts").read_text()

@@ -92,7 +92,7 @@ class UXFivePriorities(unittest.TestCase):
     def test_bundled_confirm_is_explicit(self):
         self.assertIn('title = { Text("Add ${record.name}?") }', self.plugins)
         self.assertIn('Text("Add pack")', self.plugins)
-        self.assertIn('if (applyChange { manager.installBundled(id) })', self.plugins)
+        self.assertIn('applyChange({ manager.installBundled(id) }) {', self.plugins)
 
     def test_bundled_cancel_does_not_install(self):
         self.assertIn('Text("Cancel")', self.plugins)
@@ -102,13 +102,15 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn('pendingBundledId != null -> { pendingBundledId = null; error = null }', self.plugins)
 
     def test_bundled_failed_install_keeps_confirmation_open(self):
-        self.assertIn('if (applyChange { manager.installBundled(id) }) {\n                                pendingBundledId = null', self.plugins)
+        self.assertIn('applyChange({ manager.installBundled(id) }) {\n                                pendingBundledId = null', self.plugins)
+        self.assertIn('result.onSuccess { updated ->', self.plugins)
+        self.assertIn('onSuccess()', self.plugins)
 
     def test_plugins_keep_import_open_on_failure(self):
-        self.assertIn('if (applyChange { manager.installPreview(record) })', self.plugins)
+        self.assertIn('applyChange({ manager.installPreview(record) }) {', self.plugins)
 
     def test_plugins_keep_remove_open_on_failure(self):
-        self.assertIn('if (applyChange { manager.uninstall(id) })', self.plugins)
+        self.assertIn('applyChange({ manager.uninstall(id) }) {', self.plugins)
 
     def test_plugins_have_state_specific_accessibility(self):
         self.assertIn('if (plugin.enabled) "Disable " else "Enable "', self.plugins)

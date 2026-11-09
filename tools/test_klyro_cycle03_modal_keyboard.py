@@ -103,7 +103,7 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn("modifier = Modifier.weight(1f)\n                        .heightIn(min = KlyroUiMetrics.minTouch)", self.plugins)
 
     def test_plugin_dialog_cancel_resets_error(self):
-        self.assertIn("pendingImport = null; error = null", self.plugins)
+        self.assertIn("pendingImport = null; pendingImportUri = null; error = null", self.plugins)
         self.assertIn("removeId = null; error = null", self.plugins)
 
     def test_shell_picker_uses_standard_spacing(self):
