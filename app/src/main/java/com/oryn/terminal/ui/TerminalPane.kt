@@ -900,7 +900,10 @@ fun TerminalPane(
                 TextButton(onClick = {
                     val text = pendingMultilinePaste
                     pendingMultilinePaste = null
-                    if (ClipboardPastePolicy.canPaste(text)) {
+                    if (!session.isRunning()) {
+                        Toast.makeText(context, "Terminal session ended; paste cancelled",
+                            Toast.LENGTH_SHORT).show()
+                    } else if (ClipboardPastePolicy.canPaste(text)) {
                         session.emulator?.paste(text!!)
                     } else {
                         Toast.makeText(context, "Clipboard text rejected", Toast.LENGTH_SHORT).show()
