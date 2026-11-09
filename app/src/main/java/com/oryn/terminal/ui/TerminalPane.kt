@@ -24,6 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
@@ -665,7 +666,7 @@ fun TerminalPane(
                     else R.drawable.hugeicons_clipboard_paste,
                 keyWidth = keyWidth, darkChrome = darkChrome,
                 iconCaption = if (canSelect) "SELECT" else "PASTE",
-                pasteTone = !canSelect,
+                tone = if (canSelect) KlyroShortcutTone.SELECT else KlyroShortcutTone.PASTE,
                 active = selectedOutput != null,
                 // Allow copying a finished session's transcript; only pasting
                 // requires a live PTY.
@@ -1177,7 +1178,7 @@ fun TerminalPane(
     }
 }
 
-private enum class ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }
+internal enum class ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1193,7 +1194,7 @@ private fun TerminalExtraKey(
     darkChrome: Boolean = true,
     longClickDescription: String? = null,
     iconCaption: String? = null,
-    pasteTone: Boolean = false,
+    tone: KlyroShortcutTone = KlyroShortcutTone.NEUTRAL,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
@@ -1207,18 +1208,13 @@ private fun TerminalExtraKey(
         active -> ShortcutState.ACTIVE
         else -> ShortcutState.DEFAULT
     }
-    val stateInk = when (keyState) {
-        ShortcutState.ACTIVE -> colors.accent
-        ShortcutState.HOLD -> colors.onAccent
-        ShortcutState.INACTIVE -> colors.muted
-        ShortcutState.DEFAULT -> if (pasteTone) colors.warningInk else colors.foreground
-    }
-    val stateBackground = when (keyState) {
-        ShortcutState.ACTIVE -> colors.accent.copy(alpha = .18f)
-        ShortcutState.HOLD -> colors.accent
-        ShortcutState.INACTIVE -> colors.key.copy(alpha = .50f)
-        ShortcutState.DEFAULT -> if (pasteTone) colors.warningContainer else colors.key
-    }
+    // Neutral shortcuts by default. SELECT is a subtle accent, PASTE is a
+    // neutral tile with its own outline: neither is a warning state.
+    val visuals = KlyroShortcutTonePolicy.resolve(colors, tone, keyState)
+    val stateInk = visuals.ink
+    val stateBackground = visuals.background
+    val stateBorder = if (tone == KlyroShortcutTone.PASTE)
+        BorderStroke(1.dp, colors.muted.copy(alpha = .24f)) else null
     val keyContents: @Composable () -> Unit = {
         if (glyph != null) {
             Column(
@@ -1293,6 +1289,7 @@ private fun TerminalExtraKey(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
             contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
             interactionSource = interaction,
+            border = stateBorder,
             colors = ButtonDefaults.buttonColors(
                 containerColor = stateBackground,
                 contentColor = stateInk,
@@ -1324,6 +1321,7 @@ private fun TerminalExtraKey(
                     stateDescription = keyState.name.lowercase()
                 },
             shape = shape,
+            border = stateBorder,
             color = stateBackground,
             contentColor = stateInk
         ) {

@@ -88,8 +88,13 @@ class SelectPasteAdversarialAudit(unittest.TestCase):
         self.assertIn("Character.isHighSurrogate(c)", self.clip)
 
     def test_shortcut_colors_are_differentiated_without_removing_context(self):
-        self.assertIn("pasteTone = !canSelect", self.pane)
-        self.assertIn("if (pasteTone) colors.warningContainer else colors.key", self.pane)
+        self.assertIn(
+            "tone = if (canSelect) KlyroShortcutTone.SELECT else KlyroShortcutTone.PASTE",
+            self.pane
+        )
+        self.assertIn("KlyroShortcutTonePolicy.resolve(colors, tone, keyState)", self.pane)
+        self.assertNotIn("pasteTone", self.pane)
+        self.assertNotIn("colors.warningContainer else colors.key", self.pane)
 
 if __name__ == "__main__":
     unittest.main()
