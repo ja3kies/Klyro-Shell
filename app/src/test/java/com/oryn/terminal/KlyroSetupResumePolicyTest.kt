@@ -19,6 +19,15 @@ class KlyroSetupResumePolicyTest {
             KlyroSetupResumePolicy.decide(true, true, failure))
     }
 
+    @Test fun livePtysPreventAutomaticRuntimeReplacementOnRotation() {
+        assertEquals(KlyroSetupResumeAction.IDLE,
+            KlyroSetupResumePolicy.decide(false, true, null, hasLiveSessions = true))
+        assertEquals(KlyroSetupResumeAction.OBSERVE,
+            KlyroSetupResumePolicy.decide(true, true, null, hasLiveSessions = true))
+        assertEquals(KlyroSetupResumeAction.SHOW_FAILURE,
+            KlyroSetupResumePolicy.decide(false, true, failure, hasLiveSessions = true))
+    }
+
     @Test fun aCleanBootstrapCanStillBeVerified() {
         assertEquals(KlyroSetupResumeAction.VERIFY_PROOT,
             KlyroSetupResumePolicy.decide(false, true, null))

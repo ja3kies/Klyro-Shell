@@ -568,7 +568,7 @@ class MainActivity : ComponentActivity() {
         val previousSetup = KlyroSetupLedger.snapshot()
         when (KlyroSetupResumePolicy.decide(
             TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy(),
-            bootstrapInstalled, previousSetup
+            bootstrapInstalled, previousSetup, terminalState.hasLiveSessions()
         )) {
             KlyroSetupResumeAction.OBSERVE -> observePreviousInstall()
             KlyroSetupResumeAction.SHOW_FAILURE -> {
@@ -639,6 +639,8 @@ class MainActivity : ComponentActivity() {
                     statusMessage = previous.message
                 } else {
                     when {
+                        bootstrapInstalled && !runtimeInstalled && terminalState.hasLiveSessions() ->
+                            statusMessage = "Sessions preserved. Close them before installing PRoot."
                         bootstrapInstalled && !runtimeInstalled -> installProotRuntime()
                         runtimeInstalled -> verifyRuntime()
                         else -> statusMessage = "Setup stopped before completion. Retry installation."
