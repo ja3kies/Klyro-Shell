@@ -212,7 +212,7 @@ internal fun KlyroWorkspaceSheet(
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Start,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = if (active) c.accent else c.muted
+                                        color = c.muted
                                     )
                                 }
                             }
