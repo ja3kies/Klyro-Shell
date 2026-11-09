@@ -17,6 +17,7 @@ class CycleThreeUX(unittest.TestCase):
         cls.sessions = (UI / "KlyroSessionSheets.kt").read_text()
         cls.workspaces = (UI / "KlyroWorkspaceSheet.kt").read_text()
         cls.palette = (UI / "KlyroCommandPalette.kt").read_text()
+        cls.settings = (UI / "KlyroSettingsSheet.kt").read_text()
 
     def test_tooltip_appears_only_during_enabled_press(self):
         self.assertIn("if (held && enabled)", self.pane)
@@ -76,6 +77,34 @@ class CycleThreeUX(unittest.TestCase):
 
     def test_back_in_palette_returns_from_guide(self):
         self.assertIn("BackHandler(enabled = showingGuide) { showingGuide = false }", self.palette)
+
+    def test_appearance_sections_can_scroll(self):
+        self.assertIn('rows = if (section == "home") 6 else 7', self.settings)
+
+    def test_appearance_font_reset_is_accessible(self):
+        self.assertIn("onClick = onResetFont,", self.settings)
+        self.assertIn("modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)", self.settings)
+
+    def test_launcher_selected_state_has_visual_check(self):
+        self.assertIn("if (selectedBrand == choice)", self.settings)
+        self.assertIn("R.drawable.hugeicons_checkmark_circle_01", self.settings)
+
+    def test_launcher_error_can_recover_on_verified_choice(self):
+        self.assertIn("brandSwitchError = false", self.settings)
+
+    def test_terminal_errors_are_announced(self):
+        self.assertGreaterEqual(self.pane.count("liveRegion = LiveRegionMode.Polite"), 2)
+
+    def test_terminal_find_has_large_navigation_targets(self):
+        self.assertIn("searchIndex = TranscriptSearch.nextIndex(position, -1", self.pane)
+        self.assertIn("searchIndex = TranscriptSearch.nextIndex(position, 1", self.pane)
+
+    def test_plugin_tabs_are_large(self):
+        self.assertIn("modifier = Modifier.weight(1f)\n                        .heightIn(min = KlyroUiMetrics.minTouch)", self.plugins)
+
+    def test_plugin_dialog_cancel_resets_error(self):
+        self.assertIn("pendingImport = null; error = null", self.plugins)
+        self.assertIn("removeId = null; error = null", self.plugins)
 
     def test_shell_picker_uses_standard_spacing(self):
         self.assertIn("Arrangement.spacedBy(KlyroUiMetrics.sectionGap)", self.sessions)
