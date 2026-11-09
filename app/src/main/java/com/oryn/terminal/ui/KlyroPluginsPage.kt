@@ -89,19 +89,22 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     }
     LaunchedEffect(installed, pendingBundledId, confirmedImportId, confirmedRemovalId) {
         val installedIds = installed.map { it.id }.toSet()
-        if (pendingBundledId in installedIds) {
+        val bundledId = pendingBundledId
+        val importedId = confirmedImportId
+        val removedId = confirmedRemovalId
+        if (bundledId != null && bundledId in installedIds) {
             pendingBundledId = null
             page = "installed"
             error = null
         }
-        if (confirmedImportId != null && confirmedImportId in installedIds) {
+        if (importedId != null && importedId in installedIds) {
             pendingImport = null
             pendingImportUri = null
             confirmedImportId = null
             page = "installed"
             error = null
         }
-        if (confirmedRemovalId != null && confirmedRemovalId !in installedIds) {
+        if (removedId != null && removedId !in installedIds) {
             removeId = null
             confirmedRemovalId = null
             error = null

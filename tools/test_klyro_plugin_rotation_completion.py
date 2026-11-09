@@ -12,9 +12,9 @@ class PluginRotationCompletion(unittest.TestCase):
  def test_completed_mutations_are_reconciled_by_ids(self):
   self.assertIn('var confirmedImportId by rememberSaveable',S)
   self.assertIn('var confirmedRemovalId by rememberSaveable',S)
-  self.assertIn('if (pendingBundledId in installedIds)',S)
-  self.assertIn('if (confirmedImportId != null && confirmedImportId in installedIds)',S)
-  self.assertIn('if (confirmedRemovalId != null && confirmedRemovalId !in installedIds)',S)
+  self.assertIn('if (bundledId != null && bundledId in installedIds)',S)
+  self.assertIn('if (importedId != null && importedId in installedIds)',S)
+  self.assertIn('if (removedId != null && removedId !in installedIds)',S)
   self.assertIn('confirmedImportId = record.id',S)
   self.assertIn('confirmedRemovalId = id',S)
  def test_user_can_cancel_recovered_confirmation(self):
