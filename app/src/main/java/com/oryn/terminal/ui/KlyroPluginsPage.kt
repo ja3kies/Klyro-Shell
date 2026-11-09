@@ -39,6 +39,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -59,14 +61,22 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var removeId by remember { mutableStateOf<String?>(null) }
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
-    BackHandler { onBack() }
-    fun applyChange(action: () -> Unit) {
-        runCatching(action).onSuccess {
+    BackHandler {
+        when {
+            pendingImport != null -> pendingImport = null
+            removeId != null -> removeId = null
+            else -> onBack()
+        }
+    }
+    fun applyChange(action: () -> Unit): Boolean {
+        return runCatching {
+            action()
             installed = manager.installed()
+        }.onSuccess {
             error = null
         }.onFailure { failure ->
             error = failure.message?.take(160) ?: "Action failed"
-        }
+        }.isSuccess
     }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
