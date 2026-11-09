@@ -166,6 +166,15 @@ fun TerminalPane(
     var sessionSheetId by remember(session) { mutableStateOf<Long?>(null) }
     var renameDialogId by remember(session) { mutableStateOf<Long?>(null) }
     var shellChooserSourceId by remember(session) { mutableStateOf<Long?>(null) }
+    // A session can be closed while its sheet/rename/chooser is open.
+    LaunchedEffect(tabs, sessionSheetId, renameDialogId, shellChooserSourceId) {
+        val availableIds = tabs.map { it.first }.toSet()
+        if (sessionSheetId != null && sessionSheetId !in availableIds) sessionSheetId = null
+        if (renameDialogId != null && renameDialogId !in availableIds) renameDialogId = null
+        if (shellChooserSourceId != null && shellChooserSourceId !in availableIds) {
+            shellChooserSourceId = null
+        }
+    }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var selectedOutputTruncated by remember(session) { mutableStateOf(false) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
@@ -1002,6 +1011,7 @@ fun TerminalPane(
                     sessionSheetId = null
                     shellChooserSourceId = id
                 },
+                canCreateSession = tabs.size < 8,
                 onActivate = {
                     sessionSheetId = null
                     onSelectTab(id)
@@ -1028,7 +1038,6 @@ fun TerminalPane(
     }
     shellChooserSourceId?.let { sourceId ->
         KlyroChooseShellSheet(
-            onDismiss = { shellChooserSourceId = null },
             onBack = {
                 shellChooserSourceId = null
                 sessionSheetId = sourceId
@@ -1036,7 +1045,8 @@ fun TerminalPane(
             onNewBash = {
                 shellChooserSourceId = null
                 onNewTab()
-            }
+            },
+            canStartBash = tabs.size < 8
         )
     }
 

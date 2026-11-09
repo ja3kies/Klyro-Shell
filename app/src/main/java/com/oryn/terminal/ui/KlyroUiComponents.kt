@@ -100,17 +100,20 @@ internal fun KlyroActionRow(
     subtitle: String? = null,
     destructive: Boolean = false,
     trailing: Boolean = false,
-    iconWell: Boolean = false
+    iconWell: Boolean = false,
+    enabled: Boolean = true
 ) {
     val colors = LocalKlyroColors.current
     val ink = if (destructive) colors.danger else colors.muted
     Row(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)
-            .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button,
+                onClickLabel = label, onClick = onClick)
             .semantics {
                 contentDescription = if (subtitle.isNullOrBlank()) label else "$label. $subtitle"
-                if (destructive) stateDescription = "Destructive action"
+                if (!enabled) stateDescription = "Unavailable"
+                else if (destructive) stateDescription = "Destructive action"
             }
             .padding(horizontal = KlyroUiMetrics.spaceLg, vertical = KlyroUiMetrics.spaceSm),
         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
@@ -131,7 +134,8 @@ internal fun KlyroActionRow(
                 modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
         }
         Column(Modifier.weight(1f)) {
-            Text(label, color = if (destructive) colors.danger else colors.foreground,
+            Text(label, color = if (!enabled) colors.muted else if (destructive)
+                colors.danger else colors.foreground,
                 fontWeight = if (subtitle == null) FontWeight.Medium else FontWeight.SemiBold,
                 style = MaterialTheme.typography.bodyMedium)
             if (!subtitle.isNullOrBlank()) {

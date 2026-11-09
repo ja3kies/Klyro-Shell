@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +52,7 @@ internal fun KlyroSessionSheet(
     onDismiss: () -> Unit,
     onRename: () -> Unit,
     onChooseShell: () -> Unit,
+    canCreateSession: Boolean = true,
     onActivate: () -> Unit,
     onCloseSession: () -> Unit
 ) {
@@ -75,7 +77,10 @@ internal fun KlyroSessionSheet(
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
                         KlyroActionRow("Rename", R.drawable.hugeicons_pen_01, onRename)
-                        KlyroActionRow("New terminal", R.drawable.hugeicons_plus_sign, onChooseShell, trailing = true)
+                        KlyroActionRow("New terminal", R.drawable.hugeicons_plus_sign,
+                            onChooseShell,
+                            trailing = true, enabled = canCreateSession,
+                            subtitle = if (canCreateSession) null else "Maximum 8 sessions")
                         if (!isActive) KlyroActionRow("Switch to session",
                             R.drawable.hugeicons_arrow_up_right_01, onActivate)
                     }
@@ -170,13 +175,13 @@ internal fun KlyroRenameSessionDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun KlyroChooseShellSheet(
-    onDismiss: () -> Unit,
     onBack: () -> Unit,
-    onNewBash: () -> Unit
+    onNewBash: () -> Unit,
+    canStartBash: Boolean = true
 ) {
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = onDismiss) {
+        KlyroSheet(onDismissRequest = onBack) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
@@ -200,19 +205,26 @@ internal fun KlyroChooseShellSheet(
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .heightIn(min = KlyroUiMetrics.minTouch)
-                            .clickable(role = Role.Button,
-                                onClickLabel = "Start a Bash terminal", onClick = onNewBash)
-                            .semantics { role = Role.Button }
+                            .clickable(enabled = canStartBash, role = Role.Button,
+                                onClickLabel = if (canStartBash) "Start a Bash terminal"
+                                    else "Maximum 8 sessions reached", onClick = onNewBash)
+                            .semantics {
+                                role = Role.Button
+                                if (!canStartBash) stateDescription = "Unavailable"
+                            }
                             .padding(KlyroUiMetrics.spaceLg),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
                     ) {
                         Icon(painterResource(R.drawable.hugeicons_terminal),
-                            contentDescription = null, tint = colors.accent,
+                            contentDescription = null,
+                            tint = if (canStartBash) colors.accent else colors.muted,
                             modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
                         Column {
                             Text("bash", fontWeight = FontWeight.SemiBold)
-                            Text("/bin/bash", color = colors.muted,
+                            Text(if (canStartBash) "/bin/bash" else
+                                "Maximum 8 sessions. Close a terminal first.",
+                                color = colors.muted,
                                 style = MaterialTheme.typography.bodySmall)
                         }
                     }
