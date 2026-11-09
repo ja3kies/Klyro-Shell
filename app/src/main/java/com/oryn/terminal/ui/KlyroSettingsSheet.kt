@@ -202,8 +202,9 @@ internal fun KlyroSettingsSheet(
                                     Surface(
                                         modifier = Modifier.weight(1f)
                                             .heightIn(min = 96.dp)
-                                            .clickable {
-                                                if (selectedBrand != choice) {
+                                            .clickable(role = Role.RadioButton,
+                                                onClickLabel = "Select launcher icon $title") {
+                                                if (!KlyroBrandChoice.isVerifiedSelection(context, choice)) {
                                                     brandSwitchError = !KlyroBrandChoice.select(context, choice)
                                                     selectedBrand = KlyroBrandChoice.selected(context)
                                                 }
