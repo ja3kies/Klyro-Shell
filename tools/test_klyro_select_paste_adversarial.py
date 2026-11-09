@@ -32,17 +32,17 @@ class SelectPasteAdversarialAudit(unittest.TestCase):
         self.assertIn("Character.isLowSurrogate(text.charAt(start))", self.policy)
 
     def test_finished_session_can_still_be_copied(self):
-        self.assertIn("enabled = canSelect || (session.isRunning() && clipboardAvailable)", self.pane)
+        self.assertIn("enabled = canSelect || (session.isRunning() && session.emulator != null && clipboardAvailable)", self.pane)
 
     def test_finished_session_cannot_receive_direct_paste(self):
-        self.assertIn("Terminal session ended; start a new session to paste", self.pane)
+        self.assertIn("Terminal unavailable; start or reopen a session to paste", self.pane)
 
     def test_finished_session_cannot_receive_native_paste(self):
-        self.assertIn("Terminal session ended; paste cancelled", self.pane)
+        self.assertIn("Terminal unavailable; paste cancelled", self.pane)
         self.assertIn("onNativePasteConsumed()", self.pane)
 
     def test_finished_session_cannot_receive_confirmed_multiline_paste(self):
-        self.assertIn('if (!session.isRunning()) {\n                        Toast.makeText(context, "Terminal session ended; paste cancelled"', self.pane)
+        self.assertIn('if (!session.isRunning()) {\n                        Toast.makeText(context, "Terminal unavailable; paste cancelled"', self.pane)
 
     def test_failed_clipboard_reads_do_not_crash_terminal(self):
         self.assertIn("catch (SecurityException | IllegalStateException denied)", self.reader)
