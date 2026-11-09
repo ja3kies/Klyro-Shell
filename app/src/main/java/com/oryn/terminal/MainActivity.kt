@@ -369,7 +369,7 @@ class MainActivity : ComponentActivity() {
         )
         // The bars are transparent; draw a matching fallback behind system insets.
         // The Compose root paints the actual active-screen color edge to edge.
-        window.decorView.setBackgroundColor(android.graphics.Color.rgb(24, 37, 40))
+        window.decorView.setBackgroundColor(activePalette.chrome.toArgb())
 
         try {
             installer = TermuxBootstrapInstaller(this)

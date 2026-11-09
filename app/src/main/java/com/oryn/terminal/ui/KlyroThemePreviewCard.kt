@@ -18,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -31,24 +30,31 @@ import androidx.compose.ui.unit.sp
  * The actual theme palettes are represented by miniature terminal surfaces,
  * rather than by icon-only action buttons that cannot communicate a theme.
  */
+/** Preview palettes use the exact same generator as Klyro's active themes. */
+internal object KlyroThemePreviewPalette {
+    fun forMode(mode: String, accentId: String): KlyroColors = when (mode) {
+        "dark" -> KlyroColors.create(true, accentId)
+        "mono-black", "mono-paper", "mono-contrast" -> KlyroColors.monochrome(mode)
+        else -> KlyroColors.create(false, accentId)
+    }
+
+    fun systemPair(accentId: String): Pair<KlyroColors, KlyroColors> =
+        KlyroColors.create(false, accentId) to KlyroColors.create(true, accentId)
+}
+
 @Composable
 internal fun KlyroThemePreviewCard(
     mode: String,
     label: String,
     active: Boolean,
+    accentId: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val current = LocalKlyroColors.current
-    val preview = when (mode) {
-        "system" -> Triple(Color(0xFFE5F0E9), Color.White, Color(0xFF56620C))
-        "light" -> Triple(Color(0xFFF2F7F5), Color.White, Color(0xFF56620C))
-        "dark" -> Triple(Color(0xFF11191D), Color(0xFF202A2F), Color(0xFFBDCC64))
-        "mono-black" -> Triple(Color.Black, Color(0xFF101010), Color.White)
-        "mono-paper" -> Triple(Color.White, Color(0xFFF6F6F6), Color.Black)
-        "mono-contrast" -> Triple(Color.White, Color.Black, Color.White)
-        else -> Triple(current.background, current.terminal, current.accent)
-    }
+    // Generate previews from the selected accent instead of a fixed Lime palette.
+    val preview = KlyroThemePreviewPalette.forMode(mode, accentId)
+    val (lightPreview, darkPreview) = KlyroThemePreviewPalette.systemPair(accentId)
     val shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
     Surface(
         modifier = modifier
@@ -65,7 +71,7 @@ internal fun KlyroThemePreviewCard(
         ) {
             Box(
                 modifier = Modifier.fillMaxWidth().height(40.dp)
-                    .background(preview.first, RoundedCornerShape(9.dp))
+                    .background(preview.background, RoundedCornerShape(9.dp))
                     .padding(5.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -75,17 +81,14 @@ internal fun KlyroThemePreviewCard(
                         modifier = Modifier.fillMaxWidth().height(29.dp)
                             .clip(RoundedCornerShape(6.dp))
                     ) {
-                        listOf(
-                            Color(0xFFF2F7F5) to Color(0xFF56620C),
-                            Color(0xFF11191D) to Color(0xFFBDCC64)
-                        ).forEach { (background, ink) ->
+                        listOf(lightPreview, darkPreview).forEach { palette ->
                             Box(
                                 modifier = Modifier.weight(1f).fillMaxHeight()
-                                    .background(background)
+                                    .background(palette.terminal)
                                     .padding(start = 6.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
-                                Text("›_", color = ink, fontFamily = FontFamily.Monospace,
+                                Text("›_", color = palette.terminalPrompt, fontFamily = FontFamily.Monospace,
                                     fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -93,11 +96,11 @@ internal fun KlyroThemePreviewCard(
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth().height(29.dp)
-                            .background(preview.second, RoundedCornerShape(6.dp))
+                            .background(preview.terminal, RoundedCornerShape(6.dp))
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("› _", color = preview.third, fontFamily = FontFamily.Monospace,
+                        Text("› _", color = preview.terminalPrompt, fontFamily = FontFamily.Monospace,
                             fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     }
                 }

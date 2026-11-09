@@ -262,6 +262,7 @@ internal fun KlyroSettingsSheet(
                                     "dark" to "Dark").forEach { (mode, label) ->
                                     KlyroThemePreviewCard(
                                         mode = mode, label = label, active = themeMode == mode,
+                                        accentId = accentId,
                                         modifier = Modifier.weight(1f),
                                         onClick = { onThemeModeChange(mode) }
                                     )
@@ -277,6 +278,7 @@ internal fun KlyroSettingsSheet(
                                     "mono-paper" to "Paper").forEach { (mode, label) ->
                                     KlyroThemePreviewCard(
                                         mode = mode, label = label, active = themeMode == mode,
+                                        accentId = accentId,
                                         modifier = Modifier.weight(1f),
                                         onClick = { onThemeModeChange(mode) }
                                     )
@@ -634,7 +636,7 @@ internal fun KlyroSettingsSheet(
                                 ) {
                                     Box(
                                         modifier = Modifier.size(64.dp).background(
-                                            Color(0xFF0C0B13),
+                                            colors.key,
                                             RoundedCornerShape(KlyroUiMetrics.controlCorner)
                                         ),
                                         contentAlignment = Alignment.Center

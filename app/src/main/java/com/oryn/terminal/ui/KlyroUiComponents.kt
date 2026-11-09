@@ -32,7 +32,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -220,14 +219,14 @@ internal fun KlyroThinSlider(
         steps = steps,
         modifier = modifier,
         colors = SliderDefaults.colors(
-            thumbColor = Color.White,
+            thumbColor = colors.foreground,
             activeTrackColor = colors.accent,
             inactiveTrackColor = colors.key
         ),
         thumb = {
             Box(
                 Modifier.size(KlyroUiMetrics.iosSliderThumb)
-                    .background(Color.White, CircleShape)
+                    .background(colors.foreground, CircleShape)
                     .border(KlyroUiMetrics.iosSliderBorder,
                         colors.muted.copy(alpha = .35f), CircleShape)
             )

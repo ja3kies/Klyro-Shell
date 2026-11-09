@@ -103,12 +103,6 @@ import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import java.nio.charset.StandardCharsets
 
-private val TerminalBackground = Color(0xFF101719)
-private val TerminalSurface = Color(0xFF182528)
-private val TerminalAccent = Color(0xFFB9DAD4)
-private val TerminalText = Color(0xFFE3F1EA)
-private val TerminalMuted = Color(0xFF98B0A9)
-
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalPane(
@@ -410,7 +404,7 @@ fun TerminalPane(
                     Box(
                         modifier = Modifier.size(35.dp)
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
-                            .background(Color(0xFF0C0B13)),
+                            .background(ui.tile),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
