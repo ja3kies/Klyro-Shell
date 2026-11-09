@@ -766,6 +766,11 @@ fun TerminalPane(
                                         }
                                     }
                                 }
+                            },
+                            update = { view ->
+                                // React to theme changes without replacing selection or transcript.
+                                view.setTextColor(ui.terminalInk.toArgb())
+                                view.setBackgroundColor(ui.terminal.toArgb())
                             }
                         )
                     }
