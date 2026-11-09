@@ -33,6 +33,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -112,6 +115,13 @@ internal fun KlyroCommandPalette(
                         label = { Text("Find a shell command") },
                         placeholder = { Text("pwd, pkg search, exit…") },
                         singleLine = true,
+                        trailingIcon = {
+                            if (query.isNotEmpty()) {
+                                TextButton(onClick = { query = ""; info = null }) {
+                                    Text("Clear")
+                                }
+                            }
+                        },
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                     )
                     Text(
@@ -124,7 +134,8 @@ internal fun KlyroCommandPalette(
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
                             Text(
                                 info.orEmpty(),
-                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                modifier = Modifier.fillMaxWidth().padding(12.dp)
+                                    .semantics { liveRegion = LiveRegionMode.Polite },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.foreground
                             )
@@ -136,8 +147,13 @@ internal fun KlyroCommandPalette(
                     ) {
                         if (matches.isEmpty() && pluginMatches.isEmpty()) {
                             item {
-                                Text("No matching commands.", color = colors.muted,
-                                    modifier = Modifier.padding(12.dp))
+                                Column(Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                    Text("No matching commands.", color = colors.muted)
+                                    TextButton(onClick = { query = ""; info = null }) {
+                                        Text("Show all commands")
+                                    }
+                                }
                             }
                         }
                         if (pluginMatches.isNotEmpty()) {
@@ -157,6 +173,8 @@ internal fun KlyroCommandPalette(
                                             keyboard?.hide()
                                             onDismiss()
                                             onInsert(command.insert)
+                                        } else {
+                                            info = "This plugin command cannot be inserted safely."
                                         }
                                     }
                                 ),
@@ -165,7 +183,7 @@ internal fun KlyroCommandPalette(
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth().heightIn(
-                                        min = KlyroUiMetrics.compactRow
+                                        min = KlyroUiMetrics.minTouch
                                     ).padding(KlyroUiMetrics.spaceMd),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
@@ -211,7 +229,7 @@ internal fun KlyroCommandPalette(
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth()
-                                        .heightIn(min = KlyroUiMetrics.compactRow)
+                                        .heightIn(min = KlyroUiMetrics.minTouch)
                                         .padding(horizontal = KlyroUiMetrics.spaceMd,
                                             vertical = KlyroUiMetrics.spaceSm),
                                     verticalAlignment = Alignment.CenterVertically,
