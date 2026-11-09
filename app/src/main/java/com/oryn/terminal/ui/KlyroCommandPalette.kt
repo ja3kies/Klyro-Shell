@@ -76,7 +76,9 @@ internal fun KlyroCommandPalette(
     }
 
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = onDismiss) {
+        KlyroSheet(onDismissRequest = {
+            if (showingGuide) showingGuide = false else onDismiss()
+        }) {
             Column(
                 modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().imePadding()
