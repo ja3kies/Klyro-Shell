@@ -74,7 +74,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn("ClipboardPastePolicy.canPaste(incoming)", section)
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(incoming)", section)
         self.assertIn("pendingMultilinePaste = incoming", section)
-        self.assertIn("session.emulator?.paste(incoming)", section)
+        self.assertIn("emulator.paste(incoming)", section)
         self.assertIn("onNativePasteConsumed()", section)
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(content)", pane)
 
