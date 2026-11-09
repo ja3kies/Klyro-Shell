@@ -15,6 +15,26 @@ public class TerminalActionPolicyTest {
         assertTrue(TerminalActionPolicy.hasCopyableOutput("klyro ~ $\nhello\nklyro ~ $"));
     }
 
+    @Test public void selectionTailPreservesShortCopyableText() {
+        assertEquals("hello", TerminalActionPolicy.selectionTail("hello"));
+        assertEquals("", TerminalActionPolicy.selectionTail(null));
+        assertEquals("", TerminalActionPolicy.selectionTail(""));
+    }
+
+    @Test public void selectionTailIsBounded() {
+        String longText = "A".repeat(TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS + 1000);
+        String bounded = TerminalActionPolicy.selectionTail(longText);
+        assertEquals(TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS, bounded.length());
+        assertEquals("A".repeat(TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS), bounded);
+    }
+
+    @Test public void selectionTailDoesNotSplitEmojiAtBoundary() {
+        String text = "😀" + "x".repeat(TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS - 1);
+        String bounded = TerminalActionPolicy.selectionTail(text);
+        assertEquals("x".repeat(TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS - 1), bounded);
+        assertFalse(Character.isLowSurrogate(bounded.charAt(0)));
+    }
+
     @Test public void outputOrTypedCommandsUsesSelectionAction() {
         assertTrue(TerminalActionPolicy.hasCopyableOutput("hello"));
         assertTrue(TerminalActionPolicy.hasCopyableOutput("klyro ~ $ ls"));
