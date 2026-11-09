@@ -235,8 +235,18 @@ fun TerminalPane(
         }
     }
     var activeTerminalView by remember(session) { mutableStateOf<TerminalView?>(null) }
-    LaunchedEffect(activeTabId, activeTerminalView, sessionSheetId, renameDialogId, shellChooserSourceId) {
-        if (sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null) {
+    LaunchedEffect(
+        activeTabId, activeTerminalView, sessionSheetId, renameDialogId,
+        shellChooserSourceId, showWorkspaceSheet, showCommandPalette,
+        showTerminalSettings, showTranscriptSearch, showEndSessionConfirmation,
+        selectedOutput, pendingMultilinePaste
+    ) {
+        if (sessionSheetId == null && renameDialogId == null &&
+            shellChooserSourceId == null && !showWorkspaceSheet &&
+            !showCommandPalette && !showTerminalSettings &&
+            !showTranscriptSearch && !showEndSessionConfirmation &&
+            selectedOutput == null && pendingMultilinePaste == null
+        ) {
             activeTerminalView?.let { view ->
                 view.isFocusableInTouchMode = true
                 view.requestFocus()
