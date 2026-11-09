@@ -73,6 +73,7 @@ internal fun KlyroWorkspaceSheet(
         KlyroModalTheme {
             AlertDialog(
                 onDismissRequest = onDismiss,
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 containerColor = c.sheet,
                 title = { Text("Workspaces unavailable") },
                 text = { Text("The workspace list is empty. Reopen this page after the workspace catalog loads.") },
