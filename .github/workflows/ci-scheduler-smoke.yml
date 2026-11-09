@@ -1,0 +1,17 @@
+name: Klyro CI Scheduler Smoke
+
+on:
+  push:
+    branches:
+      - p1/ci-scheduler-smoke-20261109
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify runner dispatch only
+        run: echo "CI_SCHEDULER_SMOKE_PASS"
