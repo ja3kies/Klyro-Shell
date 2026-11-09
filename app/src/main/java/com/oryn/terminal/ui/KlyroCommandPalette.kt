@@ -95,6 +95,7 @@ internal fun KlyroCommandPalette(
                         keyboard?.hide()
                         showingGuide = !showingGuide
                         info = null
+                        unsafeFeedback = false
                     }) {
                         Text(if (showingGuide) "Commands" else "Welcome guide")
                     }
@@ -116,6 +117,7 @@ internal fun KlyroCommandPalette(
                         onValueChange = {
                             query = it.take(KlyroCommandSearch.MAX_QUERY_LENGTH)
                             info = null
+                            unsafeFeedback = false
                         },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Find a shell command") },
@@ -123,7 +125,7 @@ internal fun KlyroCommandPalette(
                         singleLine = true,
                         trailingIcon = {
                             if (query.isNotEmpty()) {
-                                TextButton(onClick = { query = ""; info = null }) {
+                                TextButton(onClick = { query = ""; info = null; unsafeFeedback = false }) {
                                     Text("Clear")
                                 }
                             }
@@ -156,7 +158,7 @@ internal fun KlyroCommandPalette(
                                 Column(Modifier.fillMaxWidth().padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                                     Text("No matching commands.", color = colors.muted)
-                                    TextButton(onClick = { query = ""; info = null }) {
+                                    TextButton(onClick = { query = ""; info = null; unsafeFeedback = false }) {
                                         Text("Show all commands")
                                     }
                                 }
