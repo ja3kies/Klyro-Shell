@@ -78,14 +78,19 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var confirmedImportId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmedRemovalId by rememberSaveable { mutableStateOf<String?>(null) }
 
+    // A revision cancels stale IO refreshes: an older read cannot overwrite a
+    // newer registry snapshot when two rapid writes finish out of order.
+    var registryRevision by remember { mutableStateOf(0) }
     DisposableEffect(manager) {
-        // Another Activity's confirmed IO commit can complete after rotation.
+        // Listen first, then refresh to close the registration/read race.
         val stopObserving = manager.observeRegistry {
-            scope.launch {
-                installed = withContext(Dispatchers.IO) { manager.installed() }
-            }
+            scope.launch { registryRevision += 1 }
         }
+        scope.launch { registryRevision += 1 }
         onDispose { stopObserving() }
+    }
+    LaunchedEffect(manager, registryRevision) {
+        installed = withContext(Dispatchers.IO) { manager.installed() }
     }
     LaunchedEffect(installed, pendingBundledId, confirmedImportId, confirmedRemovalId) {
         val installedIds = installed.map { it.id }.toSet()
