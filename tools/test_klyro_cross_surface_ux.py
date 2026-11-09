@@ -57,7 +57,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
     def test_terminal_selection_is_read_only_and_never_pastes(self):
         pane = READ(UI / "TerminalPane.kt")
         selection = pane.split("fun selectTerminalOutput(expectedSelection: Boolean)", 1)[1].split("// Fit seven", 1)[0]
-        self.assertIn("selectedOutput = output", selection)
+        self.assertIn("selectedOutput = TerminalActionPolicy.selectionTail(output)", selection)
         self.assertNotIn(".paste(", selection)
         self.assertIn('"ALL",\n                description = if (canSelect) "Select all terminal output" else "Paste clipboard"', pane)
         self.assertNotIn('"PASTE", description = "Paste clipboard text"', pane)
