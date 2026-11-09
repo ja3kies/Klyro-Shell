@@ -77,6 +77,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -494,9 +496,10 @@ fun TerminalPane(
 
         if (sessionFailureMessage != null) {
             Surface(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
                 color = ui.dangerContainer,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -509,7 +512,10 @@ fun TerminalPane(
                         lineHeight = 17.sp,
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = onReturnHome) {
+                    TextButton(
+                        onClick = onReturnHome,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                    ) {
                         Text("Home", color = TerminalAccent, fontSize = 12.sp)
                     }
                 }
@@ -518,9 +524,10 @@ fun TerminalPane(
 
         if (runtimeHasWarnings && sessionFailureMessage == null && !warningNoteDismissed) {
             Surface(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
                 color = ui.warningContainer,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
@@ -535,7 +542,7 @@ fun TerminalPane(
                     )
                     TextButton(
                         onClick = { warningNoteDismissed = true },
-                        modifier = Modifier.heightIn(min = 48.dp)
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                     ) {
                         Text("Dismiss", color = TerminalAccent, fontSize = 12.sp)
                     }
@@ -1016,7 +1023,7 @@ fun TerminalPane(
                         }
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
                         ) {
                             Text(
                                 text = preview,
@@ -1030,11 +1037,15 @@ fun TerminalPane(
                     }
                     if (matches.isNotEmpty()) {
                         Row {
-                            TextButton(onClick = {
+                            TextButton(
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                onClick = {
                                 searchIndex = TranscriptSearch.nextIndex(position, -1, matches.size)
                                 goToMatch(searchIndex)
                             }) { Text("Previous") }
-                            TextButton(onClick = {
+                            TextButton(
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                onClick = {
                                 searchIndex = TranscriptSearch.nextIndex(position, 1, matches.size)
                                 goToMatch(searchIndex)
                             }) { Text("Next") }
@@ -1050,6 +1061,7 @@ fun TerminalPane(
                         showTranscriptSearch = false
                     },
                     enabled = matches.isNotEmpty(),
+                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
                 ) { Text("Go to line") }
             },
