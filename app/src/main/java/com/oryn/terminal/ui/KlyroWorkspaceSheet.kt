@@ -247,6 +247,7 @@ internal fun KlyroWorkspaceSheet(
 
                 if (editorId != null) {
                     val editing = !editorId.isNullOrEmpty()
+                    val editTarget = entries.firstOrNull { it.id == editorId }
                     Surface(color = c.tile,
                         shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                         Column(
@@ -270,6 +271,11 @@ internal fun KlyroWorkspaceSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             )
+                            if (editing && editTarget == null) {
+                                Text("Workspace no longer exists. Cancel this edit.",
+                                    color = c.danger,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
                             if (editorError) Text("Choose a unique, non-empty name.",
                                 color = c.danger, style = MaterialTheme.typography.bodySmall)
                             Row(
@@ -279,11 +285,13 @@ internal fun KlyroWorkspaceSheet(
                                 TextButton(onClick = { editorId = null }) { Text("Cancel") }
                                 Button(
                                     enabled = editorText.trim().isNotEmpty() &&
-                                        (!editing || editorText.trim() !=
-                                            entries.firstOrNull { it.id == editorId }?.name),
+                                        (!editing || (editTarget != null &&
+                                            editorText.trim() != editTarget.name)),
                                     onClick = {
-                                        val saved = if (editing) onRenameProject(editorId!!, editorText)
-                                            else onCreateProject(editorText)
+                                        val saved = if (editing) {
+                                            editTarget != null &&
+                                                onRenameProject(editTarget.id, editorText)
+                                        } else onCreateProject(editorText)
                                         if (saved) editorId = null else editorError = true
                                     },
                                     colors = ButtonDefaults.buttonColors(
