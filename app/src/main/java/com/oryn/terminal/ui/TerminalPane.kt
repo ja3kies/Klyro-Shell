@@ -84,6 +84,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.oryn.terminal.session.OrynTerminalSessionClient
@@ -622,6 +625,8 @@ fun TerminalPane(
                 glyph = if (canSelect) R.drawable.hugeicons_clipboard_list
                     else R.drawable.hugeicons_clipboard_paste,
                 keyWidth = keyWidth, darkChrome = darkChrome,
+                iconCaption = if (canSelect) "SELECT" else "PASTE",
+                pasteTone = !canSelect,
                 active = selectedOutput != null,
                 enabled = canSelect || clipboardAvailable
             ) { selectTerminalOutput() }
@@ -1136,6 +1141,8 @@ private fun TerminalExtraKey(
     keyWidth: androidx.compose.ui.unit.Dp = 52.dp,
     darkChrome: Boolean = true,
     longClickDescription: String? = null,
+    iconCaption: String? = null,
+    pasteTone: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
@@ -1152,13 +1159,13 @@ private fun TerminalExtraKey(
         ShortcutState.ACTIVE -> colors.accent
         ShortcutState.HOLD -> colors.onAccent
         ShortcutState.INACTIVE -> colors.muted
-        ShortcutState.DEFAULT -> colors.foreground
+        ShortcutState.DEFAULT -> if (pasteTone) colors.warningInk else colors.foreground
     }
     val stateBackground = when (keyState) {
         ShortcutState.ACTIVE -> colors.accent.copy(alpha = .18f)
         ShortcutState.HOLD -> colors.accent
         ShortcutState.INACTIVE -> colors.key.copy(alpha = .50f)
-        ShortcutState.DEFAULT -> colors.key
+        ShortcutState.DEFAULT -> if (pasteTone) colors.warningContainer else colors.key
     }
     val keyContents: @Composable () -> Unit = {
         if (glyph != null) {
@@ -1172,7 +1179,11 @@ private fun TerminalExtraKey(
                     modifier = Modifier.size(KlyroUiMetrics.glyphSmall),
                     tint = stateInk
                 )
-                // Icon-only affordance: full action name is exposed to accessibility.
+                if (iconCaption != null) {
+                    Text(iconCaption, fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, color = stateInk)
+                }
             }
         } else if (arrow != null) {
             // Thin chevrons, inspired by the reference terminal keyboard.
@@ -1215,6 +1226,7 @@ private fun TerminalExtraKey(
             Text(label, fontSize = labelSize, fontFamily = FontFamily.Monospace)
         }
     }
+    Box(contentAlignment = Alignment.Center) {
     if (onLongClick == null) {
         Button(
             onClick = onClick,
@@ -1267,6 +1279,27 @@ private fun TerminalExtraKey(
                 keyContents()
             }
         }
+    }
+    // A brief, visible action hint helps sighted users discover shortcuts.
+    // Non-focusable popup does not interrupt the held touch gesture or PTY.
+    if (held && enabled) {
+        Popup(
+            alignment = Alignment.TopCenter,
+            offset = IntOffset(0, -64),
+            properties = PopupProperties(focusable = false)
+        ) {
+            Surface(
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                    KlyroUiMetrics.controlCorner),
+                color = colors.sheet,
+                contentColor = colors.foreground
+            ) {
+                Text(longClickDescription ?: description ?: label,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    fontSize = 12.sp, maxLines = 2)
+            }
+        }
+    }
     }
 }
 
