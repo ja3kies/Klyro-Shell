@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import androidx.activity.compose.BackHandler
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -60,6 +62,8 @@ internal fun KlyroCommandPalette(
     val keyboard = LocalSoftwareKeyboardController.current
     var query by remember { mutableStateOf("") }
     var showingGuide by remember { mutableStateOf(false) }
+    BackHandler(enabled = showingGuide) { showingGuide = false }
+
     var info by remember { mutableStateOf<String?>(null) }
     val matches = remember(query) { KlyroCommandCatalog.search(query) }
     val pluginMatches = remember(query, pluginCommands) {
