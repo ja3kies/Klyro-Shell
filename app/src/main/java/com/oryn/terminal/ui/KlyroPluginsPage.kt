@@ -72,9 +72,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
     var pendingImportUri by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingBundledId by rememberSaveable { mutableStateOf<String?>(null) }
-    BackHandler {
-        // Do not dismiss an in-flight registry write by leaving the screen.
-        if (mutationBusy) return@BackHandler
+    fun navigateBack() {
+        // Visible Home and Android Back must unwind the same dialog stack.
+        if (mutationBusy) return
         when {
             pendingImport != null || pendingImportUri != null -> {
                 pendingImport = null; pendingImportUri = null; error = null
@@ -84,6 +84,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             else -> onBack()
         }
     }
+    BackHandler { navigateBack() }
     fun applyChange(action: () -> Unit, onSuccess: () -> Unit = {}) {
         if (mutationBusy) return
         mutationBusy = true
@@ -135,7 +136,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
             TextButton(
-                onClick = onBack,
+                onClick = ::navigateBack,
                 enabled = !mutationBusy,
                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
             ) {
