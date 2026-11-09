@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -552,6 +553,7 @@ class MainActivity : ComponentActivity() {
                         terminalState.activeTabId?.let(terminalState::clearNativePaste)
                     },
                     onInstall = ::handlePrimaryAction,
+                    onRepair = { installEnvironment(forceBootstrapRepair = true) },
                     onLaunch = {
                         if (terminalState.sessions.isNotEmpty()) showWelcomeScreen = false
                         else launchBash()
@@ -674,13 +676,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun installEnvironment() {
+    private fun installEnvironment(forceBootstrapRepair: Boolean = false) {
         if (isInstalling || isVerifyingRuntime) return
+        if (forceBootstrapRepair && terminalState.hasLiveSessions()) {
+            Toast.makeText(this, "Close running sessions before repairing the bootstrap", Toast.LENGTH_LONG).show()
+            return
+        }
         if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
             observePreviousInstall()
             return
         }
-        if (bootstrapInstalled) {
+        if (bootstrapInstalled && !forceBootstrapRepair) {
             installProotRuntime()
             return
         }
@@ -880,6 +886,7 @@ private fun OrynTerminalApp(
     nativePasteRequest: String?,
     onNativePasteConsumed: () -> Unit,
     onInstall: () -> Unit,
+    onRepair: () -> Unit,
     onLaunch: () -> Unit,
     onClose: () -> Unit,
     onRecheck: () -> Unit
@@ -891,6 +898,7 @@ private fun OrynTerminalApp(
     val homeStatus = KlyroHomeStatusPolicy.resolve(status, sessionFailureMessage)
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
+    var showRepairConfirmation by rememberSaveable { mutableStateOf(false) }
     val warningLines = remember(technicalErrorDetails) {
         KlyroVerificationWarnings.unexpectedLines(technicalErrorDetails.orEmpty()).distinct()
     }
@@ -1208,6 +1216,16 @@ private fun OrynTerminalApp(
                                 )
                             }
                         }
+                        if (KlyroRuntimeRepairPolicy.canOffer(
+                                runtimeInstalled, runtimeVerified,
+                                technicalErrorDetails != null, hasRunningSessions,
+                                installing, verifyingRuntime
+                            )) {
+                            TextButton(
+                                onClick = { showRepairConfirmation = true },
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                            ) { Text("Repair private bootstrap", color = ui.warningInk) }
+                        }
                         if (runtimeVerified) {
                             TextButton(
                                 onClick = onRecheck,
@@ -1262,5 +1280,27 @@ private fun OrynTerminalApp(
 
             }
         }
+    }
+    if (showRepairConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showRepairConfirmation = false },
+            title = { Text("Repair private bootstrap?") },
+            text = { Text(
+                "This replaces Klyro's private bootstrap packages and may remove packages installed " +
+                    "inside Klyro. Back up your installed packages first. HOME files are kept. " +
+                    "All terminal sessions must be closed."
+            ) },
+            confirmButton = {
+                Button(onClick = {
+                    showRepairConfirmation = false
+                    onRepair()
+                }) { Text("Replace private bootstrap") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRepairConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
