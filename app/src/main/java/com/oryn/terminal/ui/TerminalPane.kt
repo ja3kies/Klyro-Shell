@@ -66,6 +66,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -312,7 +313,7 @@ fun TerminalPane(
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
     var shiftActive by remember(viewClient) { mutableStateOf(viewClient.isShiftDown()) }
     var fnActive by remember(viewClient) { mutableStateOf(viewClient.isFnDown()) }
-    var showEndSessionConfirmation by remember(session) { mutableStateOf(false) }
+    var showEndSessionConfirmation by rememberSaveable(session) { mutableStateOf(false) }
     var warningNoteDismissed by remember(session) { mutableStateOf(false) }
 
     BackHandler(
