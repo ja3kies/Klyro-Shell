@@ -1006,7 +1006,14 @@ fun TerminalPane(
                         onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
                         label = { Text("Find text") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        trailingIcon = {
+                            if (transcriptQuery.isNotEmpty()) {
+                                TextButton(onClick = { transcriptQuery = ""; searchIndex = 0 }) {
+                                    Text("Clear")
+                                }
+                            }
+                        }
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth()
