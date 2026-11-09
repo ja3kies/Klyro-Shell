@@ -373,6 +373,15 @@ fun TerminalPane(
     // Never reduce key targets below Android's 48dp minimum: scroll narrow rows.
     val keyWidth = if (compact) 48.dp else ((maxWidth - 36.dp) / 7).coerceIn(48.dp, 56.dp)
     val canSendKeys = session.isRunning() && session.emulator != null
+    LaunchedEffect(canSendKeys, viewClient, outputRevision) {
+        // Clear sticky modifiers when a PTY exits while a key is held.
+        if (!canSendKeys) {
+            controlActive = false; altActive = false
+            shiftActive = false; fnActive = false
+            viewClient.setControlDown(false); viewClient.setAltDown(false)
+            viewClient.setShiftDown(false); viewClient.setFnDown(false)
+        }
+    }
     val toolsMenu: @Composable () -> Unit = {
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
@@ -657,9 +666,9 @@ fun TerminalPane(
         // Portrait: two fixed rows; compact height: one scrollable row to preserve PTY height.
         val firstRow: @Composable () -> Unit = {
             TerminalExtraKey("ESC", keyWidth = keyWidth, darkChrome = darkChrome,
-                enabled = canSendKeys) { session.writeCodePoint(false, 27) }
+                enabled = canSendKeys) { sendCodePointIfRunning(session, 27) }
             TerminalExtraKey("TAB", keyWidth = keyWidth, darkChrome = darkChrome,
-                enabled = canSendKeys) { session.writeCodePoint(false, 9) }
+                enabled = canSendKeys) { sendCodePointIfRunning(session, 9) }
             TerminalExtraKey("CTRL", active = controlActive, keyWidth = keyWidth, darkChrome = darkChrome,
                 enabled = canSendKeys) {
                 controlActive = !controlActive
@@ -723,11 +732,17 @@ fun TerminalPane(
                 searchIndex = 0
                 showTranscriptSearch = true
             }
-            TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser, keyWidth = keyWidth, darkChrome = darkChrome) {
-                // Clear emulator display and scrollback without injecting input into Bash.
-                TerminalDisplayActions.clear(session)
-                activeTerminalView?.setTopRow(0)
-                activeTerminalView?.invalidate()
+            TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser,
+                keyWidth = keyWidth, darkChrome = darkChrome, enabled = session.emulator != null) {
+                // Never erase a partially typed Readline command or active program output.
+                if (TerminalDisplayActions.clear(session)) {
+                    activeTerminalView?.setTopRow(0)
+                    activeTerminalView?.invalidate()
+                } else {
+                    Toast.makeText(context,
+                        "Clear is available only at an idle Klyro prompt; input preserved",
+                        Toast.LENGTH_SHORT).show()
+                }
             }
         }
         if (compact) {
@@ -1396,6 +1411,13 @@ private fun TerminalExtraKey(
 }
 
 private fun write(session: TerminalSession, value: String) {
+    // Buttons may race PTY exit after the last Compose recomposition.
+    if (value.isEmpty() || !session.isRunning() || session.emulator == null) return
     val bytes = value.toByteArray(StandardCharsets.UTF_8)
     session.write(bytes, 0, bytes.size)
+}
+
+private fun sendCodePointIfRunning(session: TerminalSession, codePoint: Int) {
+    if (!session.isRunning() || session.emulator == null) return
+    session.writeCodePoint(false, codePoint)
 }

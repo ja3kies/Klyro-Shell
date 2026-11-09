@@ -2,9 +2,14 @@ package com.oryn.terminal.ui;
 
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 /** CLEAR must not desynchronize Readline input or replay untrusted output. */
 public class TerminalDisplayActionsTest {
+    @Test public void missingTerminalCannotBeCleared() {
+        assertFalse(TerminalDisplayActions.clear(null));
+    }
+
     @Test public void redrawsOnlyIdleKlyroPrompt() {
         assertEquals("klyro ~ $ ", TerminalDisplayActions.promptToRestore("klyro ~ $"));
         assertEquals("klyro ~/a $ ", TerminalDisplayActions.promptToRestore("klyro ~/a $ "));

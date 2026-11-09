@@ -29,10 +29,10 @@ public final class TerminalDisplayActions {
         return line.trim() + " ";
     }
 
-    public static void clear(TerminalSession session) {
-        if (session == null) return;
+    public static boolean clear(TerminalSession session) {
+        if (session == null) return false;
         TerminalEmulator emulator = session.getEmulator();
-        if (emulator == null) return;
+        if (emulator == null) return false;
         // Keep Readline's visible prompt without injecting an Enter or Ctrl+L.
         final int row = emulator.getCursorRow();
         final String promptLine = emulator.getScreen().getSelectedText(
@@ -40,7 +40,7 @@ public final class TerminalDisplayActions {
         final String prompt = promptToRestore(promptLine);
         // Refuse to erase a line containing a partially typed command: the
         // shell still owns those bytes even when we clear the emulator screen.
-        if (prompt.isEmpty()) return;
+        if (prompt.isEmpty()) return false;
         emulator.append(CLEAR_SCREEN_AND_SCROLLBACK, CLEAR_SCREEN_AND_SCROLLBACK.length);
         if (!prompt.isEmpty()) {
             byte[] bytes = prompt.getBytes(StandardCharsets.UTF_8);
@@ -50,5 +50,6 @@ public final class TerminalDisplayActions {
             emulator.append(bytes, bytes.length);
             emulator.append(RESET_COLORS, RESET_COLORS.length);
         }
+        return true;
     }
 }
