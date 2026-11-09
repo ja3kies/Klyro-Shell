@@ -344,8 +344,8 @@ fun TerminalPane(
                 Toast.LENGTH_SHORT).show()
         }
     }
-    // Fit seven 48dp+ touch targets across a Pixel-width screen; scroll on narrower devices.
-    val keyWidth = if (compact) 48.dp else ((maxWidth - 36.dp) / 7).coerceIn(40.dp, 56.dp)
+    // Never reduce key targets below Android's 48dp minimum: scroll narrow rows.
+    val keyWidth = if (compact) 48.dp else ((maxWidth - 36.dp) / 7).coerceIn(48.dp, 56.dp)
     val toolsMenu: @Composable () -> Unit = {
             Box {
                 TextButton(onClick = { showToolsMenu = true }) {
@@ -702,7 +702,8 @@ fun TerminalPane(
                     .padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(modifier = Modifier.fillMaxWidth(),
+                Row(modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) { firstRow() }
                 Row(modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
