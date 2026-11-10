@@ -160,6 +160,7 @@ fun TerminalPane(
     onNativePasteConsumed: () -> Unit,
     onClose: () -> Unit,
     runtimeHasWarnings: Boolean = false,
+    verifyingRuntime: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val ui = LocalKlyroColors.current
@@ -1064,6 +1065,7 @@ fun TerminalPane(
             onExportFile = onExportFile,
             diagnosticReport = diagnosticReport,
             onRecheckEnvironment = onRecheck,
+            verifyingRuntime = verifyingRuntime,
             onCopyDiagnostic = {
                 val copied = runCatching {
                     val clipboard = clipboardManager ?: error("Clipboard unavailable")

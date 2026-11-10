@@ -63,10 +63,13 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.toArgb
 import com.oryn.terminal.ui.KlyroColors
 import com.oryn.terminal.ui.KlyroUiMetrics
+import com.oryn.terminal.ui.KlyroSettingsSheet
+import com.oryn.terminal.ui.KlyroTerminalFonts
 import com.oryn.terminal.ui.LocalKlyroColors
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.Composable
@@ -938,6 +941,35 @@ private fun OrynTerminalApp(
     val homeStatus = KlyroHomeStatusPolicy.resolve(status, sessionFailureMessage)
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
+    var showHomeSettings by rememberSaveable { mutableStateOf(false) }
+    // Settings must remain available even before Bash can start.
+    val homeFontPrefs = remember(context) {
+        context.getSharedPreferences("klyro_terminal_preferences", android.content.Context.MODE_PRIVATE)
+    }
+    var homeFontSize by remember(context) {
+        mutableStateOf(homeFontPrefs.getFloat("font_size_sp", 13.5f).coerceIn(9f, 24f))
+    }
+    var homeFontFamily by remember(context) {
+        mutableStateOf(KlyroTerminalFonts.normalize(
+            homeFontPrefs.getString("font_family", "system")
+        ))
+    }
+    var homeModifierRevision by remember { mutableIntStateOf(0) }
+    LaunchedEffect(showHomeSettings) {
+        if (showHomeSettings) {
+            homeFontSize = homeFontPrefs.getFloat("font_size_sp", 13.5f).coerceIn(9f, 24f)
+            homeFontFamily = KlyroTerminalFonts.normalize(
+                homeFontPrefs.getString("font_family", "system"))
+        }
+    }
+    val homeModifiers = remember(viewClient, homeModifierRevision) {
+        buildSet {
+            if (viewClient?.isControlDown() == true) add("Ctrl")
+            if (viewClient?.isAltDown() == true) add("Alt")
+            if (viewClient?.isShiftDown() == true) add("Shift")
+            if (viewClient?.isFnDown() == true) add("Fn")
+        }
+    }
     var showRepairConfirmation by rememberSaveable { mutableStateOf(false) }
     val warningLines = remember(technicalErrorDetails) {
         KlyroVerificationWarnings.unexpectedLines(technicalErrorDetails.orEmpty()).distinct()
@@ -956,6 +988,16 @@ private fun OrynTerminalApp(
     }
 
     val homeAction = KlyroHomeActionPolicy.decide(runtimeVerified, hasRunningSessions)
+    val diagnosticReport = KlyroHealthReport.format(
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+                .versionName ?: "unknown"
+        } catch (_: Exception) { "unknown" },
+        android.os.Build.VERSION.SDK_INT,
+        bootstrapInstalled, runtimeInstalled, runtimeVerified,
+        runtimeHasWarnings, tabs.size, workspaces.size,
+        context.filesDir.usableSpace, technicalErrorDetails
+    )
     val screenChrome = ui.chrome
     Surface(
         // Paint before insets; the transparent status bar must show Klyro, not
@@ -991,16 +1033,7 @@ private fun OrynTerminalApp(
                 onRenameWorkspace = onRenameWorkspace,
                 onDeleteWorkspace = onDeleteWorkspace,
                 onAssignWorkspace = onAssignWorkspace,
-                diagnosticReport = KlyroHealthReport.format(
-                    try {
-                        context.packageManager.getPackageInfo(context.packageName, 0)
-                            .versionName ?: "unknown"
-                    } catch (_: Exception) { "unknown" },
-                    android.os.Build.VERSION.SDK_INT,
-                    bootstrapInstalled, runtimeInstalled, runtimeVerified,
-                    runtimeHasWarnings, tabs.size, workspaces.size,
-                    context.filesDir.usableSpace, technicalErrorDetails
-                ),
+                diagnosticReport = diagnosticReport,
                 onRecheck = onRecheck,
                 onSelectTab = onSelectTab,
                 onRenameTab = onRenameTab,
@@ -1017,6 +1050,7 @@ private fun OrynTerminalApp(
                 nativePasteRequest = nativePasteRequest,
                 onNativePasteConsumed = onNativePasteConsumed,
                 runtimeHasWarnings = runtimeHasWarnings,
+                verifyingRuntime = verifyingRuntime,
                 onClose = onClose
             )
         } else {
@@ -1308,6 +1342,40 @@ private fun OrynTerminalApp(
                     }
                 }
 
+                Surface(
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable(role = Role.Button,
+                            onClickLabel = "Open Klyro settings") {
+                            showHomeSettings = true
+                        },
+                    color = ui.tile,
+                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(42.dp).background(
+                                ui.key, RoundedCornerShape(13.dp)
+                            ), contentAlignment = Alignment.Center
+                        ) {
+                            Icon(painterResource(R.drawable.hugeicons_settings_01),
+                                contentDescription = null, tint = ui.muted,
+                                modifier = Modifier.size(23.dp))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("Settings", color = ui.foreground, fontWeight = FontWeight.SemiBold)
+                            Text("Appearance, keyboard, storage & diagnostics",
+                                color = ui.muted, fontSize = 12.sp)
+                        }
+                        Icon(painterResource(R.drawable.hugeicons_chevron_right),
+                            contentDescription = null, tint = ui.muted,
+                            modifier = Modifier.size(20.dp))
+                    }
+                }
+
                 Text(
                     "Private shell · Local workspace · No cloud account required",
                     color = ui.muted,
@@ -1317,6 +1385,68 @@ private fun OrynTerminalApp(
 
             }
         }
+    }
+    if (showHomeSettings) {
+        KlyroSettingsSheet(
+            initialSection = "home",
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
+            accentId = accentId,
+            onAccentIdChange = onAccentIdChange,
+            fontSizeSp = homeFontSize,
+            fontFamilyId = homeFontFamily,
+            onFontFamilyChange = { value ->
+                homeFontFamily = KlyroTerminalFonts.normalize(value)
+                homeFontPrefs.edit().putString("font_family", homeFontFamily).apply()
+            },
+            onFontChange = { delta ->
+                homeFontSize = (homeFontSize + delta).coerceIn(9f, 24f)
+                homeFontPrefs.edit().putFloat("font_size_sp", homeFontSize).apply()
+            },
+            onResetFont = {
+                homeFontSize = 13.5f
+                homeFontPrefs.edit().remove("font_size_sp").apply()
+            },
+            onResetModifiers = {
+                viewClient?.setControlDown(false)
+                viewClient?.setAltDown(false)
+                viewClient?.setShiftDown(false)
+                viewClient?.setFnDown(false)
+                homeModifierRevision++
+            },
+            activeModifiers = homeModifiers,
+            onSetupStorage = onSetupStorage,
+            onImportStorageFolder = onImportStorageFolder,
+            onImportFile = onImportFile,
+            onExportFile = onExportFile,
+            diagnosticReport = diagnosticReport,
+            onRecheckEnvironment = onRecheck,
+            verifyingRuntime = verifyingRuntime,
+            onCopyDiagnostic = {
+                val copied = runCatching {
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                        as? ClipboardManager ?: error("Clipboard unavailable")
+                    clipboard.setPrimaryClip(ClipData.newPlainText(
+                        "Klyro health snapshot", diagnosticReport))
+                }.isSuccess
+                Toast.makeText(context,
+                    if (copied) "Report copied" else "Clipboard unavailable",
+                    Toast.LENGTH_SHORT).show()
+            },
+            onShareDiagnostic = {
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, diagnosticReport)
+                }
+                if (runCatching {
+                        context.startActivity(Intent.createChooser(send, "Share Klyro report"))
+                    }.isFailure) {
+                    Toast.makeText(context, "No sharing app available",
+                        Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { showHomeSettings = false }
+        )
     }
     if (showRepairConfirmation) {
         AlertDialog(

@@ -85,6 +85,7 @@ internal fun KlyroSettingsSheet(
     onExportFile: () -> Unit,
     diagnosticReport: String,
     onRecheckEnvironment: () -> Unit,
+    verifyingRuntime: Boolean = false,
     onCopyDiagnostic: () -> Unit,
     onShareDiagnostic: () -> Unit,
     onDismiss: () -> Unit
@@ -599,15 +600,24 @@ internal fun KlyroSettingsSheet(
                                 )
                             }
                         }
+                        if (verifyingRuntime) {
+                            KlyroInlineNotice(
+                                "Checking the private environment. The current report " +
+                                    "will refresh when verification finishes."
+                            )
+                        }
                         Button(
                             onClick = onRecheckEnvironment,
+                            enabled = !verifyingRuntime,
                             modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch),
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.accent,
                                 contentColor = colors.onAccent
                             )
-                        ) { Text("Recheck environment") }
+                        ) {
+                            Text(if (verifyingRuntime) "Checking environment…" else "Recheck environment")
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
