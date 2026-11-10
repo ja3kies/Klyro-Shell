@@ -5,6 +5,7 @@ import shutil
 import datetime as dt
 import html
 import json
+import math
 import re
 import subprocess
 import time
@@ -12,9 +13,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 PKG = "com.klyro.shell"
+HOME_ACTION = ("Launch Bash", "Return to terminal")
+HOME_MARKERS = ("KLYRO", HOME_ACTION, "Plugins", "Settings")
 # Explicit screen transitions derived from the Pixel 9 XML evidence.
 ROUTES = [("Plugins", ("Plugins", "Installed", "Explore")),
-          ("Home", ("KLYRO", "Launch Bash", "Settings")),
+          ("Home", HOME_MARKERS),
           ("Settings", ("Settings", "Appearance", "Keyboard", "Storage", "Privacy")),
           ("Appearance", ("Appearance", "Launcher icon", "App theme"))]
 SAFE = re.compile(r"^(More actions|Settings|Preferences|Plugins|Appearance|Theme|Find|Search|Home|General|Workspace|Diagnostics|About|Paramètres|Apparence|Recherche|Accueil)$", re.I)
@@ -29,7 +32,7 @@ def adb(*a, binary=False, timeout=45):
 def measured_density():
     """Get pixels per dp from the connected Android device, respecting overrides."""
     data = adb("shell", "wm", "density")
-    matches = re.findall(r"(?:Physical|Override) density:\\s*(\\d+)", data)
+    matches = re.findall(r"(?:Physical|Override) density:\s*(\d+)", data)
     if not matches:
         return None
     return int(matches[-1]) / 160.0
@@ -102,7 +105,9 @@ class Robot:
         return next((c for c in s["controls"] if re.fullmatch(pattern,c["label"],re.I)),None)
     def has_markers(self, s, markers):
         labels = s["labels"]
-        return all(any(marker.casefold() in item.casefold() for item in labels) for marker in markers)
+        return all(any(option.casefold() in item.casefold() for option in
+                       (marker if isinstance(marker, tuple) else (marker,))
+                       for item in labels) for marker in markers)
     def wait_for_markers(self, title, markers, max_checks=3):
         current = self.snap(title)
         for _ in range(max_checks - 1):
@@ -120,11 +125,11 @@ class Robot:
         after = self.wait_for_markers("after-" + title, markers)
         passed = self.has_markers(after, markers) and after["screen"] != before["screen"]
         self.record("Navigate: " + title, passed, before, after,
-                    "Expected " + ", ".join(markers))
+                    "Expected " + ", ".join(" / ".join(m) if isinstance(m, tuple) else m for m in markers))
         return after if passed else None
     def smoke(self):
         current = self.snap("initial")
-        home_markers = ("KLYRO", "Launch Bash", "Plugins", "Settings")
+        home_markers = HOME_MARKERS
         if not self.has_markers(current, home_markers):
             self.warnings.append("Not on Klyro Home; smoke run stopped without tapping")
             return
@@ -241,6 +246,10 @@ def main():
     p.add_argument("--mode", choices=("smoke", "explore"), default="smoke", help="Deterministic safe smoke route or bounded exploratory crawl")
     p.add_argument("--density", type=float, default=None, help="Physical device pixels per dp, for touch target audit")
     args=p.parse_args()
+    if not math.isfinite(args.delay) or args.delay < 0:
+        p.error("--delay must be nonnegative and finite")
+    if args.density is not None and (not math.isfinite(args.density) or args.density <= 0):
+        p.error("--density must be finite and positive")
     out=Path(args.output).expanduser()
     out.mkdir(parents=True,exist_ok=True)
     robot=Robot(out,args.delay)
