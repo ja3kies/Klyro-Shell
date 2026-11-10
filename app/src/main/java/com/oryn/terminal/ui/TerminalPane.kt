@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.graphics.Typeface
+import android.os.SystemClock
 import android.widget.EditText
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
@@ -107,6 +108,14 @@ import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+/** UI-only monotonic state; no command names, arguments or output are retained. */
+private data class JobActivityUi(
+    val sample: KlyroJobProbe.Sample,
+    val detectedAtElapsedMs: Long
+)
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -125,6 +134,8 @@ fun TerminalPane(
     selectedWorkspaceId: String,
     tabWorkspaces: Map<Long, String>,
     tabsWithUnreadOutput: Set<Long>,
+    jobSessions: Map<Long, TerminalSession>,
+    lastOutputElapsedMs: Map<Long, Long>,
     onSelectWorkspace: (String) -> Unit,
     onCreateWorkspace: (String) -> Boolean,
     onRenameWorkspace: (String, String) -> Boolean,
@@ -187,6 +198,52 @@ fun TerminalPane(
         mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
     val lifecycleOwner = context as? LifecycleOwner
+    var tabJobActivity by remember { mutableStateOf<Map<Long, JobActivityUi>>(emptyMap()) }
+    var activityElapsedMs by remember { mutableStateOf(SystemClock.elapsedRealtime()) }
+
+    LaunchedEffect(jobSessions, lifecycleOwner) {
+        while (true) {
+            // No /proc polling while the app is backgrounded. Sampling uses the
+            // IO dispatcher so terminal rendering and typing never block.
+            val foreground = lifecycleOwner?.lifecycle?.currentState
+                ?.isAtLeast(Lifecycle.State.RESUMED) != false
+            if (foreground) {
+                val measured = withContext(Dispatchers.IO) {
+                    jobSessions.mapValues { (_, terminal) -> KlyroJobProbe.sample(terminal) }
+                }
+                val now = SystemClock.elapsedRealtime()
+                val previous = tabJobActivity
+                tabJobActivity = measured.mapValues { (tabId, sample) ->
+                    val old = previous[tabId]
+                    val sameJob = sample.hasForegroundJob() &&
+                        old?.sample?.hasForegroundJob() == true &&
+                        old.sample.shellPid == sample.shellPid &&
+                        old.sample.foregroundGroup == sample.foregroundGroup
+                    JobActivityUi(sample, if (sameJob) old!!.detectedAtElapsedMs else now)
+                }
+                activityElapsedMs = now
+            }
+            delay(if (foreground) 1_400L else 3_500L)
+        }
+    }
+    fun recentOutput(id: Long): Boolean = KlyroJobProbe.recentOutput(
+        lastOutputElapsedMs[id] ?: 0L, activityElapsedMs
+    )
+    fun activityLabel(id: Long): String {
+        val uiState = tabJobActivity[id]
+        val result = KlyroJobProbe.statusLabel(uiState?.sample, recentOutput(id))
+        return if (uiState?.sample?.hasForegroundJob() == true) {
+            "$result · " + KlyroJobProbe.elapsedLabel(
+                uiState.detectedAtElapsedMs, activityElapsedMs
+            )
+        } else result
+    }
+    fun compactActivity(id: Long): String? = when {
+        tabJobActivity[id]?.sample?.hasForegroundJob() == true -> "JOB"
+        recentOutput(id) -> "OUT"
+        else -> null
+    }
+
     DisposableEffect(clipboardManager, session, lifecycleOwner) {
         val listener = ClipboardManager.OnPrimaryClipChangedListener {
             clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
@@ -525,6 +582,7 @@ fun TerminalPane(
             if (compact) toolsMenu()
             tabs.forEach { (id, tabTitle) ->
                 val active = id == activeTabId
+                val activityTag = compactActivity(id)
                 Box(
                     modifier = Modifier
                         .height(48.dp)
@@ -544,9 +602,14 @@ fun TerminalPane(
                                 ", project " + (workspaces.firstOrNull {
                                     it.id == (tabWorkspaces[id] ?: KlyroWorkspaceCatalog.GENERAL)
                                 }?.name ?: "General")
-                            stateDescription = if (id in tabsWithUnreadOutput && !active)
-                                "New terminal output" else if (active) "Selected terminal"
-                                else "Open terminal"
+                            stateDescription = buildString {
+                                append(if (active) "Selected terminal" else "Open terminal")
+                                append(", ")
+                                append(activityLabel(id))
+                                if (id in tabsWithUnreadOutput && !active) {
+                                    append(", New terminal output")
+                                }
+                            }
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -572,6 +635,16 @@ fun TerminalPane(
                                 maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
+                            if (activityTag != null) {
+                                Text(
+                                    activityTag,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (active) ui.onAccent else if (activityTag == "JOB")
+                                        ui.readyInk else ui.muted,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }
@@ -1050,6 +1123,14 @@ fun TerminalPane(
             KlyroSessionSheet(
                 sessionName = name,
                 isActive = id == activeTabId,
+                activityStatus = activityLabel(id),
+                activityDetail = when {
+                    tabJobActivity[id]?.sample?.hasForegroundJob() == true ->
+                        "A different process group owns the foreground PTY. Elapsed time is approximate."
+                    tabJobActivity[id]?.sample?.state == KlyroJobProbe.State.UNAVAILABLE ->
+                        "Android did not provide a readable foreground process group."
+                    else -> "Recent terminal output does not necessarily mean a job is running."
+                },
                 onDismiss = { sessionSheetId = null },
                 onRename = {
                     sessionSheetId = null
