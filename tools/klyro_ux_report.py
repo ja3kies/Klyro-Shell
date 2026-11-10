@@ -29,6 +29,7 @@ SOURCE_ANCHORS = {
     "Impl: SettingsRowLink": (SETTINGS, "fun SettingsRowLink("),
     "Impl: KlyroSheet": (ROOT + "ui/KlyroUiComponents.kt", "internal fun KlyroSheet("),
     "Impl: KlyroActionRow": (ROOT + "ui/KlyroUiComponents.kt", "internal fun KlyroActionRow("),
+    "Diagnostics: Recheck environment": (SETTINGS, "onClick = onRecheckEnvironment"),
 }
 SUGGESTIONS = {
     "Initial Home": "Tester aussi le premier démarrage, le runtime absent et la reprise d'une session.",
@@ -126,11 +127,58 @@ def improvements(action, target_review, sheet=None):
         result.append("Vérifier chacun des segments du contenu défilant, pas uniquement le premier.")
     return result
 
+def findings_from_accessibility(evidence, source_root):
+    """Prioritized and deduplicated defects measured on unique screenshots."""
+    issues, seen = [], set()
+    for snapshot in evidence or []:
+        for item in snapshot.get("small_details", []):
+            label = item.get("label", "(unknown)")
+            key = ("touch", snapshot.get("stage"), label)
+            if key in seen:
+                continue
+            seen.add(key)
+            source = (source_for("Diagnostics: Recheck environment", None, source_root)
+                      if "Recheck environment" in label else
+                      {"status": "UNMAPPED", "description": "Source action not mapped"})
+            issues.append({
+                "priority": "P1", "kind": "touch-target",
+                "screen": snapshot.get("stage", "unknown"),
+                "label": label, "bounds": item.get("bounds"),
+                "observation": (f"{item.get('width_dp')} × {item.get('height_dp')} dp"
+                                " — au moins une dimension sous 48 dp"),
+                "recommendation": "Agrandir la zone accessible, corriger les insets si rognée.",
+                "source": source,
+            })
+        for label in snapshot.get("unlabeled", []):
+            key = ("unlabeled", snapshot.get("stage"), label)
+            if key not in seen:
+                seen.add(key)
+                issues.append({
+                    "priority": "P1", "kind": "accessibility",
+                    "screen": snapshot.get("stage"), "label": label,
+                    "observation": "Contrôle cliquable sans libellé accessible",
+                    "recommendation": "Ajouter une description ou un texte enfant lisible.",
+                    "source": {"status": "UNMAPPED"}
+                })
+        for label in snapshot.get("missing", []):
+            key = ("missing", snapshot.get("stage"), label)
+            if key not in seen:
+                seen.add(key)
+                issues.append({
+                    "priority": "P2", "kind": "missing-marker",
+                    "screen": snapshot.get("stage"), "label": label,
+                    "observation": "Marqueur attendu absent de la capture visible",
+                    "recommendation": "Vérifier la navigation et la position de défilement.",
+                    "source": {"status": "UNMAPPED"}
+                })
+    return issues
+
 def esc(value):
     return html.escape(str(value if value is not None else ""), quote=True)
 
 def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
-                duplicate_count=0, display_height=None, display_width=None):
+                duplicate_count=0, display_height=None, display_width=None,
+                accessibility_evidence=None):
     out = Path(out)
     sheet_gallery = sheet_gallery or {}
     records = []
@@ -205,6 +253,22 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
         md.extend("- " + v for v in ideas)
         md.extend(["", "### Kotlin : " + source.get("path", "inconnu"),
                    source.get("url", ""), "~~~kotlin", snippet, "~~~", ""])
+    issues = findings_from_accessibility(accessibility_evidence, source_root)
+    issues_html = []
+    for item in issues:
+        source = item.get("source", {})
+        link = ('<a href="' + esc(source.get("url", "")) + '">' +
+                esc(source.get("path", "Code Kotlin")) + '</a>'
+                if source.get("url") else "Code non identifié")
+        code = source.get("code")
+        details = ('<details><summary>Voir le code Kotlin lié au défaut</summary><pre><code>' +
+                   esc(code) + '</code></pre></details>') if code else ""
+        issues_html.append(
+            '<article><h3>' + esc(item["priority"]) + " · " + esc(item["label"]) +
+            '</h3><p>Écran : ' + esc(item.get("screen")) +
+            ' · ' + esc(item["observation"]) + '</p><p>Correction : ' +
+            esc(item["recommendation"]) + '</p><p>' + link + '</p>' +
+            details + '</article>')
     gallery_html = []
     for page, record in sheet_gallery.items():
         pictures = record.get("images", [])
@@ -236,12 +300,19 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
         str(len(steps)) + ' assertions · ' + str(duplicate_count) +
         ' doublons de capture évités. Évaluation des zones tactiles et recommandations ciblées.</p>' +
         '<p>Les recommandations sont des règles explicites et doivent être validées sur appareil.</p></header>'
+        '<h2>Problèmes prioritaires détectés (' + str(len(issues)) + ')</h2>' +
+        ("".join(issues_html) if issues_html else
+         "<p>Pas de défaut détecté par ces seules règles statiques.</p>") +
         '<h2>Feuilles complètes et défilement</h2>' + "".join(gallery_html) +
         '<h2>Composants testés</h2>' + "".join(cards) + '</body></html>')
     (out / "ux-review.html").write_text(page, encoding="utf-8")
+    md += ["## Problèmes prioritaires", ""]
+    md += [("- " + x["priority"] + " " + x["label"] + ": " +
+            x["observation"] + " — " + x["recommendation"]) for x in issues]
     (out / "ux-review.md").write_text("\n".join(md), encoding="utf-8")
     (out / "components.json").write_text(
         json.dumps({"density": density, "duplicate_screens_avoided": duplicate_count,
-                    "components": records, "sheets": sheet_gallery},
+                    "components": records, "sheets": sheet_gallery,
+                    "findings": issues},
                    ensure_ascii=False, indent=2), encoding="utf-8")
     return records
