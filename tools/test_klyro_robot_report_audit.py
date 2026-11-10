@@ -30,7 +30,7 @@ class RobotReportAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "000-initial.xml"
             p.write_text("""<hierarchy><node text="" content-desc="" clickable="true" enabled="true" bounds="[0,0][20,20]"/></hierarchy>""")
-            result = audit.inspect(p)
+            result = audit.inspect(p, density=2.0)
             self.assertEqual(len(result["unlabeled"]), 1)
             self.assertEqual(len(result["small"]), 1)
             self.assertIn("Launch Bash", result["missing"])
@@ -50,6 +50,21 @@ class RobotReportAuditTests(unittest.TestCase):
             result = audit.inspect(p)
             self.assertEqual(result["stage"], "plugins")
             self.assertEqual(result["missing"], [])
+
+    def test_size_is_unknown_without_density(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-home.xml"
+            p.write_text("""<hierarchy><node clickable="true" enabled="true" text="Launch Bash" bounds="[0,0][20,20]"/></hierarchy>""")
+            self.assertEqual(audit.inspect(p)["small"], [])
+            self.assertEqual(len(audit.inspect(p, density=2)["small"]), 1)
+
+    def test_invalid_bounds_are_reported(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-home.xml"
+            p.write_text("""<hierarchy><node bounds="[20,20][10,10]"/><node bounds="broken"/><node bounds="[0,0][100,100]"/></hierarchy>""")
+            result = audit.inspect(p)
+            self.assertEqual(len(result["invalid_bounds"]), 2)
+            self.assertIn("malformed", audit.report([result]))
 
     def test_stage_requires_complete_token(self):
         with tempfile.TemporaryDirectory() as d:
