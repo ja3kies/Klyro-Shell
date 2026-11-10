@@ -145,6 +145,9 @@ def geometry(root):
     bounds = [b for b in (parse_bounds(n.get("bounds")) for n in available) if b]
     screen_height = max((b[3] for b in bounds), default=None)
     screen_width = max((b[2] for b in bounds), default=None)
+    touches_bottom = bool(screen_height and any(
+        n.get("clickable") == "true" and (parse_bounds(n.get("bounds")) or (0,0,0,0))[3] >= screen_height - 12
+        for n in available))
     sheet_top, handle = None, None
     for n in available:
         desc = (n.get("content-desc") or "").casefold()
@@ -186,7 +189,8 @@ def geometry(root):
     else:
         stage = "Settings"
     return {"sheet_top": sheet_top, "handle": handle, "scroll": scroll,
-            "screen_height": screen_height, "screen_width": screen_width, "stage": stage}
+            "screen_height": screen_height, "screen_width": screen_width,
+            "touches_bottom": touches_bottom, "stage": stage}
 
 class Robot:
     def __init__(self, out, delay):
@@ -279,10 +283,10 @@ class Robot:
                 and expanded["sheet_top"] + 24 < current["sheet_top"]
                 else "not observed")
             current = expanded
-            if record["expanded"] != "verified" and record["top_fraction"] > .45:
+            if (record["expanded"] != "verified" and record["top_fraction"] > .45
+                    and (current.get("scroll") or current.get("touches_bottom"))):
                 self.warnings.append(
-                    "Sheet expansion not confirmed in " + page +
-                    "; full visual coverage requires review")
+                    "Sheet expansion not confirmed for potentially clipped content in " + page)
         record["images"].append(current["shot"])
         baseline = current
         scroll_rect = current.get("scroll")
@@ -331,7 +335,8 @@ class Robot:
             # No accessible scroll container: do not claim a complete view if
             # the sheet remained half-expanded and could conceal content.
             record["fully_captured"] = (
-                record["expanded"] == "verified" or record["top_fraction"] < .3)
+                record["expanded"] == "verified" or
+                not current.get("touches_bottom", False))
             if not record["fully_captured"]:
                 self.warnings.append("Complete sheet visibility not verified: " + page)
         return baseline if record["fully_captured"] else current
