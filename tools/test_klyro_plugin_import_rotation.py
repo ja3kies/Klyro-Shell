@@ -6,7 +6,7 @@ SRC = (Path(__file__).resolve().parents[1] /
 class ImportedPreviewRestorationTest(unittest.TestCase):
     def test_manifest_uri_is_saved_and_reparsed_in_io(self):
         self.assertIn("var pendingImportUri by rememberSaveable", SRC)
-        effect = SRC.split("LaunchedEffect(pendingImportUri)",1)[1].split("\n\n    Column(",1)[0]
+        effect = SRC.split("LaunchedEffect(pendingImportUri)",1)[1].split("\n    val pageScroll =",1)[0]
         self.assertIn("withContext(Dispatchers.IO)",effect)
         self.assertIn("manager.previewManifest(Uri.parse(selectedUri))",effect)
         self.assertNotIn("installPreview",effect)

@@ -8,7 +8,7 @@ class PluginBackParityTest(unittest.TestCase):
   self.assertIn("BackHandler { navigateBack() }",S)
   self.assertIn("onClick = ::navigateBack",S)
   fn=S.split("fun navigateBack()",1)[1].split("fun applyChange",1)[0]
-  self.assertIn("if (mutationBusy) return",fn)
+  self.assertIn("if (mutationBusy || confirmedMutationPending) return",fn)
   self.assertIn("pendingImport != null || pendingImportUri != null",fn)
   self.assertIn("pendingBundledId != null",fn)
   self.assertIn("removeId != null",fn)

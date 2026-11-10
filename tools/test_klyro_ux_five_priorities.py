@@ -51,7 +51,8 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn("This plugin command cannot be inserted safely.", self.palette)
 
     def test_palette_error_is_announced(self):
-        self.assertIn("liveRegion = LiveRegionMode.Polite", self.palette)
+        self.assertIn('info?.let { KlyroInlineNotice(it, isError = unsafeFeedback) }', self.palette)
+        self.assertIn("liveRegion = LiveRegionMode.Polite", self.shared)
 
     def test_command_rows_have_hit_target(self):
         self.assertIn("min = KlyroUiMetrics.minTouch", self.palette)
@@ -89,7 +90,9 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn("KlyroBrandChoice.isVerifiedSelection(context, choice)", self.settings)
 
     def test_launcher_and_permission_errors_announced(self):
-        self.assertGreaterEqual(self.settings.count("liveRegion = LiveRegionMode.Polite"), 2)
+        self.assertGreaterEqual(self.settings.count("liveRegion = LiveRegionMode.Polite"), 1)
+        self.assertIn("KlyroInlineNotice(", self.settings)
+        self.assertIn("liveRegion = LiveRegionMode.Polite", self.shared)
 
     def test_bundled_add_only_opens_confirmation(self):
         section = self.plugins.split('KlyroPluginManager.bundled.forEach', 1)[1].split('pendingBundledId?.let', 1)[0]
@@ -103,10 +106,11 @@ class UXFivePriorities(unittest.TestCase):
 
     def test_bundled_cancel_does_not_install(self):
         self.assertIn('Text("Cancel")', self.plugins)
-        self.assertIn('pendingBundledId = null; error = null', self.plugins)
+        self.assertIn('pendingBundledId = null; confirmedBundledId = null; error = null', self.plugins)
 
     def test_bundled_back_dismisses_before_navigation(self):
-        self.assertIn('pendingBundledId != null -> { pendingBundledId = null; error = null }', self.plugins)
+        self.assertIn('pendingBundledId != null -> {', self.plugins)
+        self.assertIn('pendingBundledId = null; confirmedBundledId = null; error = null', self.plugins)
 
     def test_bundled_failed_install_keeps_confirmation_open(self):
         self.assertIn('applyChange({ manager.installBundled(id) }) {\n                                pendingBundledId = null', self.plugins)
@@ -123,7 +127,8 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn('if (plugin.enabled) "Disable " else "Enable "', self.plugins)
 
     def test_plugins_announce_errors(self):
-        self.assertIn('liveRegion = LiveRegionMode.Polite', self.plugins)
+        self.assertIn('KlyroInlineNotice(', self.plugins)
+        self.assertIn('liveRegion = LiveRegionMode.Polite', self.shared)
 
     def test_contextual_all_behavior_unchanged(self):
         self.assertIn('description = if (canSelect) "Select all terminal output" else "Paste clipboard"', self.terminal)
