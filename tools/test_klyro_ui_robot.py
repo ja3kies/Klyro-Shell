@@ -75,6 +75,22 @@ class RobotSemanticTests(unittest.TestCase):
         with patch.object(robot, "adb", return_value="No density information"):
             self.assertIsNone(robot.measured_density())
 
+    def test_selected_plugin_tab_is_detected(self):
+        root = ET.fromstring(
+            '<hierarchy><node selected="true" clickable="true" enabled="true" bounds="[0,0][200,100]">'
+            '<node text="Installed (1)" /></node>'
+            '<node selected="false" clickable="true" enabled="true" bounds="[200,0][400,100]">'
+            '<node text="Explore" /></node></hierarchy>')
+        snapshot = robot.state(root)
+        self.assertEqual(snapshot["selected_tabs"], ["Installed (1)"])
+        self.assertEqual(robot.Robot(Path("."), .1).find(snapshot, r"Installed \\(\\d+\\)")["label"], "Installed (1)")
+
+    def test_unselected_plugin_tab_does_not_count_as_selected(self):
+        root = ET.fromstring(
+            '<hierarchy><node selected="false"><node text="Installed (0)"/></node>'
+            '<node selected="true"><node text="Explore"/></node></hierarchy>')
+        self.assertEqual(robot.state(root)["selected_tabs"], ["Explore"])
+
     def test_no_destructive_action_allowlist(self):
         for unsafe in ("Install", "Remove", "End Bash session", "Clear", "Reset"):
             self.assertFalse(bool(robot.SAFE.fullmatch(unsafe)))
