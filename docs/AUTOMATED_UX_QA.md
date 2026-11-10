@@ -7,13 +7,16 @@ older split between the UX closure branch and the prototype QA branch.
 ## Run on Pixel 9 without root or a computer
 
 Prerequisites: Termux with Python 3, ADB paired with the Pixel, storage
-access configured. Check out this branch in the Klyro-Shell repository:
+access configured. **One command in Termux, no checkout needed:**
 
 ```bash
-git fetch origin p1/ux-cross-screen-final-pass-20261110
-git switch p1/ux-cross-screen-final-pass-20261110
-bash scripts/klyro-qa.sh
+bash <(curl -fsSL https://raw.githubusercontent.com/ja3kies/Klyro-Shell/p1/ux-cross-screen-final-pass-20261110/scripts/klyro-qa-bootstrap.sh)
 ```
+
+This fetches the two current robot Python files from the same GitHub development
+branch, validates their Python syntax, and runs the installed APK. It does not
+reinstall the app. For a local repository checkout, the equivalent is
+`bash scripts/klyro-qa.sh`.
 
 The run opens the installed Klyro APK (without reinstalling it) and
 performs this safe, deterministic smoke sequence:
@@ -27,7 +30,7 @@ performs this safe, deterministic smoke sequence:
 6. Return to Settings after each subsection, verifying backward navigation.
 7. Close Settings and verify Home.
 
-This covers **up to 18 observed navigation and tab assertions** without installing
+This covers **up to 19 observed navigation and tab assertions** without installing
 plugins, removing files, or changing settings.
 The robot **does not** install plugins, remove files, close terminals, clear
 session data, toggle themes, or execute shell commands by default. It
@@ -57,7 +60,7 @@ The `Android build` GitHub Actions workflow compiles the Android APK and
 runs `tools/test_klyro_ui_robot.py`,
 `tools/test_klyro_robot_report_audit.py` and
 `tools/test_klyro_robot_accessibility_contract.py` alongside existing
-tests. It also checks `scripts/klyro-qa.sh` syntax and Python compilation.
+tests. It checks both QA shell scripts and Python compilation.
 **GitHub Actions cannot claim Pixel device acceptance.**
 
 ## Further QA
@@ -68,6 +71,6 @@ close it. Avoid these flags on a work session with important foreground jobs.
 Full interaction scenarios and visual comparisons require dedicated test
 data and baseline screenshots before automated write actions are enabled.
 
-The official QA entry point for this branch is
-`scripts/klyro-qa.sh`. Do not repeat manual ADB/XML extraction for ordinary
+The official zero-checkout QA entry point is
+`scripts/klyro-qa-bootstrap.sh`; the local-repository entry point is `scripts/klyro-qa.sh`. Do not repeat manual ADB/XML extraction for ordinary
 iteration; the robot captures these automatically.
