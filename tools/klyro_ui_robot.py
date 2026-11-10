@@ -149,9 +149,17 @@ def geometry(root):
         desc = (n.get("content-desc") or "").casefold()
         bounds_n = parse_bounds(n.get("bounds"))
         if "fermer la feuille" in desc or "close sheet" in desc:
-            sheet_top = bounds_n[3] if bounds_n else None
+            if bounds_n:
+                sheet_top = bounds_n[3]
+            else:
+                # Fully expanded sheets may have a zero-height scrim.
+                coords = re.findall(r"-?\d+", n.get("bounds", ""))
+                if len(coords) == 4:
+                    sheet_top = int(coords[3])
         if "poignée de déplacement" in desc or "drag handle" in desc:
             handle = bounds_n
+    if sheet_top is None and handle:
+        sheet_top = max(0, handle[1] - 70)
     scrollables = [parse_bounds(n.get("bounds")) for n in available
                    if n.get("scrollable") == "true"]
     scrollables = [b for b in scrollables if b and (sheet_top is None or b[3] > sheet_top)]
@@ -260,8 +268,8 @@ class Robot:
             y = (handle[1] + handle[3]) // 2
             self.swipe(x, y, x, max(int(height * .13), y - int(height * .40)), 560)
             expanded = self.snap("expanded-" + page)
-            if expanded.get("stage") != current.get("stage"):
-                self.warnings.append("Expansion changed screen unexpectedly: " + page)
+            if expanded.get("sheet_top") is None:
+                self.warnings.append("Expansion unexpectedly dismissed the sheet: " + page)
                 record["expanded"] = "unexpected navigation; capture stopped"
                 return current
             record["expanded"] = (
@@ -269,6 +277,10 @@ class Robot:
                 and expanded["sheet_top"] + 24 < current["sheet_top"]
                 else "not observed")
             current = expanded
+            if record["expanded"] != "verified" and record["top_fraction"] > .45:
+                self.warnings.append(
+                    "Sheet expansion not confirmed in " + page +
+                    "; full visual coverage requires review")
         record["images"].append(current["shot"])
         baseline = current
         scroll_rect = current.get("scroll")
@@ -283,8 +295,10 @@ class Robot:
             for n in range(max_scrolls):
                 self.swipe(x, y_start, x, y_stop, 470)
                 next_view = self.snap("full-" + page + "-scroll-" + str(n+1))
-                if next_view.get("stage") != current.get("stage"):
-                    self.warnings.append("Scroll changed screen unexpectedly: " + page)
+                # A section title may scroll off-screen, changing the
+                # inferred route name even though the same sheet remains.
+                if next_view.get("sheet_top") is None:
+                    self.warnings.append("Scroll unexpectedly left the sheet: " + page)
                     break
                 if next_view["signature"] == current["signature"]:
                     end_reached = True
@@ -295,6 +309,8 @@ class Robot:
                 current = next_view
             record["scroll_segments"] = pages
             record["fully_captured"] = end_reached
+            if not end_reached and pages >= max_scrolls:
+                self.warnings.append("Full sheet not proven: scroll limit reached in " + page)
             # Restore top for stable back navigation and repeatability.
             if pages:
                 for n in range(pages + 3):
