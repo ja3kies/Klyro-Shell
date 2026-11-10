@@ -4,6 +4,7 @@ import argparse
 import shutil
 import datetime as dt
 import html
+import hashlib
 import json
 import math
 import re
@@ -124,10 +125,67 @@ def state(root):
             "keyboard": any(n.get("package", "").startswith("com.google.android.inputmethod")
                             for n in ns)}
 
+def xml_signature(root):
+    """Ignore clock/notification pixels; compare visible UI semantics and geometry."""
+    attrs = ("class", "text", "content-desc", "bounds", "clickable",
+             "enabled", "scrollable", "selected", "checked", "checkable")
+    rows = [tuple(n.get(a, "") for a in attrs) for n in visible_nodes(root)]
+    return hashlib.sha256(json.dumps(rows, ensure_ascii=False).encode("utf-8")).hexdigest()[:20]
+
+def parse_bounds(raw):
+    match = re.fullmatch(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]", raw or "")
+    if not match:
+        return None
+    x1,y1,x2,y2 = map(int, match.groups())
+    return (x1,y1,x2,y2) if x2>x1 and y2>y1 else None
+
+def geometry(root):
+    """Detect Android Material bottom sheet, drag handle and scroll viewport."""
+    available = visible_nodes(root)
+    bounds = [b for b in (parse_bounds(n.get("bounds")) for n in available) if b]
+    screen_height = max((b[3] for b in bounds), default=None)
+    sheet_top, handle = None, None
+    for n in available:
+        desc = (n.get("content-desc") or "").casefold()
+        bounds_n = parse_bounds(n.get("bounds"))
+        if "fermer la feuille" in desc or "close sheet" in desc:
+            sheet_top = bounds_n[3] if bounds_n else None
+        if "poignée de déplacement" in desc or "drag handle" in desc:
+            handle = bounds_n
+    scrollables = [parse_bounds(n.get("bounds")) for n in available
+                   if n.get("scrollable") == "true"]
+    scrollables = [b for b in scrollables if b and (sheet_top is None or b[3] > sheet_top)]
+    scroll = max(scrollables, key=lambda r: (r[2]-r[0])*(r[3]-r[1]), default=None)
+    labels = [v for n in available for v in (n.get("text"), n.get("content-desc")) if v]
+    joined = " ".join(labels).casefold()
+    if "local extensions" in joined:
+        stage = "Plugins"
+    elif sheet_top is None:
+        stage = "Home"
+    elif "launcher icon" in joined:
+        stage = "Appearance"
+    elif "modifier status" in joined:
+        stage = "Keyboard"
+    elif "files & storage" in joined:
+        stage = "Storage"
+    elif "android permissions" in joined:
+        stage = "Privacy"
+    elif "local checks" in joined and "diagnostics" in joined:
+        stage = "Diagnostics"
+    elif "about klyro shell" in joined:
+        stage = "About"
+    else:
+        stage = "Settings"
+    return {"sheet_top": sheet_top, "handle": handle, "scroll": scroll,
+            "screen_height": screen_height, "stage": stage}
+
 class Robot:
     def __init__(self, out, delay):
         self.out, self.delay, self.steps, self.warnings = out, delay, [], []
         self.serial = 0
+        self.seen_screens = {}
+        self.duplicates = 0
+        self.sheet_gallery = {}
     def snap(self, name):
         if not active():
             raise RuntimeError("Klyro not foreground; no further interaction")
@@ -146,13 +204,25 @@ class Robot:
                 adb("shell", "rm", "-f", remote, timeout=15)
             except (RuntimeError, subprocess.TimeoutExpired) as error:
                 self.warnings.append("Temporary hierarchy cleanup failed: " + str(error))
-        (self.out / (base+".xml")).write_text(xml,encoding="utf-8")
-        (self.out / (base+".png")).write_bytes(adb("exec-out","screencap","-p",binary=True))
         root = ET.fromstring(xml)
+        signature = xml_signature(root)
         result = state(root)
-        result["shot"] = base+".png"
+        result.update(geometry(root))
+        result["signature"] = signature
         result["screen"] = tuple(sorted(set(result["labels"])))
+        cached = self.seen_screens.get(signature)
+        if cached:
+            self.duplicates += 1
+            result["shot"], result["xml"] = cached
+            result["duplicate_of"] = cached[0]
+            return result
+        xml_name, shot_name = base + ".xml", base + ".png"
+        (self.out / xml_name).write_text(xml, encoding="utf-8")
+        (self.out / shot_name).write_bytes(adb("exec-out", "screencap", "-p", binary=True))
+        self.seen_screens[signature] = (shot_name, xml_name)
+        result["shot"], result["xml"] = shot_name, xml_name
         return result
+
     def tap(self, target):
         if not active():
             raise RuntimeError("Klyro lost foreground")
