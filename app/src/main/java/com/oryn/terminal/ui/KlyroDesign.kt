@@ -215,6 +215,9 @@ object KlyroUiMetrics {
     val workspaceRow = 56.dp
     val sheetContentMax = 620.dp
     val paletteListMax = 420.dp
+    // Responsive FIND dialog viewport: action buttons remain outside this scroll.
+    val findDialogContentMax = 440.dp
+    val findDialogCompactMax = 310.dp
     val menuWidth = 246.dp
     val sheetContentWidth = 540.dp
 }

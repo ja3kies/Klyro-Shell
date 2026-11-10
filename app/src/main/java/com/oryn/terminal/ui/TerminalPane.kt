@@ -75,6 +75,7 @@ import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.lifecycle.Lifecycle
@@ -539,6 +540,18 @@ fun TerminalPane(
                 }
             }
     }
+    val tabStripScroll = rememberScrollState()
+    LaunchedEffect(activeTabId, tabs) {
+        // Follow a tab selected from Workspaces or newly created off-screen.
+        // Wait for layout before reading maxValue; never affect terminal output.
+        withFrameNanos { }
+        val selectedIndex = tabs.indexOfFirst { it.first == activeTabId }
+        if (selectedIndex >= 0 && tabs.size > 1) {
+            val target = (tabStripScroll.maxValue.toLong() * selectedIndex /
+                (tabs.size - 1)).toInt().coerceIn(0, tabStripScroll.maxValue)
+            tabStripScroll.animateScrollTo(target)
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -578,7 +591,7 @@ fun TerminalPane(
         Row(
             modifier = Modifier.fillMaxWidth()
                 .background(TerminalSurface)
-                .horizontalScroll(rememberScrollState())
+                .horizontalScroll(tabStripScroll)
                 .padding(horizontal = 10.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -1184,6 +1197,8 @@ fun TerminalPane(
     }
 
     if (showTranscriptSearch) {
+        val findContentMax = if (LocalConfiguration.current.screenHeightDp < 700)
+            KlyroUiMetrics.findDialogCompactMax else KlyroUiMetrics.findDialogContentMax
         val emulator = session.emulator
         val snapshot = searchSnapshot
         val matches = if (searchingTranscript) emptyList<TranscriptSearch.Occurrence>()
@@ -1207,7 +1222,11 @@ fun TerminalPane(
             onDismissRequest = { showTranscriptSearch = false },
             title = { Text("Find in terminal", style = MaterialTheme.typography.titleLarge, maxLines = 1) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.heightIn(max = findContentMax)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = transcriptQuery,
                         onValueChange = {
