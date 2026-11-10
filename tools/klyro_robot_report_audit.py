@@ -22,8 +22,9 @@ EXPECTED = {
 def inspect(path, density=None):
     root = ET.parse(path).getroot()
     nodes = list(root.iter("node"))
-    texts = [n.get("text", "") for n in nodes]
-    descs = [n.get("content-desc", "") for n in nodes]
+    visible = [n for n in nodes if n.get("visible-to-user") != "false"]
+    texts = [n.get("text", "") for n in visible]
+    descs = [n.get("content-desc", "") for n in visible]
     strings = texts + descs
     bounds = []
     invalid_bounds = []
@@ -39,7 +40,7 @@ def inspect(path, density=None):
             if raw:
                 invalid_bounds.append(raw)
             continue
-    interactive = [n for n in nodes if n.get("clickable") == "true" and n.get("enabled") != "false" and n.get("visible-to-user") != "false"]
+    interactive = [n for n in visible if n.get("clickable") == "true" and n.get("enabled") != "false"]
     # UIAutomator may expose a parent with text descendants; don't flag these as unlabeled.
     unlabeled = []
     for n in interactive:
@@ -47,11 +48,12 @@ def inspect(path, density=None):
         # Include every descendant label, not only the first non-empty field.
         # A whitespace-only text attribute must not hide a valid description.
         for child in n.iter("node"):
-            labels.extend((child.get("text", ""), child.get("content-desc", "")))
+            if child.get("visible-to-user") != "false":
+                labels.extend((child.get("text", ""), child.get("content-desc", "")))
         if not any(x.strip() for x in labels):
             unlabeled.append(n.get("class", "View") + " " + n.get("bounds", ""))
     small = []
-    threshold = round(48 * density) if density is not None else None
+    threshold = 48 * density if density is not None else None
     for n, x1, y1, x2, y2 in bounds:
         if threshold is not None and n in interactive and (x2-x1 < threshold or y2-y1 < threshold):
             small.append(n.get("bounds", ""))
@@ -73,7 +75,7 @@ def report(results):
              "", "| Snapshot | Stage | Nodes | Enabled targets | Missing markers | Unlabeled targets |",
              "|---|---|---:|---:|---|---:|"]
     for r in results:
-        safe_name = r["name"].replace("|", "\\|").replace("\\n", " ")
+        safe_name = r["name"].replace("|", "\\|").replace("\n", " ")
         lines.append(f"| {safe_name} | {r['stage']} | {r['nodes']} | {r['interactive']} | {', '.join(r['missing']) or 'None'} | {len(r['unlabeled'])} |")
     lines += ["", "## Actionable findings", ""]
     for r in results:
