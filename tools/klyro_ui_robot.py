@@ -123,8 +123,19 @@ class Robot:
             raise RuntimeError("Klyro not foreground; no further interaction")
         base = f"{self.serial:03d}-{re.sub('[^a-z0-9-]','-',name.lower())[:36]}"
         self.serial += 1
-        adb("shell", "uiautomator", "dump", "/sdcard/klyro-qa-current.xml", timeout=65)
-        xml = adb("exec-out", "cat", "/sdcard/klyro-qa-current.xml")
+        # Keep the transient hierarchy out of public shared storage. Always
+        # remove it before capturing, so a failed dump cannot reuse stale XML.
+        remote = "/data/local/tmp/klyro-qa-current.xml"
+        adb("shell", "rm", "-f", remote)
+        try:
+            adb("shell", "uiautomator", "dump", remote, timeout=65)
+            xml = adb("exec-out", "cat", remote)
+        finally:
+            # No terminal app files or user settings are modified.
+            try:
+                adb("shell", "rm", "-f", remote, timeout=15)
+            except (RuntimeError, subprocess.TimeoutExpired) as error:
+                self.warnings.append("Temporary hierarchy cleanup failed: " + str(error))
         (self.out / (base+".xml")).write_text(xml,encoding="utf-8")
         (self.out / (base+".png")).write_bytes(adb("exec-out","screencap","-p",binary=True))
         root = ET.fromstring(xml)
