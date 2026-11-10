@@ -535,20 +535,23 @@ class Robot:
         # No automatic session termination: this can kill a running shell.
         self.warnings.append("Created one new terminal session; left it running intentionally")
 
-def report(out, steps, warnings):
+def report(out, steps, warnings, ux_findings=None):
     counts = {status: sum(step["status"] == status for step in steps)
               for status in ("PASS", "FAIL", "SKIP")}
+    ux_findings = ux_findings or []
     overall = ("FAIL" if counts["FAIL"] else
-               "INCOMPLETE" if warnings or counts["SKIP"] or not steps else "PASS")
+               "INCOMPLETE" if warnings or counts["SKIP"] or not steps else
+               "NEEDS_UX_REVIEW" if ux_findings else "PASS")
     payload={"generated":dt.datetime.now().isoformat(), "overall": overall,
-             "summary": counts, "steps": steps, "warnings": warnings}
+             "summary": counts, "ux_findings_count": len(ux_findings),
+             "steps": steps, "warnings": warnings}
     (out/"results.json").write_text(json.dumps(payload,indent=2,ensure_ascii=False),encoding="utf-8")
     rows=[]
     for x in steps:
         a,b=html.escape(x["before"]),html.escape(x["after"])
         rows.append(f'<tr><td>{html.escape(x["name"])}</td><td>{x["status"]}</td><td>{html.escape(x["detail"])}</td><td><a href="{a}"><img src="{a}" width="180"></a></td><td><a href="{b}"><img src="{b}" width="180"></a></td></tr>')
     warn="".join("<li>"+html.escape(x)+"</li>" for x in warnings)
-    (out/"report.html").write_text(f"""<!doctype html><html lang="fr"><meta charset="utf-8"><title>Klyro QA</title><style>body{{font:16px system-ui;max-width:1300px;margin:auto;padding:24px}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:8px}}img{{border-radius:10px}}</style><h1>Klyro — UI QA</h1><p><a href="ux-review.html">Audit complet UI / UX + code Kotlin de chaque composant</a></p><h2>État : {overall}</h2><p>PASS : {counts["PASS"]} · FAIL : {counts["FAIL"]} · SKIP : {counts["SKIP"]}</p><p>PASS = vérification d'état observé, pas validation complète du terminal.</p><p>{len(steps)} assertions, {len(warnings)} avertissements.</p><ul>{warn}</ul><table><tr><th>Test</th><th>Résultat</th><th>Attendu</th><th>Avant</th><th>Après</th></tr>{''.join(rows)}</table></html>""",encoding="utf-8")
+    (out/"report.html").write_text(f"""<!doctype html><html lang="fr"><meta charset="utf-8"><title>Klyro QA</title><style>body{{font:16px system-ui;max-width:1300px;margin:auto;padding:24px}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:8px}}img{{border-radius:10px}}</style><h1>Klyro — UI QA</h1><p><a href="ux-review.html">Audit complet UI / UX + code Kotlin de chaque composant</a></p><h2>État : {overall}</h2><p>PASS : {counts["PASS"]} · FAIL : {counts["FAIL"]} · SKIP : {counts["SKIP"]} · Problèmes UI/UX : {len(ux_findings)}</p><p>PASS = vérification d'état observé, pas validation complète du terminal.</p><p>{len(steps)} assertions, {len(warnings)} avertissements.</p><ul>{warn}</ul><table><tr><th>Test</th><th>Résultat</th><th>Attendu</th><th>Avant</th><th>Après</th></tr>{''.join(rows)}</table></html>""",encoding="utf-8")
 
 def main():
     p=argparse.ArgumentParser()
@@ -613,7 +616,12 @@ def main():
         except Exception as err:
             robot.warnings.append("Component UX/code report failed: " +
                                   type(err).__name__ + ": " + str(err))
-        report(out, robot.steps, robot.warnings)
+        try:
+            ux_findings = json.loads((out / "components.json").read_text(
+                encoding="utf-8")).get("findings", [])
+        except (OSError, ValueError):
+            ux_findings = []
+        report(out, robot.steps, robot.warnings, ux_findings=ux_findings)
         shutil.make_archive(str(out), "zip", root_dir=out)
         print("Report:", out/"report.html")
         print("Component review:", out/"ux-review.html")
