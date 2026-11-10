@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 internal fun KlyroSessionSheet(
     sessionName: String,
     isActive: Boolean,
+    activityStatus: String? = null,
+    activityDetail: String? = null,
     onDismiss: () -> Unit,
     onRename: () -> Unit,
     onChooseShell: () -> Unit,
@@ -59,7 +61,7 @@ internal fun KlyroSessionSheet(
     var confirmClose by rememberSaveable(sessionName) { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
-        rows = 4,
+        rows = if (activityStatus.isNullOrBlank()) 4 else 5,
         screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp,
         fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
     )
@@ -74,6 +76,28 @@ internal fun KlyroSessionSheet(
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
             ) {
                 KlyroSheetTitle(sessionName.ifBlank { "Session" })
+                if (!activityStatus.isNullOrBlank()) {
+                    Surface(
+                        color = colors.tile,
+                        shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Text(
+                                activityStatus,
+                                color = colors.foreground,
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            if (!activityDetail.isNullOrBlank()) {
+                                Text(activityDetail, color = colors.muted,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
                         KlyroActionRow("Rename", R.drawable.hugeicons_pen_01, onRename)
