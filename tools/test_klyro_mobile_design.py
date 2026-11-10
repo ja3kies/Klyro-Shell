@@ -65,7 +65,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn('"termux-setup-storage", "klyro-setup-storage"', catalog)
         self.assertIn('!emulator.isAlternateBufferActive', pane)
         self.assertIn('emulator.paste(snippet)', pane)
-        self.assertIn("session.emulator?.paste(snippet)", pane)
+        self.assertIn("emulator.paste(snippet)", pane)
+        self.assertIn("if (session.isRunning() && emulator != null", pane)
         self.assertNotIn('session.write("klyro-setup-storage\\n")', pane)
 
     def test_storage_bridge_uses_saf_and_no_broad_storage_permission(self):
