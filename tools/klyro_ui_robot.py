@@ -81,7 +81,7 @@ def controls(root):
         if n.get("visible-to-user") == "false":
             continue
         raw = n.get("bounds", "")
-        match = re.fullmatch(r"\\[(-?\\d+),(-?\\d+)\\]\\[(-?\\d+),(-?\\d+)\\]", raw)
+        match = re.fullmatch(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]", raw)
         if not match:
             continue
         x1, y1, x2, y2 = map(int, match.groups())
@@ -103,7 +103,7 @@ def state(root):
                 value = (n.get(attr) or "").strip()
                 if value:
                     labels.append(value)
-    sessions = sorted(set(re.findall(r"Session (\\d+)", " ".join(labels))))
+    sessions = sorted(set(re.findall(r"Session (\d+)", " ".join(labels))))
     dialog = any("End Bash session?" in x for x in labels)
     selected_tabs = []
     for node in ns:
