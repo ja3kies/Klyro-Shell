@@ -88,6 +88,17 @@ class SheetEvidenceTests(unittest.TestCase):
         issues = review.findings_from_accessibility([one, one], None)
         self.assertEqual(len(issues), 1)
 
+    def test_navigation_pass_does_not_hide_ux_defects(self):
+        with tempfile.TemporaryDirectory() as d:
+            robot.report(Path(d), [
+                {"name": "Initial Home", "status": "PASS",
+                 "before": "initial.png", "after": "initial.png", "detail": "Home"}
+            ], [], ux_findings=[{"priority": "P1", "label": "Recheck environment"}])
+            payload = json.loads((Path(d) / "results.json").read_text())
+            self.assertEqual(payload["overall"], "NEEDS_UX_REVIEW")
+            self.assertEqual(payload["summary"]["PASS"], 1)
+            self.assertEqual(payload["ux_findings_count"], 1)
+
     def test_source_report_escapes_html_and_writes_json(self):
         with tempfile.TemporaryDirectory() as folder:
             p = Path(folder)
