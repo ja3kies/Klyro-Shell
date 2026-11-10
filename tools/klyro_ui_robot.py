@@ -53,39 +53,66 @@ def active():
 def nodes(root):
     return list(root.iter("node"))
 
+def node_labels(n):
+    """Visible text AND accessibility description, including Compose descendants.
+
+    A Compose button may expose onClickLabel='Open Klyro plugins' while its
+    child displays 'Plugins'. Both are valid, but only the short title should
+    be used to select the intended safe navigation control.
+    """
+    found = []
+    for node in n.iter("node"):
+        if node.get("visible-to-user") == "false":
+            continue
+        for attr in ("content-desc", "text"):
+            value = (node.get(attr) or "").strip()
+            if value and value not in found:
+                found.append(value)
+    return found
+
 def label(n):
-    return (n.get("content-desc") or n.get("text") or "").strip()
+    return next(iter(node_labels(n)[:1]), "")
 
 def controls(root):
     found = []
     for n in nodes(root):
         if n.get("clickable") != "true" or n.get("enabled") != "true":
             continue
-        match = re.findall(r"\d+", n.get("bounds", ""))
-        if len(match) != 4:
+        if n.get("visible-to-user") == "false":
             continue
-        x1,y1,x2,y2 = map(int,match)
-        if x2-x1 < 32 or y2-y1 < 32:
+        raw = n.get("bounds", "")
+        match = re.fullmatch(r"\\[(-?\\d+),(-?\\d+)\\]\\[(-?\\d+),(-?\\d+)\\]", raw)
+        if not match:
             continue
-        labels = [label(v) for v in n.iter("node") if label(v)]
-        title = label(n) or next((v for v in labels if SAFE.fullmatch(v)), "") or next((v for v in labels if v), "")
+        x1, y1, x2, y2 = map(int, match.groups())
+        if x2 - x1 < 32 or y2 - y1 < 32:
+            continue
+        aliases = node_labels(n)
+        title = next((v for v in aliases if SAFE.fullmatch(v)), aliases[0] if aliases else "")
         if title:
-            found.append({"label":title,"x":(x1+x2)//2,"y":(y1+y2)//2,"bounds":(x1,y1,x2,y2)})
+            found.append({"label": title, "aliases": aliases, "x": (x1 + x2) // 2,
+                          "y": (y1 + y2) // 2, "bounds": (x1, y1, x2, y2)})
     return found
 
 def state(root):
     ns = nodes(root)
-    labels = [label(n) for n in ns if label(n)]
-    sessions = sorted(set(re.findall(r"Session (\d+)", " ".join(labels))))
+    labels = []
+    for n in ns:
+        if n.get("visible-to-user") != "false":
+            for attr in ("content-desc", "text"):
+                value = (n.get(attr) or "").strip()
+                if value:
+                    labels.append(value)
+    sessions = sorted(set(re.findall(r"Session (\\d+)", " ".join(labels))))
     dialog = any("End Bash session?" in x for x in labels)
     selected_tabs = []
     for node in ns:
-        if node.get("selected") == "true":
-            selected_tabs.extend(label(child) for child in node.iter("node") if label(child))
-    return {"dialog":dialog,"sessions":sessions,"labels":labels,
-            "selected_tabs":selected_tabs,
-            "controls":controls(root),
-            "keyboard":any(n.get("package","").startswith("com.google.android.inputmethod") for n in ns)}
+        if node.get("selected") == "true" and node.get("visible-to-user") != "false":
+            selected_tabs.extend(node_labels(node))
+    return {"dialog": dialog, "sessions": sessions, "labels": labels,
+            "selected_tabs": selected_tabs, "controls": controls(root),
+            "keyboard": any(n.get("package", "").startswith("com.google.android.inputmethod")
+                            for n in ns)}
 
 class Robot:
     def __init__(self, out, delay):
@@ -115,7 +142,7 @@ class Robot:
         if not passed:
             self.warnings.append(f"{name}: {detail or 'assertion failed'}")
     def find(self, s, pattern):
-        return next((c for c in s["controls"] if re.fullmatch(pattern,c["label"],re.I)),None)
+        return next((c for c in s["controls"] if any(re.fullmatch(pattern, v, re.I) for v in c.get("aliases", [c["label"]]))), None)
     def has_markers(self, s, markers):
         labels = s["labels"]
         return all(any(option.casefold() in item.casefold() for option in
