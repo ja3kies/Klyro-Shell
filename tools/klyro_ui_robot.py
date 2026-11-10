@@ -26,6 +26,14 @@ def adb(*a, binary=False, timeout=45):
         raise RuntimeError((p.stderr or p.stdout).decode(errors="replace")[:1000])
     return p.stdout if binary else p.stdout.decode(errors="replace")
 
+def measured_density():
+    """Get pixels per dp from the connected Android device, respecting overrides."""
+    data = adb("shell", "wm", "density")
+    matches = re.findall(r"(?:Physical|Override) density:\\s*(\\d+)", data)
+    if not matches:
+        return None
+    return int(matches[-1]) / 160.0
+
 def active():
     data = adb("shell", "dumpsys", "activity", "activities")
     lines = [x for x in data.splitlines() if "topResumedActivity" in x or "mResumedActivity" in x]
@@ -259,7 +267,13 @@ def main():
             from klyro_robot_report_audit import inspect as audit_inspect, report as audit_report
             snapshots = sorted(out.glob("*.xml"))
             if snapshots:
-                evidence = [audit_inspect(p, density=args.density) for p in snapshots]
+                density = args.density
+                if density is None:
+                    try:
+                        density = measured_density()
+                    except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired):
+                        density = None
+                evidence = [audit_inspect(p, density=density) for p in snapshots]
                 (out / "accessibility-audit.md").write_text(audit_report(evidence),encoding="utf-8")
         except (ImportError, ValueError, OSError, ET.ParseError) as err:
             robot.warnings.append("Accessibility audit unavailable: " + str(err))
