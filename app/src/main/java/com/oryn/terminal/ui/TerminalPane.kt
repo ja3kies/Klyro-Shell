@@ -229,9 +229,13 @@ fun TerminalPane(
     fun recentOutput(id: Long): Boolean = KlyroJobProbe.recentOutput(
         lastOutputElapsedMs[id] ?: 0L, activityElapsedMs
     )
+    // Keep TalkBack descriptions stable during duration ticks.
+    fun activitySpeech(id: Long): String = KlyroJobProbe.statusLabel(
+        tabJobActivity[id]?.sample, recentOutput(id)
+    )
     fun activityLabel(id: Long): String {
         val uiState = tabJobActivity[id]
-        val result = KlyroJobProbe.statusLabel(uiState?.sample, recentOutput(id))
+        val result = activitySpeech(id)
         return if (uiState?.sample?.hasForegroundJob() == true) {
             "$result · " + KlyroJobProbe.elapsedLabel(
                 uiState.detectedAtElapsedMs, activityElapsedMs
@@ -605,7 +609,7 @@ fun TerminalPane(
                             stateDescription = buildString {
                                 append(if (active) "Selected terminal" else "Open terminal")
                                 append(", ")
-                                append(activityLabel(id))
+                                append(activitySpeech(id))
                                 if (id in tabsWithUnreadOutput && !active) {
                                     append(", New terminal output")
                                 }

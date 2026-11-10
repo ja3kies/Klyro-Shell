@@ -21,7 +21,9 @@ class JobActivityUiContracts(unittest.TestCase):
   self.assertIn('KlyroJobProbe.statusLabel',S)
   self.assertIn('KlyroJobProbe.elapsedLabel(',S)
  def test_accessibility_and_details_explain_uncertainty(self):
-  self.assertIn('append(activityLabel(id))',S)
+  self.assertIn('append(activitySpeech(id))',S)
+  self.assertIn('activityStatus = activityLabel(id)',S)
+  self.assertIn('Keep TalkBack descriptions stable',S)
   self.assertIn('Android did not provide a readable foreground process group.',S)
   self.assertIn('Recent terminal output does not necessarily mean a job is running.',S)
   self.assertIn('activityStatus = activityLabel(id)',S)

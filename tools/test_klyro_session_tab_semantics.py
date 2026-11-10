@@ -7,6 +7,8 @@ class AccessibleSessionPills(unittest.TestCase):
   block=S.split('tabs.forEach { (id, tabTitle) ->',1)[1].split('Box(\n                modifier = Modifier\n                    .size(48.dp)',1)[0]
   self.assertIn('role = Role.Tab',block)
   self.assertIn('selected = active',block)
-  self.assertIn('stateDescription = if (id in tabsWithUnreadOutput',block)
+  self.assertIn('stateDescription = buildString',block)
+  self.assertIn('append(activitySpeech(id))',block)
+  self.assertIn('append(", New terminal output")',block)
   self.assertIn('onLongClickLabel = "Edit session"',block)
 if __name__=="__main__":unittest.main()
