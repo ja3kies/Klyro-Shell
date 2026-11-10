@@ -80,12 +80,14 @@ class SheetEvidenceTests(unittest.TestCase):
                 p, [step], source_root=None, density=2.625,
                 sheet_gallery={"Plugins": {"images": ["initial.png"],
                                           "expanded": "not attempted", "scroll_segments": 0}},
-                duplicate_count=7, display_height=2424)
+                duplicate_count=7, display_height=2424, display_width=1080)
             text = (p / "ux-review.html").read_text()
             self.assertIn("&lt;button&gt;", text)
             self.assertNotIn("<button>", text)
             self.assertIn("7 doublons", text)
             self.assertIn("UNAVAILABLE", text)
+            self.assertIn("target-overlay", text)
+            self.assertIn("Écran avant le clic", text)
             self.assertEqual(result[0]["source"]["status"], "UNAVAILABLE")
             self.assertEqual(json.loads((p/"components.json").read_text())
                              ["duplicate_screens_avoided"], 7)
