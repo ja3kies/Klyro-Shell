@@ -16,7 +16,8 @@ class AccentHierarchyContract(unittest.TestCase):
 
     def test_menu_and_repeated_icons_do_not_mimic_primary_ctas(self):
         self.assertIn('contentDescription = "More actions", tint = TerminalMuted', PANE)
-        self.assertIn('val ink = if (destructive) colors.danger else colors.muted', SHARED)
+        self.assertIn('val ink = if (!enabled) colors.muted else if (destructive) colors.danger else colors.muted', SHARED)
+        self.assertIn('enabled = enabled,', SHARED)
         section = PLUGINS.split('private fun PluginHeading', 1)[1]
         self.assertIn('Surface(color = colors.key,', section)
         self.assertIn('tint = colors.muted,', section)

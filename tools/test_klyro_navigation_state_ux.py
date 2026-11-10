@@ -18,7 +18,9 @@ class NavigationStateUX(unittest.TestCase):
         self.assertIn("BackHandler(enabled = showingGuide)", PALETTE)
 
     def test_non_error_feedback_is_neutral(self):
-        self.assertIn("if (unsafeFeedback) colors.warningContainer else colors.key", PALETTE)
+        self.assertIn("KlyroInlineNotice(it, isError = unsafeFeedback)", PALETTE)
+        shared = (APP / "KlyroUiComponents.kt").read_text()
+        self.assertIn("if (isError) colors.dangerContainer else colors.tile", shared)
         self.assertIn("unsafeFeedback = true", PALETTE)
         self.assertIn("unsafeFeedback = false", PALETTE)
         self.assertIn('else "No matching commands."', PALETTE)

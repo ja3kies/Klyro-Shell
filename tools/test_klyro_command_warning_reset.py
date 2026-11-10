@@ -9,5 +9,7 @@ class CommandPaletteWarningResetTest(unittest.TestCase):
   self.assertEqual(1,S.count('query = ""; info = null; unsafeFeedback = false'))
   self.assertIn('query = ""; pinnedOnly = false; availableOnly = false',S)
   self.assertIn("unsafeFeedback = true",S)
-  self.assertIn("if (unsafeFeedback) colors.warningContainer else colors.key",S)
+  self.assertIn('info?.let { KlyroInlineNotice(it, isError = unsafeFeedback) }',S)
+  common=(Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal/ui/KlyroUiComponents.kt").read_text()
+  self.assertIn('color = if (isError) colors.dangerContainer else colors.tile',common)
 if __name__=="__main__":unittest.main()

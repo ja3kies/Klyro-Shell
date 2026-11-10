@@ -51,7 +51,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         workspaces = READ(UI / "KlyroWorkspaceSheet.kt")
         self.assertIn("this.selected = selected", plugins)
         self.assertIn('if (plugin.enabled) "Disable " else "Enable "', plugins)
-        self.assertIn("maxLines = 1, overflow = TextOverflow.Ellipsis", components)
+        self.assertIn("maxLines = 2, overflow = TextOverflow.Ellipsis", components)
         self.assertIn("modifier = Modifier.weight(1f)", palette)
         self.assertIn('KlyroSheetTitle("Workspaces", modifier = Modifier.weight(1f))', workspaces)
         self.assertIn('R.drawable.hugeicons_folder_01', plugins)
