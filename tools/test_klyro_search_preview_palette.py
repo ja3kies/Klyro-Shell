@@ -5,8 +5,8 @@ S=(Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal/ui/T
 class SearchPreviewColors(unittest.TestCase):
  def test_custom_accent_and_theme_tokens_used(self):
   modal=S.split('if (showTranscriptSearch)',1)[1].split('if (showWorkspaceSheet)',1)[0]
-  self.assertIn('val highlightBackground = ui.accent',modal)
-  self.assertIn('val highlightForeground = ui.onAccent',modal)
+  self.assertIn('background = ui.accent',modal)
+  self.assertIn('color = ui.onAccent',modal)
   self.assertIn('color = ui.tile,',modal)
   self.assertNotIn('MaterialTheme.colorScheme.primary',modal)
 if __name__=="__main__":unittest.main()

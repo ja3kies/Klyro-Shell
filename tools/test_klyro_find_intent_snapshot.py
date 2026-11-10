@@ -12,5 +12,7 @@ class FindIntentSnapshot(unittest.TestCase):
   self.assertIn('requestedQuery, requestedCase',fragment)
   self.assertIn('if (view.isAttachedToWindow)',fragment)
   self.assertNotIn('view.requestFocus()',fragment)
-  self.assertIn('pendingSearchQuery = transcriptQuery\n                        pendingSearchCase = findMatchCase\n                        pendingSearch = position',S)
+  self.assertIn('pendingSearchQuery = transcriptQuery\n                        pendingSearchCase = findMatchCase\n                        pendingSearchOffset = chosen.logicalOffset\n                        pendingSearch = chosen.row',S)
+  self.assertIn('TranscriptSearch.scanRecent(',fragment)
+  self.assertIn('TranscriptSearch.nearestIndex(result.newest, targetRow, targetOffset)',fragment)
 if __name__=="__main__":unittest.main()
