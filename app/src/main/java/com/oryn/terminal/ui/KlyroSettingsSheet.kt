@@ -735,7 +735,8 @@ private fun SettingsBentoTile(
     val colors = LocalKlyroColors.current
     Surface(
         modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.bentoMinHeight)
-            .clickable(role = Role.Button, onClickLabel = "Open " + title, onClick = onClick),
+            .clickable(role = Role.Button, onClickLabel = "Open " + title, onClick = onClick)
+            .semantics { contentDescription = title },
         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
         color = colors.tile
     ) {
