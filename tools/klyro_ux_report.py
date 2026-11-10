@@ -2,6 +2,7 @@
 """Render evidence-backed component UX/code reports. Never execute Kotlin source."""
 import html
 import json
+import re
 from pathlib import Path
 from urllib.parse import quote
 
@@ -24,6 +25,10 @@ SOURCE_ANCHORS = {
     "Close settings": (SETTINGS, 'Text("Close")'),
     "Plugin tab switch": (PLUGINS, 'listOf("installed" to "Installed'),
     "Plugin tab restoration": (PLUGINS, 'listOf("installed" to "Installed'),
+    "Impl: SettingsBentoTile": (SETTINGS, "private fun SettingsBentoTile("),
+    "Impl: SettingsRowLink": (SETTINGS, "fun SettingsRowLink("),
+    "Impl: KlyroSheet": (ROOT + "ui/KlyroUiComponents.kt", "internal fun KlyroSheet("),
+    "Impl: KlyroActionRow": (ROOT + "ui/KlyroUiComponents.kt", "internal fun KlyroActionRow("),
 }
 SUGGESTIONS = {
     "Initial Home": "Tester aussi le premier démarrage, le runtime absent et la reprise d'une session.",
@@ -64,6 +69,23 @@ def source_for(action, from_stage, source_root):
     return {"status": "FOUND", "path": path, "url": url + "#L" + str(index+1),
             "line_start": lo+1, "line_end": hi,
             "code": "\n".join(f"{i+1:4d}  {lines[i]}" for i in range(lo, hi))}
+
+def related_code_for(action, source_root):
+    if action in ("Navigate: Appearance", "Navigate: Keyboard",
+                  "Navigate: Storage", "Navigate: Privacy"):
+        names = ("Impl: SettingsBentoTile", "Impl: KlyroSheet")
+    elif action in ("Navigate: Diagnostics", "Navigate: About"):
+        names = ("Impl: SettingsRowLink", "Impl: KlyroActionRow", "Impl: KlyroSheet")
+    elif action in ("Navigate: Settings", "Close settings"):
+        names = ("Impl: KlyroSheet",)
+    else:
+        names = ()
+    return [{"name": name, **source_for(name, None, source_root)} for name in names]
+
+def style_tokens(code):
+    """Tokens actually named in the Kotlin excerpt, not visual guesses."""
+    return sorted(set(re.findall(
+        r"(?:KlyroUiMetrics|colors|ui)\.[A-Za-z][A-Za-z0-9_]*", code or "")))[:24]
 
 def examine_target(target, density, display_height):
     if not target:
@@ -119,9 +141,15 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
     for i, step in enumerate(steps, 1):
         target = examine_target(step.get("target"), density, display_height)
         source = source_for(step["name"], step.get("from_stage"), source_root)
+        related = related_code_for(step["name"], source_root)
+        tokens = style_tokens(source.get("code"))
         gallery = sheet_gallery.get(step.get("destination", ""))
         ideas = improvements(step["name"], target, gallery)
+        if tokens:
+            ideas.append("Comparer les jetons d'apparence de l'extrait avec les composants voisins : " +
+                         ", ".join(tokens[:5]) + ".")
         records.append({**step, "component": target, "source": source,
+                        "related_code": related, "style_tokens": tokens,
                         "recommendations": ideas})
         tests_html = "".join("<li><strong>" + esc(t["result"]) + "</strong> " +
                              esc(t["check"]) + " — " + esc(t["value"]) + "</li>"
@@ -130,6 +158,13 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
         source_html = ('<a href="' + esc(source["url"]) + '">' + esc(source["path"]) + '</a>'
                        if source.get("url") else esc(source.get("description", "")))
         snippet = source.get("code", source.get("description", ""))
+        related_html = "".join(
+            '<details><summary>' + esc(item["name"]) + ' · ' + esc(item["status"]) +
+            '</summary><p><a href="' + esc(item.get("url", "")) + '">' +
+            esc(item.get("path", "")) + '</a></p><pre><code>' +
+            esc(item.get("code", item.get("description", ""))) +
+            '</code></pre></details>' for item in related)
+        tokens_html = ('<p>Jetons Kotlin : ' + esc(", ".join(tokens)) + '</p>') if tokens else ""
         cards.append(
             '<article><h3>' + esc(str(i) + ". " + step["name"]) +
             ' <small>' + esc(step["status"]) + '</small></h3>' +
@@ -140,8 +175,9 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
             '<h4>Vérifications développeur / accessibilité</h4><ul>' + tests_html +
             '</ul><h4>Améliorations UI / UX</h4><ul>' + ideas_html +
             '</ul><p>Code réel : ' + source_html + ' (' + esc(source["status"]) + ')</p>' +
+            tokens_html +
             '<details><summary>Afficher l’extrait Kotlin et ses numéros de ligne</summary><pre><code>' +
-            esc(snippet) + '</code></pre></details></article>'
+            esc(snippet) + '</code></pre></details>' + related_html + '</article>'
         )
         md.extend(["## " + step["name"] + " — " + step["status"],
                    "Composant : " + target.get("label", "non relevé"), ""])
