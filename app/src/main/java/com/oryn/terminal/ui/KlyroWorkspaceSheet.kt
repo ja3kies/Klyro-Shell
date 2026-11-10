@@ -29,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +72,11 @@ internal fun KlyroWorkspaceSheet(
     var editorError by rememberSaveable { mutableStateOf(false) }
     var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
     var menuId by rememberSaveable { mutableStateOf<String?>(null) }
+    var lastAssignedWorkspaceId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Menus can outlive their backing workspace after a deletion.
+    LaunchedEffect(entries, menuId) {
+        if (menuId != null && entries.none { it.id == menuId }) menuId = null
+    }
     // Treat inline editing as a navigation layer, not as a reason to close the sheet.
     BackHandler(enabled = editorId != null && deletingId == null && menuId == null) {
         editorId = null
@@ -103,6 +109,8 @@ internal fun KlyroWorkspaceSheet(
         fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale,
         editing = editorId != null
     )
+    val workspaceScroll = rememberScrollState()
+    LaunchedEffect(selectedId) { workspaceScroll.scrollTo(0) }
     fun editProject(id: String, title: String) {
         editorId = id
         editorText = title
@@ -122,7 +130,7 @@ internal fun KlyroWorkspaceSheet(
             Column(
                 Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
-                    .then(if (needsScroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                    .then(if (needsScroll) Modifier.verticalScroll(workspaceScroll) else Modifier)
                     .imePadding()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
@@ -136,11 +144,12 @@ internal fun KlyroWorkspaceSheet(
                     KlyroSheetTitle("Workspaces", modifier = Modifier.weight(1f))
                     TextButton(
                         onClick = { editProject("", "") },
-                        enabled = entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS
+                        enabled = editorId == null && entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
-                            val tint = if (entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS)
+                            val tint = if (editorId == null &&
+                                entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS)
                                 c.accent else c.muted
                             Icon(painterResource(R.drawable.hugeicons_plus_sign),
                                 contentDescription = null, tint = tint,
@@ -290,7 +299,10 @@ internal fun KlyroWorkspaceSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End
                             ) {
-                                TextButton(onClick = { editorId = null }) { Text("Cancel") }
+                                TextButton(onClick = {
+                                    editorId = null
+                                    editorError = false
+                                }) { Text("Cancel") }
                                 Button(
                                     enabled = editorText.trim().isNotEmpty() &&
                                         (!editing || (editTarget != null &&
@@ -300,7 +312,10 @@ internal fun KlyroWorkspaceSheet(
                                             editTarget != null &&
                                                 onRenameProject(editTarget.id, editorText)
                                         } else onCreateProject(editorText)
-                                        if (saved) editorId = null else editorError = true
+                                        if (saved) {
+                                            editorId = null
+                                            editorError = false
+                                        } else editorError = true
                                     },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = c.accent, contentColor = c.onAccent
@@ -363,11 +378,18 @@ internal fun KlyroWorkspaceSheet(
                         }
                     }
                 }
+                if (lastAssignedWorkspaceId == selected.id && activeTabId != null &&
+                    tabWorkspaces[activeTabId] == selected.id) {
+                    KlyroInlineNotice("Current terminal moved to ${selected.name}.")
+                }
                 if (activeTabId != null &&
                     (tabWorkspaces[activeTabId] ?: KlyroWorkspaceCatalog.GENERAL) != selected.id
                 ) {
                     TextButton(
-                        onClick = { onAssignCurrentTab(selected.id) },
+                        onClick = {
+                            onAssignCurrentTab(selected.id)
+                            lastAssignedWorkspaceId = selected.id
+                        },
                         modifier = Modifier.fillMaxWidth()
                             .heightIn(min = KlyroUiMetrics.minTouch)
                     ) { Text("Move current session here") }

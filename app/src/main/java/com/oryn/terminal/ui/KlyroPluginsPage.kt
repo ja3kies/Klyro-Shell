@@ -54,6 +54,7 @@ import com.oryn.terminal.R
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginRecord
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -79,6 +80,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var confirmedImportId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmedRemovalId by rememberSaveable { mutableStateOf<String?>(null) }
 
+    val confirmedMutationPending = confirmedBundledId != null ||
+        confirmedImportId != null || confirmedRemovalId != null
+
     // A revision cancels stale IO refreshes: an older read cannot overwrite a
     // newer registry snapshot when two rapid writes finish out of order.
     var registryRevision by remember { mutableStateOf(0) }
@@ -92,6 +96,26 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     }
     LaunchedEffect(manager, registryRevision) {
         installed = withContext(Dispatchers.IO) { manager.installed() }
+    }
+    // Recover after rotation if the old Activity's confirmed commit never
+    // reports completion (e.g. its coroutine failed after destruction).
+    // Do not retain an unresponsive disabled dialog indefinitely.
+    LaunchedEffect(confirmedBundledId, confirmedImportId, confirmedRemovalId, mutationBusy) {
+        if (confirmedMutationPending.not()) return@LaunchedEffect
+        if (mutationBusy) return@LaunchedEffect
+        delay(10_000L)
+        val refreshed = withContext(Dispatchers.IO) { manager.installed() }
+        installed = refreshed
+        val ids = refreshed.map { it.id }.toSet()
+        val stuck = (confirmedBundledId?.let { it !in ids } == true) ||
+            (confirmedImportId?.let { it !in ids } == true) ||
+            (confirmedRemovalId?.let { it in ids } == true)
+        if (stuck) {
+            confirmedBundledId = null
+            confirmedImportId = null
+            confirmedRemovalId = null
+            error = "The previous operation could not be confirmed. Review the list before retrying."
+        }
     }
     LaunchedEffect(installed, pendingBundledId, confirmedBundledId, confirmedImportId, confirmedRemovalId) {
         val installedIds = installed.map { it.id }.toSet()
@@ -122,8 +146,6 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             error = null
         }
     }
-    val confirmedMutationPending = confirmedBundledId != null ||
-        confirmedImportId != null || confirmedRemovalId != null
     fun navigateBack() {
         // Visible Home and Android Back must unwind the same dialog stack.
         if (mutationBusy || confirmedMutationPending) return

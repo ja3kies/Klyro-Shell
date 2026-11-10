@@ -35,6 +35,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
@@ -218,6 +219,7 @@ internal fun KlyroChooseShellSheet(
                     TextButton(
                         onClick = onBack,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                            .semantics { contentDescription = "Back to session" }
                     ) {
                         Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
                             contentDescription = null,
