@@ -14,7 +14,7 @@ from pathlib import Path
 
 PKG = "com.klyro.shell"
 HOME_ACTION = ("Launch Bash", "Return to terminal")
-HOME_MARKERS = ("KLYRO", HOME_ACTION, "Plugins", "Settings")
+HOME_MARKERS = ("KLYRO", "RUNTIME STATUS", "Plugins", "Settings")
 # Explicit screen transitions derived from the Pixel 9 XML evidence.
 SETTINGS_ROOT = ("Settings", "Appearance", "Keyboard", "Storage", "Privacy")
 ROUTES = [("Plugins", ("Plugins", "Installed", "Explore")),
@@ -53,6 +53,18 @@ def active():
 def nodes(root):
     return list(root.iter("node"))
 
+def visible_nodes(root):
+    """Exclude whole invisible subtrees, not just nodes marked invisible."""
+    result = []
+    stack = [(root, True)]
+    while stack:
+        node, parent_visible = stack.pop()
+        visible = parent_visible and node.get("visible-to-user") != "false"
+        if visible:
+            result.append(node)
+        stack.extend((child, visible) for child in reversed(list(node)))
+    return result
+
 def node_labels(n):
     """Visible text AND accessibility description, including Compose descendants.
 
@@ -61,9 +73,7 @@ def node_labels(n):
     be used to select the intended safe navigation control.
     """
     found = []
-    for node in n.iter("node"):
-        if node.get("visible-to-user") == "false":
-            continue
+    for node in visible_nodes(n):
         for attr in ("content-desc", "text"):
             value = (node.get(attr) or "").strip()
             if value and value not in found:
@@ -75,7 +85,7 @@ def label(n):
 
 def controls(root):
     found = []
-    for n in nodes(root):
+    for n in visible_nodes(root):
         if n.get("clickable") != "true" or n.get("enabled") != "true":
             continue
         if n.get("visible-to-user") == "false":
@@ -95,7 +105,7 @@ def controls(root):
     return found
 
 def state(root):
-    ns = nodes(root)
+    ns = visible_nodes(root)
     labels = []
     for n in ns:
         if n.get("visible-to-user") != "false":
