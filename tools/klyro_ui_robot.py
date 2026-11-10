@@ -96,28 +96,53 @@ class Robot:
         self.record("Cancel session closure",not after["dialog"],s,after,"Dialog must disappear after Keep session")
         return after
     def explore(self, max_actions):
-        seen = set()
-        current = self.snap("initial")
-        current = self.safe_cancel_dialog(current)
-        for _ in range(max_actions):
+        # Depth-first exploration: navigate inside pages before returning.
+        # A screen is identified by its visible labels and controls, not coordinates.
+        seen_actions = set()
+        current = self.safe_cancel_dialog(self.snap("initial"))
+        stack = []
+        actions = 0
+        while actions < max_actions:
             current = self.safe_cancel_dialog(current)
-            signature = (tuple(current["sessions"]), current["dialog"], tuple(sorted(set(current["labels"]))))
-            candidates = [c for c in current["controls"] if SAFE.fullmatch(c["label"]) and not DANGER.search(c["label"])]
-            next_action = next((c for c in candidates if (signature,c["label"]) not in seen),None)
-            if next_action is None:
+            signature = tuple(sorted(set(current["labels"])))
+            candidates = [
+                c for c in current["controls"]
+                if SAFE.fullmatch(c["label"]) and not DANGER.search(c["label"])
+                and (signature, c["label"]) not in seen_actions
+            ]
+            if candidates:
+                target = candidates[0]
+                seen_actions.add((signature, target["label"]))
+                before = current
+                self.tap(target)
+                after = self.snap("after-" + target["label"])
+                changed = tuple(sorted(set(after["labels"]))) != signature
+                self.record("Navigate: " + target["label"], changed, before, after,
+                            "Expected a changed accessibility tree")
+                actions += 1
+                if changed:
+                    stack.append(signature)
+                    current = after
+                    continue
+                current = after
+                continue
+            if not stack:
                 break
-            seen.add((signature,next_action["label"]))
             before = current
-            self.tap(next_action)
-            after = self.snap("after-navigation")
-            self.record("Navigation: "+next_action["label"],after["labels"] != before["labels"] or after["dialog"] != before["dialog"],before,after,"Visible UI state should change")
-            current = self.safe_cancel_dialog(after)
-            if not active():
-                break
-            adb("shell","input","keyevent","KEYCODE_BACK")
+            adb("shell", "input", "keyevent", "KEYCODE_BACK")
             time.sleep(self.delay)
-            current = self.snap("after-back")
-            current = self.safe_cancel_dialog(current)
+            current = self.safe_cancel_dialog(self.snap("after-back"))
+            expected = stack.pop()
+            returned = tuple(sorted(set(current["labels"]))) == expected
+            self.record("Back navigation", returned, before, current,
+                        "Expected previous page state")
+            if not returned:
+                # Never keep tapping when the navigation stack is uncertain.
+                self.warnings.append("Navigation mismatch: exploration stopped safely")
+                break
+        if actions == 0:
+            self.warnings.append("No safe actionable controls discovered")
+        return actions
     def session_smoke(self):
         before = self.safe_cancel_dialog(self.snap("session-baseline"))
         add = self.find(before,r"^New terminal$")
