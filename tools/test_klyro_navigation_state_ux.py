@@ -21,7 +21,8 @@ class NavigationStateUX(unittest.TestCase):
         self.assertIn("if (unsafeFeedback) colors.warningContainer else colors.key", PALETTE)
         self.assertIn("unsafeFeedback = true", PALETTE)
         self.assertIn("unsafeFeedback = false", PALETTE)
-        self.assertIn('Text("No matching commands.", color = colors.muted)', PALETTE)
+        self.assertIn('else "No matching commands."', PALETTE)
+        self.assertIn('else if (availableOnly) "No available commands match."', PALETTE)
 
 if __name__ == "__main__":
     unittest.main()

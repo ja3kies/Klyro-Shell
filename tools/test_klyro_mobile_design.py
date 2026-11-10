@@ -102,7 +102,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("KlyroUiMetrics.menuWidth", pane)
         self.assertIn("containerColor = ui.sheet", pane)
         self.assertNotIn("DropdownMenuItem(", pane)
-        self.assertIn('"Insert only; press Enter to run."', commands)
+        self.assertIn('Insert only; press Enter to run.', commands)
+        self.assertIn('Recent items are not Bash history.', commands)
         self.assertNotIn('"Not available · " + entry.note', commands)
         self.assertNotIn('ModalBottomSheet(', commands)
 
