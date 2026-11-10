@@ -142,9 +142,14 @@ class Robot:
             actions += 1
             if ok:
                 stack.append(signature)
-            current = after
+                current = after
+            else:
+                self.warnings.append("Navigation assertion failed; stopped before further taps")
+                break
         if actions == 0:
             self.warnings.append("No safe actionable controls discovered")
+        if actions >= max_actions and max_actions > 0:
+            self.warnings.append("Exploration action limit reached; coverage incomplete")
         return actions
     def session_smoke(self):
         before = self.safe_cancel_dialog(self.snap("session-baseline"))
