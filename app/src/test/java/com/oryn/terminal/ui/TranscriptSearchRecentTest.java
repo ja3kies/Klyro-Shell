@@ -78,7 +78,8 @@ public class TranscriptSearchRecentTest {
                 screen, COLUMNS, ROWS, "hit", false).newest;
         assertEquals(0, TranscriptSearch.nearestIndex(matches, 0, 0));
         assertEquals(2, TranscriptSearch.nearestIndex(matches, 0, 8));
-        assertEquals(2, TranscriptSearch.nearestIndex(matches, 1, 0));
+        assertEquals(0, TranscriptSearch.nearestIndex(matches, 1, 0));
+        assertEquals(2, TranscriptSearch.nearestIndex(matches, 1, 8));
         assertEquals(0, TranscriptSearch.nearestIndex(null, 0, 0));
     }
 
