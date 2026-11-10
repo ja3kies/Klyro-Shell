@@ -129,6 +129,20 @@ class RobotReportAuditTests(unittest.TestCase):
             p.write_text("""<hierarchy><node clickable="true" bounds="[0,0][200,200]"><node visible-to-user="false"><node content-desc="Hidden label"/></node></node></hierarchy>""")
             self.assertEqual(len(audit.inspect(p)["unlabeled"]), 1)
 
+    def test_small_touch_target_has_label_and_measured_dimensions(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "014-after-diagnostics.xml"
+            p.write_text(
+                '<hierarchy><node clickable="true" bounds="[42,2307][1038,2424]">'
+                '<node text="Recheck environment" /></node></hierarchy>'
+            )
+            result = audit.inspect(p, density=2.625)
+            self.assertEqual(result["small_details"][0]["label"], "Recheck environment")
+            self.assertEqual(result["small_details"][0]["height_dp"], 44.6)
+            text = audit.report([result])
+            self.assertIn("Recheck environment", text)
+            self.assertIn("48dp", text)
+
     def test_stage_requires_complete_token(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "003-pluginsettings.xml"
