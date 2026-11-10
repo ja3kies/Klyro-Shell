@@ -1167,7 +1167,7 @@ fun TerminalPane(
                             searchingTranscript -> "Searching terminal output…"
                             emulator == null -> "Terminal output unavailable"
                             snapshot == null || snapshot.totalCount == 0 -> "No matches"
-                            else -> "Match ${snapshot!!.firstOrdinal + position + 1} of ${snapshot.totalCount}"
+                            else -> "Match ${snapshot.firstOrdinal + position + 1} of ${snapshot.totalCount}"
                         },
                         color = ui.foreground,
                         fontSize = 12.sp,

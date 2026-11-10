@@ -6,7 +6,7 @@ S=(ROOT/"app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt").read_text()
 ENGINE=(ROOT/"app/src/main/java/com/oryn/terminal/ui/TranscriptSearch.java").read_text()
 class AdvancedFindUX(unittest.TestCase):
  def test_live_search_debounces_and_refreshes_on_output(self):
-  self.assertIn('showTranscriptSearch, transcriptQuery, findMatchCase, outputRevision, session',S)
+  self.assertIn('showTranscriptSearch, transcriptQuery, findMatchCase, searchPage,',S)
   self.assertIn('delay(170)',S)
   self.assertIn('searchSnapshot = snapshot',S)
   self.assertIn('searchSnapshot = null',S)
@@ -15,7 +15,7 @@ class AdvancedFindUX(unittest.TestCase):
   self.assertIn('tail.size() == MAX_VISIBLE_MATCHES',ENGINE)
   self.assertIn('totalCount',ENGINE)
   self.assertIn('snapshot.totalCount',S)
-  self.assertIn('Displaying newest',S)
+  self.assertIn('Showing ${snapshot.firstOrdinal + 1}',S)
  def test_nearest_selection_survives_live_update(self):
   self.assertIn('TranscriptSearch.nearestIndex(snapshot.newest, previous.row, previous.logicalOffset)',S)
   self.assertIn('TranscriptSearch.nearestIndex(result.newest, targetRow, targetOffset)',S)
@@ -40,4 +40,5 @@ class AdvancedFindUX(unittest.TestCase):
  def test_original_unbounded_method_kept_for_backwards_compatibility(self):
   self.assertIn('public static List<Integer> findRows(',ENGINE)
   self.assertIn('public static Snapshot scanRecent(',ENGINE)
+  self.assertIn('public static Snapshot scanPage(',ENGINE)
 if __name__=="__main__":unittest.main()

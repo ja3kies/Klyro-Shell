@@ -98,7 +98,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn(".toggleable(value = findMatchCase, role = Role.Checkbox)", pane)
         self.assertIn("Checkbox(checked = findMatchCase, onCheckedChange = null)", pane)
         self.assertIn('Text("Match case"', pane)
-        self.assertIn("TranscriptSearch.scanRecent(", pane)
+        self.assertIn("TranscriptSearch.scanPage(", pane)
 
     def test_settings_are_compact_without_losing_scroll_escape(self):
         settings = READ(UI / "KlyroSettingsSheet.kt")
