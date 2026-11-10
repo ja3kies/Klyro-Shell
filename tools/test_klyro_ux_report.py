@@ -67,6 +67,27 @@ class SheetEvidenceTests(unittest.TestCase):
                             for c in checks))
         self.assertTrue(any(c["result"] == "REVIEW" for c in checks))
 
+    def test_priority_issue_carries_real_diagnostics_kotlin_code(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        evidence = [
+            {"stage": "diagnostics", "small_details": [
+                {"label": "Recheck environment", "bounds": "[42,2307][1038,2424]",
+                 "width_dp": 379.4, "height_dp": 44.6}],
+             "unlabeled": [], "missing": []}
+        ]
+        issues = review.findings_from_accessibility(evidence, repo_root)
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0]["priority"], "P1")
+        self.assertEqual(issues[0]["source"]["status"], "FOUND")
+        self.assertIn("onClick = onRecheckEnvironment", issues[0]["source"]["code"])
+
+    def test_repeated_same_defect_is_listed_once(self):
+        one = {"stage": "diagnostics", "small_details": [
+            {"label": "Recheck environment", "width_dp": 379.4,
+             "height_dp": 44.6}], "missing": [], "unlabeled": []}
+        issues = review.findings_from_accessibility([one, one], None)
+        self.assertEqual(len(issues), 1)
+
     def test_source_report_escapes_html_and_writes_json(self):
         with tempfile.TemporaryDirectory() as folder:
             p = Path(folder)
