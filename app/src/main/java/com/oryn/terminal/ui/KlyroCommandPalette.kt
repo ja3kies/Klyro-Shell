@@ -1,6 +1,7 @@
 package com.oryn.terminal.ui
 
 import androidx.activity.compose.BackHandler
+import android.content.Context
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -38,7 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
@@ -64,16 +67,61 @@ internal fun KlyroCommandPalette(
 ) {
     val colors = LocalKlyroColors.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences("klyro_command_quick_access", Context.MODE_PRIVATE)
+    }
+    var pinnedIds by remember(context) {
+        mutableStateOf(KlyroCommandQuickAccess.decode(
+            prefs.getString("pinned", null), KlyroCommandQuickAccess.MAX_PINNED
+        ))
+    }
+    var recentIds by remember(context) {
+        mutableStateOf(KlyroCommandQuickAccess.decode(
+            prefs.getString("recent_inserts", null), KlyroCommandQuickAccess.MAX_RECENT
+        ))
+    }
+    fun recordInsertion(id: String) {
+        recentIds = KlyroCommandQuickAccess.recordInsertion(recentIds, id)
+        // Store curated identifiers only, never raw Bash or plugin input.
+        prefs.edit().putString("recent_inserts",
+            KlyroCommandQuickAccess.encode(recentIds, KlyroCommandQuickAccess.MAX_RECENT)).apply()
+    }
     var query by rememberSaveable { mutableStateOf("") }
     var showingGuide by rememberSaveable { mutableStateOf(false) }
     var info by remember { mutableStateOf<String?>(null) }
     var unsafeFeedback by remember { mutableStateOf(false) }
     var pendingCautionCommand by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingCautionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var pinnedOnly by rememberSaveable { mutableStateOf(false) }
+    var availableOnly by rememberSaveable { mutableStateOf(false) }
+    var confirmClearRecent by rememberSaveable { mutableStateOf(false) }
+    fun togglePin(id: String) {
+        val next = KlyroCommandQuickAccess.togglePinned(pinnedIds, id)
+        if (next == pinnedIds && id !in pinnedIds) {
+            unsafeFeedback = false
+            info = "Up to 8 pinned commands. Unpin one to make room."
+            return
+        }
+        pinnedIds = next
+        prefs.edit().putString("pinned",
+            KlyroCommandQuickAccess.encode(next, KlyroCommandQuickAccess.MAX_PINNED)).apply()
+        info = null
+    }
     BackHandler(enabled = showingGuide) { showingGuide = false }
-    BackHandler(enabled = pendingCautionCommand != null) { pendingCautionCommand = null }
-    val matches = remember(query) { KlyroCommandCatalog.search(query) }
-    val pluginMatches = remember(query, pluginCommands) {
-        pluginCommands.filter { command ->
+    BackHandler(enabled = pendingCautionCommand != null) {
+        pendingCautionCommand = null; pendingCautionId = null
+    }
+    BackHandler(enabled = confirmClearRecent) { confirmClearRecent = false }
+    val matches = remember(query, pinnedIds, recentIds, pinnedOnly, availableOnly, installedPrefix) {
+        val ranked = KlyroCommandQuickAccess.rank(
+            KlyroCommandCatalog.search(query), pinnedIds, recentIds
+        )
+        val selected = if (pinnedOnly) ranked.filter { it.command in pinnedIds } else ranked
+        if (availableOnly) KlyroCommandQuickAccess.available(selected, installedPrefix) else selected
+    }
+    val pluginMatches = remember(query, pluginCommands, pinnedOnly) {
+        if (pinnedOnly) emptyList() else pluginCommands.filter { command ->
             KlyroCommandSearch.matches(query, command.label,
                 command.description + " " + command.insert)
         }
@@ -82,7 +130,10 @@ internal fun KlyroCommandPalette(
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = {
             when {
-                pendingCautionCommand != null -> pendingCautionCommand = null
+                pendingCautionCommand != null -> {
+                    pendingCautionCommand = null; pendingCautionId = null
+                }
+                confirmClearRecent -> confirmClearRecent = false
                 showingGuide -> showingGuide = false
                 else -> onDismiss()
             }
