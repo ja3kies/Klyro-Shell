@@ -41,11 +41,13 @@ stops on an unverified navigation, rather than continuing blindly.
 Artifacts are created in a timestamped folder:
 `Storage/Klyro-Shell/qa-YYYYMMDD-HHMMSS/`.
 
-- `report.html`: before/after screenshots and PASS/FAIL assertions
-- `results.json`: machine-readable steps and warnings
+- `report.html`: navigation assertions, PASS / FAIL / SKIP and link to the code/UX review
+- `results.json`: machine-readable steps, clicked-control metadata, warnings and status
 - `*.png`, `*.xml`: per-step screenshot and accessibility hierarchy
 - `accessibility-audit.md`: visible controls, missing markers, and 48dp
   target-size checks using the device's own `wm density` value
+- `ux-review.html` / `ux-review.md`: clicked component details, real Kotlin source file, exact line numbers, accessible target dimensions in dp, UI/UX recommendations, and all captured sheet scroll segments
+- `components.json`: machine-readable per-component audit with evidence and source provenance
 - `qa-YYYYMMDD-HHMMSS.zip`: bundled evidence
 
 If a snapshot or expected UI marker is missing, it **is not** a pass.
@@ -53,6 +55,33 @@ The report is not exhaustive functional coverage or visual validation.
 
 The XML and screenshots may contain private terminal content. Keep report
 archives private and inspect them before sharing.
+
+
+## Screen deduplication and complete sheet evidence
+
+The robot fingerprints the **visible UIAutomator hierarchy** (labels, roles,
+bounds, selected states). Identical screens, such as Settings displayed on
+successive Back actions, reuse the initial screenshot/XML rather than storing
+near-duplicates. Pixel clock and notification changes do not defeat this
+semantic deduplication. Visual color changes that are invisible to
+UIAutomator do not count as independently verified screenshots.
+
+For each Settings sheet, the robot checks the labeled drag handle, attempts
+to drag the sheet upward, and records whether the accessible sheet top moved.
+If content is scrollable, it safely scrolls through successive viewports,
+captures each distinct view, then scrolls back. The full sequence appears
+in the **Feuilles complètes et défilement** gallery of ux-review.html.
+If expansion or end-of-scroll cannot be verified, it flags the limitation;
+a PASS navigation does not imply visual QA completeness.
+
+The component audit is evidence-based. It does NOT compile individual Kotlin
+components on the device, provide AI-generated visual designs, or pretend
+that generic heuristics are confirmed visual defects. Build/test/lint checks
+remain in GitHub Actions; per-click checks cover accessibility labels,
+48dp touch targets (using measured density), and near-edge clipping.
+The zero-checkout bootstrap downloads the exact Kotlin UI files read-only
+to provide real contextual excerpts. Source files and console transcripts
+should be treated as sensitive when sharing the report.
 
 ## Automated CI
 
