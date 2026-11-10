@@ -28,9 +28,7 @@ def inspect(path):
     for n in nodes:
         raw = n.get("bounds", "")
         try:
-            a, b = raw.replace("][", ",").strip("[]").split(",", 1)
-            x1, y1 = (int(v) for v in a.split(","))
-            x2, y2 = (int(v) for v in b.split(","))
+            x1, y1, x2, y2 = (int(v) for v in raw.replace("][", ",").strip("[]").split(","))
             bounds.append((n, x1, y1, x2, y2))
         except (ValueError, AttributeError):
             continue
