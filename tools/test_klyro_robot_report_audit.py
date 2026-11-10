@@ -35,5 +35,27 @@ class RobotReportAuditTests(unittest.TestCase):
             self.assertEqual(len(result["small"]), 1)
             self.assertIn("Launch Bash", result["missing"])
 
+    def test_descendant_description_survives_blank_text(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "002-home.xml"
+            p.write_text("""<hierarchy><node clickable="true" enabled="true" bounds="[0,0][200,200]"><node text=" " content-desc="Launch Bash" clickable="false"/></node></hierarchy>""")
+            result = audit.inspect(p)
+            self.assertEqual(result["unlabeled"], [])
+            self.assertNotIn("Launch Bash", result["missing"])
+
+    def test_case_insensitive_markers_and_stage_tokens(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "003-plugins.xml"
+            p.write_text("""<hierarchy><node text="PLUGINS"/><node text="installed (1)"/><node content-desc="EXPLORE"/></hierarchy>""")
+            result = audit.inspect(p)
+            self.assertEqual(result["stage"], "plugins")
+            self.assertEqual(result["missing"], [])
+
+    def test_stage_requires_complete_token(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "003-pluginsettings.xml"
+            p.write_text("<hierarchy/>")
+            self.assertEqual(audit.inspect(p)["stage"], "unknown")
+
 if __name__ == "__main__":
     unittest.main()
