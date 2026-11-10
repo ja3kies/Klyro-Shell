@@ -194,10 +194,48 @@ internal fun KlyroCommandPalette(
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                     )
                     Text(
-                        "Insert only; press Enter to run.",
+                        "Insert only; press Enter to run. Recent items are not Bash history.",
                         color = colors.muted,
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = { pinnedOnly = !pinnedOnly },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (pinnedOnly) colors.accent else colors.foreground
+                            ),
+                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                .semantics { contentDescription = if (pinnedOnly)
+                                    "Show all commands" else "Show pinned commands only" }
+                        ) {
+                            Text(if (pinnedOnly) "Pinned only ✓" else "Pinned ${pinnedIds.size}/8")
+                        }
+                        TextButton(
+                            onClick = { availableOnly = !availableOnly },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (availableOnly) colors.accent else colors.foreground
+                            ),
+                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                .semantics { contentDescription = if (availableOnly)
+                                    "Include unavailable commands" else "Show available commands only" }
+                        ) {
+                            Text(if (availableOnly) "Available ✓" else "All commands")
+                        }
+                    }
+                    if (recentIds.isNotEmpty() && !pinnedOnly) {
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text("Recently inserted · ${recentIds.size}",
+                                color = colors.muted, style = MaterialTheme.typography.labelSmall)
+                            TextButton(onClick = { confirmClearRecent = true },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = colors.foreground
+                                )) { Text("Clear recent") }
+                        }
+                    }
                     if (info != null) {
                         Surface(color = if (unsafeFeedback) colors.warningContainer else colors.key,
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
@@ -218,7 +256,12 @@ internal fun KlyroCommandPalette(
                             item {
                                 Column(Modifier.fillMaxWidth().padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                    Text("No matching commands.", color = colors.muted)
+                                    Text(
+                                        if (pinnedOnly && pinnedIds.isEmpty()) "No pinned commands yet."
+                                        else if (availableOnly) "No available commands match."
+                                        else "No matching commands.",
+                                        color = colors.muted
+                                    )
                                     TextButton(onClick = { query = ""; info = null; unsafeFeedback = false }) {
                                         Text("Show all commands")
                                     }
@@ -286,9 +329,11 @@ internal fun KlyroCommandPalette(
                                             if (snippet.isNotEmpty()) {
                                                 if (entry.caution) {
                                                     keyboard?.hide()
+                                                    pendingCautionId = entry.command
                                                     pendingCautionCommand = snippet
                                                 } else {
                                                     keyboard?.hide()
+                                                    recordInsertion(entry.command)
                                                     onDismiss()
                                                     onInsert(snippet)
                                                 }
@@ -328,14 +373,35 @@ internal fun KlyroCommandPalette(
                                             color = colors.muted,
                                             maxLines = 2
                                         )
+                                        if (entry.command in pinnedIds || entry.command in recentIds) {
+                                            Text(
+                                                if (entry.command in pinnedIds) "Pinned"
+                                                else "Recently inserted",
+                                                color = colors.muted,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
                                     }
-                                    Text(
-                                        if (!available) "Info" else if (entry.caution)
-                                            "Review" else "Insert",
-                                        color = if (entry.caution) colors.warningInk
-                                            else colors.accent,
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            if (!available) "Info" else if (entry.caution)
+                                                "Review" else "Insert",
+                                            color = if (entry.caution) colors.warningInk
+                                                else colors.accent,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                        TextButton(
+                                            onClick = { togglePin(entry.command) },
+                                            colors = ButtonDefaults.textButtonColors(
+                                                contentColor = colors.foreground
+                                            ),
+                                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                                .semantics { contentDescription = if (entry.command in pinnedIds)
+                                                    "Unpin ${entry.command}" else "Pin ${entry.command}" }
+                                        ) {
+                                            Text(if (entry.command in pinnedIds) "Unpin" else "Pin")
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -345,7 +411,10 @@ internal fun KlyroCommandPalette(
         }
         pendingCautionCommand?.let { command ->
             AlertDialog(
-                onDismissRequest = { pendingCautionCommand = null },
+                onDismissRequest = {
+                    pendingCautionCommand = null
+                    pendingCautionId = null
+                },
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 containerColor = colors.sheet,
                 title = { Text("Review command") },
@@ -365,7 +434,10 @@ internal fun KlyroCommandPalette(
                 confirmButton = {
                     Button(
                         onClick = {
+                            val id = pendingCautionId
                             pendingCautionCommand = null
+                            pendingCautionId = null
+                            if (id != null) recordInsertion(id)
                             onDismiss()
                             onInsert(command)
                         },
@@ -375,7 +447,34 @@ internal fun KlyroCommandPalette(
                     ) { Text("Insert command") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { pendingCautionCommand = null }) {
+                    TextButton(onClick = {
+                        pendingCautionCommand = null
+                        pendingCautionId = null
+                    }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+        if (confirmClearRecent) {
+            AlertDialog(
+                onDismissRequest = { confirmClearRecent = false },
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+                containerColor = colors.sheet,
+                title = { Text("Clear recent insertions?") },
+                text = {
+                    Text("Only this quick-access list is cleared. Running sessions, " +
+                        "Bash history and pinned commands stay unchanged.")
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        recentIds = emptyList()
+                        prefs.edit().remove("recent_inserts").apply()
+                        confirmClearRecent = false
+                    }) { Text("Clear recent") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmClearRecent = false }) {
                         Text("Cancel")
                     }
                 }
