@@ -25,6 +25,41 @@ class RobotSemanticTests(unittest.TestCase):
     def test_compose_container_uses_child_title(self):
         self.assertEqual(robot.controls(tree("Plugins"))[0]["label"], "Plugins")
 
+    def test_ancestor_onclick_label_does_not_hide_plugins_title(self):
+        root = ET.fromstring(
+            '<hierarchy><node clickable="true" enabled="true" '
+            'content-desc="Open Klyro plugins" bounds="[0,0][300,200]">'
+            '<node text="Plugins"/><node text="Extend the command palette"/>'
+            '</node></hierarchy>')
+        controls = robot.controls(root)
+        self.assertEqual(controls[0]["label"], "Plugins")
+        self.assertIn("Open Klyro plugins", controls[0]["aliases"])
+        self.assertEqual(robot.Robot(Path("."), .1).find(
+            robot.state(root), "Plugins")["label"], "Plugins")
+
+    def test_ancestor_onclick_label_does_not_hide_settings_title(self):
+        root = ET.fromstring(
+            '<hierarchy><node clickable="true" enabled="true" '
+            'content-desc="Open Klyro settings" bounds="[0,0][300,200]">'
+            '<node text="Settings"/></node></hierarchy>')
+        self.assertEqual(robot.Robot(Path("."), .1).find(
+            robot.state(root), "Settings")["label"], "Settings")
+
+    def test_selected_tabs_keep_label_if_description_differs(self):
+        root = ET.fromstring(
+            '<hierarchy><node selected="true" clickable="true" enabled="true" '
+            'content-desc="Show Installed (1)" bounds="[0,0][300,200]">'
+            '<node text="Installed (1)"/></node></hierarchy>')
+        self.assertIn("Installed (1)", robot.state(root)["selected_tabs"])
+
+    def test_invisible_and_disabled_controls_never_tapped(self):
+        root = ET.fromstring(
+            '<hierarchy><node clickable="true" enabled="true" visible-to-user="false" '
+            'text="Settings" bounds="[0,0][300,200]"/>'
+            '<node clickable="true" enabled="false" text="Plugins" '
+            'bounds="[0,0][300,200]"/></hierarchy>')
+        self.assertEqual(robot.controls(root), [])
+
     def test_direct_button_label(self):
         self.assertEqual(robot.controls(tree("Home", False))[0]["label"], "Home")
 
