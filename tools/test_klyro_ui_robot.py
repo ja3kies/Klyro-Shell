@@ -60,6 +60,33 @@ class RobotSemanticTests(unittest.TestCase):
             'bounds="[0,0][300,200]"/></hierarchy>')
         self.assertEqual(robot.controls(root), [])
 
+    def test_non_destructive_skip_records_missing_semantics(self):
+        r = robot.Robot(Path("."), .1)
+        before = {"shot": "initial.png", "selected_tabs": []}
+        self.assertIs(r.probe_plugin_tabs(before), before)
+        self.assertEqual(r.steps[0]["status"], "SKIP")
+        self.assertTrue(r.warnings)
+
+    def test_missing_navigation_is_fail_not_silent(self):
+        r = robot.Robot(Path("."), .1)
+        before = {"controls": [], "shot": "initial.png"}
+        self.assertIsNone(r.navigate(before, "Settings", ("Settings",)))
+        self.assertEqual(r.steps[0]["status"], "FAIL")
+
+    def test_current_control_bounds_parser_and_visibility(self):
+        root = ET.fromstring(
+            '<hierarchy><node clickable="true" enabled="true" '
+            'visible-to-user="true" text="Settings" bounds="[2,4][302,204]"/></hierarchy>')
+        result = robot.controls(root)
+        self.assertEqual(result[0]["x"], 152)
+        self.assertEqual(result[0]["y"], 104)
+
+    def test_malformed_bounds_do_not_create_control(self):
+        root = ET.fromstring(
+            '<hierarchy><node clickable="true" enabled="true" '
+            'text="Settings" bounds="x:y"/></hierarchy>')
+        self.assertEqual(robot.controls(root), [])
+
     def test_direct_button_label(self):
         self.assertEqual(robot.controls(tree("Home", False))[0]["label"], "Home")
 
