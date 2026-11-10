@@ -83,7 +83,7 @@ class RobotSemanticTests(unittest.TestCase):
             '<node text="Explore" /></node></hierarchy>')
         snapshot = robot.state(root)
         self.assertEqual(snapshot["selected_tabs"], ["Installed (1)"])
-        self.assertEqual(robot.Robot(Path("."), .1).find(snapshot, r"Installed \\(\\d+\\)")["label"], "Installed (1)")
+        self.assertEqual(robot.Robot(Path("."), .1).find(snapshot, r"Installed [(][0-9]+[)]")["label"], "Installed (1)")
 
     def test_unselected_plugin_tab_does_not_count_as_selected(self):
         root = ET.fromstring(
