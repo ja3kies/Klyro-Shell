@@ -12,17 +12,28 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 EXPECTED = {
-    "initial": ("KLYRO", ("Launch Bash", "Return to terminal"), "Plugins", "Settings"),
+    "initial": ("KLYRO", "RUNTIME STATUS", "Plugins", "Settings"),
     "plugins": ("Plugins", "Installed", "Explore"),
-    "home": ("KLYRO", ("Launch Bash", "Return to terminal"), "Plugins", "Settings"),
+    "home": ("KLYRO", "RUNTIME STATUS", "Plugins", "Settings"),
     "settings": ("Settings", "Appearance", "Keyboard", "Storage", "Privacy"),
     "appearance": ("Appearance", "Launcher icon", "App theme"),
 }
 
+def visible_nodes(root):
+    result = []
+    stack = [(root, True)]
+    while stack:
+        n, parent_visible = stack.pop()
+        visible = parent_visible and n.get("visible-to-user") != "false"
+        if visible:
+            result.append(n)
+        stack.extend((child, visible) for child in reversed(list(n)))
+    return result
+
 def inspect(path, density=None):
     root = ET.parse(path).getroot()
     nodes = list(root.iter("node"))
-    visible = [n for n in nodes if n.get("visible-to-user") != "false"]
+    visible = visible_nodes(root)
     texts = [n.get("text", "") for n in visible]
     descs = [n.get("content-desc", "") for n in visible]
     strings = texts + descs
@@ -47,9 +58,8 @@ def inspect(path, density=None):
         labels = [n.get("text", ""), n.get("content-desc", "")]
         # Include every descendant label, not only the first non-empty field.
         # A whitespace-only text attribute must not hide a valid description.
-        for child in n.iter("node"):
-            if child.get("visible-to-user") != "false":
-                labels.extend((child.get("text", ""), child.get("content-desc", "")))
+        for child in visible_nodes(n):
+            labels.extend((child.get("text", ""), child.get("content-desc", "")))
         if not any(x.strip() for x in labels):
             unlabeled.append(n.get("class", "View") + " " + n.get("bounds", ""))
     small = []
