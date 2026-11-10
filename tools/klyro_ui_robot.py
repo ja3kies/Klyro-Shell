@@ -152,6 +152,13 @@ class Robot:
         self.steps.append({"name":name,"status":"PASS" if passed else "FAIL","before":before["shot"],"after":after["shot"],"detail":detail})
         if not passed:
             self.warnings.append(f"{name}: {detail or 'assertion failed'}")
+    def record_skip(self, name, snapshot, reason):
+        self.steps.append({"name": name, "status": "SKIP",
+                           "before": snapshot["shot"], "after": snapshot["shot"],
+                           "detail": reason})
+        self.warnings.append(name + ": " + reason)
+    def record_blocked(self, name, snapshot, reason):
+        self.record(name, False, snapshot, snapshot, reason)
     def find(self, s, pattern):
         return next((c for c in s["controls"] if any(re.fullmatch(pattern, v, re.I) for v in c.get("aliases", [c["label"]]))), None)
     def has_markers(self, s, markers):
@@ -170,7 +177,7 @@ class Robot:
     def navigate(self, before, title, markers):
         target = self.find(before, re.escape(title))
         if target is None:
-            self.warnings.append("Missing labeled control: " + title)
+            self.record_blocked("Navigate: " + title, before, "Labeled control not found; no tap attempted")
             return None
         self.tap(target)
         after = self.wait_for_markers("after-" + title, markers)
@@ -184,12 +191,12 @@ class Robot:
         installed_selected = any(re.fullmatch(r"Installed \(\d+\)", x) for x in selected)
         explore_selected = any(x == "Explore" for x in selected)
         if installed_selected == explore_selected:
-            self.warnings.append("Plugin tab selection not observable; skipped tab probe")
+            self.record_skip("Plugin tab switch", current, "Selected tab not exposed by Android UI hierarchy")
             return current
         target_regex = "Explore" if installed_selected else r"Installed \(\d+\)"
         target = self.find(current, target_regex)
         if target is None:
-            self.warnings.append("Plugin tab switch control unavailable")
+            self.record_skip("Plugin tab switch", current, "Tab switch control not found; no tap attempted")
             return current
         self.tap(target)
         switched = self.snap("plugin-tab-switched")
@@ -204,7 +211,7 @@ class Robot:
         return_regex = r"Installed \(\d+\)" if installed_selected else "Explore"
         back = self.find(switched, return_regex)
         if back is None:
-            self.warnings.append("Original plugin tab no longer reachable")
+            self.record_blocked("Plugin tab restoration", switched, "Original plugin tab control disappeared")
             return None
         self.tap(back)
         restored = self.snap("plugin-tab-restored")
@@ -219,8 +226,9 @@ class Robot:
         current = self.snap("initial")
         home_markers = HOME_MARKERS
         if not self.has_markers(current, home_markers):
-            self.warnings.append("Not on Klyro Home; smoke run stopped without tapping")
+            self.record_blocked("Initial Home", current, "Home markers missing; no tap attempted")
             return
+        self.record("Initial Home", True, current, current, "Required Home controls visible")
         for name, markers in ROUTES:
             current = self.navigate(current, name, markers)
             if current is None:
@@ -249,7 +257,7 @@ class Robot:
             ok = self.has_markers(after, home_markers) and after["screen"] != current["screen"]
             self.record("Close settings", ok, current, after, "Home visible after dismissal")
         else:
-            self.warnings.append("Close control not found on Settings sheet")
+            self.record_blocked("Close settings", current, "Close control missing; no tap attempted")
     def safe_cancel_dialog(self, s):
         if not s["dialog"]:
             return s
@@ -331,14 +339,19 @@ class Robot:
         self.warnings.append("Created one new terminal session; left it running intentionally")
 
 def report(out, steps, warnings):
-    payload={"generated":dt.datetime.now().isoformat(),"steps":steps,"warnings":warnings}
+    counts = {status: sum(step["status"] == status for step in steps)
+              for status in ("PASS", "FAIL", "SKIP")}
+    overall = ("FAIL" if counts["FAIL"] else
+               "INCOMPLETE" if warnings or counts["SKIP"] or not steps else "PASS")
+    payload={"generated":dt.datetime.now().isoformat(), "overall": overall,
+             "summary": counts, "steps": steps, "warnings": warnings}
     (out/"results.json").write_text(json.dumps(payload,indent=2,ensure_ascii=False),encoding="utf-8")
     rows=[]
     for x in steps:
         a,b=html.escape(x["before"]),html.escape(x["after"])
         rows.append(f'<tr><td>{html.escape(x["name"])}</td><td>{x["status"]}</td><td>{html.escape(x["detail"])}</td><td><a href="{a}"><img src="{a}" width="180"></a></td><td><a href="{b}"><img src="{b}" width="180"></a></td></tr>')
     warn="".join("<li>"+html.escape(x)+"</li>" for x in warnings)
-    (out/"report.html").write_text(f"""<!doctype html><html lang="fr"><meta charset="utf-8"><title>Klyro QA</title><style>body{{font:16px system-ui;max-width:1300px;margin:auto;padding:24px}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:8px}}img{{border-radius:10px}}</style><h1>Klyro — UI QA</h1><p>PASS = vérification d'état observé, pas validation complète du terminal.</p><p>{len(steps)} assertions, {len(warnings)} avertissements.</p><ul>{warn}</ul><table><tr><th>Test</th><th>Résultat</th><th>Attendu</th><th>Avant</th><th>Après</th></tr>{''.join(rows)}</table></html>""",encoding="utf-8")
+    (out/"report.html").write_text(f"""<!doctype html><html lang="fr"><meta charset="utf-8"><title>Klyro QA</title><style>body{{font:16px system-ui;max-width:1300px;margin:auto;padding:24px}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:8px}}img{{border-radius:10px}}</style><h1>Klyro — UI QA</h1><h2>État : {overall}</h2><p>PASS : {counts["PASS"]} · FAIL : {counts["FAIL"]} · SKIP : {counts["SKIP"]}</p><p>PASS = vérification d'état observé, pas validation complète du terminal.</p><p>{len(steps)} assertions, {len(warnings)} avertissements.</p><ul>{warn}</ul><table><tr><th>Test</th><th>Résultat</th><th>Attendu</th><th>Avant</th><th>Après</th></tr>{''.join(rows)}</table></html>""",encoding="utf-8")
 
 def main():
     p=argparse.ArgumentParser()
