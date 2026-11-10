@@ -1,0 +1,71 @@
+"""Deterministic Klyro robot regression suite (no physical device required)."""
+import importlib.util
+import unittest
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+spec = importlib.util.spec_from_file_location(
+    "klyro_ui_robot", Path(__file__).with_name("klyro_ui_robot.py"))
+robot = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(robot)
+
+
+def tree(label, nested=True):
+    if nested:
+        return ET.fromstring(
+            '<hierarchy><node clickable="true" enabled="true" bounds="[0,0][300,300]">'
+            '<node text="' + label + '" /></node></hierarchy>')
+    return ET.fromstring(
+        '<hierarchy><node clickable="true" enabled="true" text="' + label +
+        '" bounds="[0,0][300,300]"/></hierarchy>')
+
+
+class RobotSemanticTests(unittest.TestCase):
+    def test_compose_container_uses_child_title(self):
+        self.assertEqual(robot.controls(tree("Plugins"))[0]["label"], "Plugins")
+
+    def test_direct_button_label(self):
+        self.assertEqual(robot.controls(tree("Home", False))[0]["label"], "Home")
+
+    def test_semantic_find_is_not_substring(self):
+        r = robot.Robot(Path("."), .1)
+        controls = [{"label": "Home"}, {"label": "Homepage settings"}]
+        self.assertEqual(r.find({"controls": controls}, "Home")["label"], "Home")
+        self.assertIsNone(r.find({"controls": controls}, "Settings"))
+
+    def test_required_stages_are_non_destructive(self):
+        self.assertEqual([step[0] for step in robot.ROUTES],
+                         ["Plugins", "Home", "Settings", "Appearance"])
+        for name, _ in robot.ROUTES:
+            self.assertIsNone(robot.DANGER.search(name))
+
+    def test_smoke_assertions_use_visible_labels(self):
+        r = robot.Robot(Path("."), .1)
+        self.assertTrue(r.has_markers(
+            {"labels": ["Installed (1)", "Explore", "Plugins"]},
+            ("Plugins", "Installed", "Explore")))
+        self.assertFalse(r.has_markers(
+            {"labels": ["Plugins", "Installed (1)"]},
+            ("Plugins", "Installed", "Explore")))
+
+    def test_unlabeled_control_ignored(self):
+        self.assertEqual(robot.controls(tree("")), [])
+
+    def test_no_destructive_action_allowlist(self):
+        for unsafe in ("Install", "Remove", "End Bash session", "Clear", "Reset"):
+            self.assertFalse(bool(robot.SAFE.fullmatch(unsafe)))
+
+    def test_dialog_state_detected(self):
+        root = ET.fromstring('<hierarchy><node text="End Bash session?" /></hierarchy>')
+        self.assertTrue(robot.state(root)["dialog"])
+
+    def test_sessions_are_deduplicated(self):
+        root = ET.fromstring(
+            '<hierarchy><node text="Session 1" />'
+            '<node content-desc="Session 1, project General" />'
+            '<node text="Session 2" /></hierarchy>')
+        self.assertEqual(robot.state(root)["sessions"], ["1", "2"])
+
+
+if __name__ == "__main__":
+    unittest.main()
