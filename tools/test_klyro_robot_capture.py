@@ -83,12 +83,24 @@ class CaptureTests(unittest.TestCase):
         baseline = {"sheet_top": 1400, "handle": None,
                     "screen_height": 2424, "stage": "Settings",
                     "shot": "partial.png", "signature": "partial",
-                    "scroll": None}
+                    "scroll": None, "touches_bottom": True}
         r = robot.Robot(Path("."), .1)
         with patch.object(r, "swipe") as swipe:
             r.capture_full_sheet(baseline, "Settings")
         self.assertFalse(r.sheet_gallery["Settings"]["fully_captured"])
         self.assertTrue(r.warnings)
+        swipe.assert_not_called()
+
+    def test_compact_sheet_that_fits_does_not_trigger_false_warning(self):
+        baseline = {"sheet_top": 1215, "handle": None,
+                    "screen_height": 2424, "stage": "Settings",
+                    "shot": "complete.png", "signature": "complete",
+                    "scroll": None, "touches_bottom": False}
+        r = robot.Robot(Path("."), .1)
+        with patch.object(r, "swipe") as swipe:
+            r.capture_full_sheet(baseline, "Settings")
+        self.assertTrue(r.sheet_gallery["Settings"]["fully_captured"])
+        self.assertEqual(r.warnings, [])
         swipe.assert_not_called()
 
     def test_previous_gallery_prevents_repeated_expansion(self):
