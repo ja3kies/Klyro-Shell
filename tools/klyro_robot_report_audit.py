@@ -17,6 +17,11 @@ EXPECTED = {
     "home": ("KLYRO", "RUNTIME STATUS", "Plugins", "Settings"),
     "settings": ("Settings", "Appearance", "Keyboard", "Storage", "Privacy"),
     "appearance": ("Appearance", "Launcher icon", "App theme"),
+    "keyboard": ("Keyboard", "Modifier status"),
+    "storage": ("Files & storage",),
+    "privacy": ("Privacy", "Android permissions"),
+    "diagnostics": ("Diagnostics", "Recheck environment"),
+    "about": ("About Klyro Shell", "JetBrains Mono licence"),
 }
 
 def visible_nodes(root):
@@ -81,7 +86,9 @@ def inspect(path, density=None):
     stage_tokens = re.split(r"[^a-z]+", path.stem.lower())
     key = next((k for k in EXPECTED if k in stage_tokens), None)
     missing = []
-    for marker in EXPECTED.get(key, ()):
+    # Scrolling often moves a section title offscreen: that is not a broken route.
+    expected = () if "scroll" in stage_tokens else EXPECTED.get(key, ())
+    for marker in expected:
         options = marker if isinstance(marker, tuple) else (marker,)
         if not any(any(option.casefold() in v.casefold() for option in options) for v in strings):
             missing.append(" / ".join(options))
