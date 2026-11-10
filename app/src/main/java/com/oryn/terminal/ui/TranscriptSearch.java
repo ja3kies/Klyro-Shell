@@ -43,19 +43,18 @@ public final class TranscriptSearch {
     }
 
 
-    /** Maximum result details retained for an interactive UI; total is still exact. */
+    /** Maximum result details retained per page, never the entire transcript. */
     public static final int MAX_VISIBLE_MATCHES = 300;
     private static final int PREVIEW_BEFORE = 42;
     private static final int PREVIEW_AFTER = 84;
 
-    /** Each result captures the exact matched text, including matches across wrapped rows. */
+    /** Exact matched span, including matches that cross wrapped physical rows. */
     public static final class Occurrence {
         public final int row;
         public final int logicalOffset;
         public final String preview;
         public final int highlightStart;
         public final int highlightEnd;
-
         private Occurrence(int row, int logicalOffset, String preview,
                 int highlightStart, int highlightEnd) {
             this.row = row;
@@ -70,26 +69,30 @@ public final class TranscriptSearch {
         public final List<Occurrence> newest;
         public final int totalCount;
         public final boolean limited;
+        /** Zero-based ordinal of the first result within the entire transcript. */
+        public final int firstOrdinal;
+        public final int pageFromNewest;
+        public final int pageCount;
 
-        private Snapshot(List<Occurrence> newest, int totalCount) {
-            this.newest = java.util.Collections.unmodifiableList(newest);
-            this.totalCount = totalCount;
-            this.limited = totalCount > newest.size();
+        private Snapshot(List<Occurrence> matches, int count, int firstOrdinal, int page) {
+            this.newest = java.util.Collections.unmodifiableList(matches);
+            this.totalCount = count;
+            this.limited = count > matches.size();
+            this.firstOrdinal = firstOrdinal;
+            this.pageFromNewest = page;
+            this.pageCount = count == 0 ? 0 : (count - 1) / MAX_VISIBLE_MATCHES + 1;
         }
     }
 
-    /**
-     * Finds every occurrence but retains details only for the newest matches.
-     * This avoids unbounded UI state on a long transcript while allowing an
-     * honest total count; no shell text is persisted or modified.
-     */
-    public static Snapshot scanRecent(TerminalBuffer screen, int columns, int rows,
-            String query, boolean caseSensitive) {
-        java.util.ArrayDeque<Occurrence> tail = new java.util.ArrayDeque<>(MAX_VISIBLE_MATCHES);
+    private interface MatchVisitor {
+        void onMatch(int row, int offset, String logicalText);
+    }
+
+    /** Scans the physical buffer only; does not persist or modify terminal data. */
+    private static int traverse(TerminalBuffer screen, int columns, int rows,
+            String query, boolean caseSensitive, MatchVisitor visitor) {
         if (screen == null || columns <= 0 || rows <= 0 || query == null ||
-                query.length() > MAX_QUERY_CHARS || query.trim().isEmpty()) {
-            return new Snapshot(new ArrayList<>(), 0);
-        }
+                query.length() > MAX_QUERY_CHARS || query.trim().isEmpty()) return 0;
         int count = 0;
         StringBuilder line = new StringBuilder();
         List<Integer> starts = new ArrayList<>();
@@ -104,28 +107,67 @@ public final class TranscriptSearch {
                 if (!text.regionMatches(!caseSensitive, offset, query, 0, query.length())) continue;
                 while (physicalRow + 1 < starts.size() &&
                         starts.get(physicalRow + 1) <= offset) physicalRow++;
+                if (visitor != null) visitor.onMatch(logicalFirstRow + physicalRow, offset, text);
                 if (count < Integer.MAX_VALUE) count++;
-                int from = Math.max(0, offset - PREVIEW_BEFORE);
-                int to = Math.min(text.length(), offset + query.length() + PREVIEW_AFTER);
-                // Avoid slicing a surrogate pair at the context boundaries.
-                if (from > 0 && Character.isLowSurrogate(text.charAt(from)) &&
-                        Character.isHighSurrogate(text.charAt(from - 1))) from--;
-                if (to < text.length() && to > 0 &&
-                        Character.isHighSurrogate(text.charAt(to - 1)) &&
-                        Character.isLowSurrogate(text.charAt(to))) to++;
-                Occurrence occurrence = new Occurrence(logicalFirstRow + physicalRow, offset,
-                        text.substring(from, to), offset - from, offset - from + query.length());
-                if (tail.size() == MAX_VISIBLE_MATCHES) tail.removeFirst();
-                tail.addLast(occurrence);
             }
             line.setLength(0);
             starts.clear();
             logicalFirstRow = row + 1;
         }
-        return new Snapshot(new ArrayList<>(tail), count);
+        return count;
     }
 
-    /** Preserve the selected physical position as new terminal output arrives. */
+    private static Occurrence occurrence(int row, int offset, String text, int queryLength) {
+        int from = Math.max(0, offset - PREVIEW_BEFORE);
+        int to = Math.min(text.length(), offset + queryLength + PREVIEW_AFTER);
+        // Do not cut a Unicode surrogate pair at preview boundaries.
+        if (from > 0 && Character.isLowSurrogate(text.charAt(from)) &&
+                Character.isHighSurrogate(text.charAt(from - 1))) from--;
+        if (to < text.length() && to > 0 &&
+                Character.isHighSurrogate(text.charAt(to - 1)) &&
+                Character.isLowSurrogate(text.charAt(to))) to++;
+        return new Occurrence(row, offset, text.substring(from, to),
+                offset - from, offset - from + queryLength);
+    }
+
+    /**
+     * Default page is the newest 300 matches; count is exact even for huge logs.
+     * Older pages are available through scanPage without storing every match.
+     */
+    public static Snapshot scanRecent(TerminalBuffer screen, int columns, int rows,
+            String query, boolean caseSensitive) {
+        java.util.ArrayDeque<Occurrence> tail = new java.util.ArrayDeque<>(MAX_VISIBLE_MATCHES);
+        int count = traverse(screen, columns, rows, query, caseSensitive, (row, offset, text) -> {
+            if (tail.size() == MAX_VISIBLE_MATCHES) tail.removeFirst();
+            tail.addLast(occurrence(row, offset, text, query.length()));
+        });
+        return new Snapshot(new ArrayList<>(tail), count,
+                Math.max(0, count - tail.size()), 0);
+    }
+
+    /**
+     * Move backward through ALL matches in fixed-size pages. Only older pages
+     * need a second scan, but retained memory is always bounded to 300 results.
+     */
+    public static Snapshot scanPage(TerminalBuffer screen, int columns, int rows,
+            String query, boolean caseSensitive, int pageFromNewest) {
+        Snapshot latest = scanRecent(screen, columns, rows, query, caseSensitive);
+        if (pageFromNewest <= 0 || latest.pageCount <= 1) return latest;
+        int page = Math.min(pageFromNewest, latest.pageCount - 1);
+        int end = latest.totalCount - page * MAX_VISIBLE_MATCHES;
+        int start = Math.max(0, end - MAX_VISIBLE_MATCHES);
+        List<Occurrence> pageMatches = new ArrayList<>(MAX_VISIBLE_MATCHES);
+        final int[] position = {0};
+        traverse(screen, columns, rows, query, caseSensitive, (row, offset, text) -> {
+            int index = position[0]++;
+            if (index >= start && index < end) {
+                pageMatches.add(occurrence(row, offset, text, query.length()));
+            }
+        });
+        return new Snapshot(pageMatches, latest.totalCount, start, page);
+    }
+
+    /** Preserve the closest selected occurrence as new output arrives. */
     public static int nearestIndex(List<Occurrence> matches, int row, int offset) {
         if (matches == null || matches.isEmpty()) return 0;
         int best = 0;

@@ -83,6 +83,34 @@ public class TranscriptSearchRecentTest {
         assertEquals(0, TranscriptSearch.nearestIndex(null, 0, 0));
     }
 
+    @Test public void olderMatchesRemainAvailableThroughBoundedPages() {
+        TerminalBuffer screen = new TerminalBuffer(COLUMNS, 1250, ROWS);
+        for (int i = 0; i < 800; i++) {
+            write(screen, ROWS - 1, "hit");
+            screen.scrollDownOneLine(0, ROWS, screen.getStyleAt(0, 0));
+        }
+        TranscriptSearch.Snapshot newest = TranscriptSearch.scanRecent(
+                screen, COLUMNS, ROWS, "hit", false);
+        TranscriptSearch.Snapshot older = TranscriptSearch.scanPage(
+                screen, COLUMNS, ROWS, "hit", false, 1);
+        TranscriptSearch.Snapshot oldest = TranscriptSearch.scanPage(
+                screen, COLUMNS, ROWS, "hit", false, 1000);
+        assertEquals(800, newest.totalCount);
+        assertEquals(800, older.totalCount);
+        assertEquals(800, oldest.totalCount);
+        assertEquals(3, newest.pageCount);
+        assertEquals(300, newest.newest.size());
+        assertEquals(300, older.newest.size());
+        assertEquals(200, oldest.newest.size());
+        assertEquals(500, newest.firstOrdinal);
+        assertEquals(200, older.firstOrdinal);
+        assertEquals(0, oldest.firstOrdinal);
+        assertEquals(2, oldest.pageFromNewest);
+        assertTrue(oldest.newest.get(0).row < older.newest.get(0).row);
+        assertEquals(0, TranscriptSearch.scanPage(
+                screen, COLUMNS, ROWS, "missing", false, 3).pageCount);
+    }
+
     @Test public void scanLeavesTheBufferUnmodified() {
         TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
         write(screen, 2, "private output hit");
