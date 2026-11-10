@@ -1,0 +1,57 @@
+name: Klyro automated UX QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      apk_run_id:
+        description: "Successful Android build workflow run ID containing klyro-shell-debug-key"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  firebase-robo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download ARM64 APK from Android build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.apk_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p qa-apk
+          gh run download "$RUN_ID" -R "$GITHUB_REPOSITORY" -n klyro-shell-debug-key -D qa-apk
+          test -s qa-apk/app-debug.apk
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_TEST_LAB_SA_JSON }}
+      - name: Install Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Run Robo Test on physical ARM64 Android device
+        env:
+          PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$PROJECT_ID" || { echo "Set FIREBASE_PROJECT_ID repository variable"; exit 1; }
+          mkdir -p qa-results
+          gcloud firebase test android run \
+            --project "$PROJECT_ID" \
+            --type robo \
+            --app qa-apk/app-debug.apk \
+            --device model=oriole,version=33,locale=fr,orientation=portrait \
+            --timeout 15m \
+            --format=json | tee qa-results/robo-result.json
+      - name: Upload Robo metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: klyro-firebase-robo-metadata
+          path: qa-results/
+          if-no-files-found: warn
+          retention-days: 14
