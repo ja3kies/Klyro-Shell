@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import android.os.SystemClock
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.ui.OrynTerminalViewClient
@@ -31,6 +32,9 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     // Native TerminalView draws outside Compose. Notify the smart ALL key when
     // the active terminal transcript changes, including output from child jobs.
     private val outputRevisions = mutableStateMapOf<Long, Long>()
+    // Elapsed timestamps are process-local, never persisted; no terminal text.
+    private val lastOutputElapsed = mutableStateMapOf<Long, Long>()
+    val lastOutputElapsedMs: Map<Long, Long> get() = lastOutputElapsed.toMap()
     fun outputRevision(tabId: Long?): Long = tabId?.let { outputRevisions[it] } ?: 0L
     val tabsWithUnreadOutput: Set<Long> get() = unreadActivity.keys.toSet()
     private val invalidTitleCharacters = Regex("[\\p{Cntrl}\\p{Cf}]")
@@ -94,6 +98,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             override fun onOutputActivity() {
                 if (tabs.any { it.id == tabId }) {
                     outputRevisions[tabId] = (outputRevisions[tabId] ?: 0L) + 1L
+                    lastOutputElapsed[tabId] = SystemClock.elapsedRealtime()
                     if (activeTabId != tabId) unreadActivity[tabId] = true
                 }
             }
@@ -166,6 +171,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         val entry = tabs.removeAt(index)
         unreadActivity.remove(id)
         outputRevisions.remove(id)
+        lastOutputElapsed.remove(id)
         entry.client.dispose()
         entry.viewClient.attachView(null)
         entry.session.finishIfRunning()
