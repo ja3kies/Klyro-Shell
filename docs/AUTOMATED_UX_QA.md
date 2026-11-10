@@ -18,13 +18,17 @@ bash scripts/klyro-qa.sh
 The run opens the installed Klyro APK (without reinstalling it) and
 performs this safe, deterministic smoke sequence:
 
-1. Validate the Home interface.
-2. Open Plugins and verify Installed/Explore.
-3. Go Home and verify the main actions.
-4. Open Settings and verify section names.
-5. Open Appearance and verify theme/icon headings.
-6. Dismiss Settings and verify Home.
+1. Validate Home (including Bash launch/resume states).
+2. Open Plugins; assert the Installed and Explore tabs are present.
+3. Return Home and verify all main actions.
+4. Open Settings and verify the root sections.
+5. Visit **Appearance, Keyboard, Storage, Privacy, Diagnostics, and About**
+   one by one, asserting distinctive visible content in every section.
+6. Return to Settings after each subsection, verifying backward navigation.
+7. Close Settings and verify Home.
 
+This covers **at least 16 observed navigation assertions** without installing
+plugins, removing files, or changing settings.
 The robot **does not** install plugins, remove files, close terminals, clear
 session data, toggle themes, or execute shell commands by default. It
 stops on an unverified navigation, rather than continuing blindly.
