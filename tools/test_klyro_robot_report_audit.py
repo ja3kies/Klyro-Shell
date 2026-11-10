@@ -83,6 +83,26 @@ class RobotReportAuditTests(unittest.TestCase):
             self.assertEqual(result["small"], [])
             self.assertEqual(result["unlabeled"], [])
 
+    def test_hidden_markers_do_not_satisfy_navigation(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-plugins.xml"
+            p.write_text("""<hierarchy><node text="Plugins"/><node text="Installed" visible-to-user="false"/><node text="Explore" visible-to-user="false"/></hierarchy>""")
+            result = audit.inspect(p)
+            self.assertIn("Installed", result["missing"])
+            self.assertIn("Explore", result["missing"])
+
+    def test_hidden_child_does_not_label_control(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-home.xml"
+            p.write_text("""<hierarchy><node clickable="true" bounds="[0,0][200,200]"><node content-desc="Invisible" visible-to-user="false"/></node></hierarchy>""")
+            self.assertEqual(len(audit.inspect(p)["unlabeled"]), 1)
+
+    def test_fractional_density_threshold_not_rounded(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-home.xml"
+            p.write_text("""<hierarchy><node clickable="true" text="Tap" bounds="[0,0][49,49]"/></hierarchy>""")
+            self.assertEqual(len(audit.inspect(p, density=1.025)["small"]), 1)
+
     def test_stage_requires_complete_token(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "003-pluginsettings.xml"
