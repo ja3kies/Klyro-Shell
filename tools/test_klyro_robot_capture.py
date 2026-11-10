@@ -64,6 +64,33 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(result["scroll_segments"], 1)
         self.assertTrue(result["fully_captured"])
 
+    def test_unrestored_scroll_never_returns_stale_pre_scroll_state(self):
+        baseline = {"sheet_top": 120, "handle": None,
+                    "screen_height": 2424, "stage": "Appearance",
+                    "shot": "top.png", "signature": "top",
+                    "scroll": (0,300,1080,2424)}
+        bottom = {**baseline, "shot": "bottom.png", "signature": "bottom"}
+        r = robot.Robot(Path("."), .1)
+        with patch.object(r, "swipe"), patch.object(
+                r, "snap", side_effect=[bottom, bottom, bottom, bottom,
+                                       bottom, bottom]):
+            result = r.capture_full_sheet(baseline, "Appearance")
+        self.assertEqual(result["shot"], "bottom.png")
+        self.assertFalse(r.sheet_gallery["Appearance"]["fully_captured"])
+        self.assertTrue(any("Could not restore" in x for x in r.warnings))
+
+    def test_half_expanded_sheet_without_scroll_is_incomplete(self):
+        baseline = {"sheet_top": 1400, "handle": None,
+                    "screen_height": 2424, "stage": "Settings",
+                    "shot": "partial.png", "signature": "partial",
+                    "scroll": None}
+        r = robot.Robot(Path("."), .1)
+        with patch.object(r, "swipe") as swipe:
+            r.capture_full_sheet(baseline, "Settings")
+        self.assertFalse(r.sheet_gallery["Settings"]["fully_captured"])
+        self.assertTrue(r.warnings)
+        swipe.assert_not_called()
+
     def test_previous_gallery_prevents_repeated_expansion(self):
         r = robot.Robot(Path("."), .1)
         r.sheet_gallery["Settings"] = {"images": ["settings.png"]}
