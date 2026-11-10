@@ -12,9 +12,9 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 EXPECTED = {
-    "initial": ("KLYRO", "Launch Bash", "Plugins", "Settings"),
+    "initial": ("KLYRO", ("Launch Bash", "Return to terminal"), "Plugins", "Settings"),
     "plugins": ("Plugins", "Installed", "Explore"),
-    "home": ("KLYRO", "Launch Bash", "Plugins", "Settings"),
+    "home": ("KLYRO", ("Launch Bash", "Return to terminal"), "Plugins", "Settings"),
     "settings": ("Settings", "Appearance", "Keyboard", "Storage", "Privacy"),
     "appearance": ("Appearance", "Launcher icon", "App theme"),
 }
@@ -60,7 +60,11 @@ def inspect(path, density=None):
     # Match complete stage tokens: e.g. "plugins" must not match "plugins-old".
     stage_tokens = re.split(r"[^a-z]+", path.stem.lower())
     key = next((k for k in EXPECTED if k in stage_tokens), None)
-    missing = [s for s in EXPECTED.get(key, ()) if not any(s.casefold() in v.casefold() for v in strings)]
+    missing = []
+    for marker in EXPECTED.get(key, ()):
+        options = marker if isinstance(marker, tuple) else (marker,)
+        if not any(any(option.casefold() in v.casefold() for option in options) for v in strings):
+            missing.append(" / ".join(options))
     return dict(name=path.name, stage=key or "unknown", nodes=len(nodes),
                 interactive=len(interactive), missing=missing,
                 unlabeled=unlabeled, small=small, invalid_bounds=invalid_bounds,
