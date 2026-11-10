@@ -280,12 +280,14 @@ fun TerminalPane(
     var transcriptQuery by rememberSaveable(session) { mutableStateOf("") }
     var findMatchCase by rememberSaveable(session) { mutableStateOf(false) }
     var searchIndex by rememberSaveable(session) { mutableStateOf(0) }
+    var searchPage by rememberSaveable(session) { mutableStateOf(0) }
     var searchSnapshot by remember(session) {
         mutableStateOf<TranscriptSearch.Snapshot?>(null)
     }
     var searchingTranscript by remember(session) { mutableStateOf(false) }
     var pendingSearch by remember(session) { mutableStateOf<Int?>(null) }
     var pendingSearchOffset by remember(session) { mutableStateOf(0) }
+    var pendingSearchPage by remember(session) { mutableStateOf(0) }
     var pendingSearchQuery by remember(session) { mutableStateOf("") }
     var pendingSearchCase by remember(session) { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -294,7 +296,8 @@ fun TerminalPane(
     // Query changes are debounced. The mutable PTY buffer is read on the UI
     // thread after the delay, and only the most recent 300 matches are kept.
     LaunchedEffect(
-        showTranscriptSearch, transcriptQuery, findMatchCase, outputRevision, session
+        showTranscriptSearch, transcriptQuery, findMatchCase, searchPage,
+        outputRevision, session
     ) {
         if (!showTranscriptSearch || transcriptQuery.isBlank()) {
             searchSnapshot = null
@@ -304,19 +307,31 @@ fun TerminalPane(
         searchingTranscript = true
         delay(170)
         val emulator = session.emulator
-        val snapshot = if (emulator == null) null else TranscriptSearch.scanRecent(
-            emulator.screen, emulator.mColumns, emulator.mRows, transcriptQuery, findMatchCase
+        val snapshot = if (emulator == null) null else TranscriptSearch.scanPage(
+            emulator.screen, emulator.mColumns, emulator.mRows,
+            transcriptQuery, findMatchCase, searchPage
         )
-        val previous = searchSnapshot?.newest?.getOrNull(searchIndex)
-        searchIndex = if (snapshot != null && previous != null) {
-            TranscriptSearch.nearestIndex(snapshot.newest, previous.row, previous.logicalOffset)
-        } else 0
+        val previous = if (searchSnapshot?.pageFromNewest == searchPage) {
+            searchSnapshot?.newest?.getOrNull(searchIndex)
+        } else null
+        searchIndex = when {
+            snapshot == null -> 0
+            searchIndex == Int.MAX_VALUE -> snapshot.newest.lastIndex.coerceAtLeast(0)
+            previous != null -> TranscriptSearch.nearestIndex(
+                snapshot.newest, previous.row, previous.logicalOffset
+            )
+            else -> 0
+        }
+        if (snapshot != null && snapshot.pageFromNewest != searchPage) {
+            searchPage = snapshot.pageFromNewest
+        }
         searchSnapshot = snapshot
         searchingTranscript = false
     }
     LaunchedEffect(pendingSearch, session, activeTerminalView) {
         val targetRow = pendingSearch ?: return@LaunchedEffect
         val targetOffset = pendingSearchOffset
+        val requestedPage = pendingSearchPage
         val requestedQuery = pendingSearchQuery
         val requestedCase = pendingSearchCase
         val view = activeTerminalView ?: return@LaunchedEffect
@@ -333,8 +348,9 @@ fun TerminalPane(
         // A detached/closed PTY must never receive a deferred scroll or focus.
         if (view.isAttachedToWindow) {
             session.emulator?.let { emulator ->
-                val result = TranscriptSearch.scanRecent(
-                    emulator.screen, emulator.mColumns, emulator.mRows, requestedQuery, requestedCase
+                val result = TranscriptSearch.scanPage(
+                    emulator.screen, emulator.mColumns, emulator.mRows,
+                    requestedQuery, requestedCase, requestedPage
                 )
                 val selected = result.newest.getOrNull(
                     TranscriptSearch.nearestIndex(result.newest, targetRow, targetOffset)
@@ -1112,6 +1128,7 @@ fun TerminalPane(
                         onValueChange = {
                             transcriptQuery = it.take(128)
                             searchIndex = 0
+                            searchPage = 0
                             searchSnapshot = null
                         },
                         label = { Text("Find text") },
@@ -1122,6 +1139,7 @@ fun TerminalPane(
                                 TextButton(onClick = {
                                     transcriptQuery = ""
                                     searchIndex = 0
+                                    searchPage = 0
                                     searchSnapshot = null
                                 }) {
                                     Text("Clear")
@@ -1135,6 +1153,7 @@ fun TerminalPane(
                             .toggleable(value = findMatchCase, role = Role.Checkbox) {
                                 findMatchCase = it
                                 searchIndex = 0
+                                searchPage = 0
                                 searchSnapshot = null
                             },
                         verticalAlignment = Alignment.CenterVertically
@@ -1148,16 +1167,18 @@ fun TerminalPane(
                             searchingTranscript -> "Searching terminal output…"
                             emulator == null -> "Terminal output unavailable"
                             snapshot == null || snapshot.totalCount == 0 -> "No matches"
-                            snapshot.limited -> "Match ${position + 1} of latest ${matches.size} · ${snapshot.totalCount} total"
-                            else -> "Match ${position + 1} of ${snapshot.totalCount}"
+                            else -> "Match ${snapshot!!.firstOrdinal + position + 1} of ${snapshot.totalCount}"
                         },
                         color = ui.foreground,
                         fontSize = 12.sp,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                     )
                     if (snapshot?.limited == true && !searchingTranscript) {
-                        Text("Displaying newest ${matches.size} matches; older matches are counted but not loaded.",
-                            color = ui.muted, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "Showing ${snapshot.firstOrdinal + 1}–${snapshot.firstOrdinal + matches.size} " +
+                                "of ${snapshot.totalCount} · Page ${snapshot.pageFromNewest + 1}/${snapshot.pageCount} from newest",
+                            color = ui.muted, style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     if (selectedMatch != null) {
                         val preview = buildAnnotatedString {
@@ -1231,16 +1252,47 @@ fun TerminalPane(
                             TextButton(
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
-                                    searchIndex = matches.lastIndex
-                                    goToMatch(searchIndex)
+                                    if (searchPage > 0) {
+                                        searchPage = 0
+                                        searchIndex = Int.MAX_VALUE
+                                        searchSnapshot = null
+                                    } else {
+                                        searchIndex = matches.lastIndex
+                                        goToMatch(searchIndex)
+                                    }
                                 }
                             ) { Text("Latest") }
+                        }
+                    }
+                    if (snapshot != null && snapshot.pageCount > 1 &&
+                        !searchingTranscript) {
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(
+                                enabled = searchPage < snapshot.pageCount - 1,
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                onClick = {
+                                    searchPage += 1
+                                    searchIndex = 0
+                                    searchSnapshot = null
+                                }
+                            ) { Text("Older matches") }
+                            TextButton(
+                                enabled = searchPage > 0,
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                onClick = {
+                                    searchPage -= 1
+                                    searchIndex = 0
+                                    searchSnapshot = null
+                                }
+                            ) { Text("Newer matches") }
                         }
                     }
                     if (transcriptQuery.isNotBlank() && !searchingTranscript &&
                         snapshot?.totalCount == 0) {
                         TextButton(onClick = {
-                            transcriptQuery = ""; searchIndex = 0; searchSnapshot = null
+                            transcriptQuery = ""; searchIndex = 0
+                            searchPage = 0; searchSnapshot = null
                         }) { Text("Clear search") }
                     }
                     if (transcriptQuery.length >= 128) {
@@ -1257,6 +1309,7 @@ fun TerminalPane(
                         pendingSearchQuery = transcriptQuery
                         pendingSearchCase = findMatchCase
                         pendingSearchOffset = chosen.logicalOffset
+                        pendingSearchPage = searchPage
                         pendingSearch = chosen.row
                         keyboard?.hide()
                         showTranscriptSearch = false
