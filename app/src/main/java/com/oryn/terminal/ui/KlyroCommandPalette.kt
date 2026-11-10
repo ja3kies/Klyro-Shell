@@ -62,7 +62,7 @@ import java.io.File
 internal fun KlyroCommandPalette(
     installedPrefix: File?,
     pluginCommands: List<KlyroPluginCommand>,
-    onInsert: (String) -> Unit,
+    onInsert: (String) -> Boolean,
     onDismiss: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
@@ -96,6 +96,15 @@ internal fun KlyroCommandPalette(
     var pinnedOnly by rememberSaveable { mutableStateOf(false) }
     var availableOnly by rememberSaveable { mutableStateOf(false) }
     var confirmClearRecent by rememberSaveable { mutableStateOf(false) }
+    fun insertCurated(id: String, snippet: String) {
+        if (onInsert(snippet)) {
+            recordInsertion(id)
+            onDismiss()
+        } else {
+            unsafeFeedback = true
+            info = "Terminal unavailable for insertion. Return to the Bash prompt and retry."
+        }
+    }
     fun togglePin(id: String) {
         val next = KlyroCommandQuickAccess.togglePinned(pinnedIds, id)
         if (next == pinnedIds && id !in pinnedIds) {
@@ -262,7 +271,10 @@ internal fun KlyroCommandPalette(
                                         else "No matching commands.",
                                         color = colors.muted
                                     )
-                                    TextButton(onClick = { query = ""; info = null; unsafeFeedback = false }) {
+                                    TextButton(onClick = {
+                                        query = ""; pinnedOnly = false; availableOnly = false
+                                        info = null; unsafeFeedback = false
+                                    }) {
                                         Text("Show all commands")
                                     }
                                 }
@@ -282,9 +294,13 @@ internal fun KlyroCommandPalette(
                                     onClickLabel = "Insert " + command.label,
                                     onClick = {
                                         if (KlyroPluginManager.safeInsertion(command.insert)) {
-                                            keyboard?.hide()
-                                            onDismiss()
-                                            onInsert(command.insert)
+                                            if (onInsert(command.insert)) {
+                                                keyboard?.hide()
+                                                onDismiss()
+                                            } else {
+                                                unsafeFeedback = true
+                                                info = "Terminal unavailable for insertion. Retry at the Bash prompt."
+                                            }
                                         } else {
                                             unsafeFeedback = true
                                             info = "This plugin command cannot be inserted safely."
@@ -333,9 +349,7 @@ internal fun KlyroCommandPalette(
                                                     pendingCautionCommand = snippet
                                                 } else {
                                                     keyboard?.hide()
-                                                    recordInsertion(entry.command)
-                                                    onDismiss()
-                                                    onInsert(snippet)
+                                                    insertCurated(entry.command, snippet)
                                                 }
                                             }
                                         } else {
@@ -437,9 +451,7 @@ internal fun KlyroCommandPalette(
                             val id = pendingCautionId
                             pendingCautionCommand = null
                             pendingCautionId = null
-                            if (id != null) recordInsertion(id)
-                            onDismiss()
-                            onInsert(command)
+                            if (id != null) insertCurated(id, command)
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.accent, contentColor = colors.onAccent

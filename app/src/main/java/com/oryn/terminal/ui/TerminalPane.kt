@@ -1213,12 +1213,16 @@ fun TerminalPane(
             onInsert = { snippet ->
                 // A curated command is pasted, never submitted with Enter.
                 // Full-screen applications retain their own keyboard focus.
-                if (session.isRunning() && session.emulator?.isAlternateBufferActive == false) {
-                    session.emulator?.paste(snippet)
+                val emulator = session.emulator
+                if (session.isRunning() && emulator != null &&
+                    !emulator.isAlternateBufferActive) {
+                    emulator.paste(snippet)
+                    true
                 } else {
                     Toast.makeText(context,
                         "Return to the Bash prompt before inserting a command.",
                         Toast.LENGTH_SHORT).show()
+                    false
                 }
             },
             onDismiss = { showCommandPalette = false }
