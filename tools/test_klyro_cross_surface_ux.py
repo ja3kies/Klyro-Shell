@@ -41,7 +41,8 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn('"git diff --stat"', manager)
         self.assertNotIn('value.startsWith("$it ")', manager)
         self.assertIn("KlyroPluginManager.safeInsertion(command.insert)", palette)
-        self.assertIn("isAlternateBufferActive == false", READ(UI / "TerminalPane.kt"))
+        self.assertIn("!emulator.isAlternateBufferActive", READ(UI / "TerminalPane.kt"))
+        self.assertIn("if (session.isRunning() && emulator != null", READ(UI / "TerminalPane.kt"))
 
     def test_plugins_and_settings_screen_reader_navigation(self):
         plugins = READ(UI / "KlyroPluginsPage.kt")

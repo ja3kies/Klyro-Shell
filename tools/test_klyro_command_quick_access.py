@@ -19,7 +19,8 @@ class CommandQuickAccessContract(unittest.TestCase):
  def test_only_explicit_caution_acceptance_records_insertion(self):
   self.assertIn('pendingCautionId = entry.command',S)
   self.assertIn('if (id != null) insertCurated(id, command)',S)
-  self.assertIn('onInsert(command)',S)
+  self.assertIn('if (id != null) insertCurated(id, command)',S)
+  self.assertIn('if (onInsert(snippet))',S)
   self.assertIn('not run automatically',S)
  def test_filter_ready_only_uses_prefix_check(self):
   self.assertIn('KlyroCommandQuickAccess.available(selected, installedPrefix)',S)

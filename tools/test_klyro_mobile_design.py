@@ -63,7 +63,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         catalog = src(UI / "KlyroCommandCatalog.java")
         pane = src(UI / "TerminalPane.kt")
         self.assertIn('"termux-setup-storage", "klyro-setup-storage"', catalog)
-        self.assertIn('isAlternateBufferActive == false', pane)
+        self.assertIn('!emulator.isAlternateBufferActive', pane)
+        self.assertIn('emulator.paste(snippet)', pane)
         self.assertIn("session.emulator?.paste(snippet)", pane)
         self.assertNotIn('session.write("klyro-setup-storage\\n")', pane)
 
