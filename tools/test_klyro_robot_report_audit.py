@@ -66,6 +66,23 @@ class RobotReportAuditTests(unittest.TestCase):
             self.assertEqual(len(result["invalid_bounds"]), 2)
             self.assertIn("malformed", audit.report([result]))
 
+    def test_empty_snapshot_is_inconclusive(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "000-initial.xml"
+            p.write_text("<hierarchy/>")
+            result = audit.inspect(p)
+            self.assertTrue(result["empty"])
+            self.assertIn("inconclusive", audit.report([result]))
+
+    def test_invisible_control_is_not_reported_as_clickable(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-home.xml"
+            p.write_text("""<hierarchy><node clickable="true" enabled="true" visible-to-user="false" bounds="[0,0][10,10]"/></hierarchy>""")
+            result = audit.inspect(p, density=2)
+            self.assertEqual(result["interactive"], 0)
+            self.assertEqual(result["small"], [])
+            self.assertEqual(result["unlabeled"], [])
+
     def test_stage_requires_complete_token(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "003-pluginsettings.xml"
