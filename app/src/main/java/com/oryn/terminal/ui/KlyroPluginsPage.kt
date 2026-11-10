@@ -69,11 +69,12 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var previewBusy by remember { mutableStateOf(false) }
     var installed by remember { mutableStateOf(manager.installed()) }
     var page by rememberSaveable { mutableStateOf(if (installed.isEmpty()) "explore" else "installed") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
     var removeId by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
     var pendingImportUri by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingBundledId by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmedBundledId by rememberSaveable { mutableStateOf<String?>(null) }
     // These IDs identify a confirmed operation after Activity recreation.
     var confirmedImportId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmedRemovalId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -92,15 +93,21 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     LaunchedEffect(manager, registryRevision) {
         installed = withContext(Dispatchers.IO) { manager.installed() }
     }
-    LaunchedEffect(installed, pendingBundledId, confirmedImportId, confirmedRemovalId) {
+    LaunchedEffect(installed, pendingBundledId, confirmedBundledId, confirmedImportId, confirmedRemovalId) {
         val installedIds = installed.map { it.id }.toSet()
         val bundledId = pendingBundledId
+        val confirmedBundle = confirmedBundledId
         val importedId = confirmedImportId
         val removedId = confirmedRemovalId
         if (bundledId != null && bundledId in installedIds) {
             pendingBundledId = null
+            confirmedBundledId = null
             page = "installed"
             error = null
+        }
+        if (confirmedBundle != null && confirmedBundle in installedIds) {
+            confirmedBundledId = null
+            page = "installed"
         }
         if (importedId != null && importedId in installedIds) {
             pendingImport = null
@@ -115,15 +122,19 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             error = null
         }
     }
+    val confirmedMutationPending = confirmedBundledId != null ||
+        confirmedImportId != null || confirmedRemovalId != null
     fun navigateBack() {
         // Visible Home and Android Back must unwind the same dialog stack.
-        if (mutationBusy) return
+        if (mutationBusy || confirmedMutationPending) return
         when {
             pendingImport != null || pendingImportUri != null -> {
                 pendingImport = null; pendingImportUri = null
                 confirmedImportId = null; error = null
             }
-            pendingBundledId != null -> { pendingBundledId = null; error = null }
+            pendingBundledId != null -> {
+                pendingBundledId = null; confirmedBundledId = null; error = null
+            }
             removeId != null -> { removeId = null; confirmedRemovalId = null; error = null }
             else -> onBack()
         }
@@ -147,6 +158,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 error = null
                 onSuccess()
             }.onFailure { failure ->
+                confirmedBundledId = null
+                confirmedImportId = null
+                confirmedRemovalId = null
                 error = failure.message?.take(160) ?: "Action failed"
             }
         }
@@ -174,8 +188,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             }
     }
 
+    val pageScroll = rememberScrollState()
+    LaunchedEffect(page) { pageScroll.scrollTo(0) }
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        modifier = Modifier.fillMaxSize().verticalScroll(pageScroll)
             .padding(horizontal = KlyroUiMetrics.sheetGutter, vertical = KlyroUiMetrics.spaceLg),
         verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
     ) {
@@ -183,7 +199,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
             TextButton(
                 onClick = ::navigateBack,
-                enabled = !mutationBusy,
+                enabled = !mutationBusy && !confirmedMutationPending,
                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
             ) {
                 Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
@@ -212,7 +228,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     modifier = Modifier.weight(1f)
                         .heightIn(min = KlyroUiMetrics.minTouch)
                         .clickable(
-                            enabled = !mutationBusy, role = Role.Tab,
+                            enabled = !mutationBusy && !confirmedMutationPending, role = Role.Tab,
                             onClickLabel = "Show $label"
                         ) {
                             page = id
@@ -230,41 +246,18 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             }
         }
-        if (mutationBusy) {
-            Surface(
-                color = colors.key,
-                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-            ) {
-                Text("Updating local plugins…",
-                    modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd)
-                        .semantics { liveRegion = LiveRegionMode.Polite },
-                    color = colors.muted)
-            }
+        if (mutationBusy || confirmedMutationPending) {
+            KlyroInlineNotice("Updating local plugins…")
         }
-        if (error != null) {
-            Surface(color = colors.dangerContainer,
-                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
-                Text(error.orEmpty(), color = colors.danger,
-                    modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd)
-                        .semantics { liveRegion = LiveRegionMode.Polite })
-            }
-        }
+        error?.let { KlyroInlineNotice(it, isError = true) }
         if (page == "installed") {
             if (installed.isEmpty()) {
-                Surface(color = colors.tile,
-                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
-                    Column(Modifier.fillMaxWidth().padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Icon(painterResource(R.drawable.hugeicons_grid2x2),
-                            contentDescription = null, tint = colors.accent,
-                            modifier = Modifier.size(28.dp))
-                        Text("Nothing installed yet", fontWeight = FontWeight.SemiBold,
-                            color = colors.foreground)
-                        Text("Explore curated packs or import a local JSON manifest.",
-                            color = colors.muted, fontSize = 13.sp)
-                        TextButton(onClick = { page = "explore" }) { Text("Explore plugins") }
-                    }
-                }
+                KlyroEmptyState(
+                    title = "Nothing installed yet",
+                    detail = "Explore curated packs or import a local JSON manifest.",
+                    actionLabel = "Explore plugins",
+                    onAction = { page = "explore" }
+                )
             }
             installed.forEach { plugin ->
                 Surface(
@@ -285,10 +278,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                                 onCheckedChange = { checked ->
                                     applyChange({ manager.setEnabled(plugin.id, checked) })
                                 },
-                                enabled = !mutationBusy)
+                                enabled = !mutationBusy && !confirmedMutationPending)
                             TextButton(
                                 onClick = { error = null; removeId = plugin.id },
-                                enabled = !mutationBusy,
+                                enabled = !mutationBusy && !confirmedMutationPending,
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                             ) {
                                 Text("Remove", color = colors.danger)
@@ -311,7 +304,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("Bundled · Offline", color = colors.muted, fontSize = 12.sp)
                             Button(
-                                enabled = !isInstalled && !mutationBusy,
+                                enabled = !isInstalled && !mutationBusy && !confirmedMutationPending,
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
                                     error = null
@@ -336,7 +329,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         color = colors.muted, fontSize = 12.sp)
                     OutlinedButton(
                         onClick = { importPicker.launch(arrayOf("*/*")) },
-                        enabled = !previewBusy && !mutationBusy &&
+                        enabled = !previewBusy && !mutationBusy && !confirmedMutationPending &&
                             pendingImportUri == null,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
@@ -385,10 +378,12 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 },
                 confirmButton = {
                     Button(
-                        enabled = !mutationBusy,
+                        enabled = !mutationBusy && !confirmedMutationPending,
                         onClick = {
+                            confirmedBundledId = id
                             applyChange({ manager.installBundled(id) }) {
                                 pendingBundledId = null
+                                confirmedBundledId = null
                                 page = "installed"
                             }
                         },
@@ -401,8 +396,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 },
                 dismissButton = {
                     TextButton(
-                        enabled = !mutationBusy,
-                        onClick = { pendingBundledId = null; error = null }
+                        enabled = !mutationBusy && !confirmedMutationPending,
+                        onClick = {
+                            pendingBundledId = null; confirmedBundledId = null; error = null
+                        }
                     ) {
                         Text("Cancel")
                     }
@@ -447,10 +444,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     }
                     Text("Commands are inserted only. Review them before pressing Enter.",
                         color = colors.warningInk, fontSize = 12.sp)
-                    if (error != null) {
-                        Text(error.orEmpty(), color = colors.danger,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                    }
+                    error?.let { KlyroInlineNotice(it, isError = true) }
                 }
             },
             confirmButton = {
@@ -494,8 +488,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     Text(if (item != null)
                         "This removes its command suggestions. Terminal sessions and user files are not affected."
                         else "This plugin is no longer installed. Close this dialog.")
-                    if (error != null) Text(error.orEmpty(), color = colors.danger,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    error?.let { KlyroInlineNotice(it, isError = true) }
                 }
             },
             confirmButton = {

@@ -129,8 +129,10 @@ internal fun KlyroCommandPalette(
         val selected = if (pinnedOnly) ranked.filter { it.command in pinnedIds } else ranked
         if (availableOnly) KlyroCommandQuickAccess.available(selected, installedPrefix) else selected
     }
-    val pluginMatches = remember(query, pluginCommands, pinnedOnly) {
-        if (pinnedOnly) emptyList() else pluginCommands.filter { command ->
+    // Plugin templates have no verified executable/dependency status.
+    // Do not include them when the user explicitly requests Available.
+    val pluginMatches = remember(query, pluginCommands, pinnedOnly, availableOnly) {
+        if (pinnedOnly || availableOnly) emptyList() else pluginCommands.filter { command ->
             KlyroCommandSearch.matches(query, command.label,
                 command.description + " " + command.insert)
         }
@@ -233,6 +235,12 @@ internal fun KlyroCommandPalette(
                             Text(if (availableOnly) "Available ✓" else "All commands")
                         }
                     }
+                    if (availableOnly) {
+                        KlyroInlineNotice(
+                            "Available filters verified built-in commands. Plugin suggestions " +
+                                "are hidden because their dependencies cannot be verified."
+                        )
+                    }
                     if (recentIds.isNotEmpty() && !pinnedOnly) {
                         Row(modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -245,18 +253,7 @@ internal fun KlyroCommandPalette(
                                 )) { Text("Clear recent") }
                         }
                     }
-                    if (info != null) {
-                        Surface(color = if (unsafeFeedback) colors.warningContainer else colors.key,
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
-                            Text(
-                                info.orEmpty(),
-                                modifier = Modifier.fillMaxWidth().padding(12.dp)
-                                    .semantics { liveRegion = LiveRegionMode.Polite },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (unsafeFeedback) colors.warningInk else colors.foreground
-                            )
-                        }
-                    }
+                    info?.let { KlyroInlineNotice(it, isError = unsafeFeedback) }
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.paletteListMax),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
