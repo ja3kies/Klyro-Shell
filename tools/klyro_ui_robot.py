@@ -591,6 +591,7 @@ def main():
                 density = measured_density()
             except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired):
                 density = None
+        evidence = []
         try:
             from klyro_robot_report_audit import inspect as audit_inspect, report as audit_report
             snapshots = sorted(out.glob("*.xml"))
@@ -608,7 +609,7 @@ def main():
             make_report(out, robot.steps, source_root=args.source_root,
                         density=density, sheet_gallery=robot.sheet_gallery,
                         duplicate_count=robot.duplicates, display_height=height,
-                        display_width=width)
+                        display_width=width, accessibility_evidence=evidence)
         except Exception as err:
             robot.warnings.append("Component UX/code report failed: " +
                                   type(err).__name__ + ": " + str(err))
