@@ -29,6 +29,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -73,7 +76,7 @@ internal fun KlyroSheetTitle(title: String, modifier: Modifier = Modifier) {
     val colors = LocalKlyroColors.current
     Text(title, modifier = modifier, style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold, color = colors.foreground,
-        maxLines = 1, overflow = TextOverflow.Ellipsis)
+        maxLines = 2, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
@@ -104,7 +107,7 @@ internal fun KlyroActionRow(
     enabled: Boolean = true
 ) {
     val colors = LocalKlyroColors.current
-    val ink = if (destructive) colors.danger else colors.muted
+    val ink = if (!enabled) colors.muted else if (destructive) colors.danger else colors.muted
     Row(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)
@@ -156,10 +159,11 @@ internal fun KlyroMenuItem(
     label: String,
     icon: Int,
     destructive: Boolean = false,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
-    val ink = if (destructive) colors.danger else colors.foreground
+    val ink = if (!enabled) colors.muted else if (destructive) colors.danger else colors.foreground
     DropdownMenuItem(
         text = { Text(label, color = ink) },
         leadingIcon = { Icon(painterResource(icon), contentDescription = null, tint = ink,
@@ -167,8 +171,10 @@ internal fun KlyroMenuItem(
         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
             .semantics {
                 contentDescription = label
-                if (destructive) stateDescription = "Destructive action"
+                if (!enabled) stateDescription = "Unavailable"
+                else if (destructive) stateDescription = "Destructive action"
             },
+        enabled = enabled,
         onClick = onClick
     )
 }
@@ -202,6 +208,48 @@ internal fun KlyroLicenseDialog(
             TextButton(onClick = onDismissRequest) { Text("Close") }
         }
     )
+}
+
+/** Reusable, screen-reader-visible feedback without a modal or repeated toast. */
+@Composable
+internal fun KlyroInlineNotice(message: String, isError: Boolean = false) {
+    val colors = LocalKlyroColors.current
+    Surface(
+        color = if (isError) colors.dangerContainer else colors.tile,
+        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+    ) {
+        Text(
+            message,
+            modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+            color = if (isError) colors.danger else colors.foreground,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+/** Shared empty state with an explicit, accessible recovery action. */
+@Composable
+internal fun KlyroEmptyState(
+    title: String,
+    detail: String,
+    actionLabel: String,
+    onAction: () -> Unit
+) {
+    val colors = LocalKlyroColors.current
+    Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+            verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+        ) {
+            Text(title, color = colors.foreground, fontWeight = FontWeight.SemiBold)
+            Text(detail, color = colors.muted, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = onAction,
+                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                Text(actionLabel)
+            }
+        }
+    }
 }
 
 /** iOS-inspired restrained slider shared by font, hue and opacity settings. */

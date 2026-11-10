@@ -1308,13 +1308,11 @@ private fun OrynTerminalApp(
                     }
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Your shell.\nYour own space.",
-                        color = ui.foreground, fontSize = 28.sp, lineHeight = 34.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                Text(
+                    "Private shell · Local workspace · No cloud account required",
+                    color = ui.muted,
+                    style = MaterialTheme.typography.bodySmall
+                )
 
 
             }

@@ -111,13 +111,14 @@ internal fun KlyroSettingsSheet(
             showColorPicker -> showColorPicker = false
             showFontLicense -> showFontLicense = false
             showHugeiconsLicense -> showHugeiconsLicense = false
+            cannotOpenPermissions -> cannotOpenPermissions = false
             section != "home" -> section = "home"
             else -> onDismiss()
         }
     }
     BackHandler(
         enabled = section != "home" || showColorPicker ||
-            showFontLicense || showHugeiconsLicense
+            showFontLicense || showHugeiconsLicense || cannotOpenPermissions
     ) { navigateBack() }
     val density = LocalDensity.current
     val version = remember(context) {
@@ -152,7 +153,7 @@ internal fun KlyroSettingsSheet(
                         KlyroSheetTitle("Settings")
                     } else {
                         TextButton(
-                            onClick = { section = "home" },
+                            onClick = ::navigateBack,
                             modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                         ) {
                             Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
@@ -163,7 +164,7 @@ internal fun KlyroSettingsSheet(
                     }
                     TextButton(onClick = onDismiss,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
-                        Text("Done")
+                        Text("Close")
                     }
                 }
                 when (section) {
@@ -571,9 +572,14 @@ internal fun KlyroSettingsSheet(
                             }.isSuccess
                         }
                         if (cannotOpenPermissions) {
-                            Text("Android settings cannot be opened on this device.",
-                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                                color = colors.danger, style = MaterialTheme.typography.bodySmall)
+                            KlyroInlineNotice(
+                                "Android settings could not be opened. You can open App info from " +
+                                    "the Android Settings app instead.",
+                                isError = true
+                            )
+                            TextButton(onClick = { cannotOpenPermissions = false }) {
+                                Text("Dismiss")
+                            }
                         }
                     }
                     "diagnostics" -> {
