@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -140,6 +141,9 @@ internal fun KlyroSettingsSheet(
                     .fillMaxWidth()
                     .heightIn(max = KlyroUiMetrics.sheetContentMax)
                     .imePadding()
+                    // Keep bottom actions above gesture navigation. On Pixel 9
+                    // the Diagnostics recheck button was partly cropped.
+                    .navigationBarsPadding()
                     .then(if (needsScroll) Modifier.verticalScroll(remember(section) { ScrollState(0) }) else Modifier)
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
