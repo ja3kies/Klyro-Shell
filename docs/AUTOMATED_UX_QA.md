@@ -19,7 +19,7 @@ The run opens the installed Klyro APK (without reinstalling it) and
 performs this safe, deterministic smoke sequence:
 
 1. Validate Home (including Bash launch/resume states).
-2. Open Plugins; assert the Installed and Explore tabs are present.
+2. Open Plugins; assert the Installed and Explore tabs are present, switch to the opposite tab, verify the selected tab, and restore the original selection.
 3. Return Home and verify all main actions.
 4. Open Settings and verify the root sections.
 5. Visit **Appearance, Keyboard, Storage, Privacy, Diagnostics, and About**
@@ -27,7 +27,7 @@ performs this safe, deterministic smoke sequence:
 6. Return to Settings after each subsection, verifying backward navigation.
 7. Close Settings and verify Home.
 
-This covers **at least 16 observed navigation assertions** without installing
+This covers **up to 18 observed navigation and tab assertions** without installing
 plugins, removing files, or changing settings.
 The robot **does not** install plugins, remove files, close terminals, clear
 session data, toggle themes, or execute shell commands by default. It
