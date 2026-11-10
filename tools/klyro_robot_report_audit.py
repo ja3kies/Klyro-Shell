@@ -6,6 +6,7 @@ The tool checks observed navigation, reachable targets, semantics and bounds.
 It never claims that an action succeeded merely because a screenshot exists.
 """
 import argparse
+import math
 import re
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -38,7 +39,7 @@ def inspect(path, density=None):
             if raw:
                 invalid_bounds.append(raw)
             continue
-    interactive = [n for n in nodes if n.get("clickable") == "true" and n.get("enabled") == "true"]
+    interactive = [n for n in nodes if n.get("clickable") == "true" and n.get("enabled") != "false" and n.get("visible-to-user") != "false"]
     # UIAutomator may expose a parent with text descendants; don't flag these as unlabeled.
     unlabeled = []
     for n in interactive:
@@ -50,7 +51,7 @@ def inspect(path, density=None):
         if not any(x.strip() for x in labels):
             unlabeled.append(n.get("class", "View") + " " + n.get("bounds", ""))
     small = []
-    threshold = round(48 * density) if density else None
+    threshold = round(48 * density) if density is not None else None
     for n, x1, y1, x2, y2 in bounds:
         if threshold is not None and n in interactive and (x2-x1 < threshold or y2-y1 < threshold):
             small.append(n.get("bounds", ""))
@@ -61,7 +62,7 @@ def inspect(path, density=None):
     return dict(name=path.name, stage=key or "unknown", nodes=len(nodes),
                 interactive=len(interactive), missing=missing,
                 unlabeled=unlabeled, small=small, invalid_bounds=invalid_bounds,
-                density=density,
+                density=density, empty=(len(nodes) == 0),
                 switches=sum(n.get("checkable") == "true" for n in nodes),
                 selected=sum(n.get("selected") == "true" for n in nodes))
 
@@ -72,9 +73,12 @@ def report(results):
              "", "| Snapshot | Stage | Nodes | Enabled targets | Missing markers | Unlabeled targets |",
              "|---|---|---:|---:|---|---:|"]
     for r in results:
-        lines.append(f"| {r['name']} | {r['stage']} | {r['nodes']} | {r['interactive']} | {', '.join(r['missing']) or 'None'} | {len(r['unlabeled'])} |")
+        safe_name = r["name"].replace("|", "\\|").replace("\\n", " ")
+        lines.append(f"| {safe_name} | {r['stage']} | {r['nodes']} | {r['interactive']} | {', '.join(r['missing']) or 'None'} | {len(r['unlabeled'])} |")
     lines += ["", "## Actionable findings", ""]
     for r in results:
+        if r["empty"]:
+            lines.append(f"- **{r['name']}**: no UI nodes were captured; snapshot is inconclusive, not a successful test.")
         for missing in r["missing"]:
             lines.append(f"- **{r['name']}**: expected visible marker not found: `{missing}`. Check navigation and scroll position.")
         for item in r["unlabeled"][:12]:
@@ -83,7 +87,7 @@ def report(results):
             lines.append(f"- **{r['name']}**: {len(r['small'])} potential touch targets below 48dp at density {r['density']}.")
         if r["invalid_bounds"]:
             lines.append(f"- **{r['name']}**: {len(r['invalid_bounds'])} malformed or non-positive bounds; inspect XML extraction.")
-    if not any(r["missing"] or r["unlabeled"] or r["small"] or r["invalid_bounds"] for r in results):
+    if not any(r["empty"] or r["missing"] or r["unlabeled"] or r["small"] or r["invalid_bounds"] for r in results):
         lines.append("- No issues detected by these limited static heuristics.")
     lines += ["", "## Follow-up device tests", "",
               "- Tap each action and compare before/after XML and screenshot; presence alone is not proof of navigation.",
@@ -99,7 +103,7 @@ def main():
     parser.add_argument("--out", type=Path)
     parser.add_argument("--density", type=float, help="Physical pixels per dp from device wm density; must be positive")
     args = parser.parse_args()
-    if args.density is not None and args.density <= 0:
+    if args.density is not None and (not math.isfinite(args.density) or args.density <= 0):
         parser.error("--density must be positive")
     results = [inspect(p, density=args.density) for p in args.xml]
     output = report(results)
