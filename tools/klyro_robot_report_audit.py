@@ -63,10 +63,20 @@ def inspect(path, density=None):
         if not any(x.strip() for x in labels):
             unlabeled.append(n.get("class", "View") + " " + n.get("bounds", ""))
     small = []
+    small_details = []
     threshold = 48 * density if density is not None else None
     for n, x1, y1, x2, y2 in bounds:
         if threshold is not None and n in interactive and (x2-x1 < threshold or y2-y1 < threshold):
             small.append(n.get("bounds", ""))
+            labels = [value.strip() for child in visible_nodes(n)
+                      for value in (child.get("text", ""), child.get("content-desc", ""))
+                      if value.strip()]
+            small_details.append({
+                "label": next(iter(labels), "(unlabeled)"),
+                "bounds": n.get("bounds", ""),
+                "width_dp": round((x2-x1) / density, 1),
+                "height_dp": round((y2-y1) / density, 1),
+            })
     # Match complete stage tokens: e.g. "plugins" must not match "plugins-old".
     stage_tokens = re.split(r"[^a-z]+", path.stem.lower())
     key = next((k for k in EXPECTED if k in stage_tokens), None)
@@ -77,7 +87,8 @@ def inspect(path, density=None):
             missing.append(" / ".join(options))
     return dict(name=path.name, stage=key or "unknown", nodes=len(nodes),
                 interactive=len(interactive), missing=missing,
-                unlabeled=unlabeled, small=small, invalid_bounds=invalid_bounds,
+                unlabeled=unlabeled, small=small, small_details=small_details,
+                invalid_bounds=invalid_bounds,
                 density=density, empty=(len(nodes) == 0),
                 switches=sum(n.get("checkable") == "true" for n in nodes),
                 selected=sum(n.get("selected") == "true" for n in nodes))
@@ -100,7 +111,12 @@ def report(results):
         for item in r["unlabeled"][:12]:
             lines.append(f"- **{r['name']}**: clickable node without its own or descendant accessible label: `{item}`. Inspect Compose semantics.")
         if r["small"]:
-            lines.append(f"- **{r['name']}**: {len(r['small'])} potential touch targets below 48dp at density {r['density']}.")
+            lines.append(f"- **{r['name']}**: {len(r['small'])} touch targets below 48dp at density {r['density']}.")
+            for item in r["small_details"][:15]:
+                lines.append(
+                    f"  - {item['label']}: {item['width_dp']} × {item['height_dp']} dp "
+                    f"at {item['bounds']}; expand hit area and verify navigation-bar insets."
+                )
         if r["invalid_bounds"]:
             lines.append(f"- **{r['name']}**: {len(r['invalid_bounds'])} malformed or non-positive bounds; inspect XML extraction.")
     if not any(r["empty"] or r["missing"] or r["unlabeled"] or r["small"] or r["invalid_bounds"] for r in results):
