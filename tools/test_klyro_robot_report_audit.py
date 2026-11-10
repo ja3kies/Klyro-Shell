@@ -33,7 +33,7 @@ class RobotReportAuditTests(unittest.TestCase):
             result = audit.inspect(p, density=2.0)
             self.assertEqual(len(result["unlabeled"]), 1)
             self.assertEqual(len(result["small"]), 1)
-            self.assertIn("Launch Bash / Return to terminal", result["missing"])
+            self.assertIn("RUNTIME STATUS", result["missing"])
 
     def test_descendant_description_survives_blank_text(self):
         with tempfile.TemporaryDirectory() as d:
@@ -41,7 +41,7 @@ class RobotReportAuditTests(unittest.TestCase):
             p.write_text("""<hierarchy><node clickable="true" enabled="true" bounds="[0,0][200,200]"><node text=" " content-desc="Launch Bash" clickable="false"/></node></hierarchy>""")
             result = audit.inspect(p)
             self.assertEqual(result["unlabeled"], [])
-            self.assertNotIn("Launch Bash", result["missing"])
+            self.assertIn("RUNTIME STATUS", result["missing"])
 
     def test_case_insensitive_markers_and_stage_tokens(self):
         with tempfile.TemporaryDirectory() as d:
@@ -106,8 +106,28 @@ class RobotReportAuditTests(unittest.TestCase):
     def test_home_is_valid_when_terminal_is_running(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "002-home.xml"
-            p.write_text("""<hierarchy><node text="KLYRO"/><node text="Return to terminal"/><node text="Plugins"/><node text="Settings"/></hierarchy>""")
+            p.write_text("""<hierarchy><node text="KLYRO"/><node text="RUNTIME STATUS"/><node text="Return to terminal"/><node text="Plugins"/><node text="Settings"/></hierarchy>""")
             self.assertEqual(audit.inspect(p)["missing"], [])
+
+    def test_first_install_home_has_no_launch_button(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "002-home.xml"
+            p.write_text("""<hierarchy><node text="KLYRO"/><node text="RUNTIME STATUS"/><node text="Plugins"/><node text="Settings"/></hierarchy>""")
+            self.assertEqual(audit.inspect(p)["missing"], [])
+
+    def test_hidden_ancestor_does_not_satisfy_navigation_markers(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-plugins.xml"
+            p.write_text("""<hierarchy><node text="Plugins"/><node visible-to-user="false"><node text="Installed"/><node text="Explore"/></node></hierarchy>""")
+            result = audit.inspect(p)
+            self.assertIn("Installed", result["missing"])
+            self.assertIn("Explore", result["missing"])
+
+    def test_hidden_ancestor_does_not_label_clickable_control(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-home.xml"
+            p.write_text("""<hierarchy><node clickable="true" bounds="[0,0][200,200]"><node visible-to-user="false"><node content-desc="Hidden label"/></node></node></hierarchy>""")
+            self.assertEqual(len(audit.inspect(p)["unlabeled"]), 1)
 
     def test_stage_requires_complete_token(self):
         with tempfile.TemporaryDirectory() as d:
