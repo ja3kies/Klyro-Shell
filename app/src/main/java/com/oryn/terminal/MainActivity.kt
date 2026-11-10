@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -1312,7 +1313,8 @@ private fun OrynTerminalApp(
                 }
                 Surface(
                     modifier = Modifier.fillMaxWidth()
-                        .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true },
+                        .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
+                        .semantics { contentDescription = "Plugins" },
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
                     border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
@@ -1347,7 +1349,7 @@ private fun OrynTerminalApp(
                         .clickable(role = Role.Button,
                             onClickLabel = "Open Klyro settings") {
                             showHomeSettings = true
-                        },
+                        }.semantics { contentDescription = "Settings" },
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
