@@ -300,8 +300,7 @@ class Robot:
                 # A section title may scroll off-screen, changing the
                 # inferred route name even though the same sheet remains.
                 if next_view.get("sheet_top") is None:
-                    self.warnings.append("Scroll unexpectedly left the sheet: " + page)
-                    break
+                    raise RuntimeError("Scroll unexpectedly left the sheet: " + page)
                 if next_view["signature"] == current["signature"]:
                     end_reached = True
                     break
@@ -315,16 +314,26 @@ class Robot:
                 self.warnings.append("Full sheet not proven: scroll limit reached in " + page)
             # Restore top for stable back navigation and repeatability.
             if pages:
+                restored_ok = False
                 for n in range(pages + 3):
                     self.swipe(x, y_stop, x, y_start, 390)
                     restored = self.snap("restored-" + page + "-" + str(n))
+                    if restored.get("sheet_top") is None:
+                        raise RuntimeError("Restoration unexpectedly left the sheet: " + page)
+                    current = restored
                     if restored["signature"] == baseline["signature"]:
-                        current = restored
+                        restored_ok = True
                         break
-                else:
+                if not restored_ok:
+                    record["fully_captured"] = False
                     self.warnings.append("Could not restore sheet scroll to top: " + page)
         else:
-            record["fully_captured"] = True
+            # No accessible scroll container: do not claim a complete view if
+            # the sheet remained half-expanded and could conceal content.
+            record["fully_captured"] = (
+                record["expanded"] == "verified" or record["top_fraction"] < .3)
+            if not record["fully_captured"]:
+                self.warnings.append("Complete sheet visibility not verified: " + page)
         return baseline if record["fully_captured"] else current
 
     def record(self, name, passed, before, after, detail="", target=None):
