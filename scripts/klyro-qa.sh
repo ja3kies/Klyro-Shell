@@ -13,11 +13,12 @@ mkdir -p "$OUT"
 # Always test the currently installed APK; do not force-stop, clear data,
 # change runtime settings or install untrusted package artifacts.
 set +e
-python3 "$ROOT/tools/klyro_ui_robot.py" --mode smoke --output "$OUT" "$@"
+python3 "$ROOT/tools/klyro_ui_robot.py" --mode smoke --output "$OUT" --source-root "$ROOT" "$@"
 RESULT=$?
 set -e
 echo "Klyro QA artifacts: $OUT"
 echo "HTML: $OUT/report.html"
+echo "Detailed Kotlin/UI/UX review: $OUT/ux-review.html"
 echo "JSON: $OUT/results.json"
 echo "Screenshots and XML: $OUT"
 echo "ZIP: $OUT.zip"
