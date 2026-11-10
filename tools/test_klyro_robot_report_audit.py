@@ -33,7 +33,7 @@ class RobotReportAuditTests(unittest.TestCase):
             result = audit.inspect(p, density=2.0)
             self.assertEqual(len(result["unlabeled"]), 1)
             self.assertEqual(len(result["small"]), 1)
-            self.assertIn("Launch Bash", result["missing"])
+            self.assertIn("Launch Bash / Return to terminal", result["missing"])
 
     def test_descendant_description_survives_blank_text(self):
         with tempfile.TemporaryDirectory() as d:
@@ -102,6 +102,12 @@ class RobotReportAuditTests(unittest.TestCase):
             p = Path(d) / "001-home.xml"
             p.write_text("""<hierarchy><node clickable="true" text="Tap" bounds="[0,0][49,49]"/></hierarchy>""")
             self.assertEqual(len(audit.inspect(p, density=1.025)["small"]), 1)
+
+    def test_home_is_valid_when_terminal_is_running(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "002-home.xml"
+            p.write_text("""<hierarchy><node text="KLYRO"/><node text="Return to terminal"/><node text="Plugins"/><node text="Settings"/></hierarchy>""")
+            self.assertEqual(audit.inspect(p)["missing"], [])
 
     def test_stage_requires_complete_token(self):
         with tempfile.TemporaryDirectory() as d:
