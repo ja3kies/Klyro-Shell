@@ -188,7 +188,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         }
     }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null && !previewBusy && !mutationBusy) {
+        if (uri != null && !previewBusy && !mutationBusy && !confirmedMutationPending) {
             pendingImport = null
             error = null
             pendingImportUri = uri.toString()
@@ -371,7 +371,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             AlertDialog(
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 onDismissRequest = {
-                    if (!mutationBusy) { pendingBundledId = null; error = null }
+                    if (!mutationBusy && !confirmedMutationPending) {
+                        pendingBundledId = null; error = null
+                    }
                 },
                 containerColor = colors.sheet,
                 title = { Text("Add ${record.name}?") },
@@ -447,7 +449,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         AlertDialog(
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             onDismissRequest = {
-                if (!mutationBusy) {
+                if (!mutationBusy && !confirmedMutationPending) {
                     pendingImport = null; pendingImportUri = null; error = null
                 }
             },
@@ -470,7 +472,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                Button(enabled = !mutationBusy, onClick = {
+                Button(enabled = !mutationBusy && !confirmedMutationPending, onClick = {
                     confirmedImportId = record.id
                     applyChange({ manager.installPreview(record) }) {
                         pendingImport = null
@@ -489,7 +491,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         pendingImport = null; pendingImportUri = null
                         confirmedImportId = null; error = null
                     },
-                    enabled = !mutationBusy,
+                    enabled = !mutationBusy && !confirmedMutationPending,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                 ) { Text("Cancel") }
             }
@@ -501,7 +503,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         AlertDialog(
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             onDismissRequest = {
-                if (!mutationBusy) { removeId = null; error = null }
+                if (!mutationBusy && !confirmedMutationPending) {
+                    removeId = null; error = null
+                }
             },
             containerColor = colors.sheet,
             title = { Text(if (item != null) "Remove ${item.name}?" else "Plugin unavailable") },
@@ -514,7 +518,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                TextButton(enabled = item != null && !mutationBusy, onClick = {
+                TextButton(enabled = item != null && !mutationBusy && !confirmedMutationPending, onClick = {
                     if (item == null) return@TextButton
                     confirmedRemovalId = id
                     applyChange({ manager.uninstall(id) }) {
@@ -528,7 +532,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     onClick = {
                         removeId = null; confirmedRemovalId = null; error = null
                     },
-                    enabled = !mutationBusy,
+                    enabled = !mutationBusy && !confirmedMutationPending,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                 ) { Text("Cancel") }
             }
