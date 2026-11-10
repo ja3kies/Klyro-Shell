@@ -1,5 +1,6 @@
 """Deterministic Klyro robot regression suite (no physical device required)."""
 import importlib.util
+from unittest.mock import patch
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -50,6 +51,26 @@ class RobotSemanticTests(unittest.TestCase):
 
     def test_unlabeled_control_ignored(self):
         self.assertEqual(robot.controls(tree("")), [])
+
+    def test_bash_resume_home_is_supported(self):
+        r = robot.Robot(Path("."), .1)
+        self.assertTrue(r.has_markers(
+            {"labels": ["KLYRO", "Return to terminal", "Plugins", "Settings"]},
+            robot.HOME_MARKERS))
+
+    def test_default_home_is_supported(self):
+        r = robot.Robot(Path("."), .1)
+        self.assertTrue(r.has_markers(
+            {"labels": ["KLYRO", "Launch Bash", "Plugins", "Settings"]},
+            robot.HOME_MARKERS))
+
+    def test_density_uses_android_override(self):
+        with patch.object(robot, "adb", return_value="Physical density: 420\\nOverride density: 440"):
+            self.assertEqual(robot.measured_density(), 2.75)
+
+    def test_density_without_device_value_is_unknown(self):
+        with patch.object(robot, "adb", return_value="No density information"):
+            self.assertIsNone(robot.measured_density())
 
     def test_no_destructive_action_allowlist(self):
         for unsafe in ("Install", "Remove", "End Bash session", "Clear", "Reset"):
