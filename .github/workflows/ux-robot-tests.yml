@@ -1,0 +1,31 @@
+name: UX robot static tests
+
+on:
+  push:
+    paths:
+      - 'tools/klyro_ui_robot.py'
+      - 'tests/test_klyro_ui_robot.py'
+      - '.github/workflows/ux-robot-tests.yml'
+  pull_request:
+    paths:
+      - 'tools/klyro_ui_robot.py'
+      - 'tests/test_klyro_ui_robot.py'
+      - '.github/workflows/ux-robot-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa-robot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile robot
+        run: python -m py_compile tools/klyro_ui_robot.py
+      - name: Run parser and safety unit tests
+        run: python -m unittest discover -s tests -p 'test_klyro_ui_robot.py' -v
