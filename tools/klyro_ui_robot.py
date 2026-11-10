@@ -144,6 +144,7 @@ def geometry(root):
     available = visible_nodes(root)
     bounds = [b for b in (parse_bounds(n.get("bounds")) for n in available) if b]
     screen_height = max((b[3] for b in bounds), default=None)
+    screen_width = max((b[2] for b in bounds), default=None)
     sheet_top, handle = None, None
     for n in available:
         desc = (n.get("content-desc") or "").casefold()
@@ -185,7 +186,7 @@ def geometry(root):
     else:
         stage = "Settings"
     return {"sheet_top": sheet_top, "handle": handle, "scroll": scroll,
-            "screen_height": screen_height, "stage": stage}
+            "screen_height": screen_height, "screen_width": screen_width, "stage": stage}
 
 class Robot:
     def __init__(self, out, delay):
@@ -219,7 +220,8 @@ class Robot:
         result.update(geometry(root))
         result["signature"] = signature
         result["screen"] = tuple(sorted(set(result["labels"])))
-        self.last_snapshots.append({"screen_height": result.get("screen_height"),
+        self.last_snapshots.append({"screen_width": result.get("screen_width"),
+                                    "screen_height": result.get("screen_height"),
                                     "stage": result.get("stage"), "signature": signature})
         cached = self.seen_screens.get(signature)
         if cached:
@@ -592,9 +594,12 @@ def main():
             from klyro_ux_report import make_report
             height = next((row.get("screen_height") for row in robot.last_snapshots
                            if row.get("screen_height")), None)
+            width = next((row.get("screen_width") for row in robot.last_snapshots
+                          if row.get("screen_width")), None)
             make_report(out, robot.steps, source_root=args.source_root,
                         density=density, sheet_gallery=robot.sheet_gallery,
-                        duplicate_count=robot.duplicates, display_height=height)
+                        duplicate_count=robot.duplicates, display_height=height,
+                        display_width=width)
         except Exception as err:
             robot.warnings.append("Component UX/code report failed: " +
                                   type(err).__name__ + ": " + str(err))
