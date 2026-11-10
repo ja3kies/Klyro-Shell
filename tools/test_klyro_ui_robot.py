@@ -36,8 +36,11 @@ class RobotSemanticTests(unittest.TestCase):
 
     def test_required_stages_are_non_destructive(self):
         self.assertEqual([step[0] for step in robot.ROUTES],
-                         ["Plugins", "Home", "Settings", "Appearance"])
-        for name, _ in robot.ROUTES:
+                         ["Plugins", "Home", "Settings"])
+        self.assertEqual([step[0] for step in robot.SETTINGS_SUBPAGES],
+                         ["Appearance", "Keyboard", "Storage", "Privacy",
+                          "Diagnostics", "About"])
+        for name, _ in robot.ROUTES + robot.SETTINGS_SUBPAGES:
             self.assertIsNone(robot.DANGER.search(name))
 
     def test_smoke_assertions_use_visible_labels(self):
