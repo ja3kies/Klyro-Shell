@@ -1084,17 +1084,19 @@ fun TerminalPane(
 
     if (showTranscriptSearch) {
         val emulator = session.emulator
-        val screen = emulator?.screen
-        // Re-read the mutable buffer; a screen object keeps its identity as output arrives.
-        val matches = if (emulator == null || screen == null) emptyList<Int>()
-            else TranscriptSearch.findRows(screen, emulator.mColumns, emulator.mRows, transcriptQuery, findMatchCase)
+        val snapshot = searchSnapshot
+        val matches = if (searchingTranscript) emptyList<TranscriptSearch.Occurrence>()
+            else snapshot?.newest.orEmpty()
         val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
+        val selectedMatch = matches.getOrNull(position)
         fun goToMatch(index: Int) {
-            if (matches.isNotEmpty() && emulator != null) {
-                activeTerminalView?.let { view ->
-                    view.setTopRow(TranscriptSearch.topRow(matches[index], emulator.mRows, screen!!.activeTranscriptRows))
-                    view.invalidate()
-                }
+            val match = matches.getOrNull(index) ?: return
+            val currentEmulator = session.emulator ?: return
+            activeTerminalView?.takeIf { it.isAttachedToWindow }?.let { view ->
+                view.setTopRow(TranscriptSearch.topRow(
+                    match.row, currentEmulator.mRows, currentEmulator.screen.activeTranscriptRows
+                ))
+                view.invalidate()
             }
         }
         KlyroModalTheme {
@@ -1107,13 +1109,21 @@ fun TerminalPane(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = transcriptQuery,
-                        onValueChange = { transcriptQuery = it.take(128); searchIndex = 0 },
+                        onValueChange = {
+                            transcriptQuery = it.take(128)
+                            searchIndex = 0
+                            searchSnapshot = null
+                        },
                         label = { Text("Find text") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         trailingIcon = {
                             if (transcriptQuery.isNotEmpty()) {
-                                TextButton(onClick = { transcriptQuery = ""; searchIndex = 0 }) {
+                                TextButton(onClick = {
+                                    transcriptQuery = ""
+                                    searchIndex = 0
+                                    searchSnapshot = null
+                                }) {
                                     Text("Clear")
                                 }
                             }
@@ -1125,6 +1135,7 @@ fun TerminalPane(
                             .toggleable(value = findMatchCase, role = Role.Checkbox) {
                                 findMatchCase = it
                                 searchIndex = 0
+                                searchSnapshot = null
                             },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1132,78 +1143,125 @@ fun TerminalPane(
                         Text("Match case", fontSize = 13.sp, color = ui.foreground)
                     }
                     Text(
-                        if (transcriptQuery.isBlank()) "Enter text to search"
-                        else if (matches.isEmpty()) "No matches"
-                        else "Match ${position + 1} of ${matches.size}",
-                        fontSize = 12.sp
+                        when {
+                            transcriptQuery.isBlank() -> "Enter text to search"
+                            searchingTranscript -> "Searching terminal output…"
+                            emulator == null -> "Terminal output unavailable"
+                            snapshot == null || snapshot.totalCount == 0 -> "No matches"
+                            snapshot.limited -> "Match ${position + 1} of latest ${matches.size} · ${snapshot.totalCount} total"
+                            else -> "Match ${position + 1} of ${snapshot.totalCount}"
+                        },
+                        color = ui.foreground,
+                        fontSize = 12.sp,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                     )
-                    if (matches.isNotEmpty() && screen != null && emulator != null) {
-                        // Preview a physical transcript row without changing terminal output.
-                        val matchRow = matches[position]
-                        val line = screen.getSelectedText(
-                            0, matchRow, emulator.mColumns - 1, matchRow, false, false
-                        ).orEmpty()
-                        val highlightBackground = ui.accent
-                        val highlightForeground = ui.onAccent
+                    if (snapshot?.limited == true && !searchingTranscript) {
+                        Text("Displaying newest ${matches.size} matches; older matches are counted but not loaded.",
+                            color = ui.muted, style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (selectedMatch != null) {
                         val preview = buildAnnotatedString {
-                            var offset = 0
-                            while (offset < line.length && transcriptQuery.isNotEmpty()) {
-                                val found = line.indexOf(transcriptQuery, offset, ignoreCase = !findMatchCase)
-                                if (found < 0) break
-                                append(line.substring(offset, found))
-                                withStyle(SpanStyle(
-                                    color = highlightForeground,
-                                    background = highlightBackground,
-                                    fontWeight = FontWeight.Bold
-                                )) { append(line.substring(found, found + transcriptQuery.length)) }
-                                offset = found + transcriptQuery.length
+                            val context = selectedMatch.preview
+                            if (selectedMatch.logicalOffset > selectedMatch.highlightStart) append("…")
+                            append(context.substring(0, selectedMatch.highlightStart))
+                            withStyle(SpanStyle(
+                                color = ui.onAccent,
+                                background = ui.accent,
+                                fontWeight = FontWeight.Bold
+                            )) {
+                                append(context.substring(
+                                    selectedMatch.highlightStart, selectedMatch.highlightEnd))
                             }
-                            // Matches can also span wrapped physical rows.
-                            append(line.substring(offset))
+                            append(context.substring(selectedMatch.highlightEnd))
                         }
                         Surface(
                             color = ui.tile,
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
                         ) {
-                            Text(
-                                text = preview,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 12.sp,
-                                maxLines = 2,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                modifier = Modifier.fillMaxWidth().padding(10.dp)
-                            )
+                            Column(modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    if (selectedMatch.row < 0) "History row ${-selectedMatch.row}"
+                                    else "Visible screen row ${selectedMatch.row + 1}",
+                                    color = ui.muted, style = MaterialTheme.typography.labelSmall
+                                )
+                                Text(
+                                    text = preview,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    maxLines = 3,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                                TextButton(
+                                    onClick = {
+                                        val copied = runCatching {
+                                            clipboardManager?.setPrimaryClip(
+                                                ClipData.newPlainText("Klyro search excerpt", selectedMatch.preview))
+                                            clipboardManager != null
+                                        }.getOrDefault(false)
+                                        Toast.makeText(context,
+                                            if (copied) "Search excerpt copied" else "Clipboard unavailable",
+                                            Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                ) { Text("Copy excerpt") }
+                            }
                         }
                     }
                     if (matches.isNotEmpty()) {
-                        Row {
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             TextButton(
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
-                                searchIndex = TranscriptSearch.nextIndex(position, -1, matches.size)
-                                goToMatch(searchIndex)
-                            }) { Text("Previous") }
+                                    searchIndex = TranscriptSearch.nextIndex(position, -1, matches.size)
+                                    goToMatch(searchIndex)
+                                }
+                            ) { Text("Previous") }
                             TextButton(
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
-                                searchIndex = TranscriptSearch.nextIndex(position, 1, matches.size)
-                                goToMatch(searchIndex)
-                            }) { Text("Next") }
+                                    searchIndex = TranscriptSearch.nextIndex(position, 1, matches.size)
+                                    goToMatch(searchIndex)
+                                }
+                            ) { Text("Next") }
+                            TextButton(
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                onClick = {
+                                    searchIndex = matches.lastIndex
+                                    goToMatch(searchIndex)
+                                }
+                            ) { Text("Latest") }
                         }
+                    }
+                    if (transcriptQuery.isNotBlank() && !searchingTranscript &&
+                        snapshot?.totalCount == 0) {
+                        TextButton(onClick = {
+                            transcriptQuery = ""; searchIndex = 0; searchSnapshot = null
+                        }) { Text("Clear search") }
+                    }
+                    if (transcriptQuery.length >= 128) {
+                        Text("Search text limit reached (128 characters)",
+                            color = ui.muted, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        // Snapshot the exact query/case accepted before IME animation.
+                        val chosen = selectedMatch ?: return@Button
+                        // Snapshot the selected physical match before IME animation.
                         pendingSearchQuery = transcriptQuery
                         pendingSearchCase = findMatchCase
-                        pendingSearch = position
+                        pendingSearchOffset = chosen.logicalOffset
+                        pendingSearch = chosen.row
                         keyboard?.hide()
                         showTranscriptSearch = false
                     },
-                    enabled = matches.isNotEmpty(),
+                    enabled = selectedMatch != null && !searchingTranscript,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
                 ) { Text("Go to line") }
