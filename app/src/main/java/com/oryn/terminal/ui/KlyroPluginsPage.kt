@@ -350,7 +350,14 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     Text("Review and confirm a local JSON command pack (up to 16 KiB). Extensions cannot run JavaScript or execute shell commands.",
                         color = colors.muted, fontSize = 12.sp)
                     OutlinedButton(
-                        onClick = { importPicker.launch(arrayOf("*/*")) },
+                        onClick = {
+                            // Common SAF providers expose JSON as application/json,
+                            // text/plain or octet-stream. Avoid showing every media file.
+                            importPicker.launch(arrayOf(
+                                "application/json", "application/x-json",
+                                "text/plain", "application/octet-stream"
+                            ))
+                        },
                         enabled = !previewBusy && !mutationBusy && !confirmedMutationPending &&
                             pendingImportUri == null,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),

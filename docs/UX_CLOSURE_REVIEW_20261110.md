@@ -8,11 +8,11 @@ Policy: preserve Bash, PTY, workspace files, bundled plugin safety, and the inde
 
 | Surface | Completed change | Adversarial check | Manual test policy |
 |---|---|---|---|
-| Home | Replace decorative marketing copy with actionable local/privacy context | Home recovery, primary action, installation gating tests remain green | Final consolidated session only |
-| Settings | Unify subpage back route; clear stale Android permissions error; separate Back and Close | Layered navigation, license and color-dialog restore tests | Final consolidated session only |
+| Home | Replace decorative marketing copy with actionable local/privacy context; expose full Settings before Bash starts | Home recovery, home settings and primary action tests remain green | Final consolidated session only |
+| Settings | Unify subpage back route; clear stale Android permissions error; separate Back and Close; disable repeated diagnostic check while verifying | Layered navigation, license and color-dialog restore tests | Final consolidated session only |
 | Design components | Two-line accessible modal headings; disabled icons/menus; one notice component with live region | Existing theme/contrast/accessibility tests and closure contracts | Theme/large-text check at final session |
 | Plugins installed | Persist recoverable errors; truthfully display updates; accessible empty-state action | Registry lock, enabled toggles, delete and rotation tests | Final consolidated session only |
-| Plugins explore | Confirmed bundled installs tracked across rotation; no reentry; timed recovery if no confirmation | Missing bundle, preview, install, concurrent write tests | Final consolidated session only |
+| Plugins explore | Confirmed bundled installs tracked across rotation; no reentry; timed recovery if no confirmation; SAF picker filters JSON MIME types | Missing bundle, preview, install, concurrent write tests | Final consolidated session only |
 | Command palette | Available-only hides plugins with unverified binaries; explain limitation; unified failure notice | Pin/recents privacy and insertion-success tests | Final consolidated session only |
 | Workspaces | Reset stale scroll on selection; clear stale context menus; disable New while editing; confirm assignment | Editor rotation, stale delete, General protection, capacity | Final consolidated session only |
 | Sessions | Shell-choice Back has accessible name; close confirmation and PTY lifetime unchanged | Session persistence, limit, rename and close contracts | Final consolidated session only |
@@ -40,3 +40,7 @@ Policy: preserve Bash, PTY, workspace files, bundled plugin safety, and the inde
 Run `tools/test_klyro_*.py`, Android JVM suite, Android lint/accessibility suite, ARM64 APK build, 16 KiB native-alignment verification and APK signing in GitHub Actions. Reconcile any brittle source-text assertions with the intended behavior, not by deleting coverage. Mark the work **automated-green** only after all stages pass; mark it **device-accepted** only after the final Pixel test session.
 
 Rollback is `d2ac1a1ad330e8f450da733690c820a4a757f9be`, preserved on the previously validated `p1/ux-job-activity-20261110` branch; this closure is isolated from `main`.
+
+## Remaining device-only checks
+
+GitHub issue #13 (Pixel 9 Android status-bar color seam) remains **open**, because a clean edge-to-edge experience cannot be proven by static code analysis alone. Verify portrait/landscape status/navigation areas and IME in the final session, not through repeated interim testing. UI inspection of the job status and first-install access to Settings is also reserved for that single acceptance pass.
