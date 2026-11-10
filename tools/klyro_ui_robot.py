@@ -228,14 +228,98 @@ class Robot:
             raise RuntimeError("Klyro lost foreground")
         adb("shell","input","tap",str(target["x"]),str(target["y"]))
         time.sleep(self.delay)
-    def record(self, name, passed, before, after, detail=""):
-        self.steps.append({"name":name,"status":"PASS" if passed else "FAIL","before":before["shot"],"after":after["shot"],"detail":detail})
+    def swipe(self, x1, y1, x2, y2, duration=500):
+        if not active():
+            raise RuntimeError("Klyro is no longer foreground; gesture cancelled")
+        adb("shell", "input", "swipe", str(x1), str(y1), str(x2),
+            str(y2), str(duration))
+        time.sleep(self.delay)
+
+    def capture_full_sheet(self, current, page, max_scrolls=5):
+        """Expand sheet via its labeled drag handle, then capture scroll segments.
+
+        This only performs reversible gestures. It never clicks settings
+        toggles or requests storage permissions.
+        """
+        if current.get("sheet_top") is None:
+            return current
+        previous = self.sheet_gallery.get(page)
+        if previous and previous.get("images"):
+            return current
+        height = current.get("screen_height") or 2424
+        record = {"images": [], "scroll_segments": 0, "expanded": "not attempted",
+                  "top_fraction": current["sheet_top"] / height,
+                  "fully_captured": False}
+        self.sheet_gallery[page] = record
+        handle = current.get("handle")
+        if handle and current["sheet_top"] > height * 0.24:
+            x = (handle[0] + handle[2]) // 2
+            y = (handle[1] + handle[3]) // 2
+            self.swipe(x, y, x, max(int(height * .13), y - int(height * .40)), 560)
+            expanded = self.snap("expanded-" + page)
+            if expanded.get("stage") != current.get("stage"):
+                self.warnings.append("Expansion changed screen unexpectedly: " + page)
+                record["expanded"] = "unexpected navigation; capture stopped"
+                return current
+            record["expanded"] = (
+                "verified" if expanded.get("sheet_top") is not None
+                and expanded["sheet_top"] + 24 < current["sheet_top"]
+                else "not observed")
+            current = expanded
+        record["images"].append(current["shot"])
+        baseline = current
+        scroll_rect = current.get("scroll")
+        if scroll_rect:
+            x1,y1,x2,y2 = scroll_rect
+            x = (x1 + x2)//2
+            distance = max(100, int((y2-y1) * .53))
+            y_start = min(y2 - 42, y1 + int((y2-y1) * .82))
+            y_stop = max(y1 + 42, y_start - distance)
+            pages = 0
+            end_reached = False
+            for n in range(max_scrolls):
+                self.swipe(x, y_start, x, y_stop, 470)
+                next_view = self.snap("full-" + page + "-scroll-" + str(n+1))
+                if next_view.get("stage") != current.get("stage"):
+                    self.warnings.append("Scroll changed screen unexpectedly: " + page)
+                    break
+                if next_view["signature"] == current["signature"]:
+                    end_reached = True
+                    break
+                pages += 1
+                if next_view["shot"] not in record["images"]:
+                    record["images"].append(next_view["shot"])
+                current = next_view
+            record["scroll_segments"] = pages
+            record["fully_captured"] = end_reached
+            # Restore top for stable back navigation and repeatability.
+            if pages:
+                for n in range(pages + 3):
+                    self.swipe(x, y_stop, x, y_start, 390)
+                    restored = self.snap("restored-" + page + "-" + str(n))
+                    if restored["signature"] == baseline["signature"]:
+                        current = restored
+                        break
+                else:
+                    self.warnings.append("Could not restore sheet scroll to top: " + page)
+        else:
+            record["fully_captured"] = True
+        return baseline if record["fully_captured"] else current
+
+    def record(self, name, passed, before, after, detail="", target=None):
+        self.steps.append({"name":name,"status":"PASS" if passed else "FAIL",
+                           "before":before["shot"],"after":after["shot"],"detail":detail,
+                           "target":target, "from_stage":before.get("stage"),
+                           "destination":after.get("stage"),
+                           "before_signature":before.get("signature"),
+                           "after_signature":after.get("signature")})
         if not passed:
             self.warnings.append(f"{name}: {detail or 'assertion failed'}")
     def record_skip(self, name, snapshot, reason):
         self.steps.append({"name": name, "status": "SKIP",
                            "before": snapshot["shot"], "after": snapshot["shot"],
-                           "detail": reason})
+                           "detail": reason, "target": None,
+                           "from_stage": snapshot.get("stage"), "destination": snapshot.get("stage")})
         self.warnings.append(name + ": " + reason)
     def record_blocked(self, name, snapshot, reason):
         self.record(name, False, snapshot, snapshot, reason)
@@ -262,8 +346,11 @@ class Robot:
         self.tap(target)
         after = self.wait_for_markers("after-" + title, markers)
         passed = self.has_markers(after, markers) and after["screen"] != before["screen"]
+        if passed and after.get("sheet_top") is not None:
+            after = self.capture_full_sheet(after, after.get("stage") or title)
         self.record("Navigate: " + title, passed, before, after,
-                    "Expected " + ", ".join(" / ".join(m) if isinstance(m, tuple) else m for m in markers))
+                    "Expected " + ", ".join(" / ".join(m) if isinstance(m, tuple) else m for m in markers),
+                    target=target)
         return after if passed else None
     def probe_plugin_tabs(self, current):
         # Switching tabs does not install, enable or remove any extension.
@@ -285,7 +372,7 @@ class Robot:
         passed = (any(x == "Explore" for x in selected_now) if installed_selected
                   else any(re.fullmatch(r"Installed \(\d+\)", x) for x in selected_now))
         self.record("Plugin tab switch", passed, current, switched,
-                    "Selected tab should change to " + expected)
+                    "Selected tab should change to " + expected, target=target)
         if not passed:
             return None
         return_regex = r"Installed \(\d+\)" if installed_selected else "Explore"
@@ -299,7 +386,7 @@ class Robot:
         ok = (any(re.fullmatch(r"Installed \(\d+\)", x) for x in restored_tabs)
               if installed_selected else "Explore" in restored_tabs)
         self.record("Plugin tab restoration", ok, switched, restored,
-                    "Original selected tab should be restored")
+                    "Original selected tab should be restored", target=back)
         return restored if ok else None
 
     def smoke(self):
@@ -335,7 +422,7 @@ class Robot:
             self.tap(target)
             after = self.wait_for_markers("after-close", home_markers)
             ok = self.has_markers(after, home_markers) and after["screen"] != current["screen"]
-            self.record("Close settings", ok, current, after, "Home visible after dismissal")
+            self.record("Close settings", ok, current, after, "Home visible after dismissal", target=target)
         else:
             self.record_blocked("Close settings", current, "Close control missing; no tap attempted")
     def safe_cancel_dialog(self, s):
