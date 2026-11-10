@@ -43,7 +43,7 @@ def controls(root):
         if x2-x1 < 32 or y2-y1 < 32:
             continue
         labels = [label(v) for v in n.iter("node") if label(v)]
-        title = next((v for v in labels if v), "")
+        title = label(n) or next((v for v in labels if SAFE.fullmatch(v)), "") or next((v for v in labels if v), "")
         if title:
             found.append({"label":title,"x":(x1+x2)//2,"y":(y1+y2)//2,"bounds":(x1,y1,x2,y2)})
     return found
@@ -73,6 +73,7 @@ class Robot:
         root = ET.fromstring(xml)
         result = state(root)
         result["shot"] = base+".png"
+        result["screen"] = tuple(sorted(set(result["labels"])))
         return result
     def tap(self, target):
         if not active():
@@ -96,50 +97,52 @@ class Robot:
         self.record("Cancel session closure",not after["dialog"],s,after,"Dialog must disappear after Keep session")
         return after
     def explore(self, max_actions):
-        # Depth-first exploration: navigate inside pages before returning.
-        # A screen is identified by its visible labels and controls, not coordinates.
-        seen_actions = set()
+        # Semantic selectors and observable assertions, inspired by Maestro/Appium.
+        seen = set()
         current = self.safe_cancel_dialog(self.snap("initial"))
         stack = []
         actions = 0
         while actions < max_actions:
             current = self.safe_cancel_dialog(current)
-            signature = tuple(sorted(set(current["labels"])))
-            candidates = [
-                c for c in current["controls"]
-                if SAFE.fullmatch(c["label"]) and not DANGER.search(c["label"])
-                and (signature, c["label"]) not in seen_actions
-            ]
-            if candidates:
-                target = candidates[0]
-                seen_actions.add((signature, target["label"]))
+            signature = current["screen"]
+            candidates = [c for c in current["controls"]
+                          if SAFE.fullmatch(c["label"]) and not DANGER.search(c["label"])
+                          and (signature, c["label"]) not in seen]
+            if not candidates:
+                if not stack:
+                    break
                 before = current
-                self.tap(target)
-                after = self.snap("after-" + target["label"])
-                changed = tuple(sorted(set(after["labels"]))) != signature
-                self.record("Navigate: " + target["label"], changed, before, after,
-                            "Expected a changed accessibility tree")
-                actions += 1
-                if changed:
-                    stack.append(signature)
-                    current = after
-                    continue
-                current = after
+                adb("shell", "input", "keyevent", "KEYCODE_BACK")
+                time.sleep(self.delay)
+                current = self.safe_cancel_dialog(self.snap("after-back"))
+                expected = stack.pop()
+                ok = current["screen"] == expected
+                self.record("Back navigation", ok, before, current,
+                            "Previous accessibility state must be restored")
+                if not ok:
+                    self.warnings.append("Navigation stack mismatch; stopped")
+                    break
                 continue
-            if not stack:
-                break
+            target = candidates[0]
+            seen.add((signature, target["label"]))
             before = current
-            adb("shell", "input", "keyevent", "KEYCODE_BACK")
-            time.sleep(self.delay)
-            current = self.safe_cancel_dialog(self.snap("after-back"))
-            expected = stack.pop()
-            returned = tuple(sorted(set(current["labels"]))) == expected
-            self.record("Back navigation", returned, before, current,
-                        "Expected previous page state")
-            if not returned:
-                # Never keep tapping when the navigation stack is uncertain.
-                self.warnings.append("Navigation mismatch: exploration stopped safely")
-                break
+            self.tap(target)
+            after = self.safe_cancel_dialog(self.snap("after-"+target["label"]))
+            new_labels = set(after["labels"]) - set(before["labels"])
+            changed = after["screen"] != signature
+            destinations = {
+                "Plugins": r"installed|available|import|plugin",
+                "Settings": r"appearance|keyboard|storage|diagnostic|theme",
+            }
+            expected = destinations.get(target["label"])
+            destination_ok = bool(expected and any(re.search(expected, x, re.I) for x in new_labels))
+            ok = changed and (destination_ok if expected else True)
+            self.record("Navigate: "+target["label"], ok, before, after,
+                        "Destination verified" if ok else "Destination not confirmed")
+            actions += 1
+            if ok:
+                stack.append(signature)
+            current = after
         if actions == 0:
             self.warnings.append("No safe actionable controls discovered")
         return actions
@@ -196,7 +199,7 @@ def main():
         report(out,robot.steps,robot.warnings)
         print("Report:",out/"report.html")
         print("Assertions:",len(robot.steps),"Warnings:",len(robot.warnings))
-    if any(x["status"]=="FAIL" for x in robot.steps) or (robot.warnings and not robot.steps):
+    if any(x["status"]=="FAIL" for x in robot.steps) or robot.warnings:
         raise SystemExit(1)
 
 if __name__=="__main__":
