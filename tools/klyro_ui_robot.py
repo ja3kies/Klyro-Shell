@@ -16,10 +16,18 @@ PKG = "com.klyro.shell"
 HOME_ACTION = ("Launch Bash", "Return to terminal")
 HOME_MARKERS = ("KLYRO", HOME_ACTION, "Plugins", "Settings")
 # Explicit screen transitions derived from the Pixel 9 XML evidence.
+SETTINGS_ROOT = ("Settings", "Appearance", "Keyboard", "Storage", "Privacy")
 ROUTES = [("Plugins", ("Plugins", "Installed", "Explore")),
           ("Home", HOME_MARKERS),
-          ("Settings", ("Settings", "Appearance", "Keyboard", "Storage", "Privacy")),
-          ("Appearance", ("Appearance", "Launcher icon", "App theme"))]
+          ("Settings", SETTINGS_ROOT)]
+SETTINGS_SUBPAGES = [
+    ("Appearance", ("Appearance", "Launcher icon", "App theme")),
+    ("Keyboard", ("Keyboard", "Modifier status")),
+    ("Storage", ("Files & storage",)),
+    ("Privacy", ("Privacy", "Android permissions")),
+    ("Diagnostics", ("Diagnostics", "Recheck environment")),
+    ("About", ("About Klyro Shell", "JetBrains Mono licence")),
+]
 SAFE = re.compile(r"^(More actions|Settings|Preferences|Plugins|Appearance|Theme|Find|Search|Home|General|Workspace|Diagnostics|About|Paramètres|Apparence|Recherche|Accueil)$", re.I)
 DANGER = re.compile(r"end session|end bash|delete|remove|uninstall|clear|reset|wipe|kill|install|logout|erase|supprimer|effacer|réinitialiser|désinstaller", re.I)
 
@@ -138,15 +146,25 @@ class Robot:
             if current is None:
                 self.warnings.append("Smoke route stopped at " + name)
                 return
-        # Exit sheets using the visible Close button only; no Android app stop.
+        # Each Settings subpage is visited and then unwound without changing
+        # user preferences, shell sessions, storage grants or external apps.
+        for name, markers in SETTINGS_SUBPAGES:
+            detail = self.navigate(current, name, markers)
+            if detail is None:
+                self.warnings.append("Settings subpage not verified: " + name)
+                return
+            current = self.navigate(detail, "Settings", SETTINGS_ROOT)
+            if current is None:
+                self.warnings.append("Back to Settings not verified after " + name)
+                return
         target = self.find(current, r"Close")
         if target is not None:
             self.tap(target)
             after = self.wait_for_markers("after-close", home_markers)
-            ok = self.has_markers(after, home_markers)
+            ok = self.has_markers(after, home_markers) and after["screen"] != current["screen"]
             self.record("Close settings", ok, current, after, "Home visible after dismissal")
         else:
-            self.warnings.append("Close control not found on Appearance sheet")
+            self.warnings.append("Close control not found on Settings sheet")
     def safe_cancel_dialog(self, s):
         if not s["dialog"]:
             return s
