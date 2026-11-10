@@ -7,7 +7,6 @@ It never claims that an action succeeded merely because a screenshot exists.
 """
 import argparse
 import re
-from collections import Counter
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -19,19 +18,25 @@ EXPECTED = {
     "appearance": ("Appearance", "Launcher icon", "App theme"),
 }
 
-def inspect(path):
+def inspect(path, density=None):
     root = ET.parse(path).getroot()
     nodes = list(root.iter("node"))
     texts = [n.get("text", "") for n in nodes]
     descs = [n.get("content-desc", "") for n in nodes]
     strings = texts + descs
     bounds = []
+    invalid_bounds = []
     for n in nodes:
         raw = n.get("bounds", "")
         try:
             x1, y1, x2, y2 = (int(v) for v in raw.replace("][", ",").strip("[]").split(","))
-            bounds.append((n, x1, y1, x2, y2))
+            if x2 <= x1 or y2 <= y1:
+                invalid_bounds.append(raw)
+            else:
+                bounds.append((n, x1, y1, x2, y2))
         except (ValueError, AttributeError):
+            if raw:
+                invalid_bounds.append(raw)
             continue
     interactive = [n for n in nodes if n.get("clickable") == "true" and n.get("enabled") == "true"]
     # UIAutomator may expose a parent with text descendants; don't flag these as unlabeled.
@@ -45,9 +50,9 @@ def inspect(path):
         if not any(x.strip() for x in labels):
             unlabeled.append(n.get("class", "View") + " " + n.get("bounds", ""))
     small = []
+    threshold = round(48 * density) if density else None
     for n, x1, y1, x2, y2 in bounds:
-        if n in interactive and (x2-x1 < 96 or y2-y1 < 96):
-            # 96 px is a heuristic, not a verified 48dp threshold (density unknown).
+        if threshold is not None and n in interactive and (x2-x1 < threshold or y2-y1 < threshold):
             small.append(n.get("bounds", ""))
     # Match complete stage tokens: e.g. "plugins" must not match "plugins-old".
     stage_tokens = re.split(r"[^a-z]+", path.stem.lower())
@@ -55,14 +60,15 @@ def inspect(path):
     missing = [s for s in EXPECTED.get(key, ()) if not any(s.casefold() in v.casefold() for v in strings)]
     return dict(name=path.name, stage=key or "unknown", nodes=len(nodes),
                 interactive=len(interactive), missing=missing,
-                unlabeled=unlabeled, small=small,
+                unlabeled=unlabeled, small=small, invalid_bounds=invalid_bounds,
+                density=density,
                 switches=sum(n.get("checkable") == "true" for n in nodes),
                 selected=sum(n.get("selected") == "true" for n in nodes))
 
 def report(results):
     lines = ["# Klyro robot UIAutomator evidence audit", "",
              "This is an observational audit, not a device interaction test.",
-             "Pixel target-size warnings use a 96px heuristic; verify actual display density.",
+             "Touch targets are evaluated against 48dp only when --density is supplied; without it, size is unverified.",
              "", "| Snapshot | Stage | Nodes | Enabled targets | Missing markers | Unlabeled targets |",
              "|---|---|---:|---:|---|---:|"]
     for r in results:
@@ -74,8 +80,10 @@ def report(results):
         for item in r["unlabeled"][:12]:
             lines.append(f"- **{r['name']}**: clickable node without its own or descendant accessible label: `{item}`. Inspect Compose semantics.")
         if r["small"]:
-            lines.append(f"- **{r['name']}**: {len(r['small'])} potential small touch targets (pixel heuristic; density needed).")
-    if not any(r["missing"] or r["unlabeled"] or r["small"] for r in results):
+            lines.append(f"- **{r['name']}**: {len(r['small'])} potential touch targets below 48dp at density {r['density']}.")
+        if r["invalid_bounds"]:
+            lines.append(f"- **{r['name']}**: {len(r['invalid_bounds'])} malformed or non-positive bounds; inspect XML extraction.")
+    if not any(r["missing"] or r["unlabeled"] or r["small"] or r["invalid_bounds"] for r in results):
         lines.append("- No issues detected by these limited static heuristics.")
     lines += ["", "## Follow-up device tests", "",
               "- Tap each action and compare before/after XML and screenshot; presence alone is not proof of navigation.",
@@ -89,8 +97,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("xml", nargs="+", type=Path)
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--density", type=float, help="Physical pixels per dp from device wm density; must be positive")
     args = parser.parse_args()
-    results = [inspect(p) for p in args.xml]
+    if args.density is not None and args.density <= 0:
+        parser.error("--density must be positive")
+    results = [inspect(p, density=args.density) for p in args.xml]
     output = report(results)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
