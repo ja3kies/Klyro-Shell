@@ -6,6 +6,7 @@ The tool checks observed navigation, reachable targets, semantics and bounds.
 It never claims that an action succeeded merely because a screenshot exists.
 """
 import argparse
+import re
 from collections import Counter
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -37,7 +38,10 @@ def inspect(path):
     unlabeled = []
     for n in interactive:
         labels = [n.get("text", ""), n.get("content-desc", "")]
-        labels += [s.get("text", "") or s.get("content-desc", "") for s in n.iter("node")]
+        # Include every descendant label, not only the first non-empty field.
+        # A whitespace-only text attribute must not hide a valid description.
+        for child in n.iter("node"):
+            labels.extend((child.get("text", ""), child.get("content-desc", "")))
         if not any(x.strip() for x in labels):
             unlabeled.append(n.get("class", "View") + " " + n.get("bounds", ""))
     small = []
@@ -45,8 +49,10 @@ def inspect(path):
         if n in interactive and (x2-x1 < 96 or y2-y1 < 96):
             # 96 px is a heuristic, not a verified 48dp threshold (density unknown).
             small.append(n.get("bounds", ""))
-    key = next((k for k in EXPECTED if k in path.stem.lower()), None)
-    missing = [s for s in EXPECTED.get(key, ()) if not any(s in v for v in strings)]
+    # Match complete stage tokens: e.g. "plugins" must not match "plugins-old".
+    stage_tokens = re.split(r"[^a-z]+", path.stem.lower())
+    key = next((k for k in EXPECTED if k in stage_tokens), None)
+    missing = [s for s in EXPECTED.get(key, ()) if not any(s.casefold() in v.casefold() for v in strings)]
     return dict(name=path.name, stage=key or "unknown", nodes=len(nodes),
                 interactive=len(interactive), missing=missing,
                 unlabeled=unlabeled, small=small,
