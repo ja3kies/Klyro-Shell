@@ -17,7 +17,8 @@ class AdvancedFindUX(unittest.TestCase):
   self.assertIn('snapshot.totalCount',S)
   self.assertIn('Showing ${snapshot.firstOrdinal + 1}',S)
  def test_nearest_selection_survives_live_update(self):
-  self.assertIn('TranscriptSearch.nearestIndex(snapshot.newest, previous.row, previous.logicalOffset)',S)
+  self.assertIn('previous != null -> TranscriptSearch.nearestIndex(',S)
+  self.assertIn('snapshot.newest, previous.row, previous.logicalOffset',S)
   self.assertIn('TranscriptSearch.nearestIndex(result.newest, targetRow, targetOffset)',S)
  def test_preview_highlights_exact_match_even_after_wrap(self):
   self.assertIn('selectedMatch.preview',S)
