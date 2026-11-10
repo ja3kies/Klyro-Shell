@@ -130,7 +130,7 @@ def esc(value):
     return html.escape(str(value if value is not None else ""), quote=True)
 
 def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
-                duplicate_count=0, display_height=None):
+                duplicate_count=0, display_height=None, display_width=None):
     out = Path(out)
     sheet_gallery = sheet_gallery or {}
     records = []
@@ -165,13 +165,32 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
             esc(item.get("code", item.get("description", ""))) +
             '</code></pre></details>' for item in related)
         tokens_html = ('<p>Jetons Kotlin : ' + esc(", ".join(tokens)) + '</p>') if tokens else ""
+        bounds = target.get("bounds")
+        ratio = (str(display_width) + "/" + str(display_height)
+                 if display_width and display_height else "9/20")
+        overlay = ""
+        if bounds and display_width and display_height:
+            x1,y1,x2,y2 = bounds
+            css = ("left:" + str(round(x1 / display_width * 100, 3)) + "%;" +
+                   "top:" + str(round(y1 / display_height * 100, 3)) + "%;" +
+                   "width:" + str(round((x2-x1) / display_width * 100, 3)) + "%;" +
+                   "height:" + str(round((y2-y1) / display_height * 100, 3)) + "%")
+            overlay = '<span class="target-overlay" style="' + css + '"></span>'
+        images_html = (
+            '<div class="evidence"><figure><div class="screen" style="aspect-ratio:' +
+            esc(ratio) + '"><img src="' + esc(step.get("before", "")) +
+            '" alt="Écran avant le clic">' + overlay +
+            '</div><figcaption>Avant : élément cliqué encadré</figcaption></figure>' +
+            '<figure><div class="screen" style="aspect-ratio:' + esc(ratio) +
+            '"><img src="' + esc(step.get("after", "")) +
+            '" alt="Écran après le clic"></div><figcaption>Après : résultat observé</figcaption>'
+            '</figure></div>')
         cards.append(
             '<article><h3>' + esc(str(i) + ". " + step["name"]) +
             ' <small>' + esc(step["status"]) + '</small></h3>' +
             '<p>Élément : ' + esc(target.get("label", "Non enregistré")) +
             ' · coordonnées : ' + esc(target.get("bounds", "")) + '</p>' +
-            '<img class="sample" src="' + esc(step.get("after", "")) +
-            '" alt="Capture liée à cette action">' +
+            images_html +
             '<h4>Vérifications développeur / accessibilité</h4><ul>' + tests_html +
             '</ul><h4>Améliorations UI / UX</h4><ul>' + ideas_html +
             '</ul><p>Code réel : ' + source_html + ' (' + esc(source["status"]) + ')</p>' +
@@ -204,7 +223,10 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
     <style>
     body{max-width:1160px;margin:auto;padding:24px;font:15px/1.55 system-ui;background:#f4f6f3;color:#1d261d}
     header,article,section{background:#fff;border-radius:14px;border:1px solid #dce3d9;padding:18px;margin-bottom:16px}
-    h1,h2,h3{line-height:1.3}.sample{max-height:430px;max-width:230px;object-fit:contain}
+    h1,h2,h3{line-height:1.3}.evidence{display:flex;flex-wrap:wrap;gap:18px}
+    .evidence figure{margin:0}.screen{width:200px;position:relative;overflow:hidden;border:1px solid #dde3d8;border-radius:12px}
+    .screen img{display:block;width:100%;height:100%;object-fit:fill}
+    .target-overlay{position:absolute;box-sizing:border-box;border:3px solid #e45b24;background:#e45b2424;pointer-events:none}
     .gallery{display:flex;overflow-x:auto;gap:12px}.gallery figure{margin:0;flex:none}
     .gallery img{width:240px;max-height:560px;object-fit:contain}
     figcaption{font-size:12px}pre{background:#17221a;color:#ebf4eb;overflow:auto;padding:12px}
