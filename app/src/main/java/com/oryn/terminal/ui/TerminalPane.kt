@@ -106,6 +106,7 @@ import java.io.File
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import java.nio.charset.StandardCharsets
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -279,14 +280,43 @@ fun TerminalPane(
     var transcriptQuery by rememberSaveable(session) { mutableStateOf("") }
     var findMatchCase by rememberSaveable(session) { mutableStateOf(false) }
     var searchIndex by rememberSaveable(session) { mutableStateOf(0) }
+    var searchSnapshot by remember(session) {
+        mutableStateOf<TranscriptSearch.Snapshot?>(null)
+    }
+    var searchingTranscript by remember(session) { mutableStateOf(false) }
     var pendingSearch by remember(session) { mutableStateOf<Int?>(null) }
+    var pendingSearchOffset by remember(session) { mutableStateOf(0) }
     var pendingSearchQuery by remember(session) { mutableStateOf("") }
     var pendingSearchCase by remember(session) { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
     val ime = WindowInsets.ime
     val density = LocalDensity.current
+    // Query changes are debounced. The mutable PTY buffer is read on the UI
+    // thread after the delay, and only the most recent 300 matches are kept.
+    LaunchedEffect(
+        showTranscriptSearch, transcriptQuery, findMatchCase, outputRevision, session
+    ) {
+        if (!showTranscriptSearch || transcriptQuery.isBlank()) {
+            searchSnapshot = null
+            searchingTranscript = false
+            return@LaunchedEffect
+        }
+        searchingTranscript = true
+        delay(170)
+        val emulator = session.emulator
+        val snapshot = if (emulator == null) null else TranscriptSearch.scanRecent(
+            emulator.screen, emulator.mColumns, emulator.mRows, transcriptQuery, findMatchCase
+        )
+        val previous = searchSnapshot?.newest?.getOrNull(searchIndex)
+        searchIndex = if (snapshot != null && previous != null) {
+            TranscriptSearch.nearestIndex(snapshot.newest, previous.row, previous.logicalOffset)
+        } else 0
+        searchSnapshot = snapshot
+        searchingTranscript = false
+    }
     LaunchedEffect(pendingSearch, session, activeTerminalView) {
-        val index = pendingSearch ?: return@LaunchedEffect
+        val targetRow = pendingSearch ?: return@LaunchedEffect
+        val targetOffset = pendingSearchOffset
         val requestedQuery = pendingSearchQuery
         val requestedCase = pendingSearchCase
         val view = activeTerminalView ?: return@LaunchedEffect
@@ -303,13 +333,15 @@ fun TerminalPane(
         // A detached/closed PTY must never receive a deferred scroll or focus.
         if (view.isAttachedToWindow) {
             session.emulator?.let { emulator ->
-                val matches = TranscriptSearch.findRows(
+                val result = TranscriptSearch.scanRecent(
                     emulator.screen, emulator.mColumns, emulator.mRows, requestedQuery, requestedCase
                 )
-                if (matches.isNotEmpty()) {
+                val selected = result.newest.getOrNull(
+                    TranscriptSearch.nearestIndex(result.newest, targetRow, targetOffset)
+                )
+                if (selected != null) {
                     view.setTopRow(TranscriptSearch.topRow(
-                        matches[index.coerceAtMost(matches.lastIndex)],
-                        emulator.mRows, emulator.screen.activeTranscriptRows
+                        selected.row, emulator.mRows, emulator.screen.activeTranscriptRows
                     ))
                     view.invalidate()
                 }
