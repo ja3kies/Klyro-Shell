@@ -186,6 +186,7 @@ class Robot:
         self.seen_screens = {}
         self.duplicates = 0
         self.sheet_gallery = {}
+        self.last_snapshots = []
     def snap(self, name):
         if not active():
             raise RuntimeError("Klyro not foreground; no further interaction")
@@ -210,6 +211,8 @@ class Robot:
         result.update(geometry(root))
         result["signature"] = signature
         result["screen"] = tuple(sorted(set(result["labels"])))
+        self.last_snapshots.append({"screen_height": result.get("screen_height"),
+                                    "stage": result.get("stage"), "signature": signature})
         cached = self.seen_screens.get(signature)
         if cached:
             self.duplicates += 1
@@ -528,6 +531,7 @@ def main():
     p.add_argument("--create-session",action="store_true",help="Opt-in: create one real shell session; do not close it")
     p.add_argument("--mode", choices=("smoke", "explore"), default="smoke", help="Deterministic safe smoke route or bounded exploratory crawl")
     p.add_argument("--density", type=float, default=None, help="Physical device pixels per dp, for touch target audit")
+    p.add_argument("--source-root", type=Path, default=None, help="Read-only Kotlin source root; source excerpts are never fabricated")
     args=p.parse_args()
     if not math.isfinite(args.delay) or args.delay < 0:
         p.error("--delay must be nonnegative and finite")
@@ -554,26 +558,38 @@ def main():
     except Exception as exc:
         robot.warnings.append(f"{type(exc).__name__}: {exc}")
     finally:
-        report(out,robot.steps,robot.warnings)
+        density = args.density
+        if density is None:
+            try:
+                density = measured_density()
+            except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired):
+                density = None
         try:
             from klyro_robot_report_audit import inspect as audit_inspect, report as audit_report
             snapshots = sorted(out.glob("*.xml"))
             if snapshots:
-                density = args.density
-                if density is None:
-                    try:
-                        density = measured_density()
-                    except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired):
-                        density = None
                 evidence = [audit_inspect(p, density=density) for p in snapshots]
-                (out / "accessibility-audit.md").write_text(audit_report(evidence),encoding="utf-8")
+                (out / "accessibility-audit.md").write_text(audit_report(evidence), encoding="utf-8")
         except (ImportError, ValueError, OSError, ET.ParseError) as err:
             robot.warnings.append("Accessibility audit unavailable: " + str(err))
-            report(out,robot.steps,robot.warnings)
+        try:
+            from klyro_ux_report import make_report
+            height = next((row.get("screen_height") for row in robot.last_snapshots
+                           if row.get("screen_height")), None)
+            make_report(out, robot.steps, source_root=args.source_root,
+                        density=density, sheet_gallery=robot.sheet_gallery,
+                        duplicate_count=robot.duplicates, display_height=height)
+        except Exception as err:
+            robot.warnings.append("Component UX/code report failed: " +
+                                  type(err).__name__ + ": " + str(err))
+        report(out, robot.steps, robot.warnings)
         shutil.make_archive(str(out), "zip", root_dir=out)
-        print("Report:",out/"report.html")
-        print("Assertions:",len(robot.steps),"Warnings:",len(robot.warnings))
-        print("Evidence ZIP:",str(out)+".zip")
+        print("Report:", out/"report.html")
+        print("Component review:", out/"ux-review.html")
+        print("Unique screens:", len(robot.seen_screens),
+              "Duplicates avoided:", robot.duplicates)
+        print("Assertions:", len(robot.steps), "Warnings:", len(robot.warnings))
+        print("Evidence ZIP:", str(out)+".zip")
     if any(x["status"]=="FAIL" for x in robot.steps) or robot.warnings:
         raise SystemExit(1)
 
