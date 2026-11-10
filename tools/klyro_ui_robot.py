@@ -78,7 +78,12 @@ def state(root):
     labels = [label(n) for n in ns if label(n)]
     sessions = sorted(set(re.findall(r"Session (\d+)", " ".join(labels))))
     dialog = any("End Bash session?" in x for x in labels)
+    selected_tabs = []
+    for node in ns:
+        if node.get("selected") == "true":
+            selected_tabs.extend(label(child) for child in node.iter("node") if label(child))
     return {"dialog":dialog,"sessions":sessions,"labels":labels,
+            "selected_tabs":selected_tabs,
             "controls":controls(root),
             "keyboard":any(n.get("package","").startswith("com.google.android.inputmethod") for n in ns)}
 
@@ -135,6 +140,43 @@ class Robot:
         self.record("Navigate: " + title, passed, before, after,
                     "Expected " + ", ".join(" / ".join(m) if isinstance(m, tuple) else m for m in markers))
         return after if passed else None
+    def probe_plugin_tabs(self, current):
+        # Switching tabs does not install, enable or remove any extension.
+        selected = current.get("selected_tabs", [])
+        installed_selected = any(re.fullmatch(r"Installed \(\d+\)", x) for x in selected)
+        explore_selected = any(x == "Explore" for x in selected)
+        if installed_selected == explore_selected:
+            self.warnings.append("Plugin tab selection not observable; skipped tab probe")
+            return current
+        target_regex = "Explore" if installed_selected else r"Installed \(\d+\)"
+        target = self.find(current, target_regex)
+        if target is None:
+            self.warnings.append("Plugin tab switch control unavailable")
+            return current
+        self.tap(target)
+        switched = self.snap("plugin-tab-switched")
+        expected = ("Explore" if installed_selected else "Installed")
+        selected_now = switched.get("selected_tabs", [])
+        passed = (any(x == "Explore" for x in selected_now) if installed_selected
+                  else any(re.fullmatch(r"Installed \(\d+\)", x) for x in selected_now))
+        self.record("Plugin tab switch", passed, current, switched,
+                    "Selected tab should change to " + expected)
+        if not passed:
+            return None
+        return_regex = r"Installed \(\d+\)" if installed_selected else "Explore"
+        back = self.find(switched, return_regex)
+        if back is None:
+            self.warnings.append("Original plugin tab no longer reachable")
+            return None
+        self.tap(back)
+        restored = self.snap("plugin-tab-restored")
+        restored_tabs = restored.get("selected_tabs", [])
+        ok = (any(re.fullmatch(r"Installed \(\d+\)", x) for x in restored_tabs)
+              if installed_selected else "Explore" in restored_tabs)
+        self.record("Plugin tab restoration", ok, switched, restored,
+                    "Original selected tab should be restored")
+        return restored if ok else None
+
     def smoke(self):
         current = self.snap("initial")
         home_markers = HOME_MARKERS
@@ -146,6 +188,11 @@ class Robot:
             if current is None:
                 self.warnings.append("Smoke route stopped at " + name)
                 return
+            if name == "Plugins":
+                current = self.probe_plugin_tabs(current)
+                if current is None:
+                    self.warnings.append("Plugin tab probe failed; stopped safely")
+                    return
         # Each Settings subpage is visited and then unwound without changing
         # user preferences, shell sessions, storage grants or external apps.
         for name, markers in SETTINGS_SUBPAGES:
