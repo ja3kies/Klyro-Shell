@@ -87,6 +87,28 @@ class RobotSemanticTests(unittest.TestCase):
             'text="Settings" bounds="x:y"/></hierarchy>')
         self.assertEqual(robot.controls(root), [])
 
+    def test_first_install_home_requires_no_bash_button(self):
+        r = robot.Robot(Path("."), .1)
+        self.assertTrue(r.has_markers(
+            {"labels": ["KLYRO", "RUNTIME STATUS", "Install runtime",
+                        "Plugins", "Settings"]}, robot.HOME_MARKERS))
+
+    def test_hidden_parent_hides_nested_clickable_child(self):
+        root = ET.fromstring(
+            '<hierarchy><node visible-to-user="false">'
+            '<node clickable="true" enabled="true" text="Settings" '
+            'bounds="[0,0][300,200]"/></node></hierarchy>')
+        self.assertEqual(robot.controls(root), [])
+        self.assertNotIn("Settings", robot.state(root)["labels"])
+
+    def test_visible_parent_with_hidden_description_child_is_unlabeled(self):
+        root = ET.fromstring(
+            '<hierarchy><node clickable="true" enabled="true" '
+            'bounds="[0,0][300,200]">'
+            '<node visible-to-user="false"><node text="Settings"/></node>'
+            '</node></hierarchy>')
+        self.assertEqual(robot.controls(root), [])
+
     def test_direct_button_label(self):
         self.assertEqual(robot.controls(tree("Home", False))[0]["label"], "Home")
 
@@ -120,13 +142,13 @@ class RobotSemanticTests(unittest.TestCase):
     def test_bash_resume_home_is_supported(self):
         r = robot.Robot(Path("."), .1)
         self.assertTrue(r.has_markers(
-            {"labels": ["KLYRO", "Return to terminal", "Plugins", "Settings"]},
+            {"labels": ["KLYRO", "RUNTIME STATUS", "Return to terminal", "Plugins", "Settings"]},
             robot.HOME_MARKERS))
 
     def test_default_home_is_supported(self):
         r = robot.Robot(Path("."), .1)
         self.assertTrue(r.has_markers(
-            {"labels": ["KLYRO", "Launch Bash", "Plugins", "Settings"]},
+            {"labels": ["KLYRO", "RUNTIME STATUS", "Launch Bash", "Plugins", "Settings"]},
             robot.HOME_MARKERS))
 
     def test_density_uses_android_override(self):
