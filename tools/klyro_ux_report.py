@@ -175,6 +175,28 @@ def findings_from_accessibility(evidence, source_root):
                 "source": {"status": "UNMAPPED",
                            "description": "Composant non relié à un fichier Kotlin sans preuve de correspondance"},
             })
+        for pair in snapshot.get("overlaps", []):
+            # A geometrical overlap is a review signal, not proof that the
+            # user cannot activate either control. Keep it below definite
+            # undersized/uncaptioned targets in priority.
+            labels = (pair.get("first", "(unknown)"),
+                      pair.get("second", "(unknown)"))
+            key = ("touch-overlap", snapshot.get("stage"),
+                   tuple(sorted(labels)))
+            if key in seen:
+                continue
+            seen.add(key)
+            issues.append({
+                "priority": "P2", "kind": "overlapping-touch-targets",
+                "screen": snapshot.get("stage", "unknown"),
+                "label": labels[0] + " / " + labels[1],
+                "bounds": [pair.get("first_bounds"), pair.get("second_bounds")],
+                "observation": (str(pair.get("overlap_pct", "?")) +
+                                "% de recouvrement entre deux contrôles indépendants"),
+                "recommendation": "Séparer les zones cliquables et vérifier les priorités gestuelles en Compose.",
+                "source": {"status": "UNMAPPED",
+                           "description": "La correspondance précise avec des composants Kotlin n'est pas établie"},
+            })
         for label in snapshot.get("unlabeled", []):
             # Compose can shift the same icon vertically by hundreds of pixels
             # while scrolling; two viewport captures must not generate two
