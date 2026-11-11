@@ -386,6 +386,21 @@ class Robot:
             time.sleep(self.delay)
             current = self.snap(title + "-retry")
         return current
+    def wait_for_route(self, title, markers, max_checks=5):
+        """Wait for the destination screen, not a label on the previous one.
+
+        Settings root already contains the words Appearance and Keyboard.
+        Those labels alone cannot prove that their pages have opened.
+        """
+        current = self.snap("after-" + title)
+        for n in range(max_checks - 1):
+            matched_stage = current.get("stage", "").casefold() == title.casefold()
+            if matched_stage and self.has_markers(current, markers[:1]):
+                return current
+            time.sleep(self.delay)
+            current = self.snap("after-" + title + "-retry-" + str(n+1))
+        return current
+
     def navigate(self, before, title, markers):
         target = self.find(before, re.escape(title))
         if target is None:
@@ -395,7 +410,7 @@ class Robot:
         # A collapsed sheet exposes the section heading before lower controls.
         # Collect every scroll viewport before verifying deeper markers; do
         # not fail Diagnostics/About only because their buttons are below fold.
-        after = self.wait_for_markers("after-" + title, markers[:1])
+        after = self.wait_for_route(title, markers)
         # A label changing is not evidence of a route transition: clock/live
         # text can change while a tap failed. Validate the screen identity
         # observed immediately after the tap, before scrolling moves headings.
