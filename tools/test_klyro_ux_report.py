@@ -191,6 +191,22 @@ class SheetEvidenceTests(unittest.TestCase):
             self.assertEqual(result["revisited_screen_layouts"], 6)
             self.assertIn("6", (p / "report.html").read_text())
 
+    def test_gfxinfo_observation_is_reported_but_not_an_animation_benchmark(self):
+        with tempfile.TemporaryDirectory() as folder:
+            out = Path(folder)
+            perf = {"status": "OBSERVED", "rendered_frames_during_robot": 200,
+                    "janky_frames_during_robot": 12,
+                    "janky_percent_during_robot": 6.0,
+                    "caveat": "Aggregate, not per-route animation"}
+            robot.report(out, [], [], performance=perf)
+            results = json.loads((out / "results.json").read_text())
+            self.assertEqual(results["performance"]["janky_percent_during_robot"], 6.0)
+            self.assertIn("6.0%", (out / "report.html").read_text())
+            review.make_report(out, [], performance=perf)
+            self.assertIn("OBSERVED", (out / "ux-review.html").read_text())
+            components = json.loads((out / "components.json").read_text())
+            self.assertEqual(components["performance"], perf)
+
     def test_source_report_escapes_html_and_writes_json(self):
         with tempfile.TemporaryDirectory() as folder:
             p = Path(folder)
