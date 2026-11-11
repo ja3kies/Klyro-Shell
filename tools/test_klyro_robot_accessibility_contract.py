@@ -23,6 +23,14 @@ class RobotAccessibleRoutesTests(unittest.TestCase):
         self.assertIn('contentDescription = title', fragment)
         self.assertIn('onClickLabel = "Open " + title', fragment)
 
+    def test_icon_only_custom_accent_has_accessible_semantic_description(self):
+        anchor = 'onClickLabel = "Choose custom accent"'
+        self.assertIn(anchor, SETTINGS)
+        scope = SETTINGS.split(anchor, 1)[1].split('Icon(painterResource(R.drawable.hugeicons_plus_sign)', 1)[0]
+        self.assertIn('.semantics {', scope)
+        self.assertIn('contentDescription = "Choose custom accent"', scope)
+        self.assertIn('showColorPicker = true', scope)
+
     def test_settings_close_and_back_actions_exist(self):
         self.assertIn('Text("Close")', SETTINGS)
         self.assertIn('Text("Settings")', SETTINGS)
