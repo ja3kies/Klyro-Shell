@@ -86,11 +86,10 @@ def inspect(path, density=None):
     # A target clipped by the display cannot be reliably tapped or read.
     # Report it separately from the 48dp check; this is measured geometry,
     # not an inferred judgment about colors or visual styling.
-    screen_rect = None
-    for n, x1, y1, x2, y2 in bounds:
-        if n is root:
-            screen_rect = (x1, y1, x2, y2)
-            break
+    # UIAutomator XML uses an unbounded <hierarchy> wrapper. The first
+    # bounded visible <node> is the display viewport. Using root bounds
+    # silently disabled clipping detection in the synthetic and Pixel XMLs.
+    screen_rect = tuple(bounds[0][1:]) if bounds else None
     clipped = []
     if screen_rect:
         sx1, sy1, sx2, sy2 = screen_rect
@@ -103,7 +102,7 @@ def inspect(path, density=None):
                               if v.strip()), "(unlabeled)")
                 clipped.append({
                     "label": label, "bounds": n.get("bounds", ""),
-                    "screen_bounds": root.get("bounds", "")
+                    "screen_bounds": f"[{sx1},{sy1}][{sx2},{sy2}]"
                 })
     # Match complete stage tokens: e.g. "plugins" must not match "plugins-old".
     stage_tokens = re.split(r"[^a-z]+", path.stem.lower())
