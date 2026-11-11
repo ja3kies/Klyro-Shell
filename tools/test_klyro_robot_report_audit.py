@@ -210,6 +210,56 @@ class RobotReportAuditTests(unittest.TestCase):
             self.assertEqual(audit.report(merged).count(
                 "expected visible marker not found"), 1)
 
+    def test_overlapping_independent_buttons_are_flagged(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-plugins.xml"
+            p.write_text(
+                '<hierarchy><node bounds="[0,0][1080,2424]">'
+                '<node clickable="true" text="Add" bounds="[100,100][250,250]"/>'
+                '<node clickable="true" text="Cancel" bounds="[160,160][310,310]"/>'
+                '</node></hierarchy>'
+            )
+            result = audit.inspect(p, density=2)
+            self.assertEqual(len(result["overlaps"]), 1)
+            item = result["overlaps"][0]
+            self.assertEqual(item["first"], "Add")
+            self.assertEqual(item["second"], "Cancel")
+            self.assertGreater(item["overlap_pct"], 30)
+            self.assertIn("pairs of independent", audit.report([result]))
+
+    def test_nested_clickable_compose_nodes_do_not_trigger_overlap(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-plugins.xml"
+            p.write_text(
+                '<hierarchy><node bounds="[0,0][1080,2424]">'
+                '<node clickable="true" text="Plugins" bounds="[100,100][400,400]">'
+                '<node clickable="true" text="Icon" bounds="[120,120][240,240]"/>'
+                '</node></node></hierarchy>'
+            )
+            self.assertEqual(audit.inspect(p)["overlaps"], [])
+
+    def test_adjacent_targets_are_not_overlapping(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "002-settings.xml"
+            p.write_text(
+                '<hierarchy><node bounds="[0,0][1080,2424]">'
+                '<node clickable="true" text="Appearance" bounds="[0,0][200,200]"/>'
+                '<node clickable="true" text="Keyboard" bounds="[200,0][400,200]"/>'
+                '</node></hierarchy>'
+            )
+            self.assertEqual(audit.inspect(p)["overlaps"], [])
+
+    def test_tiny_intersection_below_review_threshold_is_ignored(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "002-settings.xml"
+            p.write_text(
+                '<hierarchy><node bounds="[0,0][1080,2424]">'
+                '<node clickable="true" text="Appearance" bounds="[0,0][200,200]"/>'
+                '<node clickable="true" text="Keyboard" bounds="[190,0][390,200]"/>'
+                '</node></hierarchy>'
+            )
+            self.assertEqual(audit.inspect(p)["overlaps"], [])
+
     def test_stage_requires_complete_token(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "003-pluginsettings.xml"
