@@ -148,6 +148,15 @@ class SheetEvidenceTests(unittest.TestCase):
         self.assertEqual(len(review.findings_from_accessibility(
             [sample, sample], None)), 1)
 
+    def test_bootstrap_pins_every_source_file_to_same_revision(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "scripts/klyro-qa-bootstrap.sh").read_text()
+        self.assertIn('export KLYRO_QA_SOURCE_COMMIT="$REV"', script)
+        self.assertIn('SOURCE="https://raw.githubusercontent.com/ja3kies/Klyro-Shell/$REV/tools"', script)
+        self.assertIn('Klyro-Shell/$REV/$REL', script)
+        self.assertIn('printf', script)
+        self.assertIn('source-commit.txt', script)
+
     def test_source_report_escapes_html_and_writes_json(self):
         with tempfile.TemporaryDirectory() as folder:
             p = Path(folder)
@@ -170,8 +179,10 @@ class SheetEvidenceTests(unittest.TestCase):
             self.assertIn("target-overlay", text)
             self.assertIn("Écran avant le clic", text)
             self.assertEqual(result[0]["source"]["status"], "UNAVAILABLE")
-            self.assertEqual(json.loads((p/"components.json").read_text())
-                             ["duplicate_screens_avoided"], 7)
+            contents = json.loads((p / "components.json").read_text())
+            self.assertEqual(contents["duplicate_screens_avoided"], 7)
+            self.assertEqual(contents["source_revision"], review.SOURCE_REV)
+            self.assertIn(review.SOURCE_REV, text)
 
 if __name__ == "__main__":
     unittest.main()
