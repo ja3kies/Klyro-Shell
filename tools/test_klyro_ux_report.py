@@ -129,6 +129,25 @@ class SheetEvidenceTests(unittest.TestCase):
         issue = review.findings_from_accessibility(snapshots, None)[0]
         self.assertEqual(issue["source"]["status"], "UNMAPPED")
 
+    def test_offscreen_control_is_prioritized_without_inventing_source(self):
+        sample = {"stage": "appearance",
+                  "clipped": [{"label": "Close",
+                               "bounds": "[930,2330][1120,2510]"}],
+                  "small_details": [], "unlabeled": [], "missing": []}
+        issues = review.findings_from_accessibility([sample], None)
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0]["priority"], "P1")
+        self.assertEqual(issues[0]["kind"], "clipped-touch-target")
+        self.assertEqual(issues[0]["source"]["status"], "UNMAPPED")
+
+    def test_duplicate_offscreen_observation_not_reported_twice(self):
+        sample = {"stage": "appearance",
+                  "clipped": [{"label": "Close",
+                               "bounds": "[930,2330][1120,2510]"}],
+                  "small_details": [], "unlabeled": [], "missing": []}
+        self.assertEqual(len(review.findings_from_accessibility(
+            [sample, sample], None)), 1)
+
     def test_source_report_escapes_html_and_writes_json(self):
         with tempfile.TemporaryDirectory() as folder:
             p = Path(folder)
