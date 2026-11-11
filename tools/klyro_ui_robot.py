@@ -275,9 +275,10 @@ class Robot:
             self.swipe(x, y, x, max(int(height * .13), y - int(height * .40)), 560)
             expanded = self.snap("expanded-" + page)
             if expanded.get("sheet_top") is None:
-                self.warnings.append("Expansion unexpectedly dismissed the sheet: " + page)
                 record["expanded"] = "unexpected navigation; capture stopped"
-                return current
+                raise RuntimeError(
+                    "Sheet disappeared during expansion: " + page +
+                    "; stopped before any further taps")
             record["expanded"] = (
                 "verified" if expanded.get("sheet_top") is not None
                 and expanded["sheet_top"] + 24 < current["sheet_top"]
