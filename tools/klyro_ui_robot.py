@@ -316,21 +316,12 @@ class Robot:
             record["fully_captured"] = end_reached
             if not end_reached and pages >= max_scrolls:
                 self.warnings.append("Full sheet not proven: scroll limit reached in " + page)
-            # Restore top for stable back navigation and repeatability.
-            if pages:
-                restored_ok = False
-                for n in range(pages + 3):
-                    self.swipe(x, y_stop, x, y_start, 390)
-                    restored = self.snap("restored-" + page + "-" + str(n))
-                    if restored.get("sheet_top") is None:
-                        raise RuntimeError("Restoration unexpectedly left the sheet: " + page)
-                    current = restored
-                    if restored["signature"] == baseline["signature"]:
-                        restored_ok = True
-                        break
-                if not restored_ok:
-                    record["fully_captured"] = False
-                    self.warnings.append("Could not restore sheet scroll to top: " + page)
+            # Do not swipe down to restore a ModalBottomSheet! On the Pixel 9
+            # evidence of 2026-11-11 this collapsed and then dismissed the
+            # entire sheet. The caller must leave the subsection using the
+            # explicit Android BackHandler, which resets its ScrollState.
+            record["exit_strategy"] = "android-back"
+            record["last_view"] = current["shot"]
         else:
             # No accessible scroll container: do not claim a complete view if
             # the sheet remained half-expanded and could conceal content.
@@ -339,7 +330,7 @@ class Robot:
                 not current.get("touches_bottom", False))
             if not record["fully_captured"]:
                 self.warnings.append("Complete sheet visibility not verified: " + page)
-        return baseline if record["fully_captured"] else current
+        return current
 
     def record(self, name, passed, before, after, detail="", target=None):
         self.steps.append({"name":name,"status":"PASS" if passed else "FAIL",
@@ -424,6 +415,22 @@ class Robot:
                     "Original selected tab should be restored", target=back)
         return restored if ok else None
 
+    def back_to_settings(self, current, page):
+        """Use Klyro's nested Settings BackHandler, never a downward drag."""
+        if not active():
+            self.record_blocked("Back to Settings: " + page, current,
+                                "Klyro no longer in foreground")
+            return None
+        adb("shell", "input", "keyevent", "KEYCODE_BACK")
+        time.sleep(self.delay)
+        after = self.wait_for_markers("after-back-" + page, SETTINGS_ROOT)
+        passed = (self.has_markers(after, SETTINGS_ROOT) and
+                  after["screen"] != current["screen"] and
+                  after.get("sheet_top") is not None)
+        self.record("Back to Settings: " + page, passed, current, after,
+                    "Android BackHandler must restore Settings root without dismissing sheet")
+        return after if passed else None
+
     def smoke(self):
         current = self.snap("initial")
         home_markers = HOME_MARKERS
@@ -448,7 +455,7 @@ class Robot:
             if detail is None:
                 self.warnings.append("Settings subpage not verified: " + name)
                 return
-            current = self.navigate(detail, "Settings", SETTINGS_ROOT)
+            current = self.back_to_settings(detail, name)
             if current is None:
                 self.warnings.append("Back to Settings not verified after " + name)
                 return
