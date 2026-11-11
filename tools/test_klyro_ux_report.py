@@ -182,6 +182,15 @@ class SheetEvidenceTests(unittest.TestCase):
         self.assertEqual(
             len(review.findings_from_accessibility([snapshot, snapshot], None)), 1)
 
+    def test_navigation_report_tracks_repeated_layouts_separately(self):
+        with tempfile.TemporaryDirectory() as folder:
+            p = Path(folder)
+            robot.report(p, [], [], exact_duplicates=4, layout_revisits=6)
+            result = json.loads((p / "results.json").read_text())
+            self.assertEqual(result["exact_duplicate_screens"], 4)
+            self.assertEqual(result["revisited_screen_layouts"], 6)
+            self.assertIn("6", (p / "report.html").read_text())
+
     def test_source_report_escapes_html_and_writes_json(self):
         with tempfile.TemporaryDirectory() as folder:
             p = Path(folder)
@@ -195,19 +204,22 @@ class SheetEvidenceTests(unittest.TestCase):
                 p, [step], source_root=None, density=2.625,
                 sheet_gallery={"Plugins": {"images": ["initial.png"],
                                           "expanded": "not attempted", "scroll_segments": 0}},
-                duplicate_count=7, display_height=2424, display_width=1080,
+                duplicate_count=7, layout_revisits=9,
+                display_height=2424, display_width=1080,
                 installed_app={"versionName": "0.3.3-dev", "versionCode": "3",
                                "source_matches_installed_apk": "UNVERIFIED"})
             text = (p / "ux-review.html").read_text()
             self.assertIn("&lt;button&gt;", text)
             self.assertNotIn("<button>", text)
             self.assertIn("7 doublons", text)
+            self.assertIn("9 revisites", text)
             self.assertIn("UNAVAILABLE", text)
             self.assertIn("target-overlay", text)
             self.assertIn("Écran avant le clic", text)
             self.assertEqual(result[0]["source"]["status"], "UNAVAILABLE")
             contents = json.loads((p / "components.json").read_text())
             self.assertEqual(contents["duplicate_screens_avoided"], 7)
+            self.assertEqual(contents["layout_revisits"], 9)
             self.assertEqual(contents["source_revision"], review.SOURCE_REV)
             self.assertIn(review.SOURCE_REV, text)
             self.assertIn("0.3.3-dev", text)
