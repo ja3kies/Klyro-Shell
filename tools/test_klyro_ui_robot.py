@@ -227,6 +227,31 @@ class RobotSemanticTests(unittest.TestCase):
         self.assertEqual(r.steps[-1]["status"], "FAIL")
         self.assertTrue(any("Visible terminal state" in x for x in r.warnings))
 
+    def test_installed_apk_metadata_is_observed_not_assumed(self):
+        dumpsys = (
+            "Packages:\n"
+            "  Package [com.klyro.shell] (f1):\n"
+            "    versionCode=3 minSdk=28 targetSdk=35\n"
+            "    versionName=0.3.3-dev\n"
+            "    lastUpdateTime=2026-11-11 20:45:32\n"
+        )
+        with patch.object(robot, "adb", return_value=dumpsys) as device:
+            info = robot.installed_app_metadata()
+        self.assertEqual(info["versionCode"], "3")
+        self.assertEqual(info["versionName"], "0.3.3-dev")
+        self.assertEqual(info["lastUpdateTime"], "2026-11-11 20:45:32")
+        self.assertEqual(info["source_matches_installed_apk"], "UNVERIFIED")
+        device.assert_called_once_with(
+            "shell", "dumpsys", "package", robot.PKG, timeout=50
+        )
+
+    def test_missing_package_metadata_stays_unknown(self):
+        with patch.object(robot, "adb", return_value="Package not found"):
+            info = robot.installed_app_metadata()
+        self.assertIsNone(info["versionCode"])
+        self.assertIsNone(info["versionName"])
+        self.assertEqual(info["source_matches_installed_apk"], "UNVERIFIED")
+
     def test_no_destructive_action_allowlist(self):
         for unsafe in ("Install", "Remove", "End Bash session", "Clear", "Reset"):
             self.assertFalse(bool(robot.SAFE.fullmatch(unsafe)))
