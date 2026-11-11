@@ -283,7 +283,12 @@ class Robot:
                   "fully_captured": False, "observed_labels": list(current.get("labels", []))}
         self.sheet_gallery[page] = record
         handle = current.get("handle")
-        if handle and current["sheet_top"] > height * 0.24:
+        # A compact sheet already at its natural expanded height does not
+        # need another drag. A redundant handle swipe risks dismissing it.
+        # Expand only when scrolling or bottom-edge evidence indicates that
+        # some content may be obstructed.
+        requires_expansion = bool(current.get("scroll") or current.get("touches_bottom"))
+        if handle and requires_expansion and current["sheet_top"] > height * 0.24:
             x = (handle[0] + handle[2]) // 2
             y = (handle[1] + handle[3]) // 2
             self.swipe(x, y, x, max(int(height * .13), y - int(height * .40)), 560)
@@ -340,8 +345,8 @@ class Robot:
             record["exit_strategy"] = "android-back"
             record["last_view"] = current["shot"]
         else:
-            # No accessible scroll container: do not claim a complete view if
-            # the sheet remained half-expanded and could conceal content.
+            # A compact sheet is complete without forcing it to the top;
+            # a bottom-clipped sheet without scroll is inconclusive.
             record["fully_captured"] = (
                 record["expanded"] == "verified" or
                 not current.get("touches_bottom", False))
