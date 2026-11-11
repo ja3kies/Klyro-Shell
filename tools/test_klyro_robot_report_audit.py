@@ -179,6 +179,37 @@ class RobotReportAuditTests(unittest.TestCase):
             )
             self.assertEqual(audit.inspect(p)["clipped"], [])
 
+    def test_long_sheet_expected_markers_accumulate_across_scrolls(self):
+        with tempfile.TemporaryDirectory() as d:
+            top = Path(d) / "007-after-appearance.xml"
+            lower = Path(d) / "009-full-appearance-scroll-1.xml"
+            top.write_text(
+                '<hierarchy><node text="Appearance"/><node text="Launcher icon"/></hierarchy>'
+            )
+            lower.write_text('<hierarchy><node text="App theme"/></hierarchy>')
+            raw = [audit.inspect(top), audit.inspect(lower)]
+            self.assertIn("App theme", raw[0]["missing"])
+            combined = audit.reconcile_expected_markers(raw)
+            self.assertEqual(combined[0]["missing"], [])
+            self.assertEqual(combined[1]["missing"], [])
+            self.assertNotIn("expected visible marker not found", audit.report(raw))
+
+    def test_missing_across_all_scroll_views_is_reported_only_once(self):
+        with tempfile.TemporaryDirectory() as d:
+            top = Path(d) / "007-after-appearance.xml"
+            lower = Path(d) / "009-full-appearance-scroll-1.xml"
+            top.write_text(
+                '<hierarchy><node text="Appearance"/><node text="Launcher icon"/></hierarchy>'
+            )
+            lower.write_text('<hierarchy><node text="Terminal font"/></hierarchy>')
+            merged = audit.reconcile_expected_markers(
+                [audit.inspect(top), audit.inspect(lower)]
+            )
+            self.assertEqual(merged[0]["missing"], ["App theme"])
+            self.assertEqual(merged[1]["missing"], [])
+            self.assertEqual(audit.report(merged).count(
+                "expected visible marker not found"), 1)
+
     def test_stage_requires_complete_token(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "003-pluginsettings.xml"
