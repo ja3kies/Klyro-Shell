@@ -635,10 +635,16 @@ def main():
                 density = None
         evidence = []
         try:
-            from klyro_robot_report_audit import inspect as audit_inspect, report as audit_report
+            from klyro_robot_report_audit import (
+                inspect as audit_inspect,
+                report as audit_report,
+                reconcile_expected_markers,
+            )
             snapshots = sorted(out.glob("*.xml"))
             if snapshots:
-                evidence = [audit_inspect(p, density=density) for p in snapshots]
+                evidence = reconcile_expected_markers(
+                    [audit_inspect(p, density=density) for p in snapshots]
+                )
                 (out / "accessibility-audit.md").write_text(audit_report(evidence), encoding="utf-8")
         except (ImportError, ValueError, OSError, ET.ParseError) as err:
             robot.warnings.append("Accessibility audit unavailable: " + str(err))
