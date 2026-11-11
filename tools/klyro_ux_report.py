@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Render evidence-backed component UX/code reports. Never execute Kotlin source."""
 import html
+import os
 import json
 import re
 from pathlib import Path
@@ -10,7 +11,10 @@ ROOT = "app/src/main/java/com/oryn/terminal/"
 MAIN = ROOT + "MainActivity.kt"
 PLUGINS = ROOT + "ui/KlyroPluginsPage.kt"
 SETTINGS = ROOT + "ui/KlyroSettingsSheet.kt"
-BASE_URL = "https://github.com/ja3kies/Klyro-Shell/blob/p1/ux-cross-screen-final-pass-20261110/"
+# The bootstrap resolves one immutable revision so source excerpts remain
+# traceable even when this development branch receives further commits.
+SOURCE_REV = os.environ.get("KLYRO_QA_SOURCE_COMMIT", "p1/ux-cross-screen-final-pass-20261110")
+BASE_URL = "https://github.com/ja3kies/Klyro-Shell/blob/" + quote(SOURCE_REV, safe="/") + "/"
 
 SOURCE_ANCHORS = {
     "Initial Home": (MAIN, 'Text("KLYRO"'),
@@ -228,6 +232,7 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
     records = []
     cards = []
     md = ["# Klyro — audit par composant", "",
+          "Révision du code analysé : " + SOURCE_REV, "",
           "Le code est extrait du vrai dépôt. Les conseils UI/UX sont des heuristiques, pas une expertise visuelle automatique.",
           f"Captures répétées économisées : {duplicate_count}.", ""]
     for i, step in enumerate(steps, 1):
@@ -343,6 +348,7 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
         '<header><h1>Klyro — audit par composant et code Kotlin</h1><p>' +
         str(len(steps)) + ' assertions · ' + str(duplicate_count) +
         ' doublons de capture évités. Évaluation des zones tactiles et recommandations ciblées.</p>' +
+        '<p>Révision Kotlin/robot : <code>' + esc(SOURCE_REV) + '</code></p>' +
         '<p>Les recommandations sont des règles explicites et doivent être validées sur appareil.</p></header>'
         '<h2>Problèmes prioritaires détectés (' + str(len(issues)) + ')</h2>' +
         ("".join(issues_html) if issues_html else
@@ -355,7 +361,8 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
             x["observation"] + " — " + x["recommendation"]) for x in issues]
     (out / "ux-review.md").write_text("\n".join(md), encoding="utf-8")
     (out / "components.json").write_text(
-        json.dumps({"density": density, "duplicate_screens_avoided": duplicate_count,
+        json.dumps({"density": density, "source_revision": SOURCE_REV,
+                    "duplicate_screens_avoided": duplicate_count,
                     "components": records, "sheets": sheet_gallery,
                     "findings": issues},
                    ensure_ascii=False, indent=2), encoding="utf-8")
