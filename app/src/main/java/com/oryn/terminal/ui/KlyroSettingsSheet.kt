@@ -348,6 +348,12 @@ internal fun KlyroSettingsSheet(
                                                 .clickable(role = Role.Button,
                                                     onClickLabel = "Choose custom accent") {
                                                     showColorPicker = true
+                                                }
+                                                // The click action label alone is not exposed
+                                                // as content-desc by Android UIAutomator.
+                                                // This icon-only + control needs its own name.
+                                                .semantics {
+                                                    contentDescription = "Choose custom accent"
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
