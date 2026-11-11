@@ -38,7 +38,7 @@ class CaptureTests(unittest.TestCase):
         baseline = {"sheet_top": 1215, "handle": (498,1273,582,1284),
                     "screen_height": 2424, "stage": "Appearance",
                     "shot": "partial.png", "signature": "partial",
-                    "scroll": None}
+                    "scroll": None, "touches_bottom": True}
         expanded = {**baseline, "sheet_top": 250,
                     "shot": "full.png", "signature": "expanded"}
         r = robot.Robot(Path("."), .1)
@@ -49,11 +49,24 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(r.sheet_gallery["Appearance"]["images"], ["full.png"])
         self.assertEqual(sw.call_args.args[:2], (540, 1278))
 
+    def test_compact_sheet_with_handle_requires_no_drag(self):
+        baseline = {"sheet_top": 1215, "handle": (498,1273,582,1284),
+                    "screen_height": 2424, "stage": "Settings",
+                    "shot": "compact.png", "signature": "compact",
+                    "scroll": None, "touches_bottom": False}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(r, "swipe") as swipe:
+            observed = r.capture_full_sheet(baseline, "Settings")
+        swipe.assert_not_called()
+        self.assertEqual(observed["shot"], "compact.png")
+        self.assertTrue(r.sheet_gallery["Settings"]["fully_captured"])
+        self.assertEqual(r.warnings, [])
+
     def test_disappearing_sheet_never_reuses_stale_navigation_state(self):
         baseline = {"sheet_top": 1215, "handle": (498,1273,582,1284),
                     "screen_height": 2424, "stage": "Appearance",
                     "shot": "partial.png", "signature": "partial",
-                    "scroll": None}
+                    "scroll": None, "touches_bottom": True}
         gone = {**baseline, "sheet_top": None, "stage": "Home",
                 "shot": "home.png", "signature": "home"}
         r = robot.Robot(Path("."), 0)
