@@ -446,6 +446,7 @@ class Robot:
 
     def smoke(self):
         current = self.snap("initial")
+        initial_home = current
         home_markers = HOME_MARKERS
         if not self.has_markers(current, home_markers):
             self.record_blocked("Initial Home", current, "Home markers missing; no tap attempted")
@@ -478,6 +479,19 @@ class Robot:
             after = self.wait_for_markers("after-close", home_markers)
             ok = self.has_markers(after, home_markers) and after["screen"] != current["screen"]
             self.record("Close settings", ok, current, after, "Home visible after dismissal", target=target)
+            if ok:
+                # Non-destructive regression: only assert what the UI exposes.
+                # We cannot infer backend PTY lifetime from XML alone.
+                first_sessions = initial_home.get("sessions", [])
+                final_sessions = after.get("sessions", [])
+                first_action = [v for v in HOME_ACTION if any(
+                    v.casefold() in x.casefold() for x in initial_home.get("labels", []))]
+                final_action = [v for v in HOME_ACTION if any(
+                    v.casefold() in x.casefold() for x in after.get("labels", []))]
+                unchanged = first_sessions == final_sessions and first_action == final_action
+                self.record("Visible terminal state preserved", unchanged,
+                            initial_home, after,
+                            "Session identifiers and Bash launch/resume labels must match")
         else:
             self.record_blocked("Close settings", current, "Close control missing; no tap attempted")
     def safe_cancel_dialog(self, s):
