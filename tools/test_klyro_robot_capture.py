@@ -49,6 +49,21 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(r.sheet_gallery["Appearance"]["images"], ["full.png"])
         self.assertEqual(sw.call_args.args[:2], (540, 1278))
 
+    def test_disappearing_sheet_never_reuses_stale_navigation_state(self):
+        baseline = {"sheet_top": 1215, "handle": (498,1273,582,1284),
+                    "screen_height": 2424, "stage": "Appearance",
+                    "shot": "partial.png", "signature": "partial",
+                    "scroll": None}
+        gone = {**baseline, "sheet_top": None, "stage": "Home",
+                "shot": "home.png", "signature": "home"}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(r, "swipe"), patch.object(r, "snap", return_value=gone):
+            with self.assertRaisesRegex(RuntimeError, "Sheet disappeared"):
+                r.capture_full_sheet(baseline, "Appearance")
+        self.assertEqual(
+            r.sheet_gallery["Appearance"]["expanded"],
+            "unexpected navigation; capture stopped")
+
     def test_sheet_scroll_captures_unique_views_without_dragging_down(self):
         baseline = {"sheet_top": 140, "handle": None,
                     "screen_height": 2424, "stage": "Appearance",
