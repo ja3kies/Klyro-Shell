@@ -104,6 +104,34 @@ def inspect(path, density=None):
                     "label": label, "bounds": n.get("bounds", ""),
                     "screen_bounds": f"[{sx1},{sy1}][{sx2},{sy2}]"
                 })
+    # Check overlapping independent touch targets. Nested clickable Compose
+    # parents/children are intentionally excluded: they share one gesture
+    # region rather than representing competing adjacent actions.
+    touch_bounds = [(node, (x1, y1, x2, y2)) for node, x1, y1, x2, y2
+                    in bounds if node in interactive]
+    children = {node: set(node.iter("node")) for node, _ in touch_bounds}
+    overlaps = []
+    def target_label(node):
+        return next((value.strip() for child in visible_nodes(node)
+                     for value in (child.get("text", ""), child.get("content-desc", ""))
+                     if value.strip()), "(unlabeled)")
+    for index, (first, (ax1, ay1, ax2, ay2)) in enumerate(touch_bounds):
+        for second, (bx1, by1, bx2, by2) in touch_bounds[index + 1:]:
+            if first in children[second] or second in children[first]:
+                continue
+            width = max(0, min(ax2, bx2) - max(ax1, bx1))
+            height = max(0, min(ay2, by2) - max(ay1, by1))
+            if not width or not height:
+                continue
+            smaller = min((ax2-ax1)*(ay2-ay1), (bx2-bx1)*(by2-by1))
+            ratio = width * height / smaller
+            if ratio >= 0.30:
+                overlaps.append({
+                    "first": target_label(first), "second": target_label(second),
+                    "first_bounds": first.get("bounds", ""),
+                    "second_bounds": second.get("bounds", ""),
+                    "overlap_pct": round(ratio * 100, 1),
+                })
     # Match complete stage tokens: e.g. "plugins" must not match "plugins-old".
     stage_tokens = re.split(r"[^a-z]+", path.stem.lower())
     key = next((k for k in EXPECTED if k in stage_tokens), None)
@@ -118,7 +146,8 @@ def inspect(path, density=None):
                 visible_strings=[x for x in strings if x.strip()],
                 interactive=len(interactive), missing=missing,
                 unlabeled=unlabeled, small=small, small_details=small_details,
-                clipped=clipped, invalid_bounds=invalid_bounds,
+                clipped=clipped, overlaps=overlaps,
+                invalid_bounds=invalid_bounds,
                 density=density, empty=(len(nodes) == 0),
                 switches=sum(n.get("checkable") == "true" for n in nodes),
                 selected=sum(n.get("selected") == "true" for n in nodes))
@@ -182,9 +211,17 @@ def report(results):
             lines.append(f"- **{r['name']}**: {len(r['clipped'])} clickable target bounds outside the captured display; inspect clipping and Compose insets.")
             for target in r["clipped"][:12]:
                 lines.append(f"  - {target['label']} at {target['bounds']}; screen {target['screen_bounds']}.")
+        if r["overlaps"]:
+            lines.append(f"- **{r['name']}**: {len(r['overlaps'])} pairs of independent clickable targets overlap by at least 30% of the smaller area; review hit regions.")
+            for item in r["overlaps"][:12]:
+                lines.append(
+                    f"  - {item['first']} vs {item['second']}: "
+                    f"{item['overlap_pct']}% overlap at "
+                    f"{item['first_bounds']} / {item['second_bounds']}."
+                )
         if r["invalid_bounds"]:
             lines.append(f"- **{r['name']}**: {len(r['invalid_bounds'])} malformed or non-positive bounds; inspect XML extraction.")
-    if not any(r["empty"] or r["missing"] or r["unlabeled"] or r["small"] or r["clipped"] or r["invalid_bounds"] for r in results):
+    if not any(r["empty"] or r["missing"] or r["unlabeled"] or r["small"] or r["clipped"] or r["overlaps"] or r["invalid_bounds"] for r in results):
         lines.append("- No issues detected by these limited static heuristics.")
     lines += ["", "## Follow-up device tests", "",
               "- Tap each action and compare before/after XML and screenshot; presence alone is not proof of navigation.",
