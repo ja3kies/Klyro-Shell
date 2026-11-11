@@ -49,9 +49,9 @@ def measured_density():
 def installed_app_metadata():
     """Read-only package identity; source commit != installed APK by default."""
     output = adb("shell", "dumpsys", "package", PKG, timeout=50)
-    version_code = re.search(r"\\bversionCode=(\\d+)", output)
-    version_name = re.search(r"\\bversionName=([^\\s]+)", output)
-    updated = re.search(r"\\blastUpdateTime=([^\\r\\n]+)", output)
+    version_code = re.search(r"\bversionCode=(\d+)", output)
+    version_name = re.search(r"\bversionName=([^\s]+)", output)
+    updated = re.search(r"\blastUpdateTime=([^\r\n]+)", output)
     return {
         "package": PKG,
         "versionCode": version_code.group(1) if version_code else None,
