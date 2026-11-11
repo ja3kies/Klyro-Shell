@@ -248,7 +248,8 @@ def esc(value):
 
 def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
                 duplicate_count=0, display_height=None, display_width=None,
-                accessibility_evidence=None, installed_app=None):
+                accessibility_evidence=None, installed_app=None,
+                layout_revisits=0):
     out = Path(out)
     sheet_gallery = sheet_gallery or {}
     installed_app = installed_app or {}
@@ -257,7 +258,8 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
     md = ["# Klyro — audit par composant", "",
           "Révision du code analysé : " + SOURCE_REV, "",
           "Le code est extrait du vrai dépôt. Les conseils UI/UX sont des heuristiques, pas une expertise visuelle automatique.",
-          f"Captures répétées économisées : {duplicate_count}.", ""]
+          f"Captures strictement identiques économisées : {duplicate_count}.",
+          f"Écrans/feuilles revisités (même structure, contenus éventuellement différents) : {layout_revisits}.", ""]
     for i, step in enumerate(steps, 1):
         target = examine_target(step.get("target"), density, display_height)
         source = source_for(step["name"], step.get("from_stage"), source_root)
@@ -370,7 +372,8 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
     </style></head><body>""" + (
         '<header><h1>Klyro — audit par composant et code Kotlin</h1><p>' +
         str(len(steps)) + ' assertions · ' + str(duplicate_count) +
-        ' doublons de capture évités. Évaluation des zones tactiles et recommandations ciblées.</p>' +
+        ' doublons strictement identiques évités, ' + str(layout_revisits) +
+        ' revisites de même disposition. Les changements de contenu conservent leurs captures.</p>' +
         '<p>Révision Kotlin/robot : <code>' + esc(SOURCE_REV) + '</code></p>' +
         '<p>APK installée : ' + esc(installed_app.get("versionName", "non renseignée")) +
         ' (versionCode ' + esc(installed_app.get("versionCode", "?")) + '). ' +
@@ -390,6 +393,7 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
         json.dumps({"density": density, "source_revision": SOURCE_REV,
                     "installed_app": installed_app,
                     "duplicate_screens_avoided": duplicate_count,
+                    "layout_revisits": layout_revisits,
                     "components": records, "sheets": sheet_gallery,
                     "findings": issues},
                    ensure_ascii=False, indent=2), encoding="utf-8")
