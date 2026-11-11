@@ -46,6 +46,20 @@ def measured_density():
         return None
     return int(matches[-1]) / 160.0
 
+def installed_app_metadata():
+    """Read-only package identity; source commit != installed APK by default."""
+    output = adb("shell", "dumpsys", "package", PKG, timeout=50)
+    version_code = re.search(r"\\bversionCode=(\\d+)", output)
+    version_name = re.search(r"\\bversionName=([^\\s]+)", output)
+    updated = re.search(r"\\blastUpdateTime=([^\\r\\n]+)", output)
+    return {
+        "package": PKG,
+        "versionCode": version_code.group(1) if version_code else None,
+        "versionName": version_name.group(1) if version_name else None,
+        "lastUpdateTime": updated.group(1).strip() if updated else None,
+        "source_matches_installed_apk": "UNVERIFIED",
+    }
+
 def active():
     data = adb("shell", "dumpsys", "activity", "activities")
     lines = [x for x in data.splitlines() if "topResumedActivity" in x or "mResumedActivity" in x]
@@ -574,7 +588,7 @@ class Robot:
         # No automatic session termination: this can kill a running shell.
         self.warnings.append("Created one new terminal session; left it running intentionally")
 
-def report(out, steps, warnings, ux_findings=None):
+def report(out, steps, warnings, ux_findings=None, app_info=None):
     counts = {status: sum(step["status"] == status for step in steps)
               for status in ("PASS", "FAIL", "SKIP")}
     ux_findings = ux_findings or []
@@ -583,6 +597,7 @@ def report(out, steps, warnings, ux_findings=None):
                "NEEDS_UX_REVIEW" if ux_findings else "PASS")
     payload={"generated":dt.datetime.now().isoformat(), "overall": overall,
              "summary": counts, "ux_findings_count": len(ux_findings),
+             "installed_app": app_info or {},
              "steps": steps, "warnings": warnings}
     (out/"results.json").write_text(json.dumps(payload,indent=2,ensure_ascii=False),encoding="utf-8")
     rows=[]
@@ -609,10 +624,15 @@ def main():
     out=Path(args.output).expanduser()
     out.mkdir(parents=True,exist_ok=True)
     robot=Robot(out,args.delay)
+    app_info = {"package": PKG, "source_matches_installed_apk": "UNVERIFIED"}
     try:
         devices=adb("devices")
         if not any("\tdevice" in x for x in devices.splitlines()):
             raise RuntimeError("No authorized ADB device")
+        try:
+            app_info = installed_app_metadata()
+        except (RuntimeError, OSError, subprocess.TimeoutExpired):
+            pass
         if not active():
             adb("shell","monkey","-p",PKG,"-c","android.intent.category.LAUNCHER","1")
             time.sleep(2)
@@ -666,7 +686,10 @@ def main():
                 encoding="utf-8")).get("findings", [])
         except (OSError, ValueError):
             ux_findings = []
-        report(out, robot.steps, robot.warnings, ux_findings=ux_findings)
+        report(out, robot.steps, robot.warnings, ux_findings=ux_findings,
+               app_info=app_info)
+        (out / "installed-app.json").write_text(
+            json.dumps(app_info, ensure_ascii=False, indent=2), encoding="utf-8")
         shutil.make_archive(str(out), "zip", root_dir=out)
         print("Report:", out/"report.html")
         print("Component review:", out/"ux-review.html")
