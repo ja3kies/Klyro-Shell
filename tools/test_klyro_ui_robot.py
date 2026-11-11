@@ -175,6 +175,56 @@ class RobotSemanticTests(unittest.TestCase):
             '<node selected="true"><node text="Explore"/></node></hierarchy>')
         self.assertEqual(robot.state(root)["selected_tabs"], ["Explore"])
 
+    def test_installed_tab_count_is_observed_without_data_mutation(self):
+        self.assertEqual(robot.installed_plugin_count(
+            {"labels": ["Plugins", "Installed (3)", "Explore"]}), 3)
+        self.assertEqual(robot.installed_plugin_count(
+            {"labels": ["Installed (0)", "Explore"]}), 0)
+        self.assertIsNone(robot.installed_plugin_count(
+            {"labels": ["Installed", "Explore"]}))
+        self.assertIsNone(robot.installed_plugin_count(
+            {"labels": ["Installed (3)", "Installed (4)"]}))
+
+    def test_plugin_tab_round_trip_checks_registry_count(self):
+        control_explore = {"label": "Explore", "aliases": ["Explore"],
+                           "x": 600, "y": 200}
+        control_installed = {"label": "Installed (1)",
+                             "aliases": ["Installed (1)"], "x": 250, "y": 200}
+        before = {"shot": "plugins.png", "labels": ["Installed (1)", "Explore"],
+                  "selected_tabs": ["Installed (1)"],
+                  "controls": [control_explore, control_installed],
+                  "stage": "Plugins"}
+        switched = {**before, "shot": "explore.png", "selected_tabs": ["Explore"]}
+        restored = {**before, "shot": "restored.png"}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(r, "tap") as tap, patch.object(
+                r, "snap", side_effect=[switched, restored]):
+            final = r.probe_plugin_tabs(before)
+        self.assertIs(final, restored)
+        self.assertEqual(tap.call_count, 2)
+        self.assertEqual(r.steps[-1]["name"], "Plugin registry unchanged")
+        self.assertEqual(r.steps[-1]["status"], "PASS")
+
+    def test_plugin_tab_round_trip_fails_if_installed_count_changes(self):
+        control_explore = {"label": "Explore", "aliases": ["Explore"],
+                           "x": 600, "y": 200}
+        control_installed = {"label": "Installed (1)",
+                             "aliases": ["Installed (1)"], "x": 250, "y": 200}
+        before = {"shot": "plugins.png", "labels": ["Installed (1)", "Explore"],
+                  "selected_tabs": ["Installed (1)"],
+                  "controls": [control_explore, control_installed],
+                  "stage": "Plugins"}
+        switched = {**before, "shot": "explore.png", "selected_tabs": ["Explore"]}
+        changed = {**before, "shot": "restored.png",
+                   "labels": ["Installed (2)", "Explore"],
+                   "selected_tabs": ["Installed (1)"]}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(r, "tap"), patch.object(
+                r, "snap", side_effect=[switched, changed]):
+            self.assertIsNone(r.probe_plugin_tabs(before))
+        self.assertEqual(r.steps[-1]["name"], "Plugin registry unchanged")
+        self.assertEqual(r.steps[-1]["status"], "FAIL")
+
     def test_smoke_checks_visible_terminal_sessions_are_preserved(self):
         initial = {"shot": "home.png", "stage": "Home",
                    "labels": ["KLYRO", "RUNTIME STATUS", "Plugins", "Settings",
