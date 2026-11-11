@@ -249,14 +249,17 @@ def esc(value):
 def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
                 duplicate_count=0, display_height=None, display_width=None,
                 accessibility_evidence=None, installed_app=None,
-                layout_revisits=0):
+                layout_revisits=0, performance=None):
     out = Path(out)
     sheet_gallery = sheet_gallery or {}
     installed_app = installed_app or {}
+    performance = performance or {"status": "UNAVAILABLE"}
     records = []
     cards = []
     md = ["# Klyro — audit par composant", "",
           "Révision du code analysé : " + SOURCE_REV, "",
+          "gfxinfo cumulé (session robot) : " + str(performance.get("status")) +
+          " ; pas un benchmark des animations individuelles.", "",
           "Le code est extrait du vrai dépôt. Les conseils UI/UX sont des heuristiques, pas une expertise visuelle automatique.",
           f"Captures strictement identiques économisées : {duplicate_count}.",
           f"Écrans/feuilles revisités (même structure, contenus éventuellement différents) : {layout_revisits}.", ""]
@@ -375,6 +378,8 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
         ' doublons strictement identiques évités, ' + str(layout_revisits) +
         ' revisites de même disposition. Les changements de contenu conservent leurs captures.</p>' +
         '<p>Révision Kotlin/robot : <code>' + esc(SOURCE_REV) + '</code></p>' +
+        '<p>Gfxinfo : ' + esc(performance.get("status")) +
+        ' — <a href="performance.json">mesures globales (non par interaction)</a></p>' +
         '<p>APK installée : ' + esc(installed_app.get("versionName", "non renseignée")) +
         ' (versionCode ' + esc(installed_app.get("versionCode", "?")) + '). ' +
         'Correspondance binaire/source : <strong>NON VÉRIFIÉE</strong>.</p>' +
@@ -392,6 +397,7 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
     (out / "components.json").write_text(
         json.dumps({"density": density, "source_revision": SOURCE_REV,
                     "installed_app": installed_app,
+                    "performance": performance,
                     "duplicate_screens_avoided": duplicate_count,
                     "layout_revisits": layout_revisits,
                     "components": records, "sheets": sheet_gallery,
