@@ -49,35 +49,71 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(r.sheet_gallery["Appearance"]["images"], ["full.png"])
         self.assertEqual(sw.call_args.args[:2], (540, 1278))
 
-    def test_sheet_scroll_captures_unique_views_and_returns_to_start(self):
+    def test_sheet_scroll_captures_unique_views_without_dragging_down(self):
         baseline = {"sheet_top": 140, "handle": None,
                     "screen_height": 2424, "stage": "Appearance",
                     "shot": "top.png", "signature": "top",
                     "scroll": (0,300,1080,2424)}
         middle = {**baseline, "shot": "bottom.png", "signature": "bottom"}
         r = robot.Robot(Path("."), .1)
-        with patch.object(r, "swipe"), patch.object(
-                r, "snap", side_effect=[middle, middle, baseline]):
-            r.capture_full_sheet(baseline, "Appearance", max_scrolls=4)
-        result = r.sheet_gallery["Appearance"]
-        self.assertEqual(result["images"], ["top.png", "bottom.png"])
-        self.assertEqual(result["scroll_segments"], 1)
-        self.assertTrue(result["fully_captured"])
-
-    def test_unrestored_scroll_never_returns_stale_pre_scroll_state(self):
-        baseline = {"sheet_top": 120, "handle": None,
-                    "screen_height": 2424, "stage": "Appearance",
-                    "shot": "top.png", "signature": "top",
-                    "scroll": (0,300,1080,2424)}
-        bottom = {**baseline, "shot": "bottom.png", "signature": "bottom"}
-        r = robot.Robot(Path("."), .1)
-        with patch.object(r, "swipe"), patch.object(
-                r, "snap", side_effect=[bottom, bottom, bottom, bottom,
-                                       bottom, bottom]):
-            result = r.capture_full_sheet(baseline, "Appearance")
+        with patch.object(r, "swipe") as swipe, patch.object(
+                r, "snap", side_effect=[middle, middle]):
+            result = r.capture_full_sheet(baseline, "Appearance", max_scrolls=4)
+        data = r.sheet_gallery["Appearance"]
+        self.assertEqual(data["images"], ["top.png", "bottom.png"])
+        self.assertEqual(data["scroll_segments"], 1)
+        self.assertTrue(data["fully_captured"])
+        self.assertEqual(data["exit_strategy"], "android-back")
         self.assertEqual(result["shot"], "bottom.png")
-        self.assertFalse(r.sheet_gallery["Appearance"]["fully_captured"])
-        self.assertTrue(any("Could not restore" in x for x in r.warnings))
+        self.assertEqual(swipe.call_count, 2)
+        # A downwards swipe on this scrollable area collapses/dismisses
+        # the Material bottom sheet on the real Pixel 9.
+        for args, _ in swipe.call_args_list:
+            self.assertGreater(args[1], args[3])
+
+    def test_no_downward_scroll_restoration_on_actual_pixel_failure(self):
+        baseline = {"sheet_top": 606, "handle": None,
+                    "screen_height": 2424, "stage": "Appearance",
+                    "shot": "007-after-appearance.png", "signature": "top",
+                    "scroll": (0,733,1080,2361)}
+        bottom = {**baseline, "shot": "009-full-appearance-scroll-1.png",
+                  "signature": "bottom"}
+        r = robot.Robot(Path("."), .1)
+        with patch.object(r, "swipe") as swipe, patch.object(
+                r, "snap", side_effect=[bottom, bottom]):
+            result = r.capture_full_sheet(baseline, "Appearance")
+        self.assertEqual(result["shot"], "009-full-appearance-scroll-1.png")
+        self.assertTrue(all(call.args[1] > call.args[3]
+                            for call in swipe.call_args_list))
+        self.assertEqual(r.warnings, [])
+
+    def test_backhandler_restores_settings_root_after_scrolled_appearance(self):
+        detail = {"shot": "bottom.png", "screen": ("Terminal font", "Accent"),
+                  "stage": "Appearance", "sheet_top": 606}
+        root = {"shot": "settings.png",
+                "screen": ("Settings", "Appearance", "Keyboard", "Storage", "Privacy"),
+                "labels": ["Settings", "Appearance", "Keyboard", "Storage", "Privacy"],
+                "stage": "Settings", "sheet_top": 1215}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(robot, "active", return_value=True), \
+             patch.object(robot, "adb", return_value="") as adb, \
+             patch.object(r, "wait_for_markers", return_value=root):
+            after = r.back_to_settings(detail, "Appearance")
+        self.assertEqual(after, root)
+        adb.assert_called_once_with("shell", "input", "keyevent", "KEYCODE_BACK")
+        self.assertEqual(r.steps[0]["status"], "PASS")
+
+    def test_backhandler_failure_if_sheet_was_dismissed(self):
+        detail = {"shot": "bottom.png", "screen": ("Accent",),
+                  "stage": "Appearance", "sheet_top": 606}
+        dismissed = {"shot": "home.png", "screen": ("KLYRO",), "labels": ["KLYRO"],
+                     "stage": "Home", "sheet_top": None}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(robot, "active", return_value=True), \
+             patch.object(robot, "adb", return_value=""), \
+             patch.object(r, "wait_for_markers", return_value=dismissed):
+            self.assertIsNone(r.back_to_settings(detail, "Appearance"))
+        self.assertEqual(r.steps[0]["status"], "FAIL")
 
     def test_half_expanded_sheet_without_scroll_is_incomplete(self):
         baseline = {"sheet_top": 1400, "handle": None,
