@@ -11,6 +11,59 @@ SAMPLE = ('<hierarchy><node class="android.view.View" bounds="[0,0][1080,2424]">
           '<node text="Settings"/></node></hierarchy>')
 
 class CaptureTests(unittest.TestCase):
+    def test_same_structure_with_live_text_change_counts_as_revisit(self):
+        first = robot.ET.fromstring(
+            '<hierarchy><node bounds="[0,0][1080,2424]" text="Settings">'
+            '<node class="android.widget.TextView" text="Runtime 20:02" '
+            'bounds="[30,100][900,180]"/></node></hierarchy>'
+        )
+        second = robot.ET.fromstring(
+            '<hierarchy><node bounds="[0,0][1080,2424]" text="Settings">'
+            '<node class="android.widget.TextView" text="Runtime 20:03" '
+            'bounds="[30,100][900,180]"/></node></hierarchy>'
+        )
+        self.assertEqual(robot.layout_signature(first), robot.layout_signature(second))
+        self.assertNotEqual(robot.xml_signature(first), robot.xml_signature(second))
+
+    def test_selected_state_changes_layout_fingerprint(self):
+        first = robot.ET.fromstring(
+            '<hierarchy><node clickable="true" selected="true" '
+            'text="Installed (1)" bounds="[0,0][240,120]"/></hierarchy>'
+        )
+        second = robot.ET.fromstring(
+            '<hierarchy><node clickable="true" selected="false" '
+            'text="Installed (1)" bounds="[0,0][240,120]"/></hierarchy>'
+        )
+        self.assertNotEqual(robot.layout_signature(first), robot.layout_signature(second))
+
+    def test_live_changed_layout_counts_revisit_but_preserves_screenshot(self):
+        samples = [
+            '<hierarchy><node bounds="[0,0][1080,2424]" text="Settings">'
+            '<node text="20:03" bounds="[20,20][400,160]"/></node></hierarchy>',
+            '<hierarchy><node bounds="[0,0][1080,2424]" text="Settings">'
+            '<node text="20:04" bounds="[20,20][400,160]"/></node></hierarchy>'
+        ]
+        captures = []
+        def fake_adb(*args, **kwargs):
+            if args[:2] == ("exec-out", "cat"):
+                return samples.pop(0)
+            if args[:2] == ("exec-out", "screencap"):
+                captures.append(1)
+                return b"png-placeholder"
+            return ""
+        with tempfile.TemporaryDirectory() as folder:
+            subject = robot.Robot(Path(folder), 0)
+            with patch.object(robot, "active", return_value=True), \
+                 patch.object(robot, "adb", side_effect=fake_adb):
+                before = subject.snap("settings-one")
+                after = subject.snap("settings-two")
+        self.assertNotEqual(before["shot"], after["shot"])
+        self.assertTrue(after["same_layout_seen_before"])
+        self.assertEqual(after["layout_visit"], 2)
+        self.assertEqual(subject.layout_revisits, 1)
+        self.assertEqual(subject.duplicates, 0)
+        self.assertEqual(len(captures), 2)
+
     def test_identical_sheet_saves_one_png_and_xml(self):
         screenshots = []
         def adb_stub(*args, **kwargs):
