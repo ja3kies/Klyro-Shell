@@ -266,7 +266,7 @@ class Robot:
         height = current.get("screen_height") or 2424
         record = {"images": [], "scroll_segments": 0, "expanded": "not attempted",
                   "top_fraction": current["sheet_top"] / height,
-                  "fully_captured": False}
+                  "fully_captured": False, "observed_labels": list(current.get("labels", []))}
         self.sheet_gallery[page] = record
         handle = current.get("handle")
         if handle and current["sheet_top"] > height * 0.24:
@@ -283,6 +283,7 @@ class Robot:
                 and expanded["sheet_top"] + 24 < current["sheet_top"]
                 else "not observed")
             current = expanded
+            record["observed_labels"].extend(expanded.get("labels", []))
             if (record["expanded"] != "verified" and record["top_fraction"] > .45
                     and (current.get("scroll") or current.get("touches_bottom"))):
                 self.warnings.append(
@@ -311,6 +312,7 @@ class Robot:
                 pages += 1
                 if next_view["shot"] not in record["images"]:
                     record["images"].append(next_view["shot"])
+                record["observed_labels"].extend(next_view.get("labels", []))
                 current = next_view
             record["scroll_segments"] = pages
             record["fully_captured"] = end_reached
@@ -370,10 +372,20 @@ class Robot:
             self.record_blocked("Navigate: " + title, before, "Labeled control not found; no tap attempted")
             return None
         self.tap(target)
-        after = self.wait_for_markers("after-" + title, markers)
-        passed = self.has_markers(after, markers) and after["screen"] != before["screen"]
-        if passed and after.get("sheet_top") is not None:
-            after = self.capture_full_sheet(after, after.get("stage") or title)
+        # A collapsed sheet exposes the section heading before lower controls.
+        # Collect every scroll viewport before verifying deeper markers; do
+        # not fail Diagnostics/About only because their buttons are below fold.
+        after = self.wait_for_markers("after-" + title, markers[:1])
+        if after.get("sheet_top") is not None and self.has_markers(after, markers[:1]):
+            page = after.get("stage") or title
+            after = self.capture_full_sheet(after, page)
+            observed = self.sheet_gallery.get(page, {}).get("observed_labels",
+                                                            after.get("labels", []))
+            passed = (self.has_markers({"labels": observed}, markers) and
+                      after["screen"] != before["screen"] and
+                      after.get("sheet_top") is not None)
+        else:
+            passed = self.has_markers(after, markers) and after["screen"] != before["screen"]
         self.record("Navigate: " + title, passed, before, after,
                     "Expected " + ", ".join(" / ".join(m) if isinstance(m, tuple) else m for m in markers),
                     target=target)
