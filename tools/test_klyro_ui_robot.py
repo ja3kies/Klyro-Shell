@@ -277,6 +277,56 @@ class RobotSemanticTests(unittest.TestCase):
         self.assertEqual(r.steps[-1]["status"], "FAIL")
         self.assertTrue(any("Visible terminal state" in x for x in r.warnings))
 
+    def test_gfxinfo_pixel_frame_jank_parsing(self):
+        raw = (
+            "Graphics info for pid 2222 [com.klyro.shell]\n"
+            "Total frames rendered: 1,502\n"
+            "Janky frames: 125 (8.32%)\n"
+            "50th percentile: 6ms\n"
+            "90th percentile: 14ms\n"
+            "95th percentile: 18ms\n"
+            "99th percentile: 43ms\n"
+        )
+        metrics = robot.parse_gfxinfo(raw)
+        self.assertEqual(metrics["total_frames"], 1502)
+        self.assertEqual(metrics["janky_frames"], 125)
+        self.assertEqual(metrics["frame_percentiles_ms"]["90"], 14.0)
+        self.assertEqual(metrics["frame_percentiles_ms"]["99"], 43.0)
+
+    def test_gfxinfo_missing_frames_never_claims_smooth_animation(self):
+        result = robot.parse_gfxinfo("Graphics info for [com.klyro.shell]")
+        self.assertIsNone(result["total_frames"])
+        self.assertIsNone(result["janky_frames"])
+        self.assertEqual(result["frame_percentiles_ms"], {})
+        self.assertEqual(
+            robot.gfxinfo_delta(result, result)["status"], "UNAVAILABLE")
+
+    def test_gfxinfo_robot_window_delta_observed_without_reset(self):
+        before = {"total_frames": 120, "janky_frames": 12}
+        after = {"total_frames": 220, "janky_frames": 19}
+        delta = robot.gfxinfo_delta(before, after)
+        self.assertEqual(delta["rendered_frames_during_robot"], 100)
+        self.assertEqual(delta["janky_frames_during_robot"], 7)
+        self.assertEqual(delta["janky_percent_during_robot"], 7.0)
+        self.assertIn("Aggregate", delta["caveat"])
+
+    def test_gfxinfo_reset_does_not_yield_negative_jank(self):
+        delta = robot.gfxinfo_delta(
+            {"total_frames": 1600, "janky_frames": 50},
+            {"total_frames": 22, "janky_frames": 3}
+        )
+        self.assertEqual(delta["status"], "UNAVAILABLE")
+        self.assertIn("reset", delta["reason"])
+
+    def test_gfxinfo_device_sample_is_read_only(self):
+        with patch.object(robot, "adb",
+                          return_value="Total frames rendered: 20\nJanky frames: 2") as adb:
+            sample = robot.gfxinfo_sample()
+        adb.assert_called_once_with(
+            "shell", "dumpsys", "gfxinfo", robot.PKG, timeout=45
+        )
+        self.assertEqual(sample["janky_frames"], 2)
+
     def test_installed_apk_metadata_is_observed_not_assumed(self):
         dumpsys = (
             "Packages:\n"
