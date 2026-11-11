@@ -157,6 +157,31 @@ class SheetEvidenceTests(unittest.TestCase):
         self.assertIn('printf', script)
         self.assertIn('source-commit.txt', script)
 
+    def test_overlap_is_a_review_finding_not_a_claimed_visual_failure(self):
+        snapshot = {
+            "stage": "settings", "small_details": [], "unlabeled": [], "missing": [],
+            "overlaps": [{"first": "Appearance", "second": "Keyboard",
+                          "first_bounds": "[0,0][200,200]",
+                          "second_bounds": "[100,100][300,300]",
+                          "overlap_pct": 25.0}],
+        }
+        findings = review.findings_from_accessibility([snapshot], None)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["kind"], "overlapping-touch-targets")
+        self.assertEqual(findings[0]["priority"], "P2")
+        self.assertEqual(findings[0]["source"]["status"], "UNMAPPED")
+
+    def test_same_overlap_across_scrolled_snapshots_is_one_finding(self):
+        snapshot = {
+            "stage": "appearance", "small_details": [], "unlabeled": [], "missing": [],
+            "overlaps": [{"first": "Theme", "second": "System",
+                          "first_bounds": "[20,100][300,300]",
+                          "second_bounds": "[120,100][400,300]",
+                          "overlap_pct": 64.0}],
+        }
+        self.assertEqual(
+            len(review.findings_from_accessibility([snapshot, snapshot], None)), 1)
+
     def test_source_report_escapes_html_and_writes_json(self):
         with tempfile.TemporaryDirectory() as folder:
             p = Path(folder)
