@@ -47,11 +47,27 @@ Artifacts are created in a timestamped folder:
 - `accessibility-audit.md`: visible controls, missing markers, and 48dp
   target-size checks using the device's own `wm density` value
 - `ux-review.html` / `ux-review.md`: clicked component details, real Kotlin source file, exact line numbers, accessible target dimensions in dp, UI/UX recommendations, and all captured sheet scroll segments
-- `components.json`: machine-readable per-component audit with evidence and source provenance
+- `components.json`: machine-readable per-component audit with evidence, Kotlin provenance, overlapping hit regions and prioritized recommendations
+- `performance.json`: read-only before/after Android `dumpsys gfxinfo` counters, with an observational janky-frame delta when both snapshots support it; these are cumulative counters, **not** per-screen animation performance
+- `results.json` additionally distinguishes exact duplicate screenshots from revisits of the same structural screen with updated live text
 - `qa-YYYYMMDD-HHMMSS.zip`: bundled evidence
 
 If a snapshot or expected UI marker is missing, it **is not** a pass.
 The report is not exhaustive functional coverage or visual validation.
+
+The accessibility audit now flags independent touch targets whose hit
+regions overlap by at least 30% of the smaller area (nested Compose controls
+are excluded). These are **P2 review signals**, not confirmed visual defects.
+It also checks clipped targets and 48dp minimums with device density.
+
+When an audit revisits Settings with new runtime text, the structural layout is
+recognized as a revisit, but the new screenshot is retained if its semantic
+content differs. Identical screenshots are reused instead of being recaptured.
+
+The standalone `robot-quality-gate.yml` validates Python syntax, test fixtures
+and Kotlin source contracts without waiting for the full Android SDK setup.
+The Android build workflow skips changes limited to robot scripts/tests/docs,
+but still runs for source changes that can affect the signed APK.
 
 The XML and screenshots may contain private terminal content. Keep report
 archives private and inspect them before sharing.
