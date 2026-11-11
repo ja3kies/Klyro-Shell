@@ -115,6 +115,52 @@ class CaptureTests(unittest.TestCase):
                             for call in swipe.call_args_list))
         self.assertEqual(r.warnings, [])
 
+    def test_failed_tap_cannot_pass_on_changing_live_text(self):
+        before = {"shot": "home-before.png", "stage": "Home",
+                  "screen": ("KLYRO", "Clock 20:00"),
+                  "controls": [{"label": "Plugins", "aliases": ["Plugins"],
+                                "x": 120, "y": 250}],
+                  "labels": ["Plugins", "KLYRO"]}
+        after = {"shot": "home-after.png", "stage": "Home",
+                 "screen": ("KLYRO", "Clock 20:01", "Plugins",
+                            "Installed", "Explore"),
+                 "labels": ["Plugins", "Installed", "Explore", "Clock 20:01"],
+                 "sheet_top": None}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(r, "tap"), \
+             patch.object(r, "wait_for_markers", return_value=after):
+            result = r.navigate(before, "Plugins",
+                                ("Plugins", "Installed", "Explore"))
+        self.assertIsNone(result)
+        self.assertEqual(r.steps[-1]["status"], "FAIL")
+
+    def test_subpage_routes_remain_identifiable_after_title_scrolls_away(self):
+        before = {"shot": "settings.png", "stage": "Settings",
+                  "screen": ("Settings",),
+                  "controls": [{"label": "Appearance",
+                                "aliases": ["Appearance"],
+                                "x": 220, "y": 340}]}
+        opened = {"shot": "appearance-top.png", "stage": "Appearance",
+                  "screen": ("Appearance", "Launcher icon", "App theme"),
+                  "labels": ["Appearance", "Launcher icon", "App theme"],
+                  "sheet_top": 500}
+        scrolled = {"shot": "appearance-bottom.png", "stage": "Settings",
+                    "screen": ("Accent", "App theme"),
+                    "labels": ["App theme", "Accent"], "sheet_top": 140}
+        r = robot.Robot(Path("."), 0)
+        def capture(snapshot, title):
+            r.sheet_gallery[title] = {"observed_labels": opened["labels"]}
+            return scrolled
+        with patch.object(r, "tap"), \
+             patch.object(r, "wait_for_markers", return_value=opened), \
+             patch.object(r, "capture_full_sheet", side_effect=capture):
+            result = r.navigate(before, "Appearance",
+                                ("Appearance", "Launcher icon", "App theme"))
+        self.assertIsNotNone(result)
+        self.assertEqual(result["route_stage"], "Appearance")
+        self.assertEqual(r.steps[-1]["destination"], "Appearance")
+        self.assertEqual(r.steps[-1]["status"], "PASS")
+
     def test_below_fold_diagnostics_marker_valid_after_full_capture(self):
         before = {"shot": "settings.png", "screen": ("Settings", "Appearance"),
                   "controls": [{"label": "Diagnostics", "aliases": ["Diagnostics"],
