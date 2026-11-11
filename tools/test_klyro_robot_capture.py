@@ -115,6 +115,27 @@ class CaptureTests(unittest.TestCase):
                             for call in swipe.call_args_list))
         self.assertEqual(r.warnings, [])
 
+    def test_route_wait_retries_when_root_card_label_is_already_visible(self):
+        root = {"stage": "Settings", "labels": ["Settings", "Appearance",
+                "Keyboard", "Privacy"], "shot": "settings.png"}
+        appearance = {"stage": "Appearance", "labels": ["Appearance",
+                      "Launcher icon", "App theme"], "shot": "appearance.png"}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(r, "snap", side_effect=[root, appearance]) as snap:
+            observed = r.wait_for_route(
+                "Appearance", ("Appearance", "Launcher icon", "App theme"))
+        self.assertIs(observed, appearance)
+        self.assertEqual(snap.call_count, 2)
+
+    def test_route_wait_never_accepts_root_after_all_retries(self):
+        root = {"stage": "Settings", "labels": ["Settings", "Appearance",
+                "Keyboard", "Privacy"], "shot": "settings.png"}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(r, "snap", return_value=root) as snap:
+            observed = r.wait_for_route("Appearance", ("Appearance",), max_checks=3)
+        self.assertEqual(observed["stage"], "Settings")
+        self.assertEqual(snap.call_count, 3)
+
     def test_failed_tap_cannot_pass_on_changing_live_text(self):
         before = {"shot": "home-before.png", "stage": "Home",
                   "screen": ("KLYRO", "Clock 20:00"),
@@ -128,7 +149,7 @@ class CaptureTests(unittest.TestCase):
                  "sheet_top": None}
         r = robot.Robot(Path("."), 0)
         with patch.object(r, "tap"), \
-             patch.object(r, "wait_for_markers", return_value=after):
+             patch.object(r, "wait_for_route", return_value=after):
             result = r.navigate(before, "Plugins",
                                 ("Plugins", "Installed", "Explore"))
         self.assertIsNone(result)
@@ -152,7 +173,7 @@ class CaptureTests(unittest.TestCase):
             r.sheet_gallery[title] = {"observed_labels": opened["labels"]}
             return scrolled
         with patch.object(r, "tap"), \
-             patch.object(r, "wait_for_markers", return_value=opened), \
+             patch.object(r, "wait_for_route", return_value=opened), \
              patch.object(r, "capture_full_sheet", side_effect=capture):
             result = r.navigate(before, "Appearance",
                                 ("Appearance", "Launcher icon", "App theme"))
@@ -179,7 +200,7 @@ class CaptureTests(unittest.TestCase):
                 "observed_labels": ["Diagnostics", "Recheck environment"]}
             return bottom
         with patch.object(r, "tap"), \
-             patch.object(r, "wait_for_markers", return_value=partial), \
+             patch.object(r, "wait_for_route", return_value=partial), \
              patch.object(r, "capture_full_sheet", side_effect=full_capture):
             result = r.navigate(before, "Diagnostics",
                                 ("Diagnostics", "Recheck environment"))
@@ -200,7 +221,7 @@ class CaptureTests(unittest.TestCase):
             r.sheet_gallery[page] = {"observed_labels": ["About Klyro Shell"]}
             return state
         with patch.object(r, "tap"), \
-             patch.object(r, "wait_for_markers", return_value=partial), \
+             patch.object(r, "wait_for_route", return_value=partial), \
              patch.object(r, "capture_full_sheet", side_effect=full_capture):
             result = r.navigate(before, "About",
                                 ("About Klyro Shell", "JetBrains Mono licence"))
