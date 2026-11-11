@@ -358,7 +358,7 @@ class Robot:
         self.steps.append({"name":name,"status":"PASS" if passed else "FAIL",
                            "before":before["shot"],"after":after["shot"],"detail":detail,
                            "target":target, "from_stage":before.get("stage"),
-                           "destination":after.get("stage"),
+                           "destination":after.get("route_stage", after.get("stage")),
                            "before_signature":before.get("signature"),
                            "after_signature":after.get("signature")})
         if not passed:
@@ -396,16 +396,25 @@ class Robot:
         # Collect every scroll viewport before verifying deeper markers; do
         # not fail Diagnostics/About only because their buttons are below fold.
         after = self.wait_for_markers("after-" + title, markers[:1])
+        # A label changing is not evidence of a route transition: clock/live
+        # text can change while a tap failed. Validate the screen identity
+        # observed immediately after the tap, before scrolling moves headings.
+        entry_stage = after.get("stage")
+        expected_route = title.casefold()
+        transitioned = (entry_stage is not None and
+                        entry_stage.casefold() == expected_route and
+                        before.get("stage", "").casefold() != expected_route)
         if after.get("sheet_top") is not None and self.has_markers(after, markers[:1]):
-            page = after.get("stage") or title
+            page = entry_stage or title
             after = self.capture_full_sheet(after, page)
+            after["route_stage"] = entry_stage
             observed = self.sheet_gallery.get(page, {}).get("observed_labels",
                                                             after.get("labels", []))
-            passed = (self.has_markers({"labels": observed}, markers) and
-                      after["screen"] != before["screen"] and
+            passed = (transitioned and
+                      self.has_markers({"labels": observed}, markers) and
                       after.get("sheet_top") is not None)
         else:
-            passed = self.has_markers(after, markers) and after["screen"] != before["screen"]
+            passed = transitioned and self.has_markers(after, markers)
         self.record("Navigate: " + title, passed, before, after,
                     "Expected " + ", ".join(" / ".join(m) if isinstance(m, tuple) else m for m in markers),
                     target=target)
@@ -457,7 +466,8 @@ class Robot:
         time.sleep(self.delay)
         after = self.wait_for_markers("after-back-" + page, SETTINGS_ROOT)
         passed = (self.has_markers(after, SETTINGS_ROOT) and
-                  after["screen"] != current["screen"] and
+                  after.get("stage") == "Settings" and
+                  current.get("stage") != "Settings" and
                   after.get("sheet_top") is not None)
         self.record("Back to Settings: " + page, passed, current, after,
                     "Android BackHandler must restore Settings root without dismissing sheet")
