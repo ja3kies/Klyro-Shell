@@ -87,6 +87,52 @@ class CaptureTests(unittest.TestCase):
                             for call in swipe.call_args_list))
         self.assertEqual(r.warnings, [])
 
+    def test_below_fold_diagnostics_marker_valid_after_full_capture(self):
+        before = {"shot": "settings.png", "screen": ("Settings", "Appearance"),
+                  "controls": [{"label": "Diagnostics", "aliases": ["Diagnostics"],
+                                "x": 540, "y": 200, "bounds": (40,100,1040,300)}],
+                  "stage": "Settings"}
+        partial = {"shot": "diagnostics-top.png", "screen": ("Diagnostics",),
+                   "labels": ["Diagnostics"], "stage": "Diagnostics", "sheet_top": 700}
+        bottom = {"shot": "diagnostics-bottom.png",
+                  "screen": ("Recheck environment",),
+                  "labels": ["Recheck environment"], "stage": "Diagnostics",
+                  "sheet_top": 100}
+        r = robot.Robot(Path("."), 0)
+        def full_capture(state, page):
+            self.assertEqual(page, "Diagnostics")
+            r.sheet_gallery[page] = {
+                "observed_labels": ["Diagnostics", "Recheck environment"]}
+            return bottom
+        with patch.object(r, "tap"), \
+             patch.object(r, "wait_for_markers", return_value=partial), \
+             patch.object(r, "capture_full_sheet", side_effect=full_capture):
+            result = r.navigate(before, "Diagnostics",
+                                ("Diagnostics", "Recheck environment"))
+        self.assertEqual(result, bottom)
+        self.assertEqual(r.steps[-1]["status"], "PASS")
+        self.assertEqual(r.steps[-1]["target"]["label"], "Diagnostics")
+
+    def test_deeper_marker_missing_after_full_sheet_is_real_failure(self):
+        before = {"shot": "settings.png", "screen": ("Settings",),
+                  "controls": [{"label": "About", "aliases": ["About"],
+                                "x": 500, "y": 300, "bounds": (40,100,1000,350)}],
+                  "stage": "Settings"}
+        partial = {"shot": "about-top.png", "screen": ("About Klyro Shell",),
+                   "labels": ["About Klyro Shell"], "stage": "About",
+                   "sheet_top": 500}
+        r = robot.Robot(Path("."), 0)
+        def full_capture(state, page):
+            r.sheet_gallery[page] = {"observed_labels": ["About Klyro Shell"]}
+            return state
+        with patch.object(r, "tap"), \
+             patch.object(r, "wait_for_markers", return_value=partial), \
+             patch.object(r, "capture_full_sheet", side_effect=full_capture):
+            result = r.navigate(before, "About",
+                                ("About Klyro Shell", "JetBrains Mono licence"))
+        self.assertIsNone(result)
+        self.assertEqual(r.steps[-1]["status"], "FAIL")
+
     def test_backhandler_restores_settings_root_after_scrolled_appearance(self):
         detail = {"shot": "bottom.png", "screen": ("Terminal font", "Accent"),
                   "stage": "Appearance", "sheet_top": 606}
