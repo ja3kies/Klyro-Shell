@@ -503,9 +503,14 @@ class Robot:
         adb("shell", "input", "keyevent", "KEYCODE_BACK")
         time.sleep(self.delay)
         after = self.wait_for_markers("after-back-" + page, SETTINGS_ROOT)
+        # A scrolled Appearance/Diagnostics view may lose its heading; the
+        # geometry classifier can then call it "Settings". Use the route
+        # identity observed immediately after opening the page, not the
+        # incidental labels visible at the bottom of the sheet.
+        origin = current.get("route_stage", current.get("stage"))
         passed = (self.has_markers(after, SETTINGS_ROOT) and
                   after.get("stage") == "Settings" and
-                  current.get("stage") != "Settings" and
+                  origin != "Settings" and
                   after.get("sheet_top") is not None)
         self.record("Back to Settings: " + page, passed, current, after,
                     "Android BackHandler must restore Settings root without dismissing sheet")
