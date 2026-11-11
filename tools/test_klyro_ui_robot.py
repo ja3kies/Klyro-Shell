@@ -175,6 +175,58 @@ class RobotSemanticTests(unittest.TestCase):
             '<node selected="true"><node text="Explore"/></node></hierarchy>')
         self.assertEqual(robot.state(root)["selected_tabs"], ["Explore"])
 
+    def test_smoke_checks_visible_terminal_sessions_are_preserved(self):
+        initial = {"shot": "home.png", "stage": "Home",
+                   "labels": ["KLYRO", "RUNTIME STATUS", "Plugins", "Settings",
+                              "Return to terminal", "Session 1"],
+                   "sessions": ["1"], "screen": ("Home",)}
+        root = {"shot": "settings.png", "stage": "Settings",
+                "labels": ["Settings", "Appearance"], "screen": ("Settings",)}
+        page = {"shot": "appearance.png", "stage": "Appearance",
+                "labels": ["Appearance"], "screen": ("Appearance",)}
+        route_states = [
+            {"shot": "plugins.png", "stage": "Plugins",
+             "labels": ["Plugins"], "screen": ("Plugins",)},
+            initial, root
+        ] + [page for _ in robot.SETTINGS_SUBPAGES]
+        r = robot.Robot(Path("."), 0)
+        with patch.object(r, "snap", return_value=initial), \
+             patch.object(r, "navigate", side_effect=route_states), \
+             patch.object(r, "probe_plugin_tabs", side_effect=lambda x: x), \
+             patch.object(r, "back_to_settings", return_value=root), \
+             patch.object(r, "find", return_value={"label": "Close",
+                "x": 100, "y": 100, "bounds": (10,10,150,150)}), \
+             patch.object(r, "tap"), \
+             patch.object(r, "wait_for_markers", return_value=initial):
+            r.smoke()
+        self.assertEqual(r.steps[-1]["name"], "Visible terminal state preserved")
+        self.assertEqual(r.steps[-1]["status"], "PASS")
+
+    def test_smoke_detects_unexpected_visible_session_change(self):
+        initial = {"shot": "home.png", "stage": "Home",
+                   "labels": ["KLYRO", "RUNTIME STATUS", "Plugins", "Settings",
+                              "Return to terminal", "Session 1"],
+                   "sessions": ["1"], "screen": ("Home",)}
+        changed = {**initial, "shot": "changed.png", "sessions": ["1","2"],
+                   "labels": initial["labels"] + ["Session 2"],
+                   "screen": ("Changed Home",)}
+        root = {"shot": "settings.png", "stage": "Settings",
+                "labels": ["Settings"], "screen": ("Settings",)}
+        page = {"shot": "page.png", "stage": "Appearance",
+                "labels": ["Appearance"], "screen": ("Appearance",)}
+        states = [root, initial, root] + [page] * len(robot.SETTINGS_SUBPAGES)
+        r = robot.Robot(Path("."), 0)
+        with patch.object(r, "snap", return_value=initial), \
+             patch.object(r, "navigate", side_effect=states), \
+             patch.object(r, "probe_plugin_tabs", side_effect=lambda x: x), \
+             patch.object(r, "back_to_settings", return_value=root), \
+             patch.object(r, "find", return_value={"label": "Close", "x": 20, "y": 20}), \
+             patch.object(r, "tap"), \
+             patch.object(r, "wait_for_markers", return_value=changed):
+            r.smoke()
+        self.assertEqual(r.steps[-1]["status"], "FAIL")
+        self.assertTrue(any("Visible terminal state" in x for x in r.warnings))
+
     def test_no_destructive_action_allowlist(self):
         for unsafe in ("Install", "Remove", "End Bash session", "Clear", "Reset"):
             self.assertFalse(bool(robot.SAFE.fullmatch(unsafe)))
