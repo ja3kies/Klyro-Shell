@@ -115,6 +115,7 @@ def inspect(path, density=None):
         if not any(any(option.casefold() in v.casefold() for option in options) for v in strings):
             missing.append(" / ".join(options))
     return dict(name=path.name, stage=key or "unknown", nodes=len(nodes),
+                visible_strings=[x for x in strings if x.strip()],
                 interactive=len(interactive), missing=missing,
                 unlabeled=unlabeled, small=small, small_details=small_details,
                 clipped=clipped, invalid_bounds=invalid_bounds,
@@ -122,7 +123,38 @@ def inspect(path, density=None):
                 switches=sum(n.get("checkable") == "true" for n in nodes),
                 selected=sum(n.get("selected") == "true" for n in nodes))
 
+def reconcile_expected_markers(results):
+    """One sheet may need several viewports before all its labels are visible.
+
+    Keep per-snapshot inspect() findings independent for diagnostics, but avoid
+    reporting a missing route marker when the same stage exposes it further
+    down the scroll. Emit genuine missing-marker issues once per stage.
+    """
+    observed = {}
+    for row in results:
+        stage = row.get("stage", "unknown")
+        observed.setdefault(stage, []).extend(row.get("visible_strings", []))
+    seen = set()
+    normalized = []
+    for row in results:
+        stage = row.get("stage", "unknown")
+        available = observed.get(stage, [])
+        missing = []
+        for marker in row.get("missing", []):
+            variants = marker.split(" / ")
+            if any(option.casefold() in value.casefold()
+                   for option in variants for value in available):
+                continue
+            key = (stage, marker)
+            if key in seen:
+                continue
+            seen.add(key)
+            missing.append(marker)
+        normalized.append({**row, "missing": missing})
+    return normalized
+
 def report(results):
+    results = reconcile_expected_markers(results)
     lines = ["# Klyro robot UIAutomator evidence audit", "",
              "This is an observational audit, not a device interaction test.",
              "Touch targets are evaluated against 48dp only when --density is supplied; without it, size is unverified.",
