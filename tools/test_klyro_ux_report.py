@@ -170,7 +170,9 @@ class SheetEvidenceTests(unittest.TestCase):
                 p, [step], source_root=None, density=2.625,
                 sheet_gallery={"Plugins": {"images": ["initial.png"],
                                           "expanded": "not attempted", "scroll_segments": 0}},
-                duplicate_count=7, display_height=2424, display_width=1080)
+                duplicate_count=7, display_height=2424, display_width=1080,
+                installed_app={"versionName": "0.3.3-dev", "versionCode": "3",
+                               "source_matches_installed_apk": "UNVERIFIED"})
             text = (p / "ux-review.html").read_text()
             self.assertIn("&lt;button&gt;", text)
             self.assertNotIn("<button>", text)
@@ -183,6 +185,9 @@ class SheetEvidenceTests(unittest.TestCase):
             self.assertEqual(contents["duplicate_screens_avoided"], 7)
             self.assertEqual(contents["source_revision"], review.SOURCE_REV)
             self.assertIn(review.SOURCE_REV, text)
+            self.assertIn("0.3.3-dev", text)
+            self.assertIn("NON VÉRIFIÉE", text)
+            self.assertEqual(contents["installed_app"]["versionCode"], "3")
 
 if __name__ == "__main__":
     unittest.main()
