@@ -99,6 +99,36 @@ class SheetEvidenceTests(unittest.TestCase):
             self.assertEqual(payload["summary"]["PASS"], 1)
             self.assertEqual(payload["ux_findings_count"], 1)
 
+    def test_two_scrolled_positions_of_accent_plus_are_one_issue(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        snapshots = [
+            {"stage": "appearance",
+             "unlabeled": ["android.widget.Button [912,2207][1038,2333]"],
+             "small_details": [], "missing": []},
+            {"stage": "appearance",
+             "unlabeled": ["android.widget.Button [912,1698][1038,1824]"],
+             "small_details": [], "missing": []}
+        ]
+        issues = review.findings_from_accessibility(snapshots, repo_root)
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0]["label"], "Custom accent (+)")
+        self.assertEqual(issues[0]["source_match"], "inferred-from-position-and-code")
+        self.assertEqual(issues[0]["source"]["status"], "FOUND")
+        self.assertIn('onClickLabel = "Choose custom accent"', issues[0]["source"]["code"])
+
+    def test_back_route_maps_to_actual_compose_backhandler(self):
+        root = Path(__file__).resolve().parents[1]
+        source = review.source_for("Back to Settings: Appearance", "Appearance", root)
+        self.assertEqual(source["status"], "FOUND")
+        self.assertIn("fun navigateBack()", source["code"])
+
+    def test_unrelated_unlabeled_control_has_no_false_accent_mapping(self):
+        snapshots = [{"stage": "diagnostics",
+                      "unlabeled": ["android.widget.Button [912,2207][1038,2333]"],
+                      "small_details": [], "missing": []}]
+        issue = review.findings_from_accessibility(snapshots, None)[0]
+        self.assertEqual(issue["source"]["status"], "UNMAPPED")
+
     def test_source_report_escapes_html_and_writes_json(self):
         with tempfile.TemporaryDirectory() as folder:
             p = Path(folder)
