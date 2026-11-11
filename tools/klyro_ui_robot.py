@@ -677,7 +677,8 @@ def main():
             make_report(out, robot.steps, source_root=args.source_root,
                         density=density, sheet_gallery=robot.sheet_gallery,
                         duplicate_count=robot.duplicates, display_height=height,
-                        display_width=width, accessibility_evidence=evidence)
+                        display_width=width, accessibility_evidence=evidence,
+                        installed_app=app_info)
         except Exception as err:
             robot.warnings.append("Component UX/code report failed: " +
                                   type(err).__name__ + ": " + str(err))
