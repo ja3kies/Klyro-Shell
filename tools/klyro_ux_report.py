@@ -30,6 +30,7 @@ SOURCE_ANCHORS = {
     "Impl: KlyroSheet": (ROOT + "ui/KlyroUiComponents.kt", "internal fun KlyroSheet("),
     "Impl: KlyroActionRow": (ROOT + "ui/KlyroUiComponents.kt", "internal fun KlyroActionRow("),
     "Diagnostics: Recheck environment": (SETTINGS, "onClick = onRecheckEnvironment"),
+    "Custom accent (+)": (SETTINGS, 'onClickLabel = "Choose custom accent"'),
 }
 SUGGESTIONS = {
     "Initial Home": "Tester aussi le premier démarrage, le runtime absent et la reprise d'une session.",
@@ -45,10 +46,13 @@ SUGGESTIONS = {
     "Close settings": "Préserver l'état de l'accueil et des sessions à la fermeture.",
     "Plugin tab switch": "Vérifier l'état sélectionné par la sémantique et la mise en forme.",
     "Plugin tab restoration": "Rétablir l'onglet initial sans altérer le registre local.",
+    "Custom accent (+)": "Décrire explicitement le bouton + dans les sémantiques Compose et vérifier le lecteur d’écran.",
 }
 
 def source_for(action, from_stage, source_root):
-    if action == "Navigate: Settings":
+    if action.startswith("Back to Settings: "):
+        choice = (SETTINGS, "fun navigateBack()")
+    elif action == "Navigate: Settings":
         choice = ((MAIN, 'onClickLabel = "Open Klyro settings"')
                   if from_stage in (None, "Home", "home")
                   else (SETTINGS, 'onClick = ::navigateBack'))
@@ -114,8 +118,11 @@ def examine_target(target, density, display_height):
             "class": target.get("class", ""), "checks": checks}
 
 def improvements(action, target_review, sheet=None):
-    result = [SUGGESTIONS.get(action,
-               "Vérifier les états actif, inactif, chargement et navigation arrière.")]
+    if action.startswith("Back to Settings: "):
+        result = ["Utiliser le BackHandler natif pour revenir au menu Paramètres depuis une section défilée ; ne pas ramener la feuille vers le bas par geste."]
+    else:
+        result = [SUGGESTIONS.get(action,
+                   "Vérifier les états actif, inactif, chargement et navigation arrière.")]
     if any(c["result"] == "FAIL" and "48 dp" in c["check"]
            for c in target_review["checks"]):
         result.insert(0, "Agrandi la zone interactive à au moins 48 dp, sans forcément grossir le glyphe.")
@@ -150,16 +157,38 @@ def findings_from_accessibility(evidence, source_root):
                 "source": source,
             })
         for label in snapshot.get("unlabeled", []):
-            key = ("unlabeled", snapshot.get("stage"), label)
-            if key not in seen:
-                seen.add(key)
-                issues.append({
-                    "priority": "P1", "kind": "accessibility",
-                    "screen": snapshot.get("stage"), "label": label,
-                    "observation": "Contrôle cliquable sans libellé accessible",
-                    "recommendation": "Ajouter une description ou un texte enfant lisible.",
-                    "source": {"status": "UNMAPPED"}
-                })
+            # Compose can shift the same icon vertically by hundreds of pixels
+            # while scrolling; two viewport captures must not generate two
+            # independent issues for that same control.
+            match = re.search(r"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]", label)
+            box = tuple(int(v) for v in match.groups()) if match else None
+            stable_key = (re.sub(r"\\s*\\[.*", "", label),
+                          box[0], box[2] - box[0], box[3] - box[1]) if box else label
+            key = ("unlabeled", snapshot.get("stage"), stable_key)
+            if key in seen:
+                continue
+            seen.add(key)
+            # This association is grounded in the Appearance screenshots:
+            # a single 126px circular '+' at the far-right of Accent.
+            # Mark it as an inferred mapping, not runtime proof.
+            accent_plus = (snapshot.get("stage") == "appearance"
+                           and box is not None and box[0] >= 850
+                           and box[2] - box[0] in range(110, 151)
+                           and box[3] - box[1] in range(110, 151))
+            source = (source_for("Custom accent (+)", None, source_root)
+                      if accent_plus else {"status": "UNMAPPED"})
+            issues.append({
+                "priority": "P1", "kind": "accessibility",
+                "screen": snapshot.get("stage"),
+                "label": "Custom accent (+)" if accent_plus else label,
+                "observed_bounds": label,
+                "source_match": "inferred-from-position-and-code" if accent_plus else "unknown",
+                "observation": "Contrôle cliquable sans libellé accessible",
+                "recommendation": ("Rendre contentDescription explicite sur le bouton +."
+                                   if accent_plus else
+                                   "Ajouter une description ou un texte enfant lisible."),
+                "source": source
+            })
         for label in snapshot.get("missing", []):
             key = ("missing", snapshot.get("stage"), label)
             if key not in seen:
