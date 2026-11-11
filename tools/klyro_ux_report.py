@@ -156,6 +156,21 @@ def findings_from_accessibility(evidence, source_root):
                 "recommendation": "Agrandir la zone accessible, corriger les insets si rognée.",
                 "source": source,
             })
+        for item in snapshot.get("clipped", []):
+            label = item.get("label", "(unlabeled)")
+            key = ("screen-clip", snapshot.get("stage"), label, item.get("bounds"))
+            if key in seen:
+                continue
+            seen.add(key)
+            issues.append({
+                "priority": "P1", "kind": "clipped-touch-target",
+                "screen": snapshot.get("stage", "unknown"),
+                "label": label, "bounds": item.get("bounds"),
+                "observation": "Zone interactive en dehors des limites de la capture",
+                "recommendation": "Vérifier insets, contraintes et dimensions du composant, puis réévaluer sur Pixel.",
+                "source": {"status": "UNMAPPED",
+                           "description": "Composant non relié à un fichier Kotlin sans preuve de correspondance"},
+            })
         for label in snapshot.get("unlabeled", []):
             # Compose can shift the same icon vertically by hundreds of pixels
             # while scrolling; two viewport captures must not generate two
