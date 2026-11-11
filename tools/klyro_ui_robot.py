@@ -119,6 +119,15 @@ def controls(root):
                           "y": (y1 + y2) // 2, "bounds": (x1, y1, x2, y2)})
     return found
 
+def installed_plugin_count(snapshot):
+    """Read the displayed Installed (N) tab; never infer package state."""
+    counts = set()
+    for title in snapshot.get("labels", []):
+        match = re.fullmatch(r"Installed [(]([0-9]+)[)]", title.strip(), re.I)
+        if match:
+            counts.add(int(match.group(1)))
+    return next(iter(counts)) if len(counts) == 1 else None
+
 def state(root):
     ns = visible_nodes(root)
     labels = []
@@ -469,7 +478,21 @@ class Robot:
               if installed_selected else "Explore" in restored_tabs)
         self.record("Plugin tab restoration", ok, switched, restored,
                     "Original selected tab should be restored", target=back)
-        return restored if ok else None
+        if not ok:
+            return None
+        # A navigation-only PASS does not establish functional safety:
+        # the installed extension count must remain constant after switching
+        # back and forth. This check never installs or removes anything.
+        before_count = installed_plugin_count(current)
+        after_count = installed_plugin_count(restored)
+        if before_count is None or after_count is None:
+            self.record_skip("Plugin registry unchanged", restored,
+                             "Installed (N) count was not observable in both states")
+            return restored
+        count_unchanged = before_count == after_count
+        self.record("Plugin registry unchanged", count_unchanged, current, restored,
+                    f"Installed count before={before_count} after={after_count}")
+        return restored if count_unchanged else None
 
     def back_to_settings(self, current, page):
         """Use Klyro's nested Settings BackHandler, never a downward drag."""
