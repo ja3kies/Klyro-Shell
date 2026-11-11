@@ -226,9 +226,10 @@ def esc(value):
 
 def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
                 duplicate_count=0, display_height=None, display_width=None,
-                accessibility_evidence=None):
+                accessibility_evidence=None, installed_app=None):
     out = Path(out)
     sheet_gallery = sheet_gallery or {}
+    installed_app = installed_app or {}
     records = []
     cards = []
     md = ["# Klyro — audit par composant", "",
@@ -349,6 +350,9 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
         str(len(steps)) + ' assertions · ' + str(duplicate_count) +
         ' doublons de capture évités. Évaluation des zones tactiles et recommandations ciblées.</p>' +
         '<p>Révision Kotlin/robot : <code>' + esc(SOURCE_REV) + '</code></p>' +
+        '<p>APK installée : ' + esc(installed_app.get("versionName", "non renseignée")) +
+        ' (versionCode ' + esc(installed_app.get("versionCode", "?")) + '). ' +
+        'Correspondance binaire/source : <strong>NON VÉRIFIÉE</strong>.</p>' +
         '<p>Les recommandations sont des règles explicites et doivent être validées sur appareil.</p></header>'
         '<h2>Problèmes prioritaires détectés (' + str(len(issues)) + ')</h2>' +
         ("".join(issues_html) if issues_html else
@@ -362,6 +366,7 @@ def make_report(out, steps, source_root=None, density=None, sheet_gallery=None,
     (out / "ux-review.md").write_text("\n".join(md), encoding="utf-8")
     (out / "components.json").write_text(
         json.dumps({"density": density, "source_revision": SOURCE_REV,
+                    "installed_app": installed_app,
                     "duplicate_screens_avoided": duplicate_count,
                     "components": records, "sheets": sheet_gallery,
                     "findings": issues},
