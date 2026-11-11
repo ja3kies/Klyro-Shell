@@ -244,6 +244,37 @@ class CaptureTests(unittest.TestCase):
         adb.assert_called_once_with("shell", "input", "keyevent", "KEYCODE_BACK")
         self.assertEqual(r.steps[0]["status"], "PASS")
 
+    def test_backhandler_from_scrolled_section_uses_original_route(self):
+        # After a deep scroll the title has left the accessible viewport.
+        # Geometry can misleadingly classify the snapshot as "Settings".
+        detail = {"shot": "appearance-bottom.png", "screen": ("Accent",),
+                  "stage": "Settings", "route_stage": "Appearance",
+                  "sheet_top": 140}
+        root = {"shot": "settings.png", "screen": ("Settings", "Appearance", "Keyboard"),
+                "labels": ["Settings", "Appearance", "Keyboard", "Storage", "Privacy"],
+                "stage": "Settings", "sheet_top": 1200}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(robot, "active", return_value=True), \
+             patch.object(robot, "adb", return_value="") as adb, \
+             patch.object(r, "wait_for_markers", return_value=root):
+            returned = r.back_to_settings(detail, "Appearance")
+        self.assertIs(returned, root)
+        self.assertEqual(r.steps[-1]["status"], "PASS")
+        adb.assert_called_once_with("shell", "input", "keyevent", "KEYCODE_BACK")
+
+    def test_backhandler_from_actual_settings_root_does_not_false_pass(self):
+        root = {"shot": "settings.png", "screen": ("Settings", "Appearance"),
+                "stage": "Settings", "route_stage": "Settings",
+                "labels": ["Settings", "Appearance", "Keyboard", "Storage", "Privacy"],
+                "sheet_top": 1200}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(robot, "active", return_value=True), \
+             patch.object(robot, "adb", return_value=""), \
+             patch.object(r, "wait_for_markers", return_value=root):
+            returned = r.back_to_settings(root, "Appearance")
+        self.assertIsNone(returned)
+        self.assertEqual(r.steps[-1]["status"], "FAIL")
+
     def test_backhandler_failure_if_sheet_was_dismissed(self):
         detail = {"shot": "bottom.png", "screen": ("Accent",),
                   "stage": "Appearance", "sheet_top": 606}
