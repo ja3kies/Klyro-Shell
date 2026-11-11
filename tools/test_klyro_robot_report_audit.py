@@ -143,6 +143,42 @@ class RobotReportAuditTests(unittest.TestCase):
             self.assertIn("Recheck environment", text)
             self.assertIn("48dp", text)
 
+    def test_outside_display_click_target_is_reported(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "005-after-settings.xml"
+            p.write_text(
+                '<hierarchy><node bounds="[0,0][1080,2424]">'
+                '<node clickable="true" enabled="true" text="Close" '
+                'bounds="[940,2340][1140,2470]"/></node></hierarchy>'
+            )
+            result = audit.inspect(p, density=2.625)
+            self.assertEqual(len(result["clipped"]), 1)
+            self.assertEqual(result["clipped"][0]["label"], "Close")
+            self.assertIn("outside the captured display", audit.report([result]))
+
+    def test_hidden_geometry_is_not_reported_as_clipping(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "003-after-settings.xml"
+            p.write_text(
+                '<hierarchy><node bounds="[0,0][1080,2424]">'
+                '<node visible-to-user="false" bounds="[0,0][1080,2424]">'
+                '<node clickable="true" text="Remove" bounds="[1200,2500][1500,2800]"/>'
+                '</node></node></hierarchy>'
+            )
+            result = audit.inspect(p, density=2.625)
+            self.assertEqual(result["clipped"], [])
+            self.assertEqual(result["interactive"], 0)
+
+    def test_valid_target_at_screen_boundary_is_not_clipped(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "001-after-home.xml"
+            p.write_text(
+                '<hierarchy><node bounds="[0,0][1080,2424]">'
+                '<node clickable="true" text="Plugins" bounds="[900,2290][1080,2424]"/>'
+                '</node></hierarchy>'
+            )
+            self.assertEqual(audit.inspect(p)["clipped"], [])
+
     def test_stage_requires_complete_token(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "003-pluginsettings.xml"
