@@ -160,9 +160,9 @@ def findings_from_accessibility(evidence, source_root):
             # Compose can shift the same icon vertically by hundreds of pixels
             # while scrolling; two viewport captures must not generate two
             # independent issues for that same control.
-            match = re.search(r"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]", label)
+            match = re.search(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", label)
             box = tuple(int(v) for v in match.groups()) if match else None
-            stable_key = (re.sub(r"\\s*\\[.*", "", label),
+            stable_key = (re.sub(r"\s*\[.*", "", label),
                           box[0], box[2] - box[0], box[3] - box[1]) if box else label
             key = ("unlabeled", snapshot.get("stage"), stable_key)
             if key in seen:
