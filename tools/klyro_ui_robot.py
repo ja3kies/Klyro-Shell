@@ -60,6 +60,52 @@ def installed_app_metadata():
         "source_matches_installed_apk": "UNVERIFIED",
     }
 
+def parse_gfxinfo(raw):
+    """Parse read-only Android gfxinfo aggregates; not per-action animation time.
+
+    Different Android releases omit different lines. Unknown metrics remain
+    None rather than pretending the app rendered smooth frames.
+    """
+    def integer(pattern):
+        match = re.search(pattern, raw, re.I)
+        return int(match.group(1).replace(",", "")) if match else None
+    total = integer(r"Total frames rendered:\\s*([0-9,]+)")
+    janky = integer(r"Janky frames:\\s*([0-9,]+)")
+    pcts = {}
+    for pct in (50, 90, 95, 99):
+        match = re.search(
+            rf"{pct}th percentile:\\s*([0-9]+(?:\\.[0-9]+)?)\\s*ms", raw, re.I
+        )
+        if match:
+            pcts[str(pct)] = float(match.group(1))
+    return {"total_frames": total, "janky_frames": janky,
+            "frame_percentiles_ms": pcts,
+            "scope": "Android cumulative gfxinfo; not a per-route animation benchmark"}
+
+def gfxinfo_sample():
+    return parse_gfxinfo(adb("shell", "dumpsys", "gfxinfo", PKG, timeout=45))
+
+def gfxinfo_delta(before, after):
+    if not before or not after:
+        return {"status": "UNAVAILABLE", "reason": "Missing before or after gfxinfo"}
+    total0, total1 = before.get("total_frames"), after.get("total_frames")
+    jank0, jank1 = before.get("janky_frames"), after.get("janky_frames")
+    if None in (total0, total1, jank0, jank1):
+        return {"status": "UNAVAILABLE", "reason": "Missing frame counters"}
+    if total1 < total0 or jank1 < jank0:
+        return {"status": "UNAVAILABLE", "reason": "Android frame counters reset"}
+    rendered = total1 - total0
+    janky = jank1 - jank0
+    if rendered == 0 or janky > rendered:
+        return {"status": "UNAVAILABLE", "reason": "No consistent new frames"}
+    return {
+        "status": "OBSERVED",
+        "rendered_frames_during_robot": rendered,
+        "janky_frames_during_robot": janky,
+        "janky_percent_during_robot": round(janky / rendered * 100, 2),
+        "caveat": "Aggregate includes robot waiting and every screen; not an animation benchmark",
+    }
+
 def active():
     data = adb("shell", "dumpsys", "activity", "activities")
     lines = [x for x in data.splitlines() if "topResumedActivity" in x or "mResumedActivity" in x]
