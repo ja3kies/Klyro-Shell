@@ -69,12 +69,12 @@ def parse_gfxinfo(raw):
     def integer(pattern):
         match = re.search(pattern, raw, re.I)
         return int(match.group(1).replace(",", "")) if match else None
-    total = integer(r"Total frames rendered:\\s*([0-9,]+)")
-    janky = integer(r"Janky frames:\\s*([0-9,]+)")
+    total = integer(r"Total frames rendered:\s*([0-9,]+)")
+    janky = integer(r"Janky frames:\s*([0-9,]+)")
     pcts = {}
     for pct in (50, 90, 95, 99):
         match = re.search(
-            rf"{pct}th percentile:\\s*([0-9]+(?:\\.[0-9]+)?)\\s*ms", raw, re.I
+            rf"{pct}th percentile:\s*([0-9]+(?:\.[0-9]+)?)\s*ms", raw, re.I
         )
         if match:
             pcts[str(pct)] = float(match.group(1))
