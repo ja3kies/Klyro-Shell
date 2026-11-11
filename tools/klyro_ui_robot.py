@@ -155,6 +155,21 @@ def xml_signature(root):
     rows = [tuple(n.get(a, "") for a in attrs) for n in visible_nodes(root)]
     return hashlib.sha256(json.dumps(rows, ensure_ascii=False).encode("utf-8")).hexdigest()[:20]
 
+def layout_signature(root):
+    """Fingerprint the interactive layout, not volatile text or clock values.
+
+    This identifies a revisited sheet even if live values changed. Exact
+    screenshot deduplication still relies on xml_signature(), preserving
+    different visual/semantic states in the report.
+    """
+    attrs = ("class", "resource-id", "bounds", "clickable", "enabled",
+             "scrollable", "selected", "checked", "checkable")
+    rows = [tuple(node.get(key, "") for key in attrs)
+            for node in visible_nodes(root)]
+    return hashlib.sha256(
+        json.dumps(rows, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()[:20]
+
 def parse_bounds(raw):
     match = re.fullmatch(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]", raw or "")
     if not match:
@@ -220,7 +235,9 @@ class Robot:
         self.out, self.delay, self.steps, self.warnings = out, delay, [], []
         self.serial = 0
         self.seen_screens = {}
+        self.seen_layouts = {}
         self.duplicates = 0
+        self.layout_revisits = 0
         self.sheet_gallery = {}
         self.last_snapshots = []
     def snap(self, name):
@@ -246,6 +263,14 @@ class Robot:
         result = state(root)
         result.update(geometry(root))
         result["signature"] = signature
+        result["layout_signature"] = layout_signature(root)
+        visit_key = (result["stage"], result["layout_signature"])
+        previous_visit = self.seen_layouts.get(visit_key, 0)
+        self.seen_layouts[visit_key] = previous_visit + 1
+        if previous_visit:
+            self.layout_revisits += 1
+        result["same_layout_seen_before"] = bool(previous_visit)
+        result["layout_visit"] = previous_visit + 1
         result["screen"] = tuple(sorted(set(result["labels"])))
         self.last_snapshots.append({"screen_width": result.get("screen_width"),
                                     "screen_height": result.get("screen_height"),
@@ -752,8 +777,9 @@ def main():
         shutil.make_archive(str(out), "zip", root_dir=out)
         print("Report:", out/"report.html")
         print("Component review:", out/"ux-review.html")
-        print("Unique screens:", len(robot.seen_screens),
-              "Duplicates avoided:", robot.duplicates)
+        print("Unique screenshots:", len(robot.seen_screens),
+              "Exact duplicates avoided:", robot.duplicates,
+              "Repeated layouts:", robot.layout_revisits)
         print("Assertions:", len(robot.steps), "Warnings:", len(robot.warnings))
         print("Evidence ZIP:", str(out)+".zip")
     if any(x["status"]=="FAIL" for x in robot.steps) or robot.warnings:
