@@ -44,7 +44,8 @@ def inspect(path, density=None):
     strings = texts + descs
     bounds = []
     invalid_bounds = []
-    for n in nodes:
+    # Hidden descendants must not inflate reported geometry defects.
+    for n in visible:
         raw = n.get("bounds", "")
         try:
             x1, y1, x2, y2 = (int(v) for v in raw.replace("][", ",").strip("[]").split(","))
@@ -82,6 +83,28 @@ def inspect(path, density=None):
                 "width_dp": round((x2-x1) / density, 1),
                 "height_dp": round((y2-y1) / density, 1),
             })
+    # A target clipped by the display cannot be reliably tapped or read.
+    # Report it separately from the 48dp check; this is measured geometry,
+    # not an inferred judgment about colors or visual styling.
+    screen_rect = None
+    for n, x1, y1, x2, y2 in bounds:
+        if n is root:
+            screen_rect = (x1, y1, x2, y2)
+            break
+    clipped = []
+    if screen_rect:
+        sx1, sy1, sx2, sy2 = screen_rect
+        for n, x1, y1, x2, y2 in bounds:
+            if n not in interactive:
+                continue
+            if x1 < sx1 or y1 < sy1 or x2 > sx2 or y2 > sy2:
+                label = next((v.strip() for child in visible_nodes(n)
+                              for v in (child.get("text", ""), child.get("content-desc", ""))
+                              if v.strip()), "(unlabeled)")
+                clipped.append({
+                    "label": label, "bounds": n.get("bounds", ""),
+                    "screen_bounds": root.get("bounds", "")
+                })
     # Match complete stage tokens: e.g. "plugins" must not match "plugins-old".
     stage_tokens = re.split(r"[^a-z]+", path.stem.lower())
     key = next((k for k in EXPECTED if k in stage_tokens), None)
@@ -95,7 +118,7 @@ def inspect(path, density=None):
     return dict(name=path.name, stage=key or "unknown", nodes=len(nodes),
                 interactive=len(interactive), missing=missing,
                 unlabeled=unlabeled, small=small, small_details=small_details,
-                invalid_bounds=invalid_bounds,
+                clipped=clipped, invalid_bounds=invalid_bounds,
                 density=density, empty=(len(nodes) == 0),
                 switches=sum(n.get("checkable") == "true" for n in nodes),
                 selected=sum(n.get("selected") == "true" for n in nodes))
@@ -124,9 +147,13 @@ def report(results):
                     f"  - {item['label']}: {item['width_dp']} × {item['height_dp']} dp "
                     f"at {item['bounds']}; expand hit area and verify navigation-bar insets."
                 )
+        if r["clipped"]:
+            lines.append(f"- **{r['name']}**: {len(r['clipped'])} clickable target bounds outside the captured display; inspect clipping and Compose insets.")
+            for target in r["clipped"][:12]:
+                lines.append(f"  - {target['label']} at {target['bounds']}; screen {target['screen_bounds']}.")
         if r["invalid_bounds"]:
             lines.append(f"- **{r['name']}**: {len(r['invalid_bounds'])} malformed or non-positive bounds; inspect XML extraction.")
-    if not any(r["empty"] or r["missing"] or r["unlabeled"] or r["small"] or r["invalid_bounds"] for r in results):
+    if not any(r["empty"] or r["missing"] or r["unlabeled"] or r["small"] or r["clipped"] or r["invalid_bounds"] for r in results):
         lines.append("- No issues detected by these limited static heuristics.")
     lines += ["", "## Follow-up device tests", "",
               "- Tap each action and compare before/after XML and screenshot; presence alone is not proof of navigation.",
