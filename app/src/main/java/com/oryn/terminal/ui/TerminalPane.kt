@@ -810,6 +810,14 @@ fun TerminalPane(
                 if (view.getCurrentSession() !== session) {
                     view.attachSession(session)
                 }
+            },
+            onRelease = { view ->
+                // Compose can remove this AndroidView when Klyro is sent home,
+                // switched to another tab, or recreated. Do not keep an old
+                // Activity/View tree pinned by process-owned session clients.
+                sessionClient.detachViewIfCurrent(view)
+                viewClient.detachViewIfCurrent(view)
+                if (activeTerminalView === view) activeTerminalView = null
             }
         )
         }
