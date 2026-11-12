@@ -20,10 +20,12 @@ public abstract class TerminalTestCase extends TestCase {
 		public final List<ChangedTitle> titleChanges = new ArrayList<>();
 		public final List<String> clipboardPuts = new ArrayList<>();
 		public int bellsRung = 0;
+        public int writeCalls = 0;
 		public int colorsChanged = 0;
 
 		@Override
 		public void write(byte[] data, int offset, int count) {
+            writeCalls++;
 			baos.write(data, offset, count);
 		}
 

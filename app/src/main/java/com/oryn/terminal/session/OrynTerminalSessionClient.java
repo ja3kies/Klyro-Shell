@@ -139,6 +139,15 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     }
 
     @Override
+    public void onInputRejected(@NonNull com.termux.terminal.TerminalSession session) {
+        uiHandler.post(() -> {
+            if (!disposed.get()) Toast.makeText(context,
+                    "Terminal input buffer full. Input was not sent; wait and retry.",
+                    Toast.LENGTH_LONG).show();
+        });
+    }
+
+    @Override
     public void onBell(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
         if (!disposed.get() && view != null) view.post(() -> {

@@ -2418,9 +2418,8 @@ public final class TerminalEmulator {
 
         // Then: Implement bracketed paste mode if enabled:
         boolean bracketed = isDecsetInternalBitSet(DECSET_BIT_BRACKETED_PASTE_MODE);
-        if (bracketed) mSession.write("\033[200~");
-        mSession.write(text);
-        if (bracketed) mSession.write("\033[201~");
+        // Enqueue the whole paste atomically so rejection cannot leave bracketed mode open.
+        mSession.write(bracketed ? "\033[200~" + text + "\033[201~" : text);
     }
 
     /** http://www.vt100.net/docs/vt510-rm/DECSC */

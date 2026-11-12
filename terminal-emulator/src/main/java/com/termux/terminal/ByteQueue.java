@@ -14,7 +14,7 @@ final class ByteQueue {
 
     public synchronized void close() {
         mOpen = false;
-        notify();
+        notifyAll();
     }
 
     public synchronized int read(byte[] buffer, boolean block) {
@@ -29,7 +29,7 @@ final class ByteQueue {
                 return 0;
             }
         }
-        if (!mOpen) return -1;
+        if (!mOpen && mStoredBytes == 0) return -1;
 
         int totalRead = 0;
         int bufferLength = mBuffer.length;
@@ -47,8 +47,17 @@ final class ByteQueue {
             offset += bytesToCopy;
             totalRead += bytesToCopy;
         }
-        if (wasFull) notify();
+        if (wasFull) notifyAll();
         return totalRead;
+    }
+
+    /** Atomic enqueue for the UI thread: never wait for a child to consume stdin. */
+    public synchronized boolean offer(byte[] buffer, int offset, int length) {
+        if (offset < 0 || length < 0 || offset > buffer.length - length) {
+            throw new IllegalArgumentException("Invalid input range");
+        }
+        if (!mOpen || length > mBuffer.length - mStoredBytes) return false;
+        return length == 0 || write(buffer, offset, length);
     }
 
     /**
@@ -57,8 +66,8 @@ final class ByteQueue {
      * Returns whether the output was totally written, false if it was closed before.
      */
     public boolean write(byte[] buffer, int offset, int lengthToWrite) {
-        if (lengthToWrite + offset > buffer.length) {
-            throw new IllegalArgumentException("length + offset > buffer.length");
+        if (offset < 0 || lengthToWrite < 0 || offset > buffer.length - lengthToWrite) {
+            throw new IllegalArgumentException("Invalid input range");
         } else if (lengthToWrite <= 0) {
             throw new IllegalArgumentException("length <= 0");
         }
@@ -100,7 +109,7 @@ final class ByteQueue {
                     bytesToWriteBeforeWaiting -= bytesToCopy;
                     mStoredBytes += bytesToCopy;
                 }
-                if (wasEmpty) notify();
+                if (wasEmpty) notifyAll();
             }
         }
         return true;
