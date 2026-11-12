@@ -19,7 +19,9 @@ class HomeSettingsUX(unittest.TestCase):
   self.assertIn('homeFontPrefs.edit().remove("font_size_sp").apply()',M)
   self.assertIn('LaunchedEffect(showHomeSettings)',M)
  def test_diagnostics_available_from_both_surfaces(self):
-  self.assertEqual(1,M.count('val diagnosticReport = KlyroHealthReport.format('))
+  self.assertEqual(1, M.count('val diagnosticReport = remember('))
+  self.assertEqual(1, M.count('KlyroHealthReport.format('))
+  self.assertIn('withContext(Dispatchers.IO)', M)
   self.assertIn('diagnosticReport = diagnosticReport,',M)
   self.assertIn('Klyro health snapshot',M)
   self.assertIn('Share Klyro report',M)
