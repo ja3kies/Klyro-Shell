@@ -1086,16 +1086,32 @@ private fun OrynTerminalApp(
     }
 
     val homeAction = KlyroHomeActionPolicy.decide(runtimeVerified, hasRunningSessions)
-    val diagnosticReport = KlyroHealthReport.format(
-        try {
+    // PTY output increments outputRevision and can recompose this whole
+    // screen thousands of times during pkg install. The previous code did a
+    // PackageManager binder query and filesystem usableSpace stat on EVERY
+    // recomposition, including when Settings wasn't visible. A saturated
+    // filesystem can stall the Android main thread for multiple seconds.
+    val appVersion = remember(context) {
+        runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0)
                 .versionName ?: "unknown"
-        } catch (_: Exception) { "unknown" },
-        android.os.Build.VERSION.SDK_INT,
-        bootstrapInstalled, runtimeInstalled, runtimeVerified,
+        }.getOrDefault("unknown")
+    }
+    val diskFreeAtLaunch = remember(context) {
+        runCatching { context.filesDir.usableSpace }.getOrDefault(-1L)
+    }
+    val diagnosticReport = remember(
+        appVersion, bootstrapInstalled, runtimeInstalled, runtimeVerified,
         runtimeHasWarnings, tabs.size, workspaces.size,
-        context.filesDir.usableSpace, technicalErrorDetails
-    )
+        diskFreeAtLaunch, technicalErrorDetails
+    ) {
+        KlyroHealthReport.format(
+            appVersion, android.os.Build.VERSION.SDK_INT,
+            bootstrapInstalled, runtimeInstalled, runtimeVerified,
+            runtimeHasWarnings, tabs.size, workspaces.size,
+            diskFreeAtLaunch, technicalErrorDetails
+        )
+    }
     val screenChrome = ui.chrome
     Surface(
         // Paint before insets; the transparent status bar must show Klyro, not
