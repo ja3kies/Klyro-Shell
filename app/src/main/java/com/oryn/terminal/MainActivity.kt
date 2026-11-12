@@ -631,11 +631,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // PTYs keep reading in the foreground service while this Activity is
+        // backgrounded. Refresh their latest emulator screen once, rather
+        // than replaying thousands of stale View invalidations on resume.
+        terminalState.sessions.forEach { it.client.setUiActive(true) }
         storageBridgeHandler.removeCallbacks(storageBridgePoller)
         storageBridgeHandler.post(storageBridgePoller)
     }
 
     override fun onPause() {
+        // Only pause UI callbacks; NEVER stop, close or signal a shell here.
+        terminalState.sessions.forEach { it.client.setUiActive(false) }
         storageBridgeHandler.removeCallbacks(storageBridgePoller)
         super.onPause()
     }
