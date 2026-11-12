@@ -17,7 +17,9 @@ class SelectPasteAdversarialAudit(unittest.TestCase):
 
     def test_select_paste_matches_displayed_mode(self):
         self.assertIn("fun selectTerminalOutput(expectedSelection: Boolean)", self.pane)
-        self.assertIn("selectTerminalOutput(canSelect)", self.pane)
+        self.assertIn("TerminalActionPolicy.shouldSelect(canSelect, false)", self.pane)
+        self.assertIn("TerminalActionPolicy.shouldSelect(canSelect, true)", self.pane)
+        self.assertIn('longClickDescription = "Paste clipboard"', self.pane)
         self.assertIn('iconCaption = if (canSelect) "SELECT" else "PASTE"', self.pane)
 
     def test_native_select_context_menu_never_pastes(self):
@@ -40,7 +42,8 @@ class SelectPasteAdversarialAudit(unittest.TestCase):
         self.assertIn("Character.isLowSurrogate(text.charAt(start))", self.policy)
 
     def test_finished_session_can_still_be_copied(self):
-        self.assertIn("enabled = canSelect || (session.isRunning() && session.emulator != null && clipboardAvailable)", self.pane)
+        self.assertIn("TerminalActionPolicy.canUseSmartKey(canSelect, canSendKeys)", self.pane)
+        self.assertIn("return copyableOutput || livePty;", self.policy)
 
     def test_finished_session_cannot_receive_direct_paste(self):
         self.assertIn("Terminal unavailable; start or reopen a session to paste", self.pane)
