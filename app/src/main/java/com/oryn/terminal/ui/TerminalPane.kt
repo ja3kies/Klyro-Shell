@@ -189,6 +189,9 @@ fun TerminalPane(
             shellChooserSourceId = null
         }
     }
+    // Clearing the emulator locally does not emit a PTY onTextChanged event.
+    // Force the smart Select/Paste button to observe its fresh transcript.
+    var terminalActionRevision by remember(session) { mutableStateOf(0) }
     var selectedOutput by remember(session) { mutableStateOf<String?>(null) }
     var selectedOutputTruncated by remember(session) { mutableStateOf(false) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
@@ -534,6 +537,10 @@ fun TerminalPane(
                         initialSettingsSection = "home"
                         showTerminalSettings = true
                     }
+                    KlyroMenuItem("Paste clipboard", R.drawable.hugeicons_clipboard_paste) {
+                        showToolsMenu = false
+                        pasteClipboard()
+                    }
                     KlyroMenuItem("Home", R.drawable.hugeicons_home_03) {
                         showToolsMenu = false
                         onReturnHome()
@@ -849,23 +856,27 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
-            val canSelect = remember(session, outputRevision) {
+            val canSelect = remember(session, outputRevision, terminalActionRevision) {
                 TerminalActionPolicy.hasCopyableOutput(
                     session.emulator?.screen?.transcriptText.orEmpty()
                 )
             }
             TerminalExtraKey(
                 "ALL",
-                description = if (canSelect) "Select all terminal output" else "Paste clipboard",
+                description = if (canSelect) "Select terminal output; hold to paste clipboard"
+                    else "Paste clipboard",
                 glyph = if (canSelect) R.drawable.hugeicons_clipboard_list
                     else R.drawable.hugeicons_clipboard_paste,
                 keyWidth = keyWidth, darkChrome = darkChrome,
                 iconCaption = if (canSelect) "SELECT" else "PASTE",
                 tone = if (canSelect) KlyroShortcutTone.SELECT else KlyroShortcutTone.PASTE,
                 active = selectedOutput != null,
-                // Allow copying a finished session's transcript; only pasting
-                // requires a live PTY.
-                enabled = canSelect || (session.isRunning() && session.emulator != null && clipboardAvailable)
+                // Do not disable Paste based on cached clipboard access.
+                // Android may publish the clipboard after an IME/Activity focus
+                // transition; validate actual content only at tap time.
+                enabled = canSelect || canSendKeys,
+                longClickDescription = "Paste clipboard",
+                onLongClick = { pasteClipboard() }
             ) { selectTerminalOutput(canSelect) }
         }
         val secondRow: @Composable () -> Unit = {
@@ -894,14 +905,25 @@ fun TerminalPane(
             }
             TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser,
                 keyWidth = keyWidth, darkChrome = darkChrome, enabled = session.emulator != null) {
-                // Never erase a partially typed Readline command or active program output.
-                if (TerminalDisplayActions.clear(session)) {
-                    activeTerminalView?.setTopRow(0)
-                    activeTerminalView?.invalidate()
-                } else {
-                    Toast.makeText(context,
-                        "Clear is available only at an idle Klyro prompt; input preserved",
-                        Toast.LENGTH_SHORT).show()
+                when (TerminalDisplayActions.clearSafely(session)) {
+                    TerminalDisplayActions.ClearResult.CLEARED -> {
+                        terminalActionRevision++
+                        activeTerminalView?.setTopRow(0)
+                        activeTerminalView?.invalidate()
+                    }
+                    TerminalDisplayActions.ClearResult.SCROLLBACK_ONLY -> {
+                        terminalActionRevision++
+                        activeTerminalView?.setTopRow(0)
+                        activeTerminalView?.invalidate()
+                        Toast.makeText(context,
+                            "Scrollback cleared; current program and input preserved",
+                            Toast.LENGTH_SHORT).show()
+                    }
+                    TerminalDisplayActions.ClearResult.UNAVAILABLE -> {
+                        Toast.makeText(context,
+                            "Clear unavailable in full-screen programs or a closed terminal",
+                            Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -1001,28 +1023,29 @@ fun TerminalPane(
                     enabled = visibleOutput.isNotEmpty(),
                     onClick = {
                         val view = outputSelectionView
-                        if (view != null) {
-                            val value = view.text.toString()
-                            val start = view.selectionStart.coerceIn(0, value.length)
-                            val end = view.selectionEnd.coerceIn(0, value.length)
-                            val left = minOf(start, end)
-                            val right = maxOf(start, end)
-                            val hasSelection = left < right
-                            val selection = if (hasSelection) value.substring(left, right) else value
-                            val copied = runCatching {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
-                                    as? ClipboardManager ?: error("Clipboard unavailable")
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", selection))
-                            }.isSuccess
-                            Toast.makeText(
-                                context,
-                                if (copied) {
-                                    if (hasSelection) "Selection copied" else "All visible output copied"
-                                } else "Clipboard unavailable",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            if (copied) closeSelection()
-                        }
+                        // The AndroidView may still be attaching on the first
+                        // frame of the dialog. In that case Copy must still
+                        // work, using the bounded transcript snapshot.
+                        val value = view?.text?.toString() ?: visibleOutput
+                        val start = (view?.selectionStart ?: 0).coerceIn(0, value.length)
+                        val end = (view?.selectionEnd ?: 0).coerceIn(0, value.length)
+                        val left = minOf(start, end)
+                        val right = maxOf(start, end)
+                        val hasSelection = left < right
+                        val selection = if (hasSelection) value.substring(left, right) else value
+                        val copied = runCatching {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                                as? ClipboardManager ?: error("Clipboard unavailable")
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Klyro terminal", selection))
+                        }.isSuccess
+                        Toast.makeText(
+                            context,
+                            if (copied) {
+                                if (hasSelection) "Selection copied" else "All visible output copied"
+                            } else "Clipboard unavailable",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        if (copied) closeSelection()
                     }
                 ) { Text("Copy selection") }
             },
