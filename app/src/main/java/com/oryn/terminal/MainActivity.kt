@@ -659,6 +659,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        android.util.Log.i("KlyroLifecycle",
+            "RESUME liveSessions=" + terminalState.sessions.size)
         // PTYs keep reading in the foreground service while this Activity is
         // backgrounded. Refresh their latest emulator screen once, rather
         // than replaying thousands of stale View invalidations on resume.
@@ -669,10 +671,30 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        android.util.Log.i("KlyroLifecycle",
+            "PAUSE liveSessions=" + terminalState.sessions.size)
         // Only pause UI callbacks; NEVER stop, close or signal a shell here.
         terminalState.sessions.forEach { it.client.setUiActive(false) }
         storageBridgeHandler.removeCallbacks(storageBridgePoller)
         super.onPause()
+    }
+
+    override fun onStop() {
+        android.util.Log.i("KlyroLifecycle",
+            "STOP liveSessions=" + terminalState.sessions.size)
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        // Safety net for exceptional Activity teardown: no polling Runnable
+        // from this Activity should retain a dead window or its callbacks.
+        storageBridgeHandler.removeCallbacks(storageBridgePoller)
+        android.util.Log.i("KlyroLifecycle",
+            "DESTROY finishing=" + isFinishing +
+                " configChange=" + isChangingConfigurations +
+                " liveSessions=" + terminalState.sessions.size)
+        // Never close any sessions here: the foreground service owns lifetime.
+        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
