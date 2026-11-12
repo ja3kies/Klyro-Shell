@@ -44,7 +44,8 @@ class CycleThreeUX(unittest.TestCase):
         self.assertNotIn("pasteTone", self.pane)
 
     def test_all_action_behavior_is_preserved(self):
-        self.assertIn(") { selectTerminalOutput(canSelect) }", self.pane)
+        self.assertIn("TerminalActionPolicy.shouldSelect(canSelect, false)", self.pane)
+        self.assertIn("TerminalActionPolicy.shouldSelect(canSelect, true)", self.pane)
 
     def test_end_and_arrow_navigation_kept(self):
         self.assertIn('TerminalExtraKey("END"', self.pane)
