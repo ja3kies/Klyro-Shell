@@ -65,8 +65,11 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         if (disposed.get()) return;
         uiActive.set(active);
         if (active) {
-            outputReceivedWhilePaused.set(false);
-            scheduleOutputRefresh();
+            // Refresh only when output arrived during pause or a terminal
+            // view remains attached. Newly created views attach the current
+            // emulator buffer independently through TerminalView.
+            boolean deferred = outputReceivedWhilePaused.getAndSet(false);
+            if (deferred || terminalView != null) scheduleOutputRefresh();
         }
     }
 
