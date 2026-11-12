@@ -81,7 +81,7 @@ prepare(){
   token="$(date +%s)-$$-${RANDOM}"
   printf '%s\n' '#!/usr/bin/env bash' \
     'for ((i=1; i<=60; i++)); do' \
-    '  printf "%s %s\\n" "$i" "$(date +%s)" >> "$1"' \
+    '  printf "%s %s\n" "$i" "$(date +%s)" >> "$1"' \
     '  sleep 2' \
     'done' > "$TASK"
   # Write no user-provided input into executable script.
@@ -90,11 +90,11 @@ prepare(){
   local child=$!
   {
     printf 'token=%s\n' "$token"
-    printf 'shell_pid=%s\n' "$$"
+    printf 'shell_pid=%s\n' "$PPID"
     printf 'job_pid=%s\n' "$child"
     printf 'started_at=%s\n' "$(date +%s)"
   } > "$STATE"
-  printf 'READY token=%s shell_pid=%s job_pid=%s\n' "$token" "$$" "$child"
+  printf 'READY token=%s parent_shell_pid=%s job_pid=%s\n' "$token" "$PPID" "$child"
   printf 'Press Android Home, use another app, then return to SAME Klyro shell.\n'
   printf 'Run: bash klyro-daily-trial.sh verify\n'
   printf 'Do not force-stop Klyro or uninstall it.\n'
@@ -105,11 +105,12 @@ verify(){
   recorded_shell="$(sed -n 's/^shell_pid=//p' "$STATE" | head -n 1)"
   recorded_job="$(sed -n 's/^job_pid=//p' "$STATE" | head -n 1)"
   started="$(sed -n 's/^started_at=//p' "$STATE" | head -n 1)"
-  if [[ "$recorded_shell" == "$$" ]]; then
-    pass "Bash PID unchanged after returning"
+  # Each 'bash script.sh verify' invocation has its own PID. Compare
+  # their interactive parent shell, not the short-lived script processes.
+  if [[ "$recorded_shell" == "$PPID" ]]; then
+    pass "Interactive Bash parent PID unchanged"
   else
-    # Running with bash script creates a separate PID; verify its parent.
-    if [[ "$recorded_shell" == "$PPID" ]]; then pass "Bash parent PID unchanged"; else fail "Bash PID changed"; fi
+    fail "Interactive Bash parent PID changed"
   fi
   if [[ ! "$recorded_job" =~ ^[0-9]+$ ]]; then fail "job PID malformed"; report; return; fi
   if [[ ! -s "$LOG" ]]; then fail "no background log written"; report; return; fi
