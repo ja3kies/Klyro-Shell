@@ -874,10 +874,14 @@ fun TerminalPane(
                 // Do not disable Paste based on cached clipboard access.
                 // Android may publish the clipboard after an IME/Activity focus
                 // transition; validate actual content only at tap time.
-                enabled = canSelect || canSendKeys,
+                enabled = TerminalActionPolicy.canUseSmartKey(canSelect, canSendKeys),
                 longClickDescription = "Paste clipboard",
-                onLongClick = { pasteClipboard() }
-            ) { selectTerminalOutput(canSelect) }
+                onLongClick = {
+                    selectTerminalOutput(TerminalActionPolicy.shouldSelect(canSelect, true))
+                }
+            ) {
+                selectTerminalOutput(TerminalActionPolicy.shouldSelect(canSelect, false))
+            }
         }
         val secondRow: @Composable () -> Unit = {
             TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys,
