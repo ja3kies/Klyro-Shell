@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -99,10 +100,12 @@ public final class TerminalSessionManager {
             throw error;
         }
         Process process = null;
+        File pidFile = null;
         String nonce = freshVerificationMarker();
         try {
+            pidFile = File.createTempFile("klyro-check-pid-", ".txt", paths.getTmp());
             ProcessBuilder builder = new ProcessBuilder(
-                    bootstrap.buildVerificationCommand(nonce));
+                    buildVerificationLauncher(bootstrap.buildVerificationCommand(nonce), pidFile));
             builder.directory(paths.getRoot());
             builder.redirectOutput(stdoutFile);
             builder.redirectError(stderrFile);
@@ -114,17 +117,12 @@ public final class TerminalSessionManager {
             try {
                 finished = process.waitFor(VERIFY_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             } catch (InterruptedException interrupted) {
-                process.destroyForcibly();
+                stopVerification(process, pidFile, nonce);
                 Thread.currentThread().interrupt();
                 throw new IOException("Klyro environment verification was interrupted.", interrupted);
             }
             if (!finished) {
-                process.destroyForcibly();
-                try {
-                    process.waitFor(2, TimeUnit.SECONDS);
-                } catch (InterruptedException interrupted) {
-                    Thread.currentThread().interrupt();
-                }
+                stopVerification(process, pidFile, nonce);
                 throw new IOException("Klyro environment verification timed out after "
                         + VERIFY_TIMEOUT_SECONDS + " seconds. "
                         + diagnostics(stdoutFile, stderrFile, -1));
@@ -142,7 +140,10 @@ public final class TerminalSessionManager {
                     bashStarted, uidValid, aptResponds, pkgResponds, exitCode,
                     diagnostics(stdout, stderr, exitCode), !stderr.isEmpty());
         } finally {
-            if (process != null && process.isAlive()) process.destroyForcibly();
+            if (process != null && process.isAlive()) stopVerification(process, pidFile, nonce);
+            if (pidFile != null && !pidFile.delete() && pidFile.exists()) {
+                android.util.Log.w("KlyroVerify", "Cannot clear PID probe file");
+            }
             if (!stdoutFile.delete() && stdoutFile.exists()) {
                 android.util.Log.w("KlyroVerify", "Cannot clear stdout probe log");
             }
@@ -150,6 +151,32 @@ public final class TerminalSessionManager {
                 android.util.Log.w("KlyroVerify", "Cannot clear stderr probe log");
             }
         }
+    }
+
+    static String[] buildVerificationLauncher(String[] command, File pidFile) {
+        ArrayList<String> launcher = new ArrayList<>(Arrays.asList(
+                "/system/bin/sh", "-c", "printf '%s\\n' \"$$\" > \"$1\" || exit 125; shift; exec \"$@\"",
+                "klyro-verify", pidFile.getAbsolutePath()));
+        launcher.addAll(Arrays.asList(command));
+        return launcher.toArray(new String[0]);
+    }
+
+    private static void stopVerification(Process process, File pidFile, String nonce) {
+        try {
+            if (process.isAlive() && pidFile != null) {
+                int pid = Integer.parseInt(readOutput(pidFile));
+                // Match this nonce before signalling; a stale/tampered PID file cannot select another probe.
+                if (pid > 0 && readOutput(new File("/proc/" + pid + "/cmdline")).contains(nonce)) {
+                    android.system.Os.kill(pid, android.system.OsConstants.SIGQUIT);
+                    if (process.waitFor(2, TimeUnit.SECONDS)) return;
+                }
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        } catch (IOException | NumberFormatException | android.system.ErrnoException error) {
+            android.util.Log.w("KlyroVerify", "Cannot stop PRoot probe gracefully: " + error.getMessage());
+        }
+        if (process.isAlive()) process.destroyForcibly();
     }
 
     /** Must satisfy bootstrap's [A-Z0-9_] validation, even for hex UUID a-f. */

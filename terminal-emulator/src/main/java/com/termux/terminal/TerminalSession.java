@@ -57,6 +57,7 @@ public final class TerminalSession extends TerminalOutput {
     /** The exit status of the shell process. Only valid if ${@link #mShellPid} is -1. */
     int mShellExitStatus;
     private boolean mFinishing;
+    private volatile boolean mProcessReaped;
 
     /**
      * The file descriptor referencing the master half of a pseudo-terminal pair, resulting from calling
@@ -147,6 +148,7 @@ public final class TerminalSession extends TerminalOutput {
             finishIfRunning();
             new Thread(() -> {
                 int exit = JNI.waitFor(childPid);
+                mProcessReaped = true;
                 mMainThreadHandler.sendMessage(mMainThreadHandler.obtainMessage(MSG_PROCESS_EXITED, exit));
             }, "TermSessionFailedStartupWaiter").start();
             return;
@@ -190,6 +192,7 @@ public final class TerminalSession extends TerminalOutput {
             @Override
             public void run() {
                 int processExitCode = JNI.waitFor(childPid);
+                mProcessReaped = true;
                 // Let the reader enqueue the final output before the exit notification.
                 try {
                     reader.join(1000);
@@ -264,7 +267,7 @@ public final class TerminalSession extends TerminalOutput {
 
     /** Ask PRoot to reap its tracees, then bound shutdown time for an unresponsive child. */
     public synchronized void finishIfRunning() {
-        if (mShellPid <= 0 || mFinishing) return;
+        if (mShellPid <= 0 || mFinishing || mProcessReaped) return;
         mFinishing = true;
         final int pid = mShellPid;
         // PRoot handles SIGQUIT by killing tracees in all job-control process groups.
@@ -272,7 +275,8 @@ public final class TerminalSession extends TerminalOutput {
         signalProcessGroup(pid, OsConstants.SIGQUIT);
         mMainThreadHandler.postDelayed(() -> {
             synchronized (TerminalSession.this) {
-                if (mShellPid == pid) signalProcessGroup(pid, OsConstants.SIGKILL);
+                // waitpid may finish before final output reaches the main thread.
+                if (mShellPid == pid && !mProcessReaped) signalProcessGroup(pid, OsConstants.SIGKILL);
             }
         }, 1000);
     }

@@ -16,12 +16,12 @@ public final class BootstrapFixture {
         boolean existing = base.exists();
         OrynPaths paths = new OrynPaths(base, new File(args[2]));
         paths.prepareLayout();
-        if (existing) {
-            System.out.println("Existing fixture layout refreshed by production OrynPaths: " + base);
-            return;
+        if (existing && !new File(base, "login.argv").isFile()) {
+            throw new IllegalArgumentException("Existing directory is not a BootstrapFixture");
         }
-        Files.createDirectory(paths.getPrefix().toPath());
         TermuxBootstrapInstaller installer = new TermuxBootstrapInstaller(paths);
+        if (!existing) {
+        Files.createDirectory(paths.getPrefix().toPath());
         Method extract = TermuxBootstrapInstaller.class.getDeclaredMethod("extractArchive", File.class, File.class);
         extract.setAccessible(true);
         extract.invoke(installer, new File(args[1]), paths.getPrefix());
@@ -30,13 +30,19 @@ public final class BootstrapFixture {
         Files.writeString(new File(paths.getPrefix(), ".oryn-bootstrap-version").toPath(), TermuxBootstrapInstaller.BOOTSTRAP_TAG);
         Files.copy(new File(args[2], "libtalloc.so").toPath(),
                 new File(paths.getProotDependencyDir(), "libtalloc.so.2").toPath());
+        }
         installer.migrateShellProfile();
         Method environment = TerminalSessionManager.class.getDeclaredMethod("buildHostEnvironment", OrynPaths.class);
         environment.setAccessible(true);
         @SuppressWarnings("unchecked") Map<String, String> env = (Map<String, String>) environment.invoke(null, paths);
         Path output = base.toPath();
         Files.writeString(output.resolve("login.argv"), String.join("\u0000", installer.buildLoginCommand()), StandardCharsets.UTF_8);
-        Files.writeString(output.resolve("verify.argv"), String.join("\u0000", installer.buildVerificationCommand("KLYRO_FIXTURE_OK")), StandardCharsets.UTF_8);
+        String[] verification = installer.buildVerificationCommand("KLYRO_FIXTURE_OK");
+        Files.writeString(output.resolve("verify.argv"), String.join("\u0000", verification), StandardCharsets.UTF_8);
+        Method launcher = TerminalSessionManager.class.getDeclaredMethod("buildVerificationLauncher", String[].class, File.class);
+        launcher.setAccessible(true);
+        String[] wrapped = (String[]) launcher.invoke(null, verification, output.resolve("verify.pid").toFile());
+        Files.writeString(output.resolve("verify-launcher.argv"), String.join("\u0000", wrapped), StandardCharsets.UTF_8);
         StringBuilder entries = new StringBuilder();
         env.forEach((key, value) -> entries.append(key).append('=').append(value).append('\u0000'));
         Files.writeString(output.resolve("host.env"), entries, StandardCharsets.UTF_8);
