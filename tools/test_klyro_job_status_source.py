@@ -6,7 +6,10 @@ V=(ROOT/"TerminalSessionViewModel.kt").read_text()
 A=(ROOT/"MainActivity.kt").read_text()
 class JobActivitySource(unittest.TestCase):
  def test_output_timestamps_use_monotonic_uptime_not_wall_clock(self):
-  self.assertIn("lastOutputElapsed[tabId] = SystemClock.elapsedRealtime()",V)
+  self.assertIn("val now = SystemClock.elapsedRealtime()", V)
+  self.assertIn("lastOutputElapsed[id] = now", V)
+  self.assertIn("queueOutputUpdate(tabId)", V)
+  self.assertIn("outputUiHandler.postDelayed(publishPendingOutput, 120L)", V)
   self.assertIn("val lastOutputElapsedMs: Map<Long, Long>",V)
   self.assertIn("lastOutputElapsed.remove(id)",V)
   self.assertIn("if (tabs.any { it.id == tabId })",V)
