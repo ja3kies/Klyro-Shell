@@ -41,9 +41,11 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
     def test_notification_uses_immutable_pending_intent(self):
         self.assertIn("PendingIntent.FLAG_IMMUTABLE", self.service)
 
-    def test_idle_policy_remains_authorized_to_close_sessions(self):
-        self.assertIn("KlyroIdlePolicy.isExpired", self.runtime)
-        self.assertIn("sessions.closeAllSessions()", self.runtime)
+    def test_inactivity_never_terminates_a_user_started_job(self):
+        for source in (self.runtime, self.service, self.activity):
+            self.assertNotIn("expireIfIdle", source)
+        self.assertNotIn("closeAllSessions()", self.runtime)
+        self.assertIn("val sessions = TerminalSessionViewModel()", self.runtime)
 
     def test_service_never_restarts_after_process_death(self):
         self.assertIn("START_NOT_STICKY", self.service)

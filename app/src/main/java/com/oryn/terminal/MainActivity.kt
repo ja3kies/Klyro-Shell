@@ -363,7 +363,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         pendingStorageRequestToken =
             savedInstanceState?.getString("klyro_pending_storage_request")
-        KlyroSessionRuntime.expireIfIdle()
         if (terminalState.hasLiveSessions()) KlyroSessionService.ensureRunning(this)
         // Navigation is Activity UI state, independent of live PTY ownership.
         showWelcomeScreen = savedInstanceState?.getBoolean("klyro_show_welcome", false) ?: false
@@ -586,14 +585,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onUserInteraction() {
-        super.onUserInteraction()
-        KlyroSessionRuntime.noteInteraction()
-    }
-
     override fun onResume() {
         super.onResume()
-        KlyroSessionRuntime.expireIfIdle()
         storageBridgeHandler.removeCallbacks(storageBridgePoller)
         storageBridgeHandler.post(storageBridgePoller)
     }
@@ -837,7 +830,6 @@ class MainActivity : ComponentActivity() {
             val newSession = manager.startBash("Bash", newSessionClient)
             terminalState.attachSession(newSession, newSessionClient, newViewClient,
                 tabId, workspaceStore.activeId)
-            KlyroSessionRuntime.noteInteraction()
             KlyroSessionService.ensureRunning(this)
             showWelcomeScreen = false
         } catch (error: Exception) {

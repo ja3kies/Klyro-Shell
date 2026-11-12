@@ -1,0 +1,12 @@
+.gradle/
+.kotlin/
+**/build/
+**/.cxx/
+.local/
+local.properties
+__pycache__/
+*.pyc
+# Runtime and typography payloads are generated and verified by the build.
+app/src/main/jniLibs/
+app/src/main/assets/proot/
+app/src/main/assets/fonts/JetBrainsMono-Regular.ttf

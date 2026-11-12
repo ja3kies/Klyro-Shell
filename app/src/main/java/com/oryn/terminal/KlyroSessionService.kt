@@ -19,7 +19,6 @@ class KlyroSessionService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val check = object : Runnable {
         override fun run() {
-            KlyroSessionRuntime.expireIfIdle()
             if (KlyroSessionRuntime.sessions.hasLiveSessions()) {
                 handler.postDelayed(this, 60_000L)
             } else stopSelf()
@@ -39,7 +38,6 @@ class KlyroSessionService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        KlyroSessionRuntime.expireIfIdle()
         if (!KlyroSessionRuntime.sessions.hasLiveSessions()) {
             stopSelf(startId)
             return START_NOT_STICKY
@@ -83,7 +81,7 @@ class KlyroSessionService : Service() {
         handler.removeCallbacks(check)
         // The service is a notification owner, not the PTY owner. Android may
         // recreate or stop this service while the process and sessions survive.
-        // Explicit session close and the idle policy own PTY termination.
+        // Only explicit session close owns PTY termination.
         super.onDestroy()
     }
 
