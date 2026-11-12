@@ -38,6 +38,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -105,6 +108,24 @@ internal fun KlyroSettingsSheet(
     var brandSwitchError by rememberSaveable { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
+    var authorizedFolderCount by remember { mutableStateOf(-1) }
+    LaunchedEffect(context, section) {
+        if (section == "files") {
+            authorizedFolderCount = -1
+            authorizedFolderCount = withContext(Dispatchers.IO) {
+                runCatching {
+                    val stored = context.getSharedPreferences(
+                        "klyro_storage", Context.MODE_PRIVATE
+                    )
+                    val savedTrees = stored.getStringSet("tree_uris", emptySet()).orEmpty() +
+                        listOfNotNull(stored.getString("tree_uri", null))
+                    context.contentResolver.persistedUriPermissions.count {
+                        it.isReadPermission && it.uri.toString() in savedTrees
+                    }
+                }.getOrDefault(0)
+            }
+        }
+    }
     androidx.compose.runtime.LaunchedEffect(context) {
         selectedBrand = KlyroBrandChoice.selected(context)
     }
@@ -489,13 +510,8 @@ internal fun KlyroSettingsSheet(
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "files" -> {
-                        val stored = context.getSharedPreferences(
-                            "klyro_storage", Context.MODE_PRIVATE)
-                        val savedTrees = stored.getStringSet("tree_uris", emptySet()).orEmpty() +
-                            listOfNotNull(stored.getString("tree_uri", null))
-                        val authorizedCount = context.contentResolver.persistedUriPermissions
-                            .count { it.isReadPermission && it.uri.toString() in savedTrees }
-                        val authorized = authorizedCount > 0
+                        val authorizedCount = authorizedFolderCount.coerceAtLeast(0)
+                        val authorized = authorizedFolderCount > 0
                         KlyroSectionHeading("Files & storage")
                         Surface(
                             color = if (authorized) colors.readyInk.copy(alpha = .10f) else colors.tile,
