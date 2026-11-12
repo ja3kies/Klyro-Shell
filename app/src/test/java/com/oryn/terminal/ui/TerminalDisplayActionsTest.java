@@ -21,6 +21,26 @@ public class TerminalDisplayActionsTest {
         assertEquals("", TerminalDisplayActions.promptToRestore("klyro ~ $\\u001b[36m"));
     }
 
+    @Test public void acceptsAVisiblePartiallyTypedKlyroCommandWithoutChangingShellInput() {
+        assertEquals("klyro ~ $ c",
+                TerminalDisplayActions.bashLineToPreserve("klyro ~ $ c"));
+        assertEquals("klyro ~/project $ git status",
+                TerminalDisplayActions.bashLineToPreserve("klyro ~/project $ git status"));
+        assertEquals("klyro ~ $ echo $HOME",
+                TerminalDisplayActions.bashLineToPreserve("klyro ~ $ echo $HOME"));
+    }
+
+    @Test public void rejectsUnsafeOrUnfamiliarScreenLines() {
+        assertEquals("", TerminalDisplayActions.bashLineToPreserve(null));
+        assertEquals("", TerminalDisplayActions.bashLineToPreserve("Password:"));
+        assertEquals("", TerminalDisplayActions.bashLineToPreserve("vim buffer"));
+        assertEquals("", TerminalDisplayActions.bashLineToPreserve("klyro ~ $secret"));
+        assertEquals("", TerminalDisplayActions.bashLineToPreserve("klyro ~ $ echo\nnext"));
+        assertEquals("", TerminalDisplayActions.bashLineToPreserve("klyro ~ $ \u001B[31m"));
+        assertEquals("", TerminalDisplayActions.bashLineToPreserve(
+                "klyro ~ $ " + "x".repeat(513)));
+    }
+
     @Test public void refusesActiveInputAndArbitraryOutput() {
         assertEquals("", TerminalDisplayActions.promptToRestore("klyro ~/a $ pwd"));
         assertEquals("", TerminalDisplayActions.promptToRestore("klyro ~ $ rm -rf /"));
