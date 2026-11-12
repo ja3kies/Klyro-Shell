@@ -24,6 +24,12 @@ public final class OrynTerminalViewClient implements TerminalViewClient {
     }
 
     public void attachView(View view) { terminalView = view; }
+
+    /** A stale AndroidView must not detach a newer view of the same PTY. */
+    public void detachViewIfCurrent(View oldView) {
+        if (terminalView == oldView) terminalView = null;
+    }
+
     public void invalidateTerminal() {
         View view = terminalView;
         if (view != null) view.postInvalidate();
