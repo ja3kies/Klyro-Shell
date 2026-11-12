@@ -29,27 +29,64 @@ public final class TerminalDisplayActions {
         return line.trim() + " ";
     }
 
-    public static boolean clear(TerminalSession session) {
-        if (session == null) return false;
-        TerminalEmulator emulator = session.getEmulator();
-        if (emulator == null) return false;
-        // Keep Readline's visible prompt without injecting an Enter or Ctrl+L.
-        final int row = emulator.getCursorRow();
-        final String promptLine = emulator.getScreen().getSelectedText(
-                0, row, emulator.getCursorCol(), row);
-        final String prompt = promptToRestore(promptLine);
-        // Refuse to erase a line containing a partially typed command: the
-        // shell still owns those bytes even when we clear the emulator screen.
-        if (prompt.isEmpty()) return false;
-        emulator.append(CLEAR_SCREEN_AND_SCROLLBACK, CLEAR_SCREEN_AND_SCROLLBACK.length);
-        if (!prompt.isEmpty()) {
-            byte[] bytes = prompt.getBytes(StandardCharsets.UTF_8);
-            // Bash renders its Klyro prompt with ANSI color 36 (palette slot 6).
-            // The terminal palette maps that slot to the selected accent.
-            emulator.append(ACCENT_PROMPT, ACCENT_PROMPT.length);
-            emulator.append(bytes, bytes.length);
-            emulator.append(RESET_COLORS, RESET_COLORS.length);
+    /** A full clear is safe when the current Bash input can be repainted. */
+    public enum ClearResult { CLEARED, SCROLLBACK_ONLY, UNAVAILABLE }
+
+    /**
+     * Preserve the *visible* Bash command without writing to stdin. Readline
+     * retains its private edit buffer even when the emulator repaints. A full
+     * screen clear must not silently erase a partially typed command.
+     *
+     * Keep this strict: wrapped/long lines, other app prompts, terminal control
+     * bytes and full-screen alternate buffers must not be reconstructed.
+     */
+    static String bashLineToPreserve(String line) {
+        if (line == null || line.length() > 512 || !line.startsWith("klyro ")) return "";
+        int promptEnd = line.indexOf(" $");
+        if (promptEnd < 6) return "";
+        int after = promptEnd + 2;
+        if (after < line.length() && line.charAt(after) != ' ') return "";
+        for (int i = 0; i < line.length(); i++) {
+            if (Character.isISOControl(line.charAt(i))) return "";
         }
-        return true;
+        return line;
     }
+
+    public static ClearResult clearSafely(TerminalSession session) {
+        if (session == null) return ClearResult.UNAVAILABLE;
+        final TerminalEmulator emulator = session.getEmulator();
+        if (emulator == null || emulator.isAlternateBufferActive()) {
+            return ClearResult.UNAVAILABLE;
+        }
+        final int row = emulator.getCursorRow();
+        final int col = emulator.getCursorCol();
+        final String visible = emulator.getScreen().getSelectedText(
+                0, row, emulator.mColumns - 1, row);
+        final String line = bashLineToPreserve(visible);
+        if (!line.isEmpty() && !emulator.getScreen().getLineWrap(row)) {
+            emulator.append(CLEAR_SCREEN_AND_SCROLLBACK, CLEAR_SCREEN_AND_SCROLLBACK.length);
+            final byte[] paint = line.getBytes(StandardCharsets.UTF_8);
+            // Accent affects only the prefix; never insert shell data via PTY.
+            emulator.append(ACCENT_PROMPT, ACCENT_PROMPT.length);
+            emulator.append(paint, paint.length);
+            emulator.append(RESET_COLORS, RESET_COLORS.length);
+            // Bash/Readline may have a cursor inside the already typed line.
+            final byte[] cursor = ("\u001B[" + (col + 1) + "G")
+                    .getBytes(StandardCharsets.US_ASCII);
+            emulator.append(cursor, cursor.length);
+            return ClearResult.CLEARED;
+        }
+        // A foreground program, wrapped input or unfamiliar prompt may own
+        // the screen. Purge old scrollback only; preserve the live viewport
+        // and its current input state. CSI 3 J never writes to the child PTY.
+        final byte[] historyOnly = "\u001B[3J".getBytes(StandardCharsets.US_ASCII);
+        emulator.append(historyOnly, historyOnly.length);
+        return ClearResult.SCROLLBACK_ONLY;
+    }
+
+    /** Kept for callers expecting the original boolean contract. */
+    public static boolean clear(TerminalSession session) {
+        return clearSafely(session) != ClearResult.UNAVAILABLE;
+    }
+
 }
