@@ -1100,14 +1100,22 @@ private fun OrynTerminalApp(
     // PackageManager binder query and filesystem usableSpace stat on EVERY
     // recomposition, including when Settings wasn't visible. A saturated
     // filesystem can stall the Android main thread for multiple seconds.
-    val appVersion = remember(context) {
-        runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0)
-                .versionName ?: "unknown"
-        }.getOrDefault("unknown")
-    }
-    val diskFreeAtLaunch = remember(context) {
-        runCatching { context.filesDir.usableSpace }.getOrDefault(-1L)
+    var appVersion by remember(context) { mutableStateOf("unknown") }
+    var diskFreeAtLaunch by remember(context) { mutableStateOf(-1L) }
+    LaunchedEffect(context) {
+        // Initial diagnostics are intentionally asynchronous. Both filesystem
+        // statfs and PackageManager may stall behind dpkg/other binder work.
+        val snapshot = withContext(Dispatchers.IO) {
+            Pair(
+                runCatching {
+                    context.packageManager.getPackageInfo(context.packageName, 0)
+                        .versionName ?: "unknown"
+                }.getOrDefault("unknown"),
+                runCatching { context.filesDir.usableSpace }.getOrDefault(-1L)
+            )
+        }
+        appVersion = snapshot.first
+        diskFreeAtLaunch = snapshot.second
     }
     val diagnosticReport = remember(
         appVersion, bootstrapInstalled, runtimeInstalled, runtimeVerified,
