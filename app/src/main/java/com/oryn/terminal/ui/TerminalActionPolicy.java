@@ -27,6 +27,19 @@ public final class TerminalActionPolicy {
             Pattern.compile("^(?:klyro[ \\t]+[^\\r\\n]*\\$[ \\t]*(?:\\r?\\n|\\r|$))+$",
                     Pattern.CASE_INSENSITIVE);
 
+    /**
+     * Single smart key: short tap selects when there is output and pastes when
+     * blank. Long press ALWAYS pastes, including after a command produced
+     * history. Actual clipboard contents are validated at execution time.
+     */
+    public static boolean shouldSelect(boolean copyableOutput, boolean longPress) {
+        return copyableOutput && !longPress;
+    }
+
+    public static boolean canUseSmartKey(boolean copyableOutput, boolean livePty) {
+        return copyableOutput || livePty;
+    }
+
     public static boolean hasCopyableOutput(String transcript) {
         if (transcript == null) return false;
         String text = transcript.trim();
