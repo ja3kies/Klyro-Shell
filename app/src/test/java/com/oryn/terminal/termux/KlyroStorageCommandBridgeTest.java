@@ -8,6 +8,30 @@ import java.io.IOException;
 import static org.junit.Assert.*;
 
 public class KlyroStorageCommandBridgeTest {
+    @Test(timeout = 10000) public void interruptedHelperReleasesOnlyItsOwnPendingRequest() throws Exception {
+        Path home = Files.createTempDirectory("klyro-storage-cancel");
+        Path script = home.resolve("helper.sh");
+        Files.write(script, KlyroStorageCommandBridge.helperScript().getBytes(StandardCharsets.UTF_8));
+        ProcessBuilder builder = new ProcessBuilder("bash", script.toString());
+        builder.environment().put("HOME", home.toString());
+        Process helper = builder.start();
+        Path request = home.resolve(".klyro-control/storage.request");
+        try {
+            long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(3);
+            while (!Files.exists(request) && System.nanoTime() < deadline) Thread.sleep(10);
+            assertTrue("Helper did not publish its request", Files.exists(request));
+            helper.destroy();
+            assertTrue(helper.waitFor(3, java.util.concurrent.TimeUnit.SECONDS));
+            assertFalse("Interrupted helper stranded its request", Files.exists(request));
+        } finally {
+            if (helper.isAlive()) helper.destroyForcibly();
+            Files.deleteIfExists(request);
+            Files.deleteIfExists(home.resolve(".klyro-control"));
+            Files.deleteIfExists(script);
+            Files.deleteIfExists(home);
+        }
+    }
+
     @Test public void consumesRequestOnceAndReturnsStatus() throws Exception {
         Path home = Files.createTempDirectory("klyro-home");
         try {

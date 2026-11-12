@@ -12,12 +12,13 @@ import java.nio.file.LinkOption
 internal object KlyroFileSafety {
     const val MAX_FILE_BYTES = 32L * 1024 * 1024
     const val MAX_COLLISIONS = 1000
-    private val unsafeChars = Regex("[^a-zA-Z0-9._-]")
+    private val unsafeChars = Regex("""[\p{C}/\\:*?"<>|]""")
 
     fun safeName(raw: String?, fallback: String = "imported-file"): String =
         raw.orEmpty().substringAfterLast('/').substringAfterLast('\\')
-            .replace(unsafeChars, "_").trimStart('.').take(80)
-            .ifBlank { fallback }
+            .replace(unsafeChars, "_").trim().take(80)
+            .trimEnd { Character.isHighSurrogate(it) }
+            .let { if (it.isBlank() || it.all { char -> char == '.' }) fallback else it }
 
     fun verifyDestination(directory: File) {
         if (Files.isSymbolicLink(directory.toPath())) {
@@ -31,16 +32,24 @@ internal object KlyroFileSafety {
         }
     }
 
+    fun exportFile(home: File, relativePath: String): File {
+        if (relativePath.isBlank() || File(relativePath).isAbsolute || relativePath.contains('\u0000')) {
+            throw IOException("Choose a relative path inside HOME")
+        }
+        return File(home, relativePath).also { verifyExportSource(home, it) }
+    }
+
     fun verifyExportSource(home: File, source: File) {
         val root = home.canonicalFile.toPath()
+        val parent = source.parentFile ?: throw IOException("Export must be inside HOME")
         val normalized = source.toPath().toAbsolutePath().normalize()
         if (!normalized.startsWith(root)
             || Files.isSymbolicLink(source.toPath())
-            || Files.isSymbolicLink(source.parentFile.toPath())
+            || Files.isSymbolicLink(parent.toPath())
             || !source.canonicalFile.toPath().startsWith(root)) {
             throw IOException("Export must be a regular Klyro-private file")
         }
-        if (!source.isFile) throw IOException("Create ~/imports/klyro-export.txt first")
+        if (!source.isFile) throw IOException("Choose an existing regular file inside HOME")
         if (source.length() > MAX_FILE_BYTES) throw IOException("Export limited to 32 MiB")
     }
 

@@ -13,7 +13,11 @@ class KlyroFileSafetyTest {
         assertEquals("danger.txt", KlyroFileSafety.safeName("../danger.txt"))
         assertEquals("danger.txt", KlyroFileSafety.safeName("C:\\temp\\danger.txt"))
         assertEquals("imported-file", KlyroFileSafety.safeName("..."))
-        assertEquals("a_b.txt", KlyroFileSafety.safeName("a b.txt"))
+        assertEquals("a b.txt", KlyroFileSafety.safeName("a b.txt"))
+        assertEquals(".gitignore", KlyroFileSafety.safeName(".gitignore"))
+        assertEquals("café 😀.txt", KlyroFileSafety.safeName("café 😀.txt"))
+        assertEquals("bad_name.txt", KlyroFileSafety.safeName("bad\u202ename.txt"))
+        assertFalse(KlyroFileSafety.safeName("x".repeat(79) + "😀").last().isHighSurrogate())
         assertEquals(80, KlyroFileSafety.safeName("x".repeat(180)).length)
     }
 
@@ -73,6 +77,21 @@ class KlyroFileSafetyTest {
             Files.deleteIfExists(home)
             Files.deleteIfExists(outside)
         }
+    }
+
+    @Test fun exportSelectsArbitraryPrivateFilesAndRejectsTraversal() {
+        val home = Files.createTempDirectory("klyro-export-").toFile()
+        val project = File(home, "project é").apply { mkdir() }
+        val source = File(project, "archive 😀.zip").apply { writeBytes(byteArrayOf(0, 1, 2, 3)) }
+        try {
+            assertEquals(source, KlyroFileSafety.exportFile(home, "project é/archive 😀.zip"))
+            for (path in listOf("../outside", "/etc/passwd", "", "invalid\u0000name")) {
+                try {
+                    KlyroFileSafety.exportFile(home, path)
+                    fail("Unsafe export path accepted: $path")
+                } catch (expected: IOException) { }
+            }
+        } finally { source.delete(); project.delete(); home.delete() }
     }
 
     @Test fun streamingCopyPreservesDataAndCapsSize() {

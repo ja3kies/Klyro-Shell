@@ -42,8 +42,9 @@ class KlyroPairQaTest(unittest.TestCase):
         main = (APP / "MainActivity.kt").read_text()
         self.assertGreaterEqual(main.count("KlyroFileSafety.verifyDestination("), 2)
         self.assertGreaterEqual(main.count("KlyroFileSafety.copyLimited("), 3)
-        self.assertIn("KlyroFileSafety.verifyExportSource(", main)
+        self.assertIn("KlyroFileSafety.exportFile(", main)
         safety = (APP / "KlyroFileSafety.kt").read_text()
+        self.assertIn("verifyExportSource(home, it)", safety)
         self.assertIn("MAX_COLLISIONS = 1000", safety)
         self.assertIn("Files.isSymbolicLink", safety)
 

@@ -51,6 +51,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -132,6 +133,9 @@ class MainActivity : ComponentActivity() {
         }.getOrNull()
     }
     private var pendingStorageRequestToken: String? = null
+    private var exportRelativePath by mutableStateOf("imports/klyro-export.txt")
+    private var showExportPathDialog by mutableStateOf(false)
+    private var pendingExportPath: String? = null
     private val storageBridgeHandler = Handler(Looper.getMainLooper())
     private val storageBridgePoller = object : Runnable {
         override fun run() {
@@ -320,8 +324,13 @@ class MainActivity : ComponentActivity() {
         }
 
     private val exportFileLauncher =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-            if (uri == null) return@registerForActivityResult
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+            if (uri == null) {
+                pendingExportPath = null
+                return@registerForActivityResult
+            }
+            val relativePath = pendingExportPath ?: return@registerForActivityResult
+            pendingExportPath = null
             lifecycleScope.launch {
                 val outcome = withContext(Dispatchers.IO) {
                     runCatching {
@@ -329,14 +338,11 @@ class MainActivity : ComponentActivity() {
                             applicationContext.filesDir,
                             File(applicationContext.applicationInfo.nativeLibraryDir)
                         )
-                        val source = File(root.home, "imports/klyro-export.txt")
-                        KlyroFileSafety.verifyExportSource(root.home, source)
-                        val stream = contentResolver.openOutputStream(uri, "w")
-                            ?: throw IOException("Unable to open destination")
-                        stream.use { output ->
-                            FileInputStream(source).use { input ->
-                                KlyroFileSafety.copyLimited(input, output)
-                            }
+                        val source = KlyroFileSafety.exportFile(root.home, relativePath)
+                        FileInputStream(source).use { input ->
+                            val stream = contentResolver.openOutputStream(uri, "w")
+                                ?: throw IOException("Unable to open destination")
+                            stream.use { output -> KlyroFileSafety.copyLimited(input, output) }
                         }
                     }
                 }
@@ -349,7 +355,11 @@ class MainActivity : ComponentActivity() {
         }
 
     private fun chooseFileToExport() {
-        exportFileLauncher.launch("klyro-export.txt")
+        if (pendingExportPath != null) {
+            Toast.makeText(this, "Finish the current export first", Toast.LENGTH_SHORT).show()
+            return
+        }
+        showExportPathDialog = true
     }
 
     private fun chooseFileToImport() {
@@ -363,6 +373,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         pendingStorageRequestToken =
             savedInstanceState?.getString("klyro_pending_storage_request")
+        exportRelativePath = savedInstanceState?.getString("klyro_export_path") ?: "imports/klyro-export.txt"
+        showExportPathDialog = savedInstanceState?.getBoolean("klyro_export_dialog") ?: false
+        pendingExportPath = savedInstanceState?.getString("klyro_pending_export_path")
         if (terminalState.hasLiveSessions()) KlyroSessionService.ensureRunning(this)
         // Navigation is Activity UI state, independent of live PTY ownership.
         showWelcomeScreen = savedInstanceState?.getBoolean("klyro_show_welcome", false) ?: false
@@ -566,6 +579,37 @@ class MainActivity : ComponentActivity() {
                     onClose = ::closeBash,
                     onRecheck = ::verifyRuntime
                 )
+                if (showExportPathDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showExportPathDialog = false },
+                        title = { Text("Export a private file") },
+                        text = {
+                            OutlinedTextField(
+                                value = exportRelativePath,
+                                onValueChange = { exportRelativePath = it },
+                                label = { Text("Path relative to HOME") },
+                                singleLine = true
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                try {
+                                    val home = OrynPaths(filesDir, File(applicationInfo.nativeLibraryDir)).home
+                                    val source = KlyroFileSafety.exportFile(home, exportRelativePath)
+                                    showExportPathDialog = false
+                                    pendingExportPath = exportRelativePath
+                                    exportFileLauncher.launch(source.name)
+                                } catch (error: Exception) {
+                                    pendingExportPath = null
+                                    Toast.makeText(this@MainActivity, error.message ?: "Cannot export file", Toast.LENGTH_LONG).show()
+                                }
+                            }, enabled = exportRelativePath.isNotBlank()) { Text("Choose destination") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showExportPathDialog = false }) { Text("Cancel") }
+                        }
+                    )
+                }
                 }
             }
         }
@@ -600,6 +644,9 @@ class MainActivity : ComponentActivity() {
         outState.putBoolean("klyro_show_welcome", showWelcomeScreen)
         outState.putBoolean("klyro_had_sessions", terminalState.hasLiveSessions())
         outState.putString("klyro_pending_storage_request", pendingStorageRequestToken)
+        outState.putString("klyro_export_path", exportRelativePath)
+        outState.putBoolean("klyro_export_dialog", showExportPathDialog)
+        outState.putString("klyro_pending_export_path", pendingExportPath)
         super.onSaveInstanceState(outState)
     }
 
@@ -1447,9 +1494,9 @@ private fun OrynTerminalApp(
             onDismissRequest = { showRepairConfirmation = false },
             title = { Text("Repair private bootstrap?") },
             text = { Text(
-                "This replaces Klyro's private bootstrap packages and may remove packages installed " +
-                    "inside Klyro. Back up your installed packages first. HOME files are kept. " +
-                    "All terminal sessions must be closed."
+                "This activates a clean bootstrap. Current packages and files are retained in " +
+                    "/usr.previous; they are not installed in the new environment. HOME files are kept. " +
+                    "Review the backup before another repair. All terminal sessions must be closed."
             ) },
             confirmButton = {
                 Button(onClick = {

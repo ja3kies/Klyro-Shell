@@ -165,7 +165,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("skippedFolders++", activity)
         self.assertIn("folders skipped", activity)
         self.assertIn("Copy up to 30 files", settings)
-        self.assertIn("Export klyro-export.txt", settings)
+        self.assertIn("Export a private file", settings)
 
         # The Select all action must never be a paste alias.
         self.assertIn('"ALL",\n                description = if (canSelect) "Select all terminal output" else "Paste clipboard"', terminal)
