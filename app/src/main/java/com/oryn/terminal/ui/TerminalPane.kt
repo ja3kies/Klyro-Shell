@@ -856,10 +856,21 @@ fun TerminalPane(
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
             }
+            // Avoid materializing the ENTIRE scrollback on every PTY output
+            // revision. pkg/apt may print thousands of lines; previously each
+            // UI recomposition copied and trimmed up to 50k transcript rows
+            // on the main thread, causing noticeable freezes when opening
+            // Settings or returning to the terminal. Only the visible screen
+            // needs to be scanned unless older scrollback already exists.
             val canSelect = remember(session, outputRevision, terminalActionRevision) {
-                TerminalActionPolicy.hasCopyableOutput(
-                    session.emulator?.screen?.transcriptText.orEmpty()
-                )
+                session.emulator?.let { emulator ->
+                    val screen = emulator.screen
+                    screen.activeTranscriptRows > 0 ||
+                        TerminalActionPolicy.hasCopyableOutput(
+                            screen.getSelectedText(0, 0,
+                                emulator.mColumns - 1, emulator.mRows - 1)
+                        )
+                } ?: false
             }
             TerminalExtraKey(
                 "ALL",
