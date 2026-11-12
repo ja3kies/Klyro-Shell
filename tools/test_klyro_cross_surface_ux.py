@@ -63,7 +63,8 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         selection = pane.split("fun selectTerminalOutput(expectedSelection: Boolean)", 1)[1].split("val keyWidth =", 1)[0]
         self.assertIn("selectedOutput = TerminalActionPolicy.selectionTail(output)", selection)
         self.assertNotIn(".paste(", selection)
-        self.assertIn('"ALL",\n                description = if (canSelect) "Select all terminal output" else "Paste clipboard"', pane)
+        self.assertIn('"ALL",\n                description = if (canSelect) "Select terminal output; hold to paste clipboard"', pane)
+        self.assertIn("TerminalActionPolicy.shouldSelect(canSelect, true)", pane)
         self.assertNotIn('"PASTE", description = "Paste clipboard text"', pane)
         self.assertIn("keyListener = null", pane)
         self.assertIn("ui.terminalInk.toArgb()", pane)
@@ -90,7 +91,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn("collectIsPressedAsState()", pane)
         self.assertIn("stateDescription = spokenState", pane)
         self.assertIn('KlyroShortcutTone.PASTE -> "Clipboard available"', pane)
-        self.assertIn("TerminalDisplayActions.clear(session)", pane)
+        self.assertIn("TerminalDisplayActions.clearSafely(session)", pane)
         self.assertIn('R.drawable.hugeicons_eraser', pane)
 
     def test_search_checkbox_has_single_full_width_toggle_target(self):
