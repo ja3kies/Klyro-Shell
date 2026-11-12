@@ -1,0 +1,706 @@
+{
+  "scope": "Android ARM64 build host, disposable private rootfs, NOT the Klyro APK UID",
+  "runtime": [
+    {
+      "name": "bootstrap-shell",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 2.5,
+      "note": ""
+    },
+    {
+      "name": "fixture-https-source",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.63,
+      "note": ""
+    },
+    {
+      "name": "pkg-update",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 16.75,
+      "note": ""
+    },
+    {
+      "name": "pkg-upgrade",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 18.24,
+      "note": ""
+    },
+    {
+      "name": "pkg-search",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.64,
+      "note": ""
+    },
+    {
+      "name": "install-bash",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.83,
+      "note": ""
+    },
+    {
+      "name": "install-coreutils",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.41,
+      "note": ""
+    },
+    {
+      "name": "install-findutils",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.25,
+      "note": ""
+    },
+    {
+      "name": "install-grep",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.91,
+      "note": ""
+    },
+    {
+      "name": "install-sed",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.19,
+      "note": ""
+    },
+    {
+      "name": "install-gawk",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.04,
+      "note": ""
+    },
+    {
+      "name": "install-tar",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.12,
+      "note": ""
+    },
+    {
+      "name": "install-gzip",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.77,
+      "note": ""
+    },
+    {
+      "name": "install-unzip",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.78,
+      "note": ""
+    },
+    {
+      "name": "install-zip",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.78,
+      "note": ""
+    },
+    {
+      "name": "install-rsync",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.78,
+      "note": ""
+    },
+    {
+      "name": "install-curl",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.77,
+      "note": ""
+    },
+    {
+      "name": "install-wget",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.46,
+      "note": ""
+    },
+    {
+      "name": "install-termux-tools",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 2.95,
+      "note": ""
+    },
+    {
+      "name": "install-openssh",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.77,
+      "note": ""
+    },
+    {
+      "name": "install-git",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.87,
+      "note": ""
+    },
+    {
+      "name": "install-python",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.64,
+      "note": ""
+    },
+    {
+      "name": "install-python-pip",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.72,
+      "note": ""
+    },
+    {
+      "name": "install-nodejs",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.57,
+      "note": ""
+    },
+    {
+      "name": "install-npm",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.67,
+      "note": ""
+    },
+    {
+      "name": "install-clang",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.97,
+      "note": ""
+    },
+    {
+      "name": "install-make",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.77,
+      "note": ""
+    },
+    {
+      "name": "install-pkg-config",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.51,
+      "note": ""
+    },
+    {
+      "name": "install-nano",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.84,
+      "note": ""
+    },
+    {
+      "name": "install-vim",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.84,
+      "note": ""
+    },
+    {
+      "name": "install-less",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.92,
+      "note": ""
+    },
+    {
+      "name": "install-procps",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.04,
+      "note": ""
+    },
+    {
+      "name": "pkg-uninstall-git",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 7.9,
+      "note": ""
+    },
+    {
+      "name": "pkg-reinstall-git",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 12.17,
+      "note": ""
+    },
+    {
+      "name": "apt-update",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 14.22,
+      "note": ""
+    },
+    {
+      "name": "apt-install-nano",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 1.55,
+      "note": ""
+    },
+    {
+      "name": "execute-bash",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.63,
+      "note": ""
+    },
+    {
+      "name": "execute-ls",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.63,
+      "note": ""
+    },
+    {
+      "name": "execute-find",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.53,
+      "note": ""
+    },
+    {
+      "name": "execute-grep",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.65,
+      "note": ""
+    },
+    {
+      "name": "execute-sed",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.63,
+      "note": ""
+    },
+    {
+      "name": "execute-awk",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.73,
+      "note": ""
+    },
+    {
+      "name": "execute-tar",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.73,
+      "note": ""
+    },
+    {
+      "name": "execute-gzip",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.68,
+      "note": ""
+    },
+    {
+      "name": "execute-unzip",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.65,
+      "note": ""
+    },
+    {
+      "name": "execute-rsync",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.73,
+      "note": ""
+    },
+    {
+      "name": "execute-curl",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.79,
+      "note": ""
+    },
+    {
+      "name": "execute-wget",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.68,
+      "note": ""
+    },
+    {
+      "name": "execute-ping",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.73,
+      "note": ""
+    },
+    {
+      "name": "execute-ssh",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.88,
+      "note": ""
+    },
+    {
+      "name": "execute-git",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.68,
+      "note": ""
+    },
+    {
+      "name": "execute-python",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.63,
+      "note": ""
+    },
+    {
+      "name": "execute-node",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.88,
+      "note": ""
+    },
+    {
+      "name": "execute-npm",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 2.91,
+      "note": ""
+    },
+    {
+      "name": "execute-clang",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 1.34,
+      "note": ""
+    },
+    {
+      "name": "execute-make",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.58,
+      "note": ""
+    },
+    {
+      "name": "execute-pkg-config",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.63,
+      "note": ""
+    },
+    {
+      "name": "execute-nano",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.58,
+      "note": ""
+    },
+    {
+      "name": "execute-vim",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.69,
+      "note": ""
+    },
+    {
+      "name": "execute-less",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.58,
+      "note": ""
+    },
+    {
+      "name": "execute-top",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 1.19,
+      "note": ""
+    },
+    {
+      "name": "git-https-commit-branch",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 6.26,
+      "note": ""
+    },
+    {
+      "name": "python-project-dependency",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.61,
+      "note": ""
+    },
+    {
+      "name": "node-npm-project",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 6.7,
+      "note": ""
+    },
+    {
+      "name": "clang-make-project",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 2.75,
+      "note": ""
+    },
+    {
+      "name": "archives-rsync-unicode",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 2.81,
+      "note": ""
+    },
+    {
+      "name": "tls-curl-wget",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 1.79,
+      "note": ""
+    },
+    {
+      "name": "network-errors",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 2.44,
+      "note": ""
+    },
+    {
+      "name": "package-consistency",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 2.19,
+      "note": ""
+    }
+  ],
+  "pty": [
+    {
+      "name": "bash-read-unicode",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=1/1"
+    },
+    {
+      "name": "cat-eof",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=2/2"
+    },
+    {
+      "name": "control-c",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=1/1"
+    },
+    {
+      "name": "resize",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=1/1"
+    },
+    {
+      "name": "job-control-z",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=5/5"
+    },
+    {
+      "name": "nano",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=1/1"
+    },
+    {
+      "name": "vim",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=1/1"
+    },
+    {
+      "name": "less",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=1/1"
+    },
+    {
+      "name": "top",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=1/1"
+    },
+    {
+      "name": "ansi-truecolor-utf8",
+      "status": "PASS",
+      "detail": "exit=0, input_steps=0/0"
+    },
+    {
+      "name": "close-detached-job",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "eight-independent-input-streams",
+      "status": "PASS",
+      "detail": "[0, 0, 0, 0, 0, 0, 0, 0]"
+    }
+  ],
+  "recovery_and_locks": [
+    {
+      "name": "recover-partial-configuration",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.93
+    },
+    {
+      "name": "pkg-upgrade",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 29.11
+    },
+    {
+      "name": "install-bash",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 1.57
+    },
+    {
+      "name": "install-coreutils",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.92
+    },
+    {
+      "name": "install-findutils",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.83
+    },
+    {
+      "name": "install-grep",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.12
+    },
+    {
+      "name": "install-sed",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.6
+    },
+    {
+      "name": "install-inetutils",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 4.44
+    },
+    {
+      "name": "execute-ping",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 1.25
+    },
+    {
+      "name": "package-consistency",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 1.64
+    },
+    {
+      "name": "apt-lock",
+      "status": "PASS",
+      "exit": 100,
+      "note": "nonzero expected while frontend lock is held"
+    },
+    {
+      "name": "apt-lock-released",
+      "status": "PASS",
+      "exit": 0
+    }
+  ],
+  "jvm": {
+    "app": {
+      "tests": 192,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "terminal-emulator": {
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "physical_android": {
+    "status": "NOT TESTED",
+    "reason": "Pixel 9 is the Termux build/test host; no ADB connection to exercise the Klyro APK",
+    "scope": "Klyro APK UID, UI/FGS/storage/lifecycle"
+  },
+  "instrumentation": {
+    "status": "NOT TESTED",
+    "compiled_tests": 4
+  },
+  "signature_tampering": {
+    "status": "PASS",
+    "evidence": "tampered-signature.log"
+  },
+  "initial_failures": {
+    "apt_cache": "Reproduced, fixed in OrynPaths, retested",
+    "dpkg_configuration": "Fixture changed sources.list and supplied no conffile response. Explicit keep-old recovery tested.",
+    "iputils": "Invalid Debian package-name assumption; ping is the termux-tools wrapper around public /system/bin/ping.",
+    "pty_harness": "EOF/waitpid timing and nano title assumptions corrected; all PTY cases rerun."
+  },
+  "verification_wrapper": {
+    "status": "PASS",
+    "evidence": "verification-wrapper.log",
+    "checks": "real probe, PID preserved by exec, nonce match, SIGQUIT shutdown"
+  },
+  "ssh_loopback": {
+    "status": "PASS",
+    "evidence": "ssh-loopback.log",
+    "checks": "ephemeral host/client keys, strict host-key check, localhost public-key authentication, remote command"
+  },
+  "host": {
+    "model": "Pixel 9",
+    "android_sdk": 37,
+    "abi": "arm64-v8a",
+    "page_size": 4096,
+    "execution_context": "Termux build/test UID; NOT Klyro APK UID"
+  },
+  "ci": {
+    "conclusion": "success",
+    "headSha": "40733ce2ec749690413fef0abeffa2116bcd1a64",
+    "status": "completed",
+    "url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43197678741"
+  },
+  "build": {
+    "source_branch": "feat/production-ready-terminal",
+    "app_code_sha": "40733ce2ec749690413fef0abeffa2116bcd1a64",
+    "reference_base_sha": "7bfdae9fd00892ce1a66152c52077822d2758f70",
+    "ci": {
+      "conclusion": "success",
+      "headSha": "40733ce2ec749690413fef0abeffa2116bcd1a64",
+      "status": "completed",
+      "url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43197678741"
+    },
+    "certificate_sha256": "01a7e05326237fdfa4cda54e75fb8164cbe12bbc964d36e2d9c2d1a8ef7e5c14",
+    "artifacts": {
+      "application": {
+        "filename": "klyro-shell-signed.apk",
+        "bytes": 10524442,
+        "sha256": "d838c88378361136cce0d8d682e4383b0dfde72d8890f16fa7bfea486bf6dc62"
+      },
+      "instrumentation": {
+        "filename": "klyro-shell-tests-signed.apk",
+        "bytes": 365259,
+        "sha256": "51d9c0240c8c2310012b7b64a89325d3a75e63888e166b18b502c5fa89742ffe"
+      }
+    },
+    "signature_verification": "PASS, APK v2/v3; matching app and test certificates",
+    "native_16k_elf_alignment": "PASS, seven .so files; runtime on 16k-page device NOT TESTED",
+    "bootstrap_sha256": "964e0473a9fa881600927c0151b99896089fb595b81afdcd74b1a6743b8b5889"
+  }
+}

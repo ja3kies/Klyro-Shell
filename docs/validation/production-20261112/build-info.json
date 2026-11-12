@@ -1,0 +1,27 @@
+{
+  "source_branch": "feat/production-ready-terminal",
+  "app_code_sha": "40733ce2ec749690413fef0abeffa2116bcd1a64",
+  "reference_base_sha": "7bfdae9fd00892ce1a66152c52077822d2758f70",
+  "ci": {
+    "conclusion": "success",
+    "headSha": "40733ce2ec749690413fef0abeffa2116bcd1a64",
+    "status": "completed",
+    "url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43197678741"
+  },
+  "certificate_sha256": "01a7e05326237fdfa4cda54e75fb8164cbe12bbc964d36e2d9c2d1a8ef7e5c14",
+  "artifacts": {
+    "application": {
+      "filename": "klyro-shell-signed.apk",
+      "bytes": 10524442,
+      "sha256": "d838c88378361136cce0d8d682e4383b0dfde72d8890f16fa7bfea486bf6dc62"
+    },
+    "instrumentation": {
+      "filename": "klyro-shell-tests-signed.apk",
+      "bytes": 365259,
+      "sha256": "51d9c0240c8c2310012b7b64a89325d3a75e63888e166b18b502c5fa89742ffe"
+    }
+  },
+  "signature_verification": "PASS, APK v2/v3; matching app and test certificates",
+  "native_16k_elf_alignment": "PASS, seven .so files; runtime on 16k-page device NOT TESTED",
+  "bootstrap_sha256": "964e0473a9fa881600927c0151b99896089fb595b81afdcd74b1a6743b8b5889"
+}
