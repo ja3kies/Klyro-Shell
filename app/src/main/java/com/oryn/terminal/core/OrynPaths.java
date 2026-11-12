@@ -72,6 +72,8 @@ public final class OrynPaths {
         mkdir(prootDependencyDir);
         mkdir(child(root, "data/data/com.termux/files/usr"));
         mkdir(child(root, "data/data/com.termux/files/home"));
+        // APT's compiled cache path is outside PREFIX, but remains inside our private rootfs.
+        mkdir(child(root, "data/data/com.termux/cache/apt/archives/partial"));
         mkdir(child(root, "dev"));
         mkdir(child(root, "proc"));
         mkdir(child(root, "sys"));

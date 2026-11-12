@@ -2,7 +2,7 @@ name: Android build
 
 on:
   push:
-    branches: [main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108, feat/p0-cycle1-25-actions-20261108, 'p0/**', 'p1/**', 'integration/**', 'feat/ux-five-priorities-cycle-02', 'fix/ux-t4-confirm-bundled-install', 'p1/ux-modal-keyboard-cycle-03', 'p0/select-paste-adversarial-audit-20261109']
+    branches: [feat/production-ready-terminal, main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108, feat/p0-cycle1-25-actions-20261108, 'p0/**', 'p1/**', 'integration/**', 'feat/ux-five-priorities-cycle-02', 'fix/ux-t4-confirm-bundled-install', 'p1/ux-modal-keyboard-cycle-03', 'p0/select-paste-adversarial-audit-20261109']
     paths-ignore:
       # The fast robot-quality-gate workflow validates these changes
       # independently. Don't consume a full Android/Termux SDK build for
@@ -54,105 +54,19 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      # Fetch ARM64 packages from the official Termux repository. APT verifies
-      # InRelease with the Termux keyring before accepting package SHA-256 data.
-      - name: Prepare verified Termux ARM64 proot runtime assets
+      - name: Prepare signed ARM64 PRoot runtime assets
         shell: bash
         run: |
           set -euo pipefail
-
-          KEY_COMMIT="cf263f833188fc7421eded4149fee617c0aad55b"
-          KEY_DIR="$(mktemp -d)"
-          export GNUPGHOME="$KEY_DIR/gnupg"
-          mkdir -m 700 -p "$GNUPGHOME"
-
-          KEYS=(
-            agnostic-apollo.gpg
-            grimler.gpg
-            kcubeterm.gpg
-            landfillbaby.gpg
-            mradityaalok.gpg
-            2096779623.gpg
-            thunder-coding.gpg
-            termux-autobuilds.gpg
-          )
-          for key in "${KEYS[@]}"; do
-            curl --fail --silent --show-error --location \
-              "https://raw.githubusercontent.com/termux/termux-packages/$KEY_COMMIT/packages/termux-keyring/$key" \
-              --output "$KEY_DIR/$key"
+          python3 tools/prepare_proot_runtime.py "$RUNNER_TEMP/klyro-runtime"
+          mkdir -p app/src/main/jniLibs app/src/main/assets
+          cp -R "$RUNNER_TEMP/klyro-runtime/jniLibs/." app/src/main/jniLibs/
+          cp -R "$RUNNER_TEMP/klyro-runtime/assets/." app/src/main/assets/
+          for lib in app/src/main/jniLibs/arm64-v8a/*.so; do
+            readelf -h "$lib" | grep -q 'AArch64'
           done
-
-          gpg --batch --import "$KEY_DIR"/*.gpg
-          gpg --batch --export > "$KEY_DIR/termux-archive-keyring.gpg"
-          sudo install -m 0644 "$KEY_DIR/termux-archive-keyring.gpg" \
-            /usr/share/keyrings/termux-archive-keyring.gpg
-
-          sudo dpkg --add-architecture aarch64
-          echo "deb [arch=aarch64 signed-by=/usr/share/keyrings/termux-archive-keyring.gpg] https://packages.termux.dev/apt/termux-main stable main" \
-            | sudo tee /etc/apt/sources.list.d/termux-main.list >/dev/null
-          sudo apt-get update
-
-          mkdir -p "$RUNNER_TEMP/termux-runtime/debs"
-          cd "$RUNNER_TEMP/termux-runtime/debs"
-          # Keep the runtime reproducible; update these pins deliberately with the Termux sources.
-          apt-get download proot:aarch64=5.1.107.102 libtalloc:aarch64=2.5.0 libandroid-shmem:aarch64=0.7
-
-          mkdir -p extracted
-          for deb in ./*.deb; do
-            dpkg-deb --extract "$deb" "extracted/$(basename "$deb" .deb)"
-          done
-
-          PREFIX_SUFFIX="data/data/com.termux/files/usr"
-          PROOT_ROOT="$(find extracted -type f -path "*/$PREFIX_SUFFIX/bin/proot" -print -quit)"
-          LOADER_ROOT="$(find extracted -type f -path "*/$PREFIX_SUFFIX/libexec/proot/loader" -print -quit)"
-          test -n "$PROOT_ROOT"
-          test -n "$LOADER_ROOT"
-
-          NATIVE_ROOT="$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a"
-          ASSET_ROOT="$GITHUB_WORKSPACE/app/src/main/assets/proot"
-          rm -rf "$NATIVE_ROOT"
-          mkdir -p "$NATIVE_ROOT" "$ASSET_ROOT/licenses"
-          install -m 0755 "$PROOT_ROOT" "$NATIVE_ROOT/libproot.so"
-          install -m 0755 "$LOADER_ROOT" "$NATIVE_ROOT/libproot-loader.so"
-
-          TALLOC_LIBRARY="$(find -L extracted -type f -path "*/$PREFIX_SUFFIX/lib/libtalloc.so" -print -quit)"
-          SHMEM_LIBRARY="$(find -L extracted -type f -path "*/$PREFIX_SUFFIX/lib/libandroid-shmem.so" -print -quit)"
-          test -n "$TALLOC_LIBRARY"
-          test -n "$SHMEM_LIBRARY"
-          install -m 0644 "$TALLOC_LIBRARY" "$NATIVE_ROOT/libtalloc.so"
-          install -m 0644 "$SHMEM_LIBRARY" "$NATIVE_ROOT/libandroid-shmem.so"
-
-          for package in proot libtalloc libandroid-shmem; do
-            package_root="$(find extracted -type d -path "*/$PREFIX_SUFFIX/share/doc/$package" -print -quit)"
-            if [ -n "$package_root" ] && [ -f "$package_root/copyright" ]; then
-              install -m 0644 "$package_root/copyright" "$ASSET_ROOT/licenses/$package-copyright"
-            fi
-          done
-
-          test -s "$NATIVE_ROOT/libproot.so"
-          test -s "$NATIVE_ROOT/libproot-loader.so"
-          test -s "$NATIVE_ROOT/libtalloc.so"
-          test -s "$NATIVE_ROOT/libandroid-shmem.so"
-          readelf -d "$NATIVE_ROOT/libtalloc.so" | grep -q 'SONAME.*libtalloc.so.2'
-
-          {
-            echo "# Verified package versions from the signed Termux stable repository"
-            for package in proot libtalloc libandroid-shmem; do
-              deb="$(find . -maxdepth 1 -name "${package}_*_aarch64.deb" -print -quit)"
-              printf '# %s=%s\n' "$package" "$(dpkg-deb -f "$deb" Version)"
-            done
-            sha256sum "$NATIVE_ROOT/libproot.so" | awk '{print $1 " bin/proot"}'
-            sha256sum "$NATIVE_ROOT/libproot-loader.so" | awk '{print $1 " loader"}'
-            sha256sum "$NATIVE_ROOT/libtalloc.so" | awk '{print $1 " lib/libtalloc.so"}'
-            sha256sum "$NATIVE_ROOT/libandroid-shmem.so" | awk '{print $1 " lib/libandroid-shmem.so"}'
-          } > "$ASSET_ROOT/runtime-manifest.txt"
-
-          readelf -h "$NATIVE_ROOT/libproot.so" | grep -q 'AArch64'
-          readelf -h "$NATIVE_ROOT/libproot-loader.so" | grep -q 'AArch64'
-          readelf -d "$NATIVE_ROOT/libproot.so" > "$RUNNER_TEMP/proot-dynamic.txt"
-          cat "$RUNNER_TEMP/proot-dynamic.txt"
-          echo "Verified APK-native proot runtime files:"
-          cat "$ASSET_ROOT/runtime-manifest.txt"
+          readelf -d app/src/main/jniLibs/arm64-v8a/libtalloc.so | grep -q 'SONAME.*libtalloc.so.2'
+          cat app/src/main/assets/proot/runtime-manifest.txt
 
       # A pinned and verified open-font licence asset; no remote typography
       # package or UI code is imported from DSH Go.
@@ -176,6 +90,7 @@ jobs:
       - name: Run JVM and native alignment auditor unit tests
         run: |
           bash -n scripts/klyro-operational-gate.sh
+          bash scripts/test-native-pty.sh
           bash -n scripts/klyro-qa.sh
           bash -n scripts/klyro-qa-bootstrap.sh
           python3 -m py_compile tools/klyro_ui_robot.py tools/klyro_robot_report_audit.py tools/klyro_ux_report.py

@@ -125,8 +125,7 @@ public final class TermuxBootstrapInstaller {
         File previous = paths.getPreviousPrefix();
 
         // Recover if Android killed the app during the two-rename activation.
-        if (!prefix.exists() && previous.exists()) move(previous.toPath(), prefix.toPath());
-        if (prefix.exists() && previous.exists()) paths.deletePrivateTree(previous);
+        recoverPrefix(prefix, previous);
 
         if (isValidArchive(archive)) {
             progress(listener, "Verified cached bootstrap archive", 12);
@@ -181,20 +180,32 @@ public final class TermuxBootstrapInstaller {
 
         // Swap only within Oryn's private filesDir. Restore the old prefix if
         // the final rename fails; never touch /data/data/com.termux.
-        paths.deletePrivateTree(previous);
+        boolean replaced = prefix.exists();
+        activatePrefix(staging, prefix, previous);
+        progress(listener, "Klyro environment installed and validated", 100);
+        complete(listener, true, "Installed " + BOOTSTRAP_TAG
+                + " (ARM64, " + extracted + " files) in Klyro private storage."
+                + (replaced ? " Previous packages and files retained in /usr.previous; review before another repair." : ""));
+    }
+
+    static void recoverPrefix(File prefix, File previous) throws IOException {
+        if (!prefix.exists() && previous.exists()) move(previous.toPath(), prefix.toPath());
+        if (previous.exists()) {
+            throw new IOException("Previous environment backup exists at /usr.previous. "
+                    + "Archive or review it before repairing again; no files were removed.");
+        }
+    }
+
+    static void activatePrefix(File staging, File prefix, File previous) throws IOException {
+        if (previous.exists()) throw new IOException("Refusing to overwrite previous environment backup.");
         if (prefix.exists()) move(prefix.toPath(), previous.toPath());
         try {
             move(staging.toPath(), prefix.toPath());
-        } catch (Exception swapError) {
-            if (previous.exists() && !prefix.exists()) {
-                move(previous.toPath(), prefix.toPath());
-            }
+        } catch (IOException swapError) {
+            if (previous.exists() && !prefix.exists()) move(previous.toPath(), prefix.toPath());
             throw swapError;
         }
-        paths.deletePrivateTree(previous);
-        progress(listener, "Klyro environment installed and validated", 100);
-        complete(listener, true, "Installed " + BOOTSTRAP_TAG
-                + " (ARM64, " + extracted + " files) in Klyro private storage.");
+        // A prefix may contain user projects and installed packages, not just bootstrap files.
     }
 
     public static String archName() {
@@ -231,6 +242,7 @@ public final class TermuxBootstrapInstaller {
         java.util.ArrayList<String> args = new java.util.ArrayList<>();
         args.add(paths.getProot().getAbsolutePath());
         args.add("--link2symlink");
+        args.add("--kill-on-exit");
         args.add("-r");
         args.add(paths.getRoot().getAbsolutePath());
         addBind(args, "/dev");
@@ -259,6 +271,8 @@ public final class TermuxBootstrapInstaller {
         args.add("PATH=" + prefix + "/bin:/system/bin:/system/xbin");
         args.add("TERM=xterm-256color");
         args.add("COLORTERM=truecolor");
+        // Keep the configured signed HTTPS source instead of probing/randomizing upstream mirrors.
+        args.add("TERMUX_PKG_NO_MIRROR_SELECT=1");
         args.add("LANG=en_US.UTF-8");
         args.add("TMPDIR=" + prefix + "/tmp");
         args.add("LD_PRELOAD=" + prefix + "/lib/libtermux-exec.so");
