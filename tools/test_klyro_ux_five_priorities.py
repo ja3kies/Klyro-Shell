@@ -131,7 +131,8 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn('liveRegion = LiveRegionMode.Polite', self.shared)
 
     def test_contextual_all_behavior_unchanged(self):
-        self.assertIn('description = if (canSelect) "Select all terminal output" else "Paste clipboard"', self.terminal)
+        self.assertIn('description = if (canSelect) "Select terminal output; hold to paste clipboard"', self.terminal)
+        self.assertIn("TerminalActionPolicy.shouldSelect(canSelect, true)", self.terminal)
 
 
 if __name__ == "__main__":
