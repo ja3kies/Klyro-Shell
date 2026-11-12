@@ -288,7 +288,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         menu = pane.split("val toolsMenu: @Composable () -> Unit =", 1)[1].split(
             "\n    Column(", 1
         )[0]
-        self.assertEqual(menu.count("KlyroMenuItem("), 4)
+        self.assertEqual(menu.count("KlyroMenuItem("), 5)
+        self.assertIn('KlyroMenuItem("Paste clipboard", R.drawable.hugeicons_clipboard_paste)', menu)
         shared = src(UI / "KlyroUiComponents.kt")
         self.assertEqual(shared.count("DropdownMenuItem("), 1)
         self.assertIn("leadingIcon =", shared)
