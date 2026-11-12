@@ -126,8 +126,13 @@ internal fun KlyroSettingsSheet(
             }
         }
     }
-    androidx.compose.runtime.LaunchedEffect(context) {
-        selectedBrand = KlyroBrandChoice.selected(context)
+    LaunchedEffect(context) {
+        // Launcher alias verification calls PackageManager across Binder.
+        // Never block the Settings opening frame on this query.
+        selectedBrand = withContext(Dispatchers.IO) {
+            runCatching { KlyroBrandChoice.selected(context) }
+                .getOrDefault(KlyroBrandChoice.DEFAULT)
+        }
     }
     fun navigateBack() {
         when {
