@@ -15,6 +15,21 @@ public class TerminalActionPolicyTest {
         assertTrue(TerminalActionPolicy.hasCopyableOutput("klyro ~ $\nhello\nklyro ~ $"));
     }
 
+    @Test public void pasteRemainsAccessibleAfterOutputExists() {
+        assertTrue(TerminalActionPolicy.shouldSelect(true, false));
+        assertFalse("Long press always pastes even with history",
+                TerminalActionPolicy.shouldSelect(true, true));
+        assertFalse("Blank prompt defaults to paste",
+                TerminalActionPolicy.shouldSelect(false, false));
+        assertFalse(TerminalActionPolicy.shouldSelect(false, true));
+    }
+
+    @Test public void smartKeyDependsOnPtyNotStaleClipboardFlag() {
+        assertTrue(TerminalActionPolicy.canUseSmartKey(true, false));
+        assertTrue(TerminalActionPolicy.canUseSmartKey(false, true));
+        assertFalse(TerminalActionPolicy.canUseSmartKey(false, false));
+    }
+
     @Test public void selectionTailPreservesShortCopyableText() {
         assertEquals("hello", TerminalActionPolicy.selectionTail("hello"));
         assertEquals("", TerminalActionPolicy.selectionTail(null));
