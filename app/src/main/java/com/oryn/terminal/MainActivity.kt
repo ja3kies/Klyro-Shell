@@ -17,6 +17,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -133,23 +134,48 @@ class MainActivity : ComponentActivity() {
         }.getOrNull()
     }
     private var pendingStorageRequestToken: String? = null
+    private var storageBridgePollInFlight = false
+    private var deferredStorageFolderPicker = false
     private var exportRelativePath by mutableStateOf("imports/klyro-export.txt")
     private var showExportPathDialog by mutableStateOf(false)
     private var pendingExportPath: String? = null
     private val storageBridgeHandler = Handler(Looper.getMainLooper())
+    private fun launchPendingStoragePicker() {
+        if (pendingStorageRequestToken == null || isFinishing || isDestroyed) return
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            deferredStorageFolderPicker = true
+            return
+        }
+        deferredStorageFolderPicker = false
+        try {
+            chooseStorageFolder()
+        } catch (_: Exception) {
+            completeStorageRequest("DENIED")
+            Toast.makeText(this, "Unable to open Android folder picker",
+                Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private val storageBridgePoller = object : Runnable {
         override fun run() {
-            if (!isFinishing && !isDestroyed && pendingStorageRequestToken == null) {
-                runCatching { storageCommandBridge?.poll() }.onSuccess { token ->
-                    if (token != null) {
-                        pendingStorageRequestToken = token
-                        try {
-                            chooseStorageFolder()
-                        } catch (_: Exception) {
-                            completeStorageRequest("DENIED")
-                            Toast.makeText(this@MainActivity,
-                                "Unable to open Android folder picker", Toast.LENGTH_SHORT).show()
+            if (!isFinishing && !isDestroyed && pendingStorageRequestToken == null &&
+                !storageBridgePollInFlight
+            ) {
+                storageBridgePollInFlight = true
+                // Canonical paths and Files.readAllBytes can block on slow
+                // storage. Do not run these operations on Android's UI thread,
+                // especially in the first frame after returning from recents.
+                lifecycleScope.launch {
+                    val token = try {
+                        withContext(Dispatchers.IO) {
+                            runCatching { storageCommandBridge?.poll() }.getOrNull()
                         }
+                    } finally {
+                        storageBridgePollInFlight = false
+                    }
+                    if (token != null && !isFinishing && !isDestroyed) {
+                        pendingStorageRequestToken = token
+                        launchPendingStoragePicker()
                     }
                 }
             }
@@ -635,6 +661,7 @@ class MainActivity : ComponentActivity() {
         // backgrounded. Refresh their latest emulator screen once, rather
         // than replaying thousands of stale View invalidations on resume.
         terminalState.sessions.forEach { it.client.setUiActive(true) }
+        if (deferredStorageFolderPicker) launchPendingStoragePicker()
         storageBridgeHandler.removeCallbacks(storageBridgePoller)
         storageBridgeHandler.post(storageBridgePoller)
     }
