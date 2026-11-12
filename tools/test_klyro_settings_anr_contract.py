@@ -39,6 +39,12 @@ class SettingsAnrContracts(unittest.TestCase):
         # Full transcript is still available on explicit user selection.
         self.assertIn('val output = session.emulator?.screen?.transcriptText.orEmpty()', PANE)
 
+    def test_launcher_identity_binder_lookup_is_not_on_settings_opening_frame(self):
+        section = SETTINGS.split('LaunchedEffect(context) {', 1)[1].split(
+            'fun navigateBack()', 1)[0]
+        self.assertIn('withContext(Dispatchers.IO)', section)
+        self.assertIn('KlyroBrandChoice.selected(context)', section)
+
     def test_storage_permission_binder_call_not_in_compose_files_case(self):
         prefix = SETTINGS.split('val context = LocalContext.current', 1)[1].split(
             'val version =', 1)[0]
