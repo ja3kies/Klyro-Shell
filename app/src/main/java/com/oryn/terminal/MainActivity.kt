@@ -399,6 +399,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         pendingStorageRequestToken =
             savedInstanceState?.getString("klyro_pending_storage_request")
+        deferredStorageFolderPicker = savedInstanceState
+            ?.getBoolean("klyro_deferred_storage_picker", false) ?: false
         exportRelativePath = savedInstanceState?.getString("klyro_export_path") ?: "imports/klyro-export.txt"
         showExportPathDialog = savedInstanceState?.getBoolean("klyro_export_dialog") ?: false
         pendingExportPath = savedInstanceState?.getString("klyro_pending_export_path")
@@ -677,6 +679,7 @@ class MainActivity : ComponentActivity() {
         outState.putBoolean("klyro_show_welcome", showWelcomeScreen)
         outState.putBoolean("klyro_had_sessions", terminalState.hasLiveSessions())
         outState.putString("klyro_pending_storage_request", pendingStorageRequestToken)
+        outState.putBoolean("klyro_deferred_storage_picker", deferredStorageFolderPicker)
         outState.putString("klyro_export_path", exportRelativePath)
         outState.putBoolean("klyro_export_dialog", showExportPathDialog)
         outState.putString("klyro_pending_export_path", pendingExportPath)
