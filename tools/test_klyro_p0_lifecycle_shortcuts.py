@@ -73,10 +73,10 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
 
     def test_all_select_icon_matches_select_action(self):
         self.assertIn("R.drawable.hugeicons_clipboard_list", self.pane)
-        self.assertIn('"Select all terminal output"', self.pane)
+        self.assertIn('"Select terminal output; hold to paste clipboard"', self.pane)
 
     def test_all_disabled_only_if_both_actions_unavailable(self):
-        self.assertIn("enabled = canSelect || (session.isRunning() && session.emulator != null && clipboardAvailable)", self.pane)
+        self.assertIn("TerminalActionPolicy.canUseSmartKey(canSelect, canSendKeys)", self.pane)
 
     def test_all_reports_active_selection(self):
         self.assertIn("active = selectedOutput != null", self.pane)
@@ -124,7 +124,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
 
     def test_active_output_updates_selectable_action(self):
         self.assertIn("outputRevision = terminalState.outputRevision(terminalState.activeTabId)", self.activity)
-        self.assertIn("remember(session, outputRevision)", self.pane)
+        self.assertIn("remember(session, outputRevision, terminalActionRevision)", self.pane)
         self.assertIn("outputRevisions[tabId]", self.viewmodel)
 
     def test_output_subscription_is_released_on_close(self):
