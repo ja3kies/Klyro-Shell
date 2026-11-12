@@ -460,24 +460,24 @@ class MainActivity : ComponentActivity() {
                 if (themeMode.startsWith("mono-")) KlyroColors.monochrome(themeMode)
                 else KlyroColors.create(darkTheme, accentId)
             }
+            // SideEffect runs after EVERY recomposition, including every
+            // output-revision tick emitted by pkg/apt. Binder/window insets
+            // calls are only necessary when chrome or the theme changes.
             SideEffect {
-                activePalette = palette
-                // Compose chrome and native Termux ANSI colors must update together.
                 if (appliedTerminalPalette != palette) {
+                    activePalette = palette
                     KlyroTerminalPalette.apply(palette, terminalState.sessions.map { it.session })
                     terminalState.viewClient?.invalidateTerminal()
                     appliedTerminalPalette = palette
+                    window.decorView.setBackgroundColor(palette.chrome.toArgb())
+                    if (android.os.Build.VERSION.SDK_INT >= 29) {
+                        window.isNavigationBarContrastEnforced = false
+                        window.isStatusBarContrastEnforced = false
+                    }
+                    val controller = WindowInsetsControllerCompat(window, window.decorView)
+                    controller.isAppearanceLightStatusBars = !darkTheme
+                    controller.isAppearanceLightNavigationBars = !darkTheme
                 }
-                // Status and gesture navigation bars remain transparent while
-                // their underlying window matches the visible Klyro chrome.
-                window.decorView.setBackgroundColor(palette.chrome.toArgb())
-                if (android.os.Build.VERSION.SDK_INT >= 29) {
-                    window.isNavigationBarContrastEnforced = false
-                    window.isStatusBarContrastEnforced = false
-                }
-                val controller = WindowInsetsControllerCompat(window, window.decorView)
-                controller.isAppearanceLightStatusBars = !darkTheme
-                controller.isAppearanceLightNavigationBars = !darkTheme
             }
             CompositionLocalProvider(LocalKlyroColors provides palette) {
                 MaterialTheme(
