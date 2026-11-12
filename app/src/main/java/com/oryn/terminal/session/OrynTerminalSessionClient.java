@@ -35,6 +35,10 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private volatile TerminalView terminalView;
     private volatile Runnable outputObserver;
     private final AtomicBoolean pendingOutputRefresh = new AtomicBoolean(false);
+    // The PTY continues processing output while Android backgrounds the
+    // Activity. Only its UI work is paused to avoid an unbounded main queue.
+    private final AtomicBoolean uiActive = new AtomicBoolean(true);
+    private final AtomicBoolean outputReceivedWhilePaused = new AtomicBoolean(false);
     private final AtomicBoolean disposed = new AtomicBoolean(false);
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
@@ -47,6 +51,45 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         if (!disposed.get()) terminalView = view;
     }
 
+    /** Release only this pane's view, never a newer replacement view. */
+    public void detachViewIfCurrent(@NonNull TerminalView view) {
+        if (terminalView == view) terminalView = null;
+    }
+
+    /**
+     * Android pauses rendering, not the shell. Collapse background output
+     * into one screen update when the Activity resumes; never replay every
+     * output chunk to the UI thread. The emulator retains the actual bytes.
+     */
+    public void setUiActive(boolean active) {
+        if (disposed.get()) return;
+        uiActive.set(active);
+        if (active) {
+            outputReceivedWhilePaused.set(false);
+            scheduleOutputRefresh();
+        }
+    }
+
+    private void scheduleOutputRefresh() {
+        if (disposed.get() || !uiActive.get()) return;
+        if (!pendingOutputRefresh.compareAndSet(false, true)) return;
+        uiHandler.post(() -> {
+            pendingOutputRefresh.set(false);
+            if (disposed.get()) return;
+            if (!uiActive.get()) {
+                outputReceivedWhilePaused.set(true);
+                return;
+            }
+            if (listener != null) listener.onOutputActivity();
+            TerminalView view = terminalView;
+            if (view != null && view.isAttachedToWindow()) {
+                view.onScreenUpdated();
+            }
+            Runnable observer = outputObserver;
+            if (observer != null) observer.run();
+        });
+    }
+
     /** Drop stale UI work when the owning PTY tab is permanently closed. */
     public void dispose() {
         disposed.set(true);
@@ -54,6 +97,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         outputObserver = null;
         uiHandler.removeCallbacksAndMessages(null);
         pendingOutputRefresh.set(false);
+        outputReceivedWhilePaused.set(false);
     }
 
     /** Observer belongs to the visible pane and is removed on disposal. */
@@ -63,19 +107,15 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
 
     @Override
     public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
-        // A noisy PTY can emit thousands of chunks. One main-thread refresh
-        // consumes the latest buffer and always targets the currently attached view.
-        if (!disposed.get() && pendingOutputRefresh.compareAndSet(false, true)) {
-            uiHandler.post(() -> {
-                pendingOutputRefresh.set(false);
-                if (disposed.get()) return;
-                if (listener != null) listener.onOutputActivity();
-                TerminalView view = terminalView;
-                if (view != null) view.onScreenUpdated();
-                Runnable observer = outputObserver;
-                if (observer != null) observer.run();
-            });
+        // No callbacks are queued while the Activity is paused. One update
+        // reads the latest emulator state upon resume, retaining every byte
+        // in the PTY's own buffer instead of replaying obsolete UI work.
+        if (disposed.get()) return;
+        if (!uiActive.get()) {
+            outputReceivedWhilePaused.set(true);
+            return;
         }
+        scheduleOutputRefresh();
     }
 
     @Override
