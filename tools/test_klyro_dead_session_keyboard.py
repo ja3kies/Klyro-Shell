@@ -11,6 +11,6 @@ class DeadSessionKeyboardTest(unittest.TestCase):
   keys=S.split("val firstRow:",1)[1].split("if (compact) {",1)[0]
   for label in ('"ALL"','"FIND"','"CLEAR"'):
    self.assertIn(label, keys)
-  self.assertIn("enabled = canSelect ||",keys)
+  self.assertIn("enabled = TerminalActionPolicy.canUseSmartKey(canSelect, canSendKeys)",keys)
   self.assertIn("TerminalActionPolicy.hasCopyableOutput",S)
 if __name__=="__main__":unittest.main()
