@@ -188,7 +188,16 @@ class MainActivity : ComponentActivity() {
     private fun completeStorageRequest(status: String) {
         val token = pendingStorageRequestToken ?: return
         pendingStorageRequestToken = null
-        runCatching { storageCommandBridge?.finish(token, status) }
+        // Completing a setup-storage request writes to a private state file.
+        // This can contend with dpkg filesystem activity; never run it from
+        // an ActivityResult callback on the main thread.
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { storageCommandBridge?.finish(token, status) }
+                .onFailure { error ->
+                    android.util.Log.w("KlyroStorage",
+                        "Could not complete storage request", error)
+                }
+        }
     }
     private val storageFolderLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
