@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import android.os.SystemClock
+import android.os.Handler
+import android.os.Looper
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.ui.OrynTerminalViewClient
@@ -32,6 +34,29 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     // Native TerminalView draws outside Compose. Notify the smart ALL key when
     // the active terminal transcript changes, including output from child jobs.
     private val outputRevisions = mutableStateMapOf<Long, Long>()
+    // Apt/dpkg can deliver thousands of chunks per second. Native TerminalView
+    // renders its own emulator state; Compose does not need one state update
+    // per chunk. Coalesce bursts into a trailing notification every 120 ms,
+    // including the FINAL chunk (so SELECT/OUT cannot remain stale).
+    private val outputUiHandler = Handler(Looper.getMainLooper())
+    private val pendingOutputIds = mutableSetOf<Long>()
+    private val publishPendingOutput = Runnable {
+        val pending = pendingOutputIds.toList()
+        pendingOutputIds.clear()
+        val now = SystemClock.elapsedRealtime()
+        pending.forEach { id ->
+            if (tabs.any { it.id == id }) {
+                outputRevisions[id] = (outputRevisions[id] ?: 0L) + 1L
+                lastOutputElapsed[id] = now
+                if (activeTabId != id) unreadActivity[id] = true
+            }
+        }
+    }
+    private fun queueOutputUpdate(tabId: Long) {
+        val first = pendingOutputIds.isEmpty()
+        pendingOutputIds.add(tabId)
+        if (first) outputUiHandler.postDelayed(publishPendingOutput, 120L)
+    }
     // Elapsed timestamps are process-local, never persisted; no terminal text.
     private val lastOutputElapsed = mutableStateMapOf<Long, Long>()
     val lastOutputElapsedMs: Map<Long, Long> get() = lastOutputElapsed.toMap()
@@ -96,11 +121,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     fun listenerFor(tabId: Long): OrynTerminalSessionClient.Listener =
         object : OrynTerminalSessionClient.Listener {
             override fun onOutputActivity() {
-                if (tabs.any { it.id == tabId }) {
-                    outputRevisions[tabId] = (outputRevisions[tabId] ?: 0L) + 1L
-                    lastOutputElapsed[tabId] = SystemClock.elapsedRealtime()
-                    if (activeTabId != tabId) unreadActivity[tabId] = true
-                }
+                if (tabs.any { it.id == tabId }) queueOutputUpdate(tabId)
             }
             override fun onTitleChanged(title: String?) {
                 updateTitle(tabId, title)
@@ -170,6 +191,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (pendingNativePaste?.tabId == id) pendingNativePaste = null
         val entry = tabs.removeAt(index)
         unreadActivity.remove(id)
+        pendingOutputIds.remove(id)
         outputRevisions.remove(id)
         lastOutputElapsed.remove(id)
         entry.client.dispose()
@@ -235,6 +257,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     override fun onCleared() {
+        outputUiHandler.removeCallbacks(publishPendingOutput)
+        pendingOutputIds.clear()
         super.onCleared()
     }
 }
