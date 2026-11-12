@@ -66,13 +66,12 @@ def main(fixture):
         printf 'pipeline\\n' | grep -qx pipeline
         read -r input < sample; test "$input" = works
         (exit 23) && exit 1 || test "$?" = 23''')
-    # Configure only this disposable fixture, not any user's selected mirror.
-    run("fixture-https-source", '''printf '%s\\n' 'deb https://packages.termux.dev/apt/termux-main stable main' > "$PREFIX/etc/apt/sources.list"''')
+    run("fixture-https-source", '''grep -Eq '^deb https://' "$PREFIX/etc/apt/sources.list"''')
     run("pkg-update", "pkg update -y")
     run("pkg-upgrade", "pkg upgrade -y")
     run("pkg-search", "pkg search git | grep -i git")
     tools = ["bash", "coreutils", "findutils", "grep", "sed", "gawk", "tar", "gzip", "unzip",
-             "zip", "rsync", "curl", "wget", "iputils", "openssh", "git", "python", "python-pip",
+             "zip", "rsync", "curl", "wget", "termux-tools", "openssh", "git", "python", "python-pip",
              "nodejs", "npm", "clang", "make", "pkg-config", "nano", "vim", "less", "procps"]
     for tool in tools:
         run("install-" + tool, "pkg install -y " + tool, timeout=900)
@@ -112,12 +111,12 @@ def main(fixture):
         rsync -a 'source é/' copy/; cmp 'source é/space 😀.txt' 'copy/space 😀.txt' ''')
     run("tls-curl-wget", work + '''curl --fail --location https://example.com/ -o "$work/curl.html"
         wget https://example.com/ -O "$work/wget.html"; test -s "$work/curl.html"; test -s "$work/wget.html"''')
-    run("network-errors", '''if curl --fail --connect-timeout 2 --max-time 3 http://127.0.0.1:1/; then exit 1; fi
+    run("network-errors", work + '''if curl --fail --connect-timeout 2 --max-time 3 http://127.0.0.1:1/; then exit 1; fi
+        mkdir -p "$work/lists/partial"
+        printf '%s\\n' 'deb http://127.0.0.1:1 stable main' > "$work/bad.list"
         if apt-get -o Acquire::Retries=0 -o Acquire::http::Timeout=2 -o APT::Update::Error-Mode=any \
-            -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- update; then
-            # Empty sources aren't a network probe; use curl failure above as the checked error.
-            printf 'APT source-free control completed; no repository error claim\\n'
-        fi''')
+            -o Dir::State::lists="$work/lists" -o Dir::Etc::sourcelist="$work/bad.list" \
+            -o Dir::Etc::sourceparts=- update; then exit 1; fi''')
     run("package-consistency", "dpkg --audit; test -z \"$(dpkg --audit)\"; apt-get check")
     print("NOT TESTED: APK isolation without Termux, Android lifecycle/IME/SAF, physical stability")
     return 1 if any(row["status"] == "FAIL" for row in results) else 0

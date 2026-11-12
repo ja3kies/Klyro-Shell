@@ -17,7 +17,7 @@ The ARM64 runtime assets are unmodified files extracted from official Termux APT
 
 | Package | Version | Upstream source |
 |---|---:|---|
-| `proot` | `5.1.107.101` | https://github.com/termux/proot |
+| `proot` | `5.1.107.102` | https://github.com/termux/proot |
 | `libtalloc` | `2.5.0` | https://www.samba.org/ftp/talloc/ |
 | `libandroid-shmem` | `0.7` | https://github.com/termux/libandroid-shmem |
 
@@ -30,9 +30,9 @@ Klyro is currently intended for personal use. Review all upstream licence obliga
 
 ## Termux terminal emulator and view
 
-Klyro uses the Termux `terminal-view` library, which brings in the matching `terminal-emulator` module transitively:
+Klyro uses the Termux `terminal-view` library and a vendored `terminal-emulator` module. The transitive emulator is excluded; Klyro builds its JNI and process/input fixes locally:
 
-- Maven coordinate: `com.termux:terminal-view:0.118.0`
+- Maven coordinate: `com.termux.termux-app:terminal-view:0.118.0`
 - Upstream: https://github.com/termux/termux-app
 - Upstream module publication: `terminal-view/build.gradle` and `terminal-emulator/build.gradle`
 - The Termux application repository is licensed under GPLv3-only. Its license file identifies an Apache-2.0 exception for code originating from Android Terminal Emulator.

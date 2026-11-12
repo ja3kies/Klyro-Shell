@@ -19,6 +19,8 @@ on:
       - 'scripts/klyro-qa.sh'
       - 'scripts/klyro-qa-bootstrap.sh'
       - 'docs/AUTOMATED_UX_QA.md'
+      - 'docs/PRODUCTION_READINESS_20261112.md'
+      - 'docs/validation/production-20261112/**'
       - '.github/workflows/robot-quality-gate.yml'
   pull_request:
     branches: [main, feat/klyro-0110, 'integration/**']
@@ -180,6 +182,14 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload instrumented debug-key APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: klyro-shell-tests-debug-key
+          path: app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Sign APK with Klyro certificate
         if: ${{ env.KLYRO_SIGNING_AVAILABLE == 'true' }}
         shell: bash
@@ -199,6 +209,9 @@ jobs:
           "$SDK_TOOLS/zipalign" -f 4 app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/aligned.apk"
           "$SDK_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/klyro.p12" --ks-type PKCS12 --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out app/build/outputs/apk/debug/klyro-shell-signed.apk "$RUNNER_TEMP/aligned.apk"
           "$SDK_TOOLS/apksigner" verify --verbose app/build/outputs/apk/debug/klyro-shell-signed.apk
+          "$SDK_TOOLS/zipalign" -f 4 app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk "$RUNNER_TEMP/aligned-tests.apk"
+          "$SDK_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/klyro.p12" --ks-type PKCS12 --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out app/build/outputs/apk/androidTest/debug/klyro-shell-tests-signed.apk "$RUNNER_TEMP/aligned-tests.apk"
+          "$SDK_TOOLS/apksigner" verify --verbose app/build/outputs/apk/androidTest/debug/klyro-shell-tests-signed.apk
           rm app/build/outputs/apk/debug/app-debug.apk
       - name: Upload signed debug APK
         if: ${{ env.KLYRO_SIGNING_AVAILABLE == 'true' }}
@@ -206,5 +219,14 @@ jobs:
         with:
           name: klyro-shell-debug
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload instrumented APK with matching Klyro certificate
+        if: ${{ env.KLYRO_SIGNING_AVAILABLE == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: klyro-shell-tests
+          path: app/build/outputs/apk/androidTest/debug/klyro-shell-tests-signed.apk
           if-no-files-found: error
           retention-days: 14
