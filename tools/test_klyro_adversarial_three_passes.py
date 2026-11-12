@@ -38,8 +38,9 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
     def test_pass_two_shortcuts_preserve_selection_without_accidental_paste(self):
         terminal = READ(UI / "TerminalPane.kt")
         actions = terminal.split("val firstRow:", 1)[1].split("if (compact)", 1)[0]
-        self.assertIn('"ALL",\n                description = if (canSelect) "Select all terminal output" else "Paste clipboard"', actions)
-        self.assertIn(") { selectTerminalOutput(canSelect) }", actions)
+        self.assertIn('"ALL",\n                description = if (canSelect) "Select terminal output; hold to paste clipboard"', actions)
+        self.assertIn("TerminalActionPolicy.shouldSelect(canSelect, false)", actions)
+        self.assertIn("TerminalActionPolicy.shouldSelect(canSelect, true)", actions)
         self.assertNotIn('"PASTE", description = "Paste clipboard text"', actions)
         self.assertIn("pasteClipboard()", terminal)
         self.assertNotIn('KlyroMenuItem("Select output"', terminal)
@@ -53,7 +54,7 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
         self.assertIn("disabledContainerColor = stateBackground", terminal)
         self.assertIn("stateDescription = spokenState", terminal)
         self.assertIn('ShortcutState.INACTIVE -> "Unavailable"', terminal)
-        self.assertIn("TerminalDisplayActions.clear(session)", terminal)
+        self.assertIn("TerminalDisplayActions.clearSafely(session)", terminal)
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(content)", terminal)
 
     def test_pass_three_compact_layout_and_launcher_consistency(self):
