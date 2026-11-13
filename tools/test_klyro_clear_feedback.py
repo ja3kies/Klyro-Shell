@@ -9,9 +9,9 @@ D=(ROOT/"TerminalDisplayActions.java").read_text()
 class ClearFeedbackTest(unittest.TestCase):
     def test_clear_preserves_current_bash_edit_buffer_and_never_writes_child_input(self):
         self.assertIn("public static ClearResult clearSafely(TerminalSession session)", D)
-        self.assertIn("bashLineToPreserve(visible)", D)
-        self.assertIn("emulator.getScreen().getLineWrap(row)", D)
-        self.assertIn("return ClearResult.CLEARED;", D)
+        self.assertIn("emulator.getScreen().clearTranscript()", D)
+        self.assertNotIn("emulator.append(", D)
+        self.assertIn("!session.isRunning()", D)
         self.assertIn("return ClearResult.SCROLLBACK_ONLY;", D)
         self.assertNotIn("session.write(", D)
         self.assertNotIn("session.writeCodePoint(", D)

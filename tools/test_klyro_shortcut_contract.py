@@ -15,10 +15,10 @@ POLICY = (ROOT / "app/src/main/java/com/oryn/terminal/ui/TerminalActionPolicy.ja
 
 class ShortcutRegressionContracts(unittest.TestCase):
     def test_clear_accepts_partial_prompt_without_writing_to_shell(self):
-        self.assertIn("bashLineToPreserve(visible)", CLEAR)
-        self.assertIn("ClearResult.CLEARED", CLEAR)
+        self.assertIn("emulator.getScreen().clearTranscript()", CLEAR)
+        self.assertIn("!session.isRunning()", CLEAR)
         self.assertIn("ClearResult.SCROLLBACK_ONLY", CLEAR)
-        self.assertIn("getLineWrap(row)", CLEAR)
+        self.assertNotIn("emulator.append(", CLEAR)
         self.assertNotIn("session.write(", CLEAR)
         self.assertNotIn("session.writeCodePoint(", CLEAR)
 

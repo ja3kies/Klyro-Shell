@@ -919,7 +919,7 @@ fun TerminalPane(
                 searchIndex = 0
                 showTranscriptSearch = true
             }
-            TerminalExtraKey("CLEAR", description = "Clear terminal display", glyph = R.drawable.hugeicons_eraser,
+            TerminalExtraKey("CLEAR", description = "Clear scrollback; preserve current screen and input", glyph = R.drawable.hugeicons_eraser,
                 keyWidth = keyWidth, darkChrome = darkChrome, enabled = session.emulator != null) {
                 when (TerminalDisplayActions.clearSafely(session)) {
                     TerminalDisplayActions.ClearResult.CLEARED -> {
