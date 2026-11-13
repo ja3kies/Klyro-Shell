@@ -146,3 +146,28 @@ Contrôle additionnel du guest PRoot jetable existant : dpkg --audit vide,
 apt-get check réussi, exécutables Bash/Git/Python/Node/npm/curl/nano/vim présents,
 versions Git/Python/Node/npm exécutées (exit 0, 7,17 s). Ce contrôle ne réexécute
 pas leurs installations réseau et ne valide pas l'isolation APK sans Termux.
+
+Validation réseau additionnelle du guest jetable : pkg update, APT téléchargement
+HTTPS/réinstallation nano 9.3, nano --version et nouveaux contrôles dpkg/audit
+PASS, exit 0 en 22,74 s. Pas d'installation dans les données utilisateur.
+
+Contrôle erreurs paquets : maintien réel d'un verrou fcntl frontend dpkg dans
+le guest puis tentative APT concurrente → refus ; apt update vers localhost:1
+avec listes et sources temporaires isolées → erreur explicite ; audit/check
+intacts ensuite. PASS. Aucune source utilisateur modifiée.
+
+## Validation consolidée
+
+CI Android [43409919352](https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352)
+SUCCESS sur 3d0b447 : 263 tests app, 34 émulateur, 506 Python, native PTY/JNI,
+lint, debug/test/release ARM64, signatures et ELF 16 KiB. APK app/tests récupérés
+et signatures identiques vérifiées localement. Les 93 cas ciblés sont également
+vérifiés dans les XML de CI. Lint conserve 45 warnings/11 hints documentés.
+
+Commits : cycle 1 1f644e6 ; cycle 2 ea4d92d ; cycle 3 d3fa783 ; cycle 4 1fc1332 ;
+cycle 5 da3b430 ; cycle 6 3d0b447. Détails, artefacts, empreintes, matrice et
+limitations dans [P0_RELIABILITY_CLOSURE.md](P0_RELIABILITY_CLOSURE.md).
+
+Clôture physique BLOCKED : aucun appareil ADB autorisé, instrumentation/robot
+non exécutables. P0-01 à P0-10 ne sont pas globalement RESOLVED. Aucun travail
+P1/P2, aucune prétention à une utilisation quotidienne validée.

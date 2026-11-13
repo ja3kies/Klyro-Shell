@@ -1,0 +1,16 @@
+CHECK dpkg audit
+Reading package lists...
+Building dependency tree...
+Reading state information...
+/data/data/com.termux/files/usr/bin/bash
+/data/data/com.termux/files/usr/bin/git
+/data/data/com.termux/files/usr/bin/python
+/data/data/com.termux/files/usr/bin/node
+/data/data/com.termux/files/usr/bin/npm
+/data/data/com.termux/files/usr/bin/curl
+/data/data/com.termux/files/usr/bin/nano
+/data/data/com.termux/files/usr/bin/vim
+git version 2.56.1
+Python 3.14.10
+v26.13.1
+12.2.2
