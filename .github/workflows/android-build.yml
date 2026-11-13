@@ -2,7 +2,7 @@ name: Android build
 
 on:
   push:
-    branches: [feat/production-ready-terminal, main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108, feat/p0-cycle1-25-actions-20261108, 'p0/**', 'p1/**', 'integration/**', 'feat/ux-five-priorities-cycle-02', 'fix/ux-t4-confirm-bundled-install', 'p1/ux-modal-keyboard-cycle-03', 'p0/select-paste-adversarial-audit-20261109']
+    branches: [fix/p0-reliability-closure, feat/production-ready-terminal, main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108, feat/p0-cycle1-25-actions-20261108, 'p0/**', 'p1/**', 'integration/**', 'feat/ux-five-priorities-cycle-02', 'fix/ux-t4-confirm-bundled-install', 'p1/ux-modal-keyboard-cycle-03', 'p0/select-paste-adversarial-audit-20261109']
     paths-ignore:
       # The fast robot-quality-gate workflow validates these changes
       # independently. Don't consume a full Android/Termux SDK build for
@@ -19,6 +19,9 @@ on:
       - 'scripts/klyro-qa.sh'
       - 'scripts/klyro-qa-bootstrap.sh'
       - 'docs/AUTOMATED_UX_QA.md'
+      - 'docs/P0_RELIABILITY_PROGRESS.md'
+      - 'docs/P0_RELIABILITY_CLOSURE.md'
+      - 'docs/validation/p0-reliability/**'
       - 'docs/PRODUCTION_READINESS_20261112.md'
       - 'docs/validation/production-20261112/**'
       - '.github/workflows/robot-quality-gate.yml'
@@ -99,6 +102,17 @@ jobs:
           python3 -m py_compile tools/klyro_ui_robot.py tools/klyro_robot_report_audit.py tools/klyro_ux_report.py
           python3 -m unittest discover -s tools -p "test_*.py"
           gradle :app:testDebugUnitTest :terminal-emulator:testDebugUnitTest
+
+      - name: Upload behavioral test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-jvm-test-results
+          path: |
+            app/build/test-results/testDebugUnitTest/*.xml
+            terminal-emulator/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Android lint and UI accessibility checks
         run: gradle :app:lintDebug

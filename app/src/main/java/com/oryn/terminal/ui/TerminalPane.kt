@@ -298,7 +298,7 @@ fun TerminalPane(
             pendingMultilinePaste = content
         } else {
             // Termux TerminalEmulator handles DECSET 2004 bracketed paste.
-            TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), content!!) { emulator.paste(it) }
+            TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), content!!) { emulator.pasteWithResult(it) }
         }
     }
     LaunchedEffect(nativePasteRequest, session) {
@@ -318,7 +318,7 @@ fun TerminalPane(
             } else if (ClipboardPastePolicy.requiresConfirmation(incoming)) {
                 pendingMultilinePaste = incoming
             } else {
-                TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), incoming) { emulator.paste(it) }
+                TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), incoming) { emulator.pasteWithResult(it) }
             }
             onNativePasteConsumed()
         }
@@ -934,11 +934,6 @@ fun TerminalPane(
             TerminalExtraKey("CLEAR", description = "Clear scrollback; preserve current screen and input", glyph = R.drawable.hugeicons_eraser,
                 keyWidth = keyWidth, darkChrome = darkChrome, enabled = session.emulator != null) {
                 when (TerminalDisplayActions.clearSafely(session)) {
-                    TerminalDisplayActions.ClearResult.CLEARED -> {
-                        terminalActionRevision++
-                        activeTerminalView?.setTopRow(0)
-                        activeTerminalView?.invalidate()
-                    }
                     TerminalDisplayActions.ClearResult.SCROLLBACK_ONLY -> {
                         terminalActionRevision++
                         activeTerminalView?.setTopRow(0)
@@ -1182,7 +1177,7 @@ fun TerminalPane(
                         Toast.makeText(context, "Terminal unavailable; paste cancelled",
                             Toast.LENGTH_SHORT).show()
                     } else if (ClipboardPastePolicy.canPaste(text)) {
-                        TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), text!!) { emulator.paste(it) }
+                        TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), text!!) { emulator.pasteWithResult(it) }
                     } else {
                         Toast.makeText(context, "Clipboard text rejected", Toast.LENGTH_SHORT).show()
                     }
@@ -1199,6 +1194,7 @@ fun TerminalPane(
         val name = tabs.firstOrNull { it.first == id }?.second
         if (name != null) {
             KlyroSessionSheet(
+                sessionId = id,
                 sessionName = name,
                 isActive = id == activeTabId,
                 activityStatus = activityLabel(id),
@@ -1529,7 +1525,7 @@ fun TerminalPane(
                 val emulator = session.emulator
                 if (session.isRunning() && emulator != null &&
                     !emulator.isAlternateBufferActive) {
-                    TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), snippet) { emulator.paste(it) }
+                    TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), snippet) { emulator.pasteWithResult(it) }
                 } else {
                     Toast.makeText(context,
                         "Return to the Bash prompt before inserting a command.",

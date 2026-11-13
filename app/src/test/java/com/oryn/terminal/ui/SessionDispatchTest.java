@@ -7,6 +7,17 @@ import static org.junit.Assert.*;
 public class SessionDispatchTest {
     final List<String> sent=new ArrayList<>();
     boolean paste(Long expected,Long current,boolean running,String text){return TerminalActionPolicy.pasteIfCurrent(expected,current,running,text,sent::add);}
+    @Test public void refusedInputIsNotReportedAsInserted(){
+        assertFalse(TerminalActionPolicy.pasteIfCurrent(1L,1L,true,"echo hello",text->false));
+    }
+    @Test public void renamedTargetKeepsItsIdentity(){
+        assertTrue(TerminalActionPolicy.runIfCurrent(42L,42L,true,()->sent.add("closed renamed")));
+        assertEquals(Arrays.asList("closed renamed"),sent);
+    }
+    @Test public void equalTitlesCannotAuthorizeDifferentSessionIds(){
+        assertFalse(TerminalActionPolicy.runIfCurrent(42L,43L,true,()->sent.add("closed duplicate title")));
+        assertTrue(sent.isEmpty());
+    }
     @Test public void liveTargetReceivesExactPayload(){assertTrue(paste(1L,1L,true,"echo hello"));assertEquals(Arrays.asList("echo hello"),sent);}
     @Test public void switchedTabNeverReceivesOldPanePaste(){assertFalse(paste(1L,2L,true,"echo old"));assertTrue(sent.isEmpty());}
     @Test public void endedSessionRejectsPaste(){assertFalse(paste(1L,1L,false,"echo old"));assertTrue(sent.isEmpty());}

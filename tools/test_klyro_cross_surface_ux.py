@@ -189,7 +189,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         sessions = READ(UI / "KlyroSessionSheets.kt")
         manifest = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()
         self.assertIn('Text("Keep session")', sessions)
-        self.assertIn('onCloseSession()', sessions)
+        self.assertIn('TerminalActionPolicy.runIfCurrent(expected, sessionId, true, onCloseSession)', sessions)
         self.assertIn('KlyroSheetTitle("Choose shell")', sessions)
         self.assertIn('Text(if (canStartBash) "/bin/bash"', sessions)
         self.assertIn('.clickable(enabled = canStartBash', sessions)

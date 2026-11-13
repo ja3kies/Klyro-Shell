@@ -16,8 +16,8 @@ class KlyroPairQaTest(unittest.TestCase):
         session = (APP / "ui/KlyroSessionSheets.kt").read_text()
         self.assertIn('title = { Text("Close ', session)
         self.assertIn('Text("Keep session")', session)
-        self.assertIn('onDismissRequest = { confirmClose = false }', session)
-        self.assertIn('onCloseSession()', session)
+        self.assertIn('onDismissRequest = { closeTargetId = null }', session)
+        self.assertIn('TerminalActionPolicy.runIfCurrent(expected, sessionId, true, onCloseSession)', session)
         self.assertIn('onDismissRequest = { if (!confirmClose) onDismiss() }', session)
 
     def test_terminal_transient_ui_is_scoped_by_session(self):

@@ -11,7 +11,7 @@ class SessionActivitySheet(unittest.TestCase):
   self.assertIn('Text(activityDetail, color = colors.muted',P)
   self.assertNotIn('session.write(',P)
  def test_existing_close_confirmation_preserved(self):
-  self.assertIn('confirmClose by rememberSaveable(sessionName)',P)
+  self.assertIn('closeTargetId by rememberSaveable',P)
   self.assertIn('This stops its Bash process and running child commands',P)
   self.assertIn('Text("Keep session")',P)
 if __name__=="__main__":unittest.main()

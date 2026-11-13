@@ -14,9 +14,10 @@ public final class TerminalActionPolicy {
     }
 
     public static boolean pasteIfCurrent(Long expected, Long current, boolean running, String text,
-                                         java.util.function.Consumer<String> insert) {
+                                         java.util.function.Predicate<String> insert) {
         if (!ClipboardPastePolicy.canPaste(text)) return false;
-        return runIfCurrent(expected, current, running, () -> insert.accept(text));
+        if (expected == null || expected <= 0 || !expected.equals(current) || !running) return false;
+        return insert.test(text);
     }
 
     /**

@@ -107,7 +107,7 @@ static int create_subprocess(JNIEnv* env,
         sigfillset(&signals_to_unblock);
         sigprocmask(SIG_UNBLOCK, &signals_to_unblock, 0);
 
-        int reset_signals[] = {SIGINT, SIGQUIT, SIGTERM, SIGPIPE, SIGCHLD, SIGTSTP, SIGTTIN, SIGTTOU};
+        int reset_signals[] = {SIGHUP, SIGINT, SIGQUIT, SIGTERM, SIGPIPE, SIGCHLD, SIGTSTP, SIGTTIN, SIGTTOU};
         for (size_t i = 0; i < sizeof(reset_signals) / sizeof(reset_signals[0]); ++i)
             signal(reset_signals[i], SIG_DFL);
         close(ptm);

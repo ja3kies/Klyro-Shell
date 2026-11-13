@@ -6,7 +6,7 @@ import com.termux.terminal.TerminalSession;
 /** History is ours; the viewport, edit buffer and escape parser belong to the running program. */
 public final class TerminalDisplayActions {
     private TerminalDisplayActions() {}
-    public enum ClearResult { CLEARED, SCROLLBACK_ONLY, UNAVAILABLE }
+    public enum ClearResult { SCROLLBACK_ONLY, UNAVAILABLE }
 
     public static ClearResult clearSafely(TerminalSession session) {
         if (session == null || !session.isRunning()) return ClearResult.UNAVAILABLE;

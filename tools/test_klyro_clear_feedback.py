@@ -18,7 +18,7 @@ class ClearFeedbackTest(unittest.TestCase):
 
     def test_ui_repaints_after_full_or_partial_clear_and_announces_partial(self):
         self.assertIn("TerminalDisplayActions.clearSafely(session)", S)
-        self.assertIn("TerminalDisplayActions.ClearResult.CLEARED ->", S)
+        self.assertNotIn("TerminalDisplayActions.ClearResult.CLEARED ->", S)
         self.assertIn("TerminalDisplayActions.ClearResult.SCROLLBACK_ONLY ->", S)
         self.assertIn("Scrollback cleared; current program and input preserved", S)
         self.assertIn("enabled = session.emulator != null", S)

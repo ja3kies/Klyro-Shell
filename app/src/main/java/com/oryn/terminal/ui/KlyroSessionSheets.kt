@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun KlyroSessionSheet(
+    sessionId: Long,
     sessionName: String,
     isActive: Boolean,
     activityStatus: String? = null,
@@ -59,7 +60,8 @@ internal fun KlyroSessionSheet(
     onActivate: () -> Unit,
     onCloseSession: () -> Unit
 ) {
-    var confirmClose by rememberSaveable(sessionName) { mutableStateOf(false) }
+    var closeTargetId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val confirmClose = closeTargetId == sessionId
     val colors = LocalKlyroColors.current
     val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
         rows = if (activityStatus.isNullOrBlank()) 4 else 5,
@@ -113,14 +115,14 @@ internal fun KlyroSessionSheet(
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
                         KlyroActionRow("Close terminal", R.drawable.hugeicons_cancel_circle,
-                            onClick = { confirmClose = true }, destructive = true)
+                            onClick = { closeTargetId = sessionId }, destructive = true)
                     }
                 }
             }
         }
         if (confirmClose) {
             AlertDialog(
-                onDismissRequest = { confirmClose = false },
+                onDismissRequest = { closeTargetId = null },
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 containerColor = colors.sheet,
                 title = { Text("Close ${sessionName.ifBlank { "session" }}?") },
@@ -129,12 +131,13 @@ internal fun KlyroSessionSheet(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        confirmClose = false
-                        onCloseSession()
+                        val expected = closeTargetId
+                        closeTargetId = null
+                        TerminalActionPolicy.runIfCurrent(expected, sessionId, true, onCloseSession)
                     }) { Text("Close session", color = colors.danger, fontWeight = FontWeight.SemiBold) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { confirmClose = false }) { Text("Keep session") }
+                    TextButton(onClick = { closeTargetId = null }) { Text("Keep session") }
                 }
             )
         }

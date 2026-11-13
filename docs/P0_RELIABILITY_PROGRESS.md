@@ -99,3 +99,50 @@ contrastes affichés : PENDING DEVICE VALIDATION. Hauteur fixe des touches sous
 police fortement agrandie : PROBABLE risque, non présenté comme résolu.
 Les anciens tests de chaînes restent des contrats structurels, jamais des
 preuves de comportement ; ils sont complétés par les tests de dispatch réels.
+
+
+## Cycle 6 — saturation, intégration et recherche de régressions
+
+18 scénarios comportementaux : six PasteDeliveryTest (enveloppe atomique,
+refus sans demi-enveloppe, mode normal, CRLF, filtrage ESC/C1, UTF-8 exact), neuf
+QueueAdversarialTest (producteurs concurrents, fermeture producteur/consommateur,
+refus surdimensionné, ring wrap, préservation des octets en attente, drain final,
+4 MiB avec backpressure, bornes invalides), plus refus explicite du sink, renommage et titres identiques dans
+SessionDispatchTest. La palette propage désormais l'accusé de réception de la
+file stdin ; elle ne mémorise plus une insertion refusée comme réussie.
+L'API publique void paste(String) reste compatible avec TerminalView.
+Suppression de la branche CLEAR devenue inaccessible.
+
+Test natif réel sur l'hôte Android ARM64 : 20 créations PTY, trois descripteurs
+TTY, code de sortie, attente interrompue EINTR, SIGTERM, SIGHUP hérité ignoré,
+20 000 lignes sans perte, même nombre de descripteurs avant/après ; JNI UTF-8,
+arguments, environnement et cwd Unicode/espaces. SIGHUP est réinitialisé dans
+l'enfant. Reproduction comparative : le même harness compilé avec termux.c
+du commit da3b430 échoue (enfant toujours vivant après SIGHUP, puis nettoyage
+de son seul groupe de test) ; le code corrigé passe. Défaut CONFIRMED dans
+cette condition d'héritage, sans prétendre avoir observé ce cas dans l'APK Pixel.
+Mesure finale seq : 128 894 octets, 0,044688 s, maxrss du harness 3540 KiB,
+FD 4 → 4. Ce n'est pas un benchmark du rendu de l'application. Les anciens
+essais avec printf externe par ligne sont exclus des mesures comparables.
+Le premier test HUP exigeait uniquement WIFSIGNALED ; le shell peut aussi
+rapporter 128+SIGHUP. Les deux résultats sont acceptés et vérifiés.
+
+Robot Android et instrumentation tentés : BLOCKED, aucun appareil ADB autorisé
+(`adb: no devices/emulators found`). Aucun screenshot, aucune assertion UI
+exécutée. Les cas réels SAF, rotation, TalkBack, clavier et lifecycle restent
+PENDING DEVICE VALIDATION ; aucune session utilisateur fermée.
+
+Les six cycles ont leurs corrections et scénarios ciblés ; cela ne clôture pas
+les dix objectifs P0 sur appareil. La CI, les artefacts et la matrice finale sont
+référencés dans P0_RELIABILITY_CLOSURE.md après leur exécution.
+
+Revue transversale : la confirmation de KlyroSessionSheet était mémorisée par
+nom de session, réutilisable entre deux IDs portant le même nom. Elle stocke
+maintenant l'ID cible et utilise la même garde de dispatch ; le renommage ne
+réattribue plus la confirmation. Les deux cas ont une vérification de politique
+comportementale ; la recomposition réelle reste à tester sur appareil.
+
+Contrôle additionnel du guest PRoot jetable existant : dpkg --audit vide,
+apt-get check réussi, exécutables Bash/Git/Python/Node/npm/curl/nano/vim présents,
+versions Git/Python/Node/npm exécutées (exit 0, 7,17 s). Ce contrôle ne réexécute
+pas leurs installations réseau et ne valide pas l'isolation APK sans Termux.
