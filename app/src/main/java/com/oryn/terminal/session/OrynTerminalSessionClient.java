@@ -169,7 +169,9 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
 
     @Override
     public void onPasteTextFromClipboard(@Nullable com.termux.terminal.TerminalSession session) {
-        if (session == null || disposed.get() || !session.isRunning()) return;
+        TerminalView source = terminalView;
+        if (session == null || disposed.get() || !uiActive.get() || source == null
+                || !source.isAttachedToWindow() || source.getCurrentSession() != session || !session.isRunning()) return;
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
         String pasted = com.oryn.terminal.ui.ClipboardTextReader.readPlainText(clipboard);

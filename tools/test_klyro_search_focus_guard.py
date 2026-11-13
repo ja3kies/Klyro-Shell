@@ -5,7 +5,7 @@ S=(Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal/ui/T
 class SearchFocusGuard(unittest.TestCase):
  def test_deferred_scroll_is_detached_safe_and_never_requests_focus(self):
   region=S.split("LaunchedEffect(pendingSearch, session, activeTerminalView)",1)[1].split("fun openSessionSheet",1)[0]
-  self.assertIn("if (view.isAttachedToWindow)",region)
+  self.assertIn("if (view.isAttachedToWindow && currentSessionId() == activeTabId && view.getCurrentSession() === session)",region)
   self.assertIn("pendingSearch = null",region)
   self.assertNotIn("view.requestFocus()",region)
   self.assertIn("withFrameNanos",region)

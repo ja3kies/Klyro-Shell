@@ -102,7 +102,7 @@ internal fun KlyroCommandPalette(
             onDismiss()
         } else {
             unsafeFeedback = true
-            info = "Terminal unavailable for insertion. Return to the Bash prompt and retry."
+            info = "Not inserted: terminal unavailable or input buffer full. Return to the Bash prompt and retry."
         }
     }
     fun togglePin(id: String) {

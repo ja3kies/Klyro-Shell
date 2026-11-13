@@ -430,7 +430,7 @@ fun TerminalPane(
             lastHeight = view.height
         }
         // A detached/closed PTY must never receive a deferred scroll or focus.
-        if (view.isAttachedToWindow) {
+        if (view.isAttachedToWindow && currentSessionId() == activeTabId && view.getCurrentSession() === session) {
             session.emulator?.let { emulator ->
                 val result = TranscriptSearch.scanPage(
                     emulator.screen, emulator.mColumns, emulator.mRows,
@@ -1276,9 +1276,10 @@ fun TerminalPane(
         val position = if (matches.isEmpty()) 0 else searchIndex.coerceIn(0, matches.lastIndex)
         val selectedMatch = matches.getOrNull(position)
         fun goToMatch(index: Int) {
+            if (currentSessionId() != activeTabId) return
             val match = matches.getOrNull(index) ?: return
             val currentEmulator = session.emulator ?: return
-            activeTerminalView?.takeIf { it.isAttachedToWindow }?.let { view ->
+            activeTerminalView?.takeIf { it.isAttachedToWindow && it.getCurrentSession() === session }?.let { view ->
                 view.setTopRow(TranscriptSearch.topRow(
                     match.row, currentEmulator.mRows, currentEmulator.screen.activeTranscriptRows
                 ))
@@ -1581,7 +1582,7 @@ internal enum class ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TerminalExtraKey(
+internal fun TerminalExtraKey(
     label: String,
     active: Boolean = false,
     enabled: Boolean = true,
@@ -1689,7 +1690,7 @@ private fun TerminalExtraKey(
             onClick = onClick,
             enabled = enabled,
             modifier = Modifier
-                .height(50.dp)
+                .heightIn(min = 50.dp)
                 .width(keyWidth)
                 .semantics {
                     contentDescription = description ?: label
@@ -1713,7 +1714,7 @@ private fun TerminalExtraKey(
         // would otherwise double-send a short arrow after the long press.
         val shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
         Surface(
-            modifier = Modifier.height(50.dp).width(keyWidth)
+            modifier = Modifier.heightIn(min = 50.dp).width(keyWidth)
                 .clip(shape)
                 .combinedClickable(
                     interactionSource = interaction,
@@ -1734,7 +1735,7 @@ private fun TerminalExtraKey(
             color = stateBackground,
             contentColor = stateInk
         ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
                 keyContents()
             }
         }

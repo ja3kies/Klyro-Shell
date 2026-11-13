@@ -10,7 +10,7 @@ class FindIntentSnapshot(unittest.TestCase):
   self.assertIn('val requestedQuery = pendingSearchQuery',fragment)
   self.assertIn('val requestedCase = pendingSearchCase',fragment)
   self.assertIn('requestedQuery, requestedCase',fragment)
-  self.assertIn('if (view.isAttachedToWindow)',fragment)
+  self.assertIn('if (view.isAttachedToWindow && currentSessionId() == activeTabId && view.getCurrentSession() === session)',fragment)
   self.assertNotIn('view.requestFocus()',fragment)
   self.assertIn('pendingSearchQuery = transcriptQuery\n                        pendingSearchCase = findMatchCase\n                        pendingSearchOffset = chosen.logicalOffset\n                        pendingSearchPage = searchPage\n                        pendingSearch = chosen.row',S)
   self.assertIn('TranscriptSearch.scanPage(',fragment)

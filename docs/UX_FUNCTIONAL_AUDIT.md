@@ -44,3 +44,28 @@ séparé pour ne jamais faire tourner l'historique réel de l'utilisateur.
 Aucune refonte Soft Bento, branding, ressources/logos ou palettes validées.
 Les appréciations visuelles portrait/paysage/thèmes/grandes polices restent
 UNVERIFIED tant qu'aucun appareil n'a été utilisé.
+
+## Cycle 4 — terminal/clavier/recherche
+
+| Contrôle substantiel | Résultat / test |
+|---|---|
+| SELECT vide vs sortie | TerminalActionPolicyTest : état calculé sans transcript entier par tick ; conservé |
+| SELECT explicite du menu natif | expectedSelection=true : ne bascule jamais en paste ; audit du callback |
+| Paste simple | ClipboardPastePolicy/SessionDispatchTest : cible vivante et exacte ; conservé |
+| Paste vide/contrôles | Politique rejette avant sink ; conservé, choix whitespace-only DEFERRED |
+| Paste multiligne | Snapshot confirmé, aucune relecture du clipboard ; conservé |
+| Paste Unicode/saturé | PasteDelivery/QueueAdversarial : une transaction acceptée ou zéro octet ; conservé |
+| Palette refusée | Feedback précise indisponibilité OU file pleine ; aucun recent enregistré au refus |
+| Callback clipboard natif obsolète | FIXED : nécessite UI active et View attachée à cette session avant lecture clipboard |
+| Touches Ctrl/Alt/Shift/Fn | TerminalNavigationPolicyTest vérifie les séquences xterm ; conservé |
+| Home/End et alternate | Long press Readline vs CSI ; End reste présent ; conservé |
+| Long press sans short click | Test Compose d'action réelle ajouté ; compilé, exécution NOT TESTED |
+| Raccourcis grandes polices | FIXED : min-height au lieu de 50dp imposés ; test Compose d'expansion + test tap, compilés |
+| FIND précédent/suivant/zéro résultats | TranscriptSearchTest/RecentTest : coordonnées physiques et pagination ; conservé |
+| FIND Go to après changement de tab pendant IME | FIXED : identité active et View/session revalidées avant scroll ; contrats structurels adaptés, scénario UI UNVERIFIED |
+| Gestes/resize/ANSI/UTF-8/CLEAR | Moteur de gestes et octets inchangés ; suites émulateur/CLEAR conservées, physique UNVERIFIED |
+
+Le report de scroll n'écrit aucune donnée stdin. Fermer FIND ne vide pas la
+ligne Bash. Les tests de source des deux gardes restent des contrats structurels,
+pas une preuve que la rotation a été manipulée. Les tests Compose supplémentaires
+ne sont jamais comptés PASS sans appareil. Ni fling/pinch ni l'IME ne sont refondus.
