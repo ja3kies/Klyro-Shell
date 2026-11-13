@@ -132,3 +132,10 @@ acquis peut rester invisible au watchdog jusqu'à un vrai callback Resume ;
 l'historique Android est le recours si le système confirme un ANR. L'absence de
 rapport n'est donc jamais une preuve d'absence de gel. Les événements IME/resize,
 comme les callbacks PTY, ne chassent pas les transitions du ring critique.
+
+Dernière revue : un OutOfMemoryError de getAllStackTraces pouvait annuler
+silencieusement la tâche périodique ScheduledExecutor. La frontière d'erreur
+retient maintenant le watchdog et expose une indisponibilité mémoire, sans
+nouvelle allocation de stack. Un test instrumenté injecte l'erreur (sans consommer
+la RAM du téléphone) puis vérifie qu'une tâche suivante peut s'exécuter ; compilé,
+à exécuter sur appareil. Pas de promesse de capture sous OOM global.

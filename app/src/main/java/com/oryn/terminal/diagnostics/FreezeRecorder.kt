@@ -219,8 +219,11 @@ object FreezeRecorder {
         worker.execute { guard { File(app.noBackupFilesDir,"freeze-seen").writeText(id) } }
     }
     private fun File.readTextOrEmpty() = if (exists()) readText() else ""
-    private inline fun guard(action: () -> Unit) {
-        try { action() } catch (e: Exception) {
+    internal fun guard(action: () -> Unit) {
+        try { action() } catch (_: OutOfMemoryError) {
+            // Keep the scheduled watchdog alive if stack collection cannot allocate.
+            lastError = "Diagnostics unavailable under memory pressure; capture may be incomplete"
+        } catch (e: Exception) {
             lastError = "Diagnostics operation failed: ${e.javaClass.simpleName}"
             android.util.Log.w("KlyroFreeze", lastError ?: "Diagnostics failure") // No exception message or user paths.
         }
