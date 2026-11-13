@@ -40,3 +40,19 @@ absent, prompt vide, saisie partielle, multiligne, curseur déplacé, ligne repl
 prompt usurpé, alternate screen, CSI incomplète, OSC incomplète, UTF-8 fractionné,
 bracketed paste, historique saturé, isolation et resize. PASS JVM ; 506 contrats
 Python PASS. Tests physiques nano/vim/rotation encore UNVERIFIED.
+
+## Cycle 3 — tests hôte terminés, lifecycle Android bloqué
+
+15 nouveaux scénarios BootstrapAdversarialTest : ZIP absolu, traversal, lecteur
+Windows, traversal backslash, NUL, parent symlink, archive interrompue, exécutable
+Unicode, données non exécutables, staging fichier, staging symlink, prefix symlink,
+backup dangling, sauvegarde existante et staging absent. PASS dans Gradle JVM.
+CONFIRMED : activatePrefix acceptait un staging fichier et la récupération
+acceptait un lien de sauvegarde. Refus avant toute mutation, sauvegardes intactes.
+
+Le singleton et le service existants conservent l'ownership des PTY ; aucune
+navigation, expiration ni destruction d'Activity ne doit appeler closeTab.
+Les observations physiques antérieures du rapport daily-trial sont conservées
+comme antérieures. Home/récents/pression mémoire/force-stop : PENDING DEVICE
+VALIDATION, pas RESOLVED. Aucun appareil ADB connecté ; ne fermer aucune session
+utilisateur pour fabriquer une preuve. P0-06 à P0-10 restent UNVERIFIED à ce stade.

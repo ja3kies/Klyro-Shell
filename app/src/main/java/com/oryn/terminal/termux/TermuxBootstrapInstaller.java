@@ -189,6 +189,7 @@ public final class TermuxBootstrapInstaller {
     }
 
     static void recoverPrefix(File prefix, File previous) throws IOException {
+        rejectLinkedPrefix(prefix, previous);
         if (!prefix.exists() && previous.exists()) move(previous.toPath(), prefix.toPath());
         if (previous.exists()) {
             throw new IOException("Previous environment backup exists at /usr.previous. "
@@ -197,6 +198,8 @@ public final class TermuxBootstrapInstaller {
     }
 
     static void activatePrefix(File staging, File prefix, File previous) throws IOException {
+        rejectLinkedPrefix(staging, prefix, previous);
+        if (!staging.isDirectory()) throw new IOException("Staged prefix is not a directory.");
         if (previous.exists()) throw new IOException("Refusing to overwrite previous environment backup.");
         if (prefix.exists()) move(prefix.toPath(), previous.toPath());
         try {
@@ -206,6 +209,12 @@ public final class TermuxBootstrapInstaller {
             throw swapError;
         }
         // A prefix may contain user projects and installed packages, not just bootstrap files.
+    }
+
+    private static void rejectLinkedPrefix(File... files) throws IOException {
+        for (File file : files) {
+            if (Files.isSymbolicLink(file.toPath())) throw new IOException("Refusing a linked prefix transaction path.");
+        }
     }
 
     public static String archName() {
