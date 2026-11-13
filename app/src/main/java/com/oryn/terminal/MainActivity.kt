@@ -250,6 +250,7 @@ class MainActivity : ComponentActivity() {
                     var skippedFolders = 0
                     var readableFolders = 0
                     for (raw in folders) {
+                        transferContext.ensureActive()
                         // The limit applies across ALL granted folders, not per folder.
                         if (imported >= 30) break
                         val tree = Uri.parse(raw)
@@ -270,6 +271,7 @@ class MainActivity : ComponentActivity() {
                             contentResolver.query(children, projection, null, null, null)?.use { cursor ->
                                 readableFolders++
                                 while (imported < 30 && cursor.moveToNext()) {
+                                    transferContext.ensureActive()
                                     val mime = cursor.getString(2) ?: continue
                                     if (mime == DocumentsContract.Document.MIME_TYPE_DIR) continue
                                     val size = if (cursor.isNull(3)) -1L else cursor.getLong(3)
@@ -293,6 +295,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             } ?: throw IOException("Cannot read authorized folder")
                         } catch (_: Exception) {
+                            transferContext.ensureActive()
                             // A revoked or broken provider must not block other grants.
                             skippedFolders++
                         }
@@ -306,9 +309,9 @@ class MainActivity : ComponentActivity() {
             val message = result.fold(
                 onSuccess = { (count, skipped) ->
                     "Imported $count files to ~/storage-imports" +
-                        if (skipped > 0) " ($skipped folders skipped)" else ""
+                        if (skipped > 0) " ($skipped folders unavailable; reconnect and retry)" else ""
                 },
-                onFailure = { "Storage import failed: " + (it.message ?: "unknown error") }
+                onFailure = { "Storage import failed: " + KlyroDiagnostics.storageFailure(it) }
             )
             Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
         }
@@ -357,7 +360,7 @@ class MainActivity : ComponentActivity() {
                 result.onSuccess {
                     Toast.makeText(this@MainActivity, "Imported: ~/imports/" + it, Toast.LENGTH_LONG).show()
                 }.onFailure {
-                    Toast.makeText(this@MainActivity, "Import failed: " + (it.message ?: "unknown error"), Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, "Import failed: " + KlyroDiagnostics.storageFailure(it), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -387,7 +390,7 @@ class MainActivity : ComponentActivity() {
                 }
                 val message = outcome.fold(
                     onSuccess = { "Export completed" },
-                    onFailure = { "Export failed: " + (it.message ?: "unknown error") }
+                    onFailure = { "Export failed: " + KlyroDiagnostics.storageFailure(it) }
                 )
                 Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
             }

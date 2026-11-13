@@ -18,14 +18,14 @@ class KlyroWorkspaceStore(context: Context) {
         prefs.getString("active", KlyroWorkspaceCatalog.GENERAL)
     )
 
-    var entries by mutableStateOf(catalog.entries())
+    var entries: List<KlyroWorkspaceCatalog.Entry> by mutableStateOf(catalog.entries().toList())
         private set
 
     var activeId by mutableStateOf(catalog.activeId())
         private set
 
     private fun persist() {
-        entries = catalog.entries()
+        entries = catalog.entries().toList()
         activeId = catalog.activeId()
         prefs.edit().putString("records", catalog.encode())
             .putString("active", activeId).apply()

@@ -163,7 +163,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("if (imported >= 30) break", activity)
         self.assertIn("readableFolders == 0", activity)
         self.assertIn("skippedFolders++", activity)
-        self.assertIn("folders skipped", activity)
+        self.assertIn("folders unavailable; reconnect and retry", activity)
         self.assertIn("Copy up to 30 files", settings)
         self.assertIn("Export a private file", settings)
 

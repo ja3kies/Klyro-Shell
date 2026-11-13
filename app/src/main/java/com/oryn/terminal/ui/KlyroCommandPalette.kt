@@ -71,12 +71,12 @@ internal fun KlyroCommandPalette(
     val prefs = remember(context) {
         context.getSharedPreferences("klyro_command_quick_access", Context.MODE_PRIVATE)
     }
-    var pinnedIds by remember(context) {
+    var pinnedIds: List<String> by remember(context) {
         mutableStateOf(KlyroCommandQuickAccess.decode(
             prefs.getString("pinned", null), KlyroCommandQuickAccess.MAX_PINNED
         ))
     }
-    var recentIds by remember(context) {
+    var recentIds: List<String> by remember(context) {
         mutableStateOf(KlyroCommandQuickAccess.decode(
             prefs.getString("recent_inserts", null), KlyroCommandQuickAccess.MAX_RECENT
         ))

@@ -69,3 +69,35 @@ Le report de scroll n'écrit aucune donnée stdin. Fermer FIND ne vide pas la
 ligne Bash. Les tests de source des deux gardes restent des contrats structurels,
 pas une preuve que la rotation a été manipulée. Les tests Compose supplémentaires
 ne sont jamais comptés PASS sans appareil. Ni fling/pinch ni l'IME ne sont refondus.
+
+## Cycle 5 — workspaces/fichiers/packages/plugins/accessibilité
+
+| Contrôle | Preuve / décision |
+|---|---|
+| Créer et renommer workspace | Catalog UUID et noms uniques nettoyés ; tests Catalog conservés |
+| Nom identique / General protégé | Catalog refuse collision et suppression General ; pas de nouvelle politique |
+| Changer workspace | Métadonnées seulement, aucun signal PTY ; breadcrumb numérique ajouté |
+| Supprimer avec sessions actives | Confirmation explique le déplacement vers General, aucun closeTab ; audit |
+| Workspace disparu pendant édition | Message existant, Save désactivé si cible absente ; conservé |
+| Préférences/persistance | Snapshot read-only explicitement typé ; aucune mutation de collection Compose en place |
+| Import/Export réussis | Copie bornée puis commit P0 intact ; succès après résultat réel |
+| Permissions révoquées | FIXED : message d'accès refusé et action reconnecter, sans URI provider |
+| Fichier absent | FIXED : message choisir à nouveau, sans chemin privé ; test comportemental |
+| Espace insuffisant | FIXED : message libérer espace/retry, sans recopier le provider ; test |
+| Fichier trop grand | Limite 32 MiB explicitée ; test de message + tests de copie P0 |
+| Annulation import multi-grants | FIXED : contexte coroutine vérifié avant nouvelle requête et dans catch ; annulation ne devient pas simple folder-skipped |
+| Packages | Palette insère un modèle, pas une installation implicite ; erreurs runtime déjà préservées ; réseau APK UNVERIFIED |
+| Plugins Add/Import/Remove | Aperçu et confirmation déjà présents ; transaction confirmée sérialisée, Back préservé ; ne pas réimplémenter |
+| Accessibilité critique | Role.Tab/selected, labels, switches/boutons Material, customActions color picker ; aucun lecteur automatique stdout ; TalkBack physique UNVERIFIED |
+
+Huit tests StorageFailureTest couvrent permission, document absent, ENOSPC,
+limite, interruption, credentials de provider, erreur inattendue typée et null.
+Les erreurs inattendues restent visibles par type ; les messages arbitraires du
+provider ne sont jamais montrés. SAF réel/révocation Android et rotation picker
+restent NOT TESTED. Les callbacks ne suppriment que leurs fichiers temporaires,
+jamais un document utilisateur pour masquer une erreur.
+
+Lint MutableCollectionMutableState : types Kotlin List explicités sur les snapshots
+workspace/pins/recents (les helpers retournaient déjà des copies/unmodifiable).
+Ce n'est pas présenté comme trois bugs fonctionnels. Reste à vérifier sur Pixel :
+TalkBack, focus, ordre de lecture, grands caractères, contraste effectif.
