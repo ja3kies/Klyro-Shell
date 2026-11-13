@@ -35,6 +35,7 @@ internal fun FreezeReportsPane(storeProvider: () -> com.oryn.terminal.diagnostic
         try {
             reports = withContext(Dispatchers.IO) {
                 val store = storeProvider()
+                FreezeRecorder.snapshotStabilityTimeline(store)
                 store.list().asReversed().map { it to store.preview(it) }
             }
             status = if (reports.isEmpty()) "No recorded incidents. This does not prove that no freeze occurred." else "Local heuristics are not official Android ANRs. An unfinished report means recovery was not observed."
@@ -47,7 +48,11 @@ internal fun FreezeReportsPane(storeProvider: () -> com.oryn.terminal.diagnostic
                 withContext(Dispatchers.IO) {
                     val output = context.contentResolver.openOutputStream(uri, "w")
                         ?: throw java.io.IOException("Destination unavailable")
-                    output.use { storeProvider().exportZip(it) }
+                    output.use {
+                        val store = storeProvider()
+                        FreezeRecorder.snapshotStabilityTimeline(store)
+                        store.exportZip(it)
+                    }
                 }
                 status = "Diagnostic ZIP exported."
             } catch (e: Exception) { status = "Export failed (${e.javaClass.simpleName}); destination may be incomplete." }

@@ -37,6 +37,11 @@ object FreezeRecorder {
         private set
     @Volatile var terminal: com.termux.terminal.TerminalSession? = null
     @Volatile private var lastScreen = "UNKNOWN"
+    @Volatile var lastHeartbeatDelayMs = 0L
+        private set
+    @Volatile var maxHeartbeatDelayMs = 0L
+        private set
+    @Volatile private var stabilityRun: Pair<String, Long>? = null
     @Volatile var activeSession = 0L
     @Volatile var sessionCount = 0
     @Volatile var serviceActive = false
@@ -103,6 +108,9 @@ object FreezeRecorder {
             when (change.kind) {
                 FreezeWatchdog.Kind.PING -> {
                     val task = Runnable {
+                        if (!engine.isPending(change.generation, change.started)) return@Runnable
+                        lastHeartbeatDelayMs = (now() - change.started).coerceAtLeast(0)
+                        maxHeartbeatDelayMs = maxOf(maxHeartbeatDelayMs, lastHeartbeatDelayMs)
                         val recovery = engine.acknowledge(change.generation, now())
                         if (recovery.isNotEmpty()) worker.execute { guard { process(recovery) } }
                     }
@@ -143,6 +151,7 @@ object FreezeRecorder {
         val pty = terminal
         val read = pty?.diagnosticBytesRead ?: 0
         val parsed = pty?.diagnosticBytesParsed ?: 0
+        report.append("heartbeat_delay_ms=$lastHeartbeatDelayMs max_heartbeat_delay_ms=$maxHeartbeatDelayMs\n")
         report.append("last_screen=$lastScreen pty_read=$read pty_parsed=$parsed pty_backlog_approx=${(read-parsed).coerceAtLeast(0)}\n")
         report.append(events.snapshot())
     }
@@ -209,9 +218,22 @@ object FreezeRecorder {
     }
     fun recordStabilityRun(id: Long) {
         event(FreezeEvents.Code.STRESS_START, id, 1500)
+        maxHeartbeatDelayMs = 0
+        val run = "${System.currentTimeMillis()}-${Process.myPid()}-test" to id
+        stabilityRun = run
         worker.execute { guard {
-            repository().write("${System.currentTimeMillis()}-${Process.myPid()}-test", "state=STABILITY_TEST_STARTED\nmonotonic_ms=${now()} session=$id lines_requested=1500\nCompletion=NOT_VERIFIED inspect END marker\n" + events.snapshot())
+            repository().write(run.first, "state=STABILITY_TEST_STARTED\nversion=${BuildConfig.VERSION_NAME} pid=${Process.myPid()} lifecycle=$lifecycle\nmonotonic_ms=${now()} session=$id lines_requested=1500\nCompletion=NOT_VERIFIED inspect END marker\n" + events.snapshot())
         } }
+    }
+    /** Manual IO refresh/export captures healthy round trips too; no background disk polling. */
+    fun snapshotStabilityTimeline(target: FreezeReportStore) {
+        check(Looper.myLooper() != Looper.getMainLooper()) { "Timeline persistence requires worker IO" }
+        if (target !== store) return // Isolated test stores never touch the application's reports.
+        val run = stabilityRun ?: return
+        if (run.first !in target.list()) return
+        target.write(run.first, "state=STABILITY_TEST_OBSERVED\nversion=${BuildConfig.VERSION_NAME} pid=${Process.myPid()} lifecycle=$lifecycle\nmonotonic_ms=${now()} session=${run.second} lines_requested=1500\n" +
+            "heartbeat_delay_ms=$lastHeartbeatDelayMs max_heartbeat_delay_ms=$maxHeartbeatDelayMs\n" +
+            "Completion=NOT_VERIFIED inspect END marker\n" + events.snapshot())
     }
     fun repository(): FreezeReportStore = store ?: throw java.io.IOException("Diagnostics initializing; retry shortly")
     fun acknowledgeNotice(id: String) {

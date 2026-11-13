@@ -34,6 +34,9 @@ public final class FreezeWatchdog {
         if (captured && now-firstCaptureAt>=5000 && !second) { second=true; events.add(new Event(Kind.SECOND_SNAPSHOT,generation,sentAt,elapsed)); }
         return events;
     }
+    public synchronized boolean isPending(long token, long started) {
+        return resumed && pending && generation==token && sentAt==started;
+    }
     public synchronized List<Event> acknowledge(long token, long now) {
         List<Event> events=new ArrayList<>();
         if (!resumed || !pending || generation!=token) return events;

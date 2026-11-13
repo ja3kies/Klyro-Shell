@@ -139,3 +139,12 @@ retient maintenant le watchdog et expose une indisponibilité mémoire, sans
 nouvelle allocation de stack. Un test instrumenté injecte l'erreur (sans consommer
 la RAM du téléphone) puis vérifie qu'une tâche suivante peut s'exécuter ; compilé,
 à exécuter sur appareil. Pas de promesse de capture sous OOM global.
+
+Dernier contrôle fonctionnel d'export : les événements d'un round trip sain
+restaient seulement dans le ring après le rapport STARTED. L'ouverture/Refresh
+et l'export des rapports prennent maintenant un snapshot de la timeline du test
+courant sur IO, sans polling disque en arrière-plan. Les délais last/max des
+heartbeats acquittés sont inclus (pas la durée d'un ping encore bloqué, déjà
+mesurée séparément par blocked_ms). Les générations obsolètes ne contribuent pas
+à ces métriques. La fin reste NOT_VERIFIED tant que l'utilisateur n'a pas observé
+END ; aucun transcript n'est lu pour déduire artificiellement PASS.
