@@ -117,6 +117,12 @@ private fun FreezeStabilityControls() {
     val context = LocalContext.current
     var blockSeconds by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf("") }
+    var strictIo by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) { onDispose { FreezeRecorder.setStrictIo(false) } }
+    Row {
+        Text("Check UI I/O (debug)")
+        Switch(checked = strictIo, onCheckedChange = { strictIo = it; FreezeRecorder.setStrictIo(it) })
+    }
     Text("Stability test (diagnostic build)", style = MaterialTheme.typography.titleMedium)
     Text("Creates a separate Bash tab, waits 3 seconds, then prints 1,500 lines. Go Home, open another app, then return. Keep the test tab until you inspect the END marker; close it explicitly when finished. Existing sessions receive no commands.")
     TextButton(onClick = {

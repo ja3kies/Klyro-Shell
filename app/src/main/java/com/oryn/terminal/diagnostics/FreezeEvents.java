@@ -4,7 +4,7 @@ package com.oryn.terminal.diagnostics;
 public final class FreezeEvents {
     public enum Code { CREATED, STARTED, RESUMED, PAUSED, STOPPED, DESTROYED, HOME, TERMINAL,
         SETTINGS, REPORTS, PTY_CALLBACK, VIEW_REFRESH, BATCH, SESSION, CURSOR, SCROLL,
-        RESIZE, IME, WORKSPACE, SERVICE_START, SERVICE_STOP, STRESS_START, STRESS_END }
+        RESIZE, IME, FIRST_FRAME, STRICT_IO, WORKSPACE, SERVICE_START, SERVICE_STOP, STRESS_START, STRESS_END }
     private final long[][] ring=new long[128][4];
     private int next, size;
     private final long[] counts=new long[Code.values().length];

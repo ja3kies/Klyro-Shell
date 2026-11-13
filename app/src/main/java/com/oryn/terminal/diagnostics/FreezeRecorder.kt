@@ -191,6 +191,19 @@ object FreezeRecorder {
             if (state == "SYSTEM_ANR_CONFIRMED") notice.value = id
         }
     }
+    private var previousPolicy: android.os.StrictMode.ThreadPolicy? = null
+    fun setStrictIo(enabled: Boolean) {
+        if (!BuildConfig.DEBUG || Build.VERSION.SDK_INT < 28) return
+        if (enabled && previousPolicy == null) {
+            previousPolicy = android.os.StrictMode.getThreadPolicy()
+            android.os.StrictMode.setThreadPolicy(android.os.StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads().detectDiskWrites().detectNetwork()
+                .penaltyListener(notifications) { event(FreezeEvents.Code.STRICT_IO) }.build())
+        } else if (!enabled) {
+            previousPolicy?.let(android.os.StrictMode::setThreadPolicy)
+            previousPolicy = null
+        }
+    }
     fun recordStabilityRun(id: Long) {
         event(FreezeEvents.Code.STRESS_START, id, 1500)
         worker.execute { guard {

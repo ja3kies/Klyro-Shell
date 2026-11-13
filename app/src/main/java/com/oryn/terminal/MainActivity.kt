@@ -455,7 +455,6 @@ class MainActivity : ComponentActivity() {
         if (intent?.getBooleanExtra("freeze_reports", false) == true)
             com.oryn.terminal.diagnostics.FreezeRecorder.openReports.value = true
         setContent {
-            com.oryn.terminal.ui.FreezeRecoveryNotice()
             val themePreferences = remember {
                 getSharedPreferences("klyro_ui_theme", MODE_PRIVATE)
             }
@@ -526,6 +525,11 @@ class MainActivity : ComponentActivity() {
                         onSurface = palette.foreground
                     )
                 ) {
+                com.oryn.terminal.ui.FreezeRecoveryNotice()
+                LaunchedEffect(Unit) {
+                    androidx.compose.runtime.withFrameNanos { }
+                    com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.FIRST_FRAME)
+                }
                 OrynTerminalApp(
                     darkChrome = darkTheme,
                     themeMode = themeMode,

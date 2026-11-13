@@ -83,3 +83,28 @@ n'est pas accessible et qu'aucun rapport de l'APK n'a été exporté.
 Résultats de compilation/CI, commits et matrice consolidés dans
 KLYRO_UX_FREEZE_COMPLETION.md en fin de campagne. Les preuves P0 antérieures
 restent dans P0_RELIABILITY_CLOSURE.md, sans être converties en preuves physiques.
+
+## Cycle 2 — reprise et frontières critiques
+
+Instrumentation sans texte : lifecycle, première frame Compose, callbacks PTY,
+rafraîchissements View, batches, sélection de session, workspace, taille View,
+IME et navigation Settings/rapports. Compteurs volatile des octets lus/parsés
+sans verrou de buffer ; backlog approximatif = différence positive (inclut un
+chunk éventuellement bloqué à l'enqueue). L'écran et le service sont des états
+techniques, pas des titres/chemins. Le switch StrictMode debug opt-in détecte
+I/O UI sans journaliser les messages/arguments de violations ; politique
+restaurée en quittant les contrôles. Pas de JankStats/télémétrie ajoutée.
+
+Audit démontré : parser append et reflow appartiennent toujours au main looper ;
+callbacks suspendus en background n'arrêtent pas ce parsing. Le handler de sortie
+n'est donc pas exclu par les seuls tests de batching. L'exit-drain possède une
+boucle jusqu'à file vide : risque plausible, pas cause confirmée de cet incident.
+Aucune réécriture spéculative des PTY. Settings ne relit plus PackageManager pour
+la version : BuildConfig fournit la valeur. Les blocs IO/PM déjà déplacés en P0
+restent déplacés ; pas de restauration simulée ni d'arrêt de session au retour.
+
+15 contrôles ciblés de ce cycle : huit cas de ring/counters concurrents réexécutés
+et sept tests adversariaux store/export/erreurs. En particulier un provider ZIP
+bloqué n'empêche pas une nouvelle écriture d'incident ; un commit atomique échoué
+ne détruit pas un autre rapport. Les anciens tests P0 sont des non-régressions,
+pas de nouvelles corrections du freeze. Correction du freeze Pixel : UNVERIFIED.

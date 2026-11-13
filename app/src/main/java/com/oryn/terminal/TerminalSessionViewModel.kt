@@ -83,6 +83,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         get() = tabs.associate { it.id to it.workspaceId }
 
     fun assignWorkspace(tabId: Long, workspaceId: String) {
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.WORKSPACE, tabId)
         val index = tabs.indexOfFirst { it.id == tabId }
         if (index >= 0 && workspaceId.isNotBlank() && tabs[index].workspaceId != workspaceId) {
             tabs[index] = tabs[index].copy(workspaceId = workspaceId)

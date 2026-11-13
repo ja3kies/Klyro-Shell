@@ -373,6 +373,10 @@ fun TerminalPane(
     val keyboard = LocalSoftwareKeyboardController.current
     val ime = WindowInsets.ime
     val density = LocalDensity.current
+    val diagnosticImeBottom = ime.getBottom(density)
+    LaunchedEffect(diagnosticImeBottom) {
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.IME, diagnosticImeBottom.toLong())
+    }
     // Query changes are debounced. The mutable PTY buffer is read on the UI
     // thread after the delay, and only the most recent 300 matches are kept.
     LaunchedEffect(
@@ -436,6 +440,7 @@ fun TerminalPane(
                     TranscriptSearch.nearestIndex(result.newest, targetRow, targetOffset)
                 )
                 if (selected != null) {
+                    com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.SCROLL, selected.row.toLong())
                     view.setTopRow(TranscriptSearch.topRow(
                         selected.row, emulator.mRows, emulator.screen.activeTranscriptRows
                     ))
@@ -819,6 +824,11 @@ fun TerminalPane(
                     isFocusableInTouchMode = true
                     sessionClient.attachView(this)
                     viewClient.attachView(this)
+                    addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+                        if (right-left != oldRight-oldLeft || bottom-top != oldBottom-oldTop)
+                            com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.RESIZE,
+                                (right-left).toLong(), (bottom-top).toLong())
+                    }
                     attachSession(session)
                     activeTerminalView = this
                 }
