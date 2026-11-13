@@ -483,10 +483,11 @@ fun TerminalPane(
             pasteClipboard()
             return
         }
-        val output = session.emulator?.screen?.transcriptText.orEmpty()
+        val snapshot = session.emulator?.screen?.getTranscriptTail(TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS)
+        val output = snapshot?.text.orEmpty()
         if (TerminalActionPolicy.hasCopyableOutput(output)) {
             outputSelectionView = null
-            selectedOutputTruncated = output.length > TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS
+            selectedOutputTruncated = snapshot?.truncated == true
             selectedOutput = TerminalActionPolicy.selectionTail(output)
         } else {
             Toast.makeText(context, "Terminal output changed; nothing to select",

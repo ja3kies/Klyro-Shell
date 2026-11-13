@@ -127,7 +127,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("remember(session, outputRevision, terminalActionRevision)", self.pane)
         self.assertIn("queueOutputUpdate(tabId)", self.viewmodel)
         self.assertIn("outputRevisions[id] = (outputRevisions[id] ?: 0L) + 1L", self.viewmodel)
-        self.assertIn("postDelayed(publishPendingOutput, 120L)", self.viewmodel)
+        self.assertIn("postDelayed(task, 120L)", self.viewmodel)
 
     def test_output_subscription_is_released_on_close(self):
         self.assertIn("outputRevisions.remove(id)", self.viewmodel)

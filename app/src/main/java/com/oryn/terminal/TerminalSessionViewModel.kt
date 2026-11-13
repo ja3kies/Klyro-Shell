@@ -39,10 +39,10 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     // per chunk. Coalesce bursts into a trailing notification every 120 ms,
     // including the FINAL chunk (so SELECT/OUT cannot remain stale).
     private val outputUiHandler = Handler(Looper.getMainLooper())
-    private val pendingOutputIds = mutableSetOf<Long>()
-    private val publishPendingOutput = Runnable {
-        val pending = pendingOutputIds.toList()
-        pendingOutputIds.clear()
+    private val publishPendingOutput = OutputUpdateBatch(
+        { task -> outputUiHandler.postDelayed(task, 120L) },
+        { task -> outputUiHandler.removeCallbacks(task) }
+    ) { pending ->
         val now = SystemClock.elapsedRealtime()
         pending.forEach { id ->
             if (tabs.any { it.id == id }) {
@@ -52,11 +52,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             }
         }
     }
-    private fun queueOutputUpdate(tabId: Long) {
-        val first = pendingOutputIds.isEmpty()
-        pendingOutputIds.add(tabId)
-        if (first) outputUiHandler.postDelayed(publishPendingOutput, 120L)
-    }
+    private fun queueOutputUpdate(tabId: Long) = publishPendingOutput.mark(tabId)
     // Elapsed timestamps are process-local, never persisted; no terminal text.
     private val lastOutputElapsed = mutableStateMapOf<Long, Long>()
     val lastOutputElapsedMs: Map<Long, Long> get() = lastOutputElapsed.toMap()
@@ -191,7 +187,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (pendingNativePaste?.tabId == id) pendingNativePaste = null
         val entry = tabs.removeAt(index)
         unreadActivity.remove(id)
-        pendingOutputIds.remove(id)
+        publishPendingOutput.remove(id)
         outputRevisions.remove(id)
         lastOutputElapsed.remove(id)
         entry.client.dispose()
@@ -257,8 +253,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     override fun onCleared() {
-        outputUiHandler.removeCallbacks(publishPendingOutput)
-        pendingOutputIds.clear()
+        publishPendingOutput.close()
         super.onCleared()
     }
 }

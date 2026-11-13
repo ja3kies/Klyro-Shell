@@ -37,7 +37,7 @@ class SettingsAnrContracts(unittest.TestCase):
         self.assertIn('screen.getSelectedText(', area)
         self.assertNotIn('transcriptText', area)
         # Full transcript is still available on explicit user selection.
-        self.assertIn('val output = session.emulator?.screen?.transcriptText.orEmpty()', PANE)
+        self.assertIn('getTranscriptTail(TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS)', PANE)
 
     def test_launcher_identity_binder_lookup_is_not_on_settings_opening_frame(self):
         section = SETTINGS.split('LaunchedEffect(context) {', 1)[1].split(

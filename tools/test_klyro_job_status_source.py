@@ -9,7 +9,7 @@ class JobActivitySource(unittest.TestCase):
   self.assertIn("val now = SystemClock.elapsedRealtime()", V)
   self.assertIn("lastOutputElapsed[id] = now", V)
   self.assertIn("queueOutputUpdate(tabId)", V)
-  self.assertIn("outputUiHandler.postDelayed(publishPendingOutput, 120L)", V)
+  self.assertIn("outputUiHandler.postDelayed(task, 120L)", V)
   self.assertIn("val lastOutputElapsedMs: Map<Long, Long>",V)
   self.assertIn("lastOutputElapsed.remove(id)",V)
   self.assertIn("if (tabs.any { it.id == tabId })",V)
