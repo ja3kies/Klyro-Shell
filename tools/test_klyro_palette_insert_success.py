@@ -10,7 +10,7 @@ class InsertSuccessContract(unittest.TestCase):
   self.assertIn('if (onInsert(snippet)) {\n            recordInsertion(id)\n            onDismiss()',P)
   self.assertIn('Return to the Bash prompt and retry',P)
   self.assertIn('val emulator = session.emulator',T)
-  self.assertIn('emulator.paste(snippet)\n                    true',T)
+  self.assertIn('TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), snippet)',T)
  def test_plugin_errors_never_look_like_success(self):
   self.assertIn('if (onInsert(command.insert))',P)
   self.assertIn('Terminal unavailable for insertion. Retry at the Bash prompt.',P)

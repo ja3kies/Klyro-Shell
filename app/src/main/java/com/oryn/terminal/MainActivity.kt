@@ -583,13 +583,12 @@ class MainActivity : ComponentActivity() {
                     onDeleteWorkspace = { id ->
                         if (workspaceStore.delete(id)) terminalState.resetWorkspace(id)
                     },
-                    onAssignWorkspace = { workspaceId ->
+                    onAssignWorkspace = { tabId, workspaceId ->
                         if (workspaceStore.entries.any { it.id == workspaceId }) {
-                            terminalState.activeTabId?.let { tabId ->
-                                terminalState.assignWorkspace(tabId, workspaceId)
-                            }
+                            terminalState.assignWorkspace(tabId, workspaceId)
                         }
                     },
+                    currentSessionId = { terminalState.activeTabId },
                     onSelectTab = terminalState::selectTab,
                     onRenameTab = terminalState::renameTab,
                     onCloseTab = { id ->
@@ -1023,7 +1022,8 @@ private fun OrynTerminalApp(
     onCreateWorkspace: (String) -> Boolean,
     onRenameWorkspace: (String, String) -> Boolean,
     onDeleteWorkspace: (String) -> Unit,
-    onAssignWorkspace: (String) -> Unit,
+    onAssignWorkspace: (Long, String) -> Unit,
+    currentSessionId: () -> Long?,
     onSelectTab: (Long) -> Unit,
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
@@ -1170,6 +1170,7 @@ private fun OrynTerminalApp(
                 onAssignWorkspace = onAssignWorkspace,
                 diagnosticReport = diagnosticReport,
                 onRecheck = onRecheck,
+                currentSessionId = currentSessionId,
                 onSelectTab = onSelectTab,
                 onRenameTab = onRenameTab,
                 onCloseTab = onCloseTab,

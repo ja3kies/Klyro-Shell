@@ -64,8 +64,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         pane = src(UI / "TerminalPane.kt")
         self.assertIn('"termux-setup-storage", "klyro-setup-storage"', catalog)
         self.assertIn('!emulator.isAlternateBufferActive', pane)
-        self.assertIn('emulator.paste(snippet)', pane)
-        self.assertIn("emulator.paste(snippet)", pane)
+        self.assertIn('TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), snippet)', pane)
+        self.assertIn("TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), snippet)", pane)
         self.assertIn("if (session.isRunning() && emulator != null", pane)
         self.assertNotIn('session.write("klyro-setup-storage\\n")', pane)
 

@@ -141,9 +141,10 @@ fun TerminalPane(
     onCreateWorkspace: (String) -> Boolean,
     onRenameWorkspace: (String, String) -> Boolean,
     onDeleteWorkspace: (String) -> Unit,
-    onAssignWorkspace: (String) -> Unit,
+    onAssignWorkspace: (Long, String) -> Unit,
     diagnosticReport: String,
     onRecheck: () -> Unit,
+    currentSessionId: () -> Long?,
     onSelectTab: (Long) -> Unit,
     onRenameTab: (Long, String) -> Unit,
     onCloseTab: (Long) -> Unit,
@@ -171,6 +172,16 @@ fun TerminalPane(
     val TerminalText = ui.foreground
     val TerminalMuted = ui.muted
     val inactiveTabSurface = ui.key
+    fun write(target: TerminalSession, value: String) {
+        TerminalActionPolicy.runIfCurrent(activeTabId, currentSessionId(), target.isRunning()) {
+            writeToRunningSession(target, value)
+        }
+    }
+    fun sendCodePointIfRunning(target: TerminalSession, codePoint: Int) {
+        TerminalActionPolicy.runIfCurrent(activeTabId, currentSessionId(), target.isRunning()) {
+            sendCodePointToRunningSession(target, codePoint)
+        }
+    }
     var showToolsMenu by remember(session) { mutableStateOf(false) }
     var showWorkspaceSheet by remember(session) { mutableStateOf(false) }
     var showCommandPalette by remember(session) { mutableStateOf(false) }
@@ -287,7 +298,7 @@ fun TerminalPane(
             pendingMultilinePaste = content
         } else {
             // Termux TerminalEmulator handles DECSET 2004 bracketed paste.
-            emulator.paste(content!!)
+            TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), content!!) { emulator.paste(it) }
         }
     }
     LaunchedEffect(nativePasteRequest, session) {
@@ -307,7 +318,7 @@ fun TerminalPane(
             } else if (ClipboardPastePolicy.requiresConfirmation(incoming)) {
                 pendingMultilinePaste = incoming
             } else {
-                emulator.paste(incoming)
+                TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), incoming) { emulator.paste(it) }
             }
             onNativePasteConsumed()
         }
@@ -442,7 +453,8 @@ fun TerminalPane(
     var altActive by remember(viewClient) { mutableStateOf(viewClient.isAltDown()) }
     var shiftActive by remember(viewClient) { mutableStateOf(viewClient.isShiftDown()) }
     var fnActive by remember(viewClient) { mutableStateOf(viewClient.isFnDown()) }
-    var showEndSessionConfirmation by rememberSaveable(session) { mutableStateOf(false) }
+    var endSessionTargetId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val showEndSessionConfirmation = endSessionTargetId != null
     var warningNoteDismissed by rememberSaveable(session, runtimeHasWarnings) { mutableStateOf(false) }
 
     LaunchedEffect(
@@ -471,7 +483,7 @@ fun TerminalPane(
             pendingMultilinePaste == null && selectedOutput == null &&
             sessionSheetId == null && renameDialogId == null && shellChooserSourceId == null
     ) {
-        showEndSessionConfirmation = true
+        endSessionTargetId = activeTabId
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -1170,7 +1182,7 @@ fun TerminalPane(
                         Toast.makeText(context, "Terminal unavailable; paste cancelled",
                             Toast.LENGTH_SHORT).show()
                     } else if (ClipboardPastePolicy.canPaste(text)) {
-                        emulator.paste(text!!)
+                        TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), text!!) { emulator.paste(it) }
                     } else {
                         Toast.makeText(context, "Clipboard text rejected", Toast.LENGTH_SHORT).show()
                     }
@@ -1490,7 +1502,12 @@ fun TerminalPane(
             onCreateProject = onCreateWorkspace,
             onRenameProject = onRenameWorkspace,
             onDeleteProject = onDeleteWorkspace,
-            onAssignCurrentTab = onAssignWorkspace,
+            onAssignCurrentTab = { workspaceId ->
+                val expected = activeTabId
+                TerminalActionPolicy.runIfCurrent(expected, currentSessionId(), session.isRunning()) {
+                    expected?.let { onAssignWorkspace(it, workspaceId) }
+                }
+            },
             onSwitchTab = onSelectTab,
             onDismiss = { showWorkspaceSheet = false }
         )
@@ -1512,8 +1529,7 @@ fun TerminalPane(
                 val emulator = session.emulator
                 if (session.isRunning() && emulator != null &&
                     !emulator.isAlternateBufferActive) {
-                    emulator.paste(snippet)
-                    true
+                    TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), snippet) { emulator.paste(it) }
                 } else {
                     Toast.makeText(context,
                         "Return to the Bash prompt before inserting a command.",
@@ -1530,17 +1546,20 @@ fun TerminalPane(
         AlertDialog(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
-            onDismissRequest = { showEndSessionConfirmation = false },
-            title = { Text("End Bash session?") },
+            onDismissRequest = { endSessionTargetId = null },
+            title = { Text("End ${tabs.firstOrNull { it.first == endSessionTargetId }?.second ?: "session"}?") },
             text = { Text("This will stop the running shell and its child processes.") },
             confirmButton = {
                 TextButton(onClick = {
-                    showEndSessionConfirmation = false
-                    onClose()
+                    val expected = endSessionTargetId
+                    endSessionTargetId = null
+                    if (!TerminalActionPolicy.runIfCurrent(expected, currentSessionId(), session.isRunning()) {
+                            expected?.let(onCloseTab)
+                        }) Toast.makeText(context, "Session changed; close cancelled", Toast.LENGTH_SHORT).show()
                 }) { Text("End session", color = ui.danger, fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
-                TextButton(onClick = { showEndSessionConfirmation = false }) {
+                TextButton(onClick = { endSessionTargetId = null }) {
                     Text("Keep session")
                 }
             }
@@ -1734,14 +1753,14 @@ private fun TerminalExtraKey(
     }
 }
 
-private fun write(session: TerminalSession, value: String) {
+private fun writeToRunningSession(session: TerminalSession, value: String) {
     // Buttons may race PTY exit after the last Compose recomposition.
     if (value.isEmpty() || !session.isRunning() || session.emulator == null) return
     val bytes = value.toByteArray(StandardCharsets.UTF_8)
     session.write(bytes, 0, bytes.size)
 }
 
-private fun sendCodePointIfRunning(session: TerminalSession, codePoint: Int) {
+private fun sendCodePointToRunningSession(session: TerminalSession, codePoint: Int) {
     if (!session.isRunning() || session.emulator == null) return
     session.writeCodePoint(false, codePoint)
 }

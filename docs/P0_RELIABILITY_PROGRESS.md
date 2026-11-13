@@ -75,3 +75,27 @@ Les courses avec un processus hostile remplaçant les répertoires parents dans 
 même UID ne sont pas prétendues éliminées par ce verrou applicatif.
 P0-06/07/09 : encore UNVERIFIED ; P0-08 : protections hôte testées, SAF physique
 PENDING DEVICE VALIDATION.
+
+## Cycle 5 — identité des actions, callbacks et accessibilité
+
+15 scénarios SessionDispatchTest : cible active/inactive/terminée, absence de
+cible/onglet, zéro/négatif, ID Long, snapshot confirmé, fermeture obsolète,
+callback destructif terminé, ANSI, UTF-16 invalide, séparateur invisible, borne
+en octets. PASS JVM ; tests instrumentés existants compilés, non exécutés.
+
+CONFIRMED : la confirmation End utilisait onClose() visant l'onglet actif au
+moment du clic, et l'affectation workspace relisait également cet onglet courant.
+Les callbacks UI provenant d'un ancien pane pouvaient encore envoyer des entrées
+à son PTY inactif. Correctifs : cible Long sauvegardée, identité courante relue
+au dispatch, IDs explicites pour close/workspace et même garde pour touches,
+presse-papiers natif, confirmation et palette. Le titre de confirmation nomme la
+cible ; aucune refonte visuelle.
+
+CONFIRMED : les OSC title avaient une file UI non regroupée. Réutilisation du
+batch testé à 120 ms, dernière valeur conservée et publication différée après
+pause. Les protections de viewport/accessibilité n'ajoutent aucun lecteur du
+transcript entier. TalkBack réel, grandes polices, focus après rotation et
+contrastes affichés : PENDING DEVICE VALIDATION. Hauteur fixe des touches sous
+police fortement agrandie : PROBABLE risque, non présenté comme résolu.
+Les anciens tests de chaînes restent des contrats structurels, jamais des
+preuves de comportement ; ils sont complétés par les tests de dispatch réels.

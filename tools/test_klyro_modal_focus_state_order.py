@@ -5,7 +5,7 @@ S=(Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal/ui/T
 class FocusInitializationOrdering(unittest.TestCase):
  def test_dialog_state_precedes_terminal_focus_effect(self):
   effect=S.index('LaunchedEffect(\n        activeTabId, activeTerminalView, sessionSheetId')
-  for k in ('var showEndSessionConfirmation by','var showTranscriptSearch by',
+  for k in ('val showEndSessionConfirmation =','var showTranscriptSearch by',
             'var warningNoteDismissed by','var selectedOutput by',
             'var pendingMultilinePaste by'):
    self.assertLess(S.index(k),effect,k)

@@ -7,6 +7,18 @@ public final class TerminalActionPolicy {
     private TerminalActionPolicy() {}
     public static final int MAX_SELECTION_UTF16_UNITS = 2 * 1024 * 1024;
 
+    public static boolean runIfCurrent(Long expected, Long current, boolean running, Runnable action) {
+        if (expected == null || expected <= 0 || !expected.equals(current) || !running) return false;
+        action.run();
+        return true;
+    }
+
+    public static boolean pasteIfCurrent(Long expected, Long current, boolean running, String text,
+                                         java.util.function.Consumer<String> insert) {
+        if (!ClipboardPastePolicy.canPaste(text)) return false;
+        return runIfCurrent(expected, current, running, () -> insert.accept(text));
+    }
+
     /**
      * Keep the latest bounded output only. Avoid retaining an entire huge PTY
      * scrollback in Compose state and never split a surrogate pair.

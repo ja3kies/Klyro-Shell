@@ -19,6 +19,7 @@ import com.termux.view.TerminalView;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
+import com.oryn.terminal.OutputUpdateBatch;
 
 /** Bridges Termux's terminal engine callbacks to Oryn-owned UI and clipboard handling. */
 public final class OrynTerminalSessionClient implements TerminalSessionClient {
@@ -40,11 +41,21 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private final AtomicBoolean uiActive = new AtomicBoolean(true);
     private final AtomicBoolean outputReceivedWhilePaused = new AtomicBoolean(false);
     private final AtomicBoolean disposed = new AtomicBoolean(false);
+    private String latestTitle;
+    private boolean titleDirty;
+    private final OutputUpdateBatch titleUpdates;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     public OrynTerminalSessionClient(Context context, Listener listener) {
         this.context = context.getApplicationContext();
         this.listener = listener;
+        titleUpdates = new OutputUpdateBatch(task -> uiHandler.postDelayed(task, 120L),
+                task -> uiHandler.removeCallbacks(task), ids -> {
+                    if (!disposed.get() && uiActive.get() && listener != null) {
+                        titleDirty = false;
+                        listener.onTitleChanged(latestTitle);
+                    }
+                });
     }
 
     public void attachView(@Nullable TerminalView view) {
@@ -65,6 +76,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         if (disposed.get()) return;
         uiActive.set(active);
         if (active) {
+            if (titleDirty) titleUpdates.mark(0L);
             // Refresh only when output arrived during pause or a terminal
             // view remains attached. Newly created views attach the current
             // emulator buffer independently through TerminalView.
@@ -96,6 +108,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     /** Drop stale UI work when the owning PTY tab is permanently closed. */
     public void dispose() {
         disposed.set(true);
+        titleUpdates.close();
         terminalView = null;
         outputObserver = null;
         uiHandler.removeCallbacksAndMessages(null);
@@ -123,12 +136,10 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
 
     @Override
     public void onTitleChanged(@NonNull com.termux.terminal.TerminalSession session) {
-        if (listener != null) {
-            String title = session.getTitle();
-            uiHandler.post(() -> {
-                if (!disposed.get()) listener.onTitleChanged(title);
-            });
-        }
+        if (disposed.get() || listener == null) return;
+        latestTitle = session.getTitle();
+        titleDirty = true;
+        if (uiActive.get()) titleUpdates.mark(0L);
     }
 
     @Override

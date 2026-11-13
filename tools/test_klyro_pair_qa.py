@@ -25,9 +25,10 @@ class KlyroPairQaTest(unittest.TestCase):
         for name in ("sessionSheetId", "renameDialogId", "shellChooserSourceId",
                      "pendingMultilinePaste", "outputSelectionView"):
             self.assertIn(f"var {name} by remember(session)", pane)
-        for name in ("showTranscriptSearch", "showEndSessionConfirmation",
+        for name in ("showTranscriptSearch",
                      "transcriptQuery", "findMatchCase", "searchIndex"):
             self.assertIn(f"var {name} by rememberSaveable(session)", pane)
+        self.assertIn("var endSessionTargetId by rememberSaveable", pane)
         self.assertIn("var warningNoteDismissed by rememberSaveable(session, runtimeHasWarnings)", pane)
         model = (APP / "TerminalSessionViewModel.kt").read_text()
         self.assertIn("pendingNativePaste = null", model)
