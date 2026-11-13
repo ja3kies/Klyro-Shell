@@ -9,6 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.diagnostics.FreezeRecorder
 import com.oryn.terminal.diagnostics.FreezeEvents
@@ -17,7 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-internal fun FreezeReportsPane() {
+internal fun FreezeReportsPane(storeProvider: () -> com.oryn.terminal.diagnostics.FreezeReportStore = FreezeRecorder::repository) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var reports by remember { mutableStateOf<List<Pair<String,String>>>(emptyList()) }
@@ -30,8 +34,8 @@ internal fun FreezeReportsPane() {
         FreezeRecorder.event(FreezeEvents.Code.REPORTS)
         try {
             reports = withContext(Dispatchers.IO) {
-                val store = FreezeRecorder.repository()
-                store.list().asReversed().map { it to store.read(it) }
+                val store = storeProvider()
+                store.list().asReversed().map { it to store.preview(it) }
             }
             status = if (reports.isEmpty()) "No recorded incidents. This does not prove that no freeze occurred." else "Local heuristics are not official Android ANRs. An unfinished report means recovery was not observed."
         } catch (e: Exception) { status = "Unable to load diagnostics (${e.javaClass.simpleName}). Retry." }
@@ -43,7 +47,7 @@ internal fun FreezeReportsPane() {
                 withContext(Dispatchers.IO) {
                     val output = context.contentResolver.openOutputStream(uri, "w")
                         ?: throw java.io.IOException("Destination unavailable")
-                    output.use { FreezeRecorder.repository().exportZip(it) }
+                    output.use { storeProvider().exportZip(it) }
                 }
                 status = "Diagnostic ZIP exported."
             } catch (e: Exception) { status = "Export failed (${e.javaClass.simpleName}); destination may be incomplete." }
@@ -52,13 +56,14 @@ internal fun FreezeReportsPane() {
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Freeze reports", style = MaterialTheme.typography.titleLarge)
-        Text(status)
+        Text(status, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         FreezeRecorder.lastError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Row {
             TextButton(onClick = { revision++ }, enabled = !busy) { Text("Refresh") }
             TextButton(onClick = { export.launch("klyro-freeze-diagnostics.zip") }, enabled = !busy && reports.isNotEmpty()) { Text("Export ZIP") }
         }
         for ((id, body) in reports) {
+            Column(Modifier.fillMaxWidth().testTag("freeze-report-$id")) {
             val state = body.lineSequence().lastOrNull { it.startsWith("state=") } ?: "unconfirmed"
             Text(java.util.Date(id.substringBefore('-').toLongOrNull() ?: 0).toString())
             Text(state)
@@ -69,6 +74,7 @@ internal fun FreezeReportsPane() {
             if (selected == id) Text(body, style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState()))
         }
+        }
         if (com.oryn.terminal.BuildConfig.DEBUG) FreezeStabilityControls()
     }
     deleteTarget?.let { target ->
@@ -78,7 +84,7 @@ internal fun FreezeReportsPane() {
                 deleteTarget = null
                 scope.launch {
                     busy = true
-                    try { withContext(Dispatchers.IO) { FreezeRecorder.repository().delete(target) }; revision++ }
+                    try { withContext(Dispatchers.IO) { storeProvider().delete(target) }; revision++ }
                     catch (e: Exception) { status = "Delete failed (${e.javaClass.simpleName})." }
                     finally { busy = false }
                 }
@@ -91,7 +97,8 @@ internal fun FreezeReportsPane() {
 internal fun FreezeRecoveryNotice() {
     val notice by FreezeRecorder.notice.collectAsState()
     val requested by FreezeRecorder.openReports.collectAsState()
-    if (requested) {
+    val inSettings by FreezeRecorder.settingsVisible.collectAsState()
+    if (requested && !inSettings) {
         KlyroModalTheme {
             KlyroSheet(onDismissRequest = { FreezeRecorder.openReports.value = false }) {
                 Column(Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)

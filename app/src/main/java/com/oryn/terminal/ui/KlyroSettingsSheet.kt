@@ -37,6 +37,8 @@ import com.oryn.terminal.R
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.Dispatchers
@@ -99,6 +101,17 @@ internal fun KlyroSettingsSheet(
             it in setOf("home", "appearance", "keyboard", "files",
                 "privacy", "diagnostics", "freeze", "about")
         } ?: "home")
+    }
+    DisposableEffect(Unit) {
+        com.oryn.terminal.diagnostics.FreezeRecorder.settingsVisible.value = true
+        onDispose { com.oryn.terminal.diagnostics.FreezeRecorder.settingsVisible.value = false }
+    }
+    val requestedReports by com.oryn.terminal.diagnostics.FreezeRecorder.openReports.collectAsState()
+    LaunchedEffect(requestedReports) {
+        if (requestedReports) {
+            section = "freeze"
+            com.oryn.terminal.diagnostics.FreezeRecorder.openReports.value = false
+        }
     }
     var showFontLicense by rememberSaveable { mutableStateOf(false) }
     var showHugeiconsLicense by rememberSaveable { mutableStateOf(false) }

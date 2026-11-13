@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit
 object FreezeRecorder {
     private val engine = FreezeWatchdog()
     val events = FreezeEvents()
+    val settingsVisible = MutableStateFlow(false)
     val openReports = MutableStateFlow(false)
     val notice = MutableStateFlow<String?>(null)
     @Volatile var lastError: String? = null

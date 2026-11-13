@@ -59,6 +59,13 @@ public final class FreezeReportStore {
             return new String(bytes,StandardCharsets.UTF_8);
         }
     }
+    public String preview(String id) throws IOException {
+        String text=read(id);
+        if(text.length()<=8192) return text;
+        int end=8192;
+        if(Character.isHighSurrogate(text.charAt(end-1))) end--;
+        return text.substring(0,end)+"\n[PREVIEW TRUNCATED — export ZIP for full report]";
+    }
     public synchronized void delete(String id) throws IOException { Files.deleteIfExists(path(id)); }
     public void exportZip(OutputStream output) throws IOException {
         // Snapshot at most 5 MiB under the store lock; never hold it across a slow SAF write.
