@@ -207,6 +207,9 @@ fun TerminalPane(
     var selectedOutputTruncated by remember(session) { mutableStateOf(false) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
     val context = LocalContext.current
+    LaunchedEffect(activeTabId) {
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.TERMINAL, activeTabId ?: 0)
+    }
     val clipboardManager = remember(context) {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     }

@@ -451,7 +451,11 @@ class MainActivity : ComponentActivity() {
             statusMessage = "Android restarted Klyro. Previous shell processes ended; open a new session."
         }
 
+        com.oryn.terminal.diagnostics.FreezeRecorder.start(applicationContext)
+        if (intent?.getBooleanExtra("freeze_reports", false) == true)
+            com.oryn.terminal.diagnostics.FreezeRecorder.openReports.value = true
         setContent {
+            com.oryn.terminal.ui.FreezeRecoveryNotice()
             val themePreferences = remember {
                 getSharedPreferences("klyro_ui_theme", MODE_PRIVATE)
             }
@@ -669,7 +673,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.STARTED)
+    }
+
     override fun onResume() {
+        com.oryn.terminal.diagnostics.FreezeRecorder.transition(com.oryn.terminal.diagnostics.FreezeEvents.Code.RESUMED)
         super.onResume()
         android.util.Log.i("KlyroLifecycle",
             "RESUME liveSessions=" + terminalState.sessions.size)
@@ -683,6 +693,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        com.oryn.terminal.diagnostics.FreezeRecorder.transition(com.oryn.terminal.diagnostics.FreezeEvents.Code.PAUSED)
         android.util.Log.i("KlyroLifecycle",
             "PAUSE liveSessions=" + terminalState.sessions.size)
         // Only pause UI callbacks; NEVER stop, close or signal a shell here.
@@ -692,12 +703,20 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        com.oryn.terminal.diagnostics.FreezeRecorder.transition(com.oryn.terminal.diagnostics.FreezeEvents.Code.STOPPED)
         android.util.Log.i("KlyroLifecycle",
             "STOP liveSessions=" + terminalState.sessions.size)
         super.onStop()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra("freeze_reports", false))
+            com.oryn.terminal.diagnostics.FreezeRecorder.openReports.value = true
+    }
+
     override fun onDestroy() {
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.DESTROYED)
         // Safety net for exceptional Activity teardown: no polling Runnable
         // from this Activity should retain a dead window or its callbacks.
         storageBridgeHandler.removeCallbacks(storageBridgePoller)
@@ -930,6 +949,28 @@ class MainActivity : ComponentActivity() {
                 }
             }
         })
+    }
+
+    fun startDiagnosticStress(): String {
+        if (!BuildConfig.DEBUG) return "Diagnostic build required."
+        if (terminalState.sessions.size >= 8) return "Maximum 8 sessions; test not started."
+        return try {
+            val manager = TerminalSessionManager(applicationContext)
+            val id = terminalState.reserveTabId()
+            val client = OrynTerminalSessionClient(applicationContext, terminalState.listenerFor(id))
+            val session = manager.startBash("Stability test", client)
+            terminalState.attachSession(session, client, OrynTerminalViewClient(applicationContext), id)
+            terminalState.renameTab(id, "Stability test")
+            session.updateSize(80, 24)
+            KlyroSessionService.ensureRunning(this)
+            showWelcomeScreen = false
+            val bytes = com.oryn.terminal.diagnostics.StabilityScenario.COMMAND.toByteArray(Charsets.UTF_8)
+            if (!session.tryWrite(bytes, 0, bytes.size)) "Test input rejected; diagnostic tab retained."
+            else {
+                com.oryn.terminal.diagnostics.FreezeRecorder.recordStabilityRun(id)
+                "Started in separate tab. Go Home → another app → return. Look for the END marker."
+            }
+        } catch (e: Exception) { "Test not started (${e.javaClass.simpleName}); existing sessions preserved." }
     }
 
     private fun launchBash() {

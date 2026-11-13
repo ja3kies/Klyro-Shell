@@ -97,7 +97,7 @@ internal fun KlyroSettingsSheet(
     var section by rememberSaveable(initialSection) {
         mutableStateOf(initialSection.takeIf {
             it in setOf("home", "appearance", "keyboard", "files",
-                "privacy", "diagnostics", "about")
+                "privacy", "diagnostics", "freeze", "about")
         } ?: "home")
     }
     var showFontLicense by rememberSaveable { mutableStateOf(false) }
@@ -140,6 +140,7 @@ internal fun KlyroSettingsSheet(
             showFontLicense -> showFontLicense = false
             showHugeiconsLicense -> showHugeiconsLicense = false
             cannotOpenPermissions -> cannotOpenPermissions = false
+            section == "freeze" -> section = "diagnostics"
             section != "home" -> section = "home"
             else -> onDismiss()
         }
@@ -149,9 +150,10 @@ internal fun KlyroSettingsSheet(
             showFontLicense || showHugeiconsLicense || cannotOpenPermissions
     ) { navigateBack() }
     val density = LocalDensity.current
-    val version = remember(context) {
-        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
-            .getOrNull() ?: "development"
+    val version = com.oryn.terminal.BuildConfig.VERSION_NAME
+    LaunchedEffect(section) {
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.SETTINGS,
+            listOf("home", "appearance", "keyboard", "files", "privacy", "diagnostics", "freeze", "about").indexOf(section).toLong())
     }
 
     // Compact content stays fixed; long reports, large fonts and small screens retain scrolling.
@@ -614,7 +616,9 @@ internal fun KlyroSettingsSheet(
                             }
                         }
                     }
+                    "freeze" -> FreezeReportsPane()
                     "diagnostics" -> {
+                        TextButton(onClick = { section = "freeze" }) { Text("Freeze reports") }
                         KlyroSectionHeading("Diagnostics", "Local checks; no commands run automatically.")
                         Surface(
                             color = colors.tile,

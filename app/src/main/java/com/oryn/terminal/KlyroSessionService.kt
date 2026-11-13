@@ -27,6 +27,8 @@ class KlyroSessionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        com.oryn.terminal.diagnostics.FreezeRecorder.serviceActive = true
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.SERVICE_START)
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL, "Active terminal sessions",
                 NotificationManager.IMPORTANCE_LOW).apply {
@@ -78,6 +80,8 @@ class KlyroSessionService : Service() {
     }
 
     override fun onDestroy() {
+        com.oryn.terminal.diagnostics.FreezeRecorder.serviceActive = false
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.SERVICE_STOP)
         handler.removeCallbacks(check)
         // The service is a notification owner, not the PTY owner. Android may
         // recreate or stop this service while the process and sessions survive.

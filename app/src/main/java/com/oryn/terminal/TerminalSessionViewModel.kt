@@ -43,6 +43,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         { task -> outputUiHandler.postDelayed(task, 120L) },
         { task -> outputUiHandler.removeCallbacks(task) }
     ) { pending ->
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.BATCH, pending.size.toLong())
         val now = SystemClock.elapsedRealtime()
         pending.forEach { id ->
             if (tabs.any { it.id == id }) {
@@ -167,6 +168,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             it.viewClient.attachView(null)
         }
         activeTabId = id
+        updateDiagnosticSession()
         unreadActivity.remove(id)
         sessionFailureMessage = null
         sessionStatus = ""
@@ -179,6 +181,13 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (index >= 0 && tabs[index].customTitle != name) {
             tabs[index] = tabs[index].copy(customTitle = name)
         }
+    }
+
+    private fun updateDiagnosticSession() {
+        com.oryn.terminal.diagnostics.FreezeRecorder.activeSession = activeTabId ?: 0
+        com.oryn.terminal.diagnostics.FreezeRecorder.sessionCount = tabs.size
+        com.oryn.terminal.diagnostics.FreezeRecorder.terminal = activeSession
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.SESSION, activeTabId ?: 0, tabs.size.toLong())
     }
 
     fun closeTab(id: Long) {
@@ -197,6 +206,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             activeTabId = null
             tabs.getOrNull(index.coerceAtMost(tabs.lastIndex))?.let { selectTab(it.id) }
         }
+        updateDiagnosticSession()
     }
 
     fun closeSession() {

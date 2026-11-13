@@ -53,6 +53,8 @@ public final class TerminalSession extends TerminalOutput {
 
     /** The pid of the shell process. 0 if not started and -1 if finished running. */
     int mShellPid;
+    /** Approximate monotonic byte counters; diagnostics never acquire the emulator lock. */
+    public volatile long diagnosticBytesRead, diagnosticBytesParsed;
 
     /** The exit status of the shell process. Only valid if ${@link #mShellPid} is -1. */
     int mShellExitStatus;
@@ -162,6 +164,7 @@ public final class TerminalSession extends TerminalOutput {
                     while (true) {
                         int read = termIn.read(buffer);
                         if (read == -1) return;
+                        diagnosticBytesRead += read;
                         if (!mProcessToTerminalIOQueue.write(buffer, 0, read)) return;
                         mMainThreadHandler.sendEmptyMessage(MSG_NEW_INPUT);
                     }
@@ -393,7 +396,10 @@ public final class TerminalSession extends TerminalOutput {
             int bytesRead;
             do {
                 bytesRead = mProcessToTerminalIOQueue.read(mReceiveBuffer, false);
-                if (bytesRead > 0) mEmulator.append(mReceiveBuffer, bytesRead);
+                if (bytesRead > 0) {
+                    mEmulator.append(mReceiveBuffer, bytesRead);
+                    diagnosticBytesParsed += bytesRead;
+                }
             } while (msg.what == MSG_PROCESS_EXITED && bytesRead > 0);
             notifyScreenUpdate();
 
