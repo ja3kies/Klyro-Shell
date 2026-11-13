@@ -1,0 +1,302 @@
+[
+  {
+    "scenario": "Home → autre app → retour",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Lancer le test isolé, Home, autre app, revenir",
+    "expected": "Même PTY, UI réactive ou incident conservé",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Settings pendant PTY",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Ouvrir Settings pendant 1500 lignes",
+    "expected": "UI réactive, dernier output conservé",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Diagnostics pendant PTY",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Ouvrir Diagnostics puis Freeze reports pendant sortie",
+    "expected": "Pas de stall provoqué par la liste",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Sessions simultanées",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Deux sessions jetables, alterner",
+    "expected": "Aucune réattribution d’entrée ou fermeture",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Commande interactive",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Exécuter read/cat dans session jetable",
+    "expected": "Entrée et EOF cohérents",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Collage multiligne",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Prévisualiser, changer clipboard, confirmer",
+    "expected": "Snapshot confirmé, aucune exécution implicite",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "CLEAR",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Saisie partielle puis CLEAR",
+    "expected": "Historique seul purgé, saisie intacte",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Ctrl+C",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Lancer sleep dans session jetable puis Ctrl+C",
+    "expected": "SIGINT reçu ou refus explicite sous saturation",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Rotation",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Tourner avec IME/FIND ouverts",
+    "expected": "Même session, pas de confirmation réattribuée",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Paysage",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Ouvrir IME en paysage",
+    "expected": "Zone terminal utilisable",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Grandes polices",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Police système agrandie, barre raccourcis",
+    "expected": "Aucun texte coupé ; actions atteignables",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Navigation rapide",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Home interne, Terminal, Settings, Back",
+    "expected": "Un parcours cohérent sans fermeture PTY",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Dialogues successifs",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Rapports depuis Settings puis notification",
+    "expected": "Pas de double feuille de rapports",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "SAF",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Exporter ZIP, annuler puis révoquer accès",
+    "expected": "Annulation non destructive, erreur explicite",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Réseau interrompu APK",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Interrompre réseau pendant installation dans session de test",
+    "expected": "Aucun faux succès ; fichiers préservés",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Installation package APK",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Installer un outil sur préfixe Klyro",
+    "expected": "Signature/dépendances/exit réel vérifiés",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Notification refusée",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Refuser POST_NOTIFICATIONS puis test stall isolé",
+    "expected": "Pas de crash, rapport et avertissement après reprise",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Freeze artificiel 6s",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Sans sessions, confirmer Test 6s stall",
+    "expected": "Snapshot avant recovery, UI_RECOVERED durable",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Freeze artificiel persistant",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Sans sessions, confirmer Test 11s stall",
+    "expected": "Deux stacks séparées, recovery ou reprise observée absente",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Freeze réel récupéré",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Reproduire le scénario incident puis revenir",
+    "expected": "Rapport de l’incident réel exportable, cause évaluée",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Processus relancé",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Redémarrer après incident dans environnement de test dédié",
+    "expected": "Ancien incident présenté, pas de faux PTY restauré",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Export rapport SAF",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Exporter ZIP et inspecter archive",
+    "expected": "ZIP complet sans transcript/clipboard/env",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "Suppression rapport UI",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Annuler Delete puis confirmer un seul rapport",
+    "expected": "Annulation conserve, confirmation ne touche que la cible",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "TalkBack",
+    "preconditions": "Pixel 9 autorisé, build de test 0.4.10-dev; sessions/fichiers de test uniquement",
+    "steps": "Naviguer onglets/rapports/touches via TalkBack",
+    "expected": "États compréhensibles sans lecture automatique stdout",
+    "observed": "Aucun appareil ADB autorisé ; aucune manipulation physique ni rapport exporté de cette build disponible",
+    "status": "NOT TESTED",
+    "evidence": "adb-devices.txt",
+    "fix_reference": "docs/FREEZE_FORENSICS.md / docs/UX_FUNCTIONAL_AUDIT.md"
+  },
+  {
+    "scenario": "1500 lignes PTY guest",
+    "preconditions": "Harness hôte / fichiers et processus jetables propres au test",
+    "steps": "Exécuter la suite/harness indiquée",
+    "expected": "Assertions comportementales de la suite satisfaites sans toucher aux données utilisateur",
+    "observed": "1500 lignes, END présent, exit 0 ; guest jetable, pas Activity Android",
+    "status": "PASS",
+    "evidence": "stress-1500-pty.json",
+    "fix_reference": "StabilityScenario.java"
+  },
+  {
+    "scenario": "Freeze engine et génération",
+    "preconditions": "Harness hôte / fichiers et processus jetables propres au test",
+    "steps": "Exécuter la suite/harness indiquée",
+    "expected": "Assertions comportementales de la suite satisfaites sans toucher aux données utilisateur",
+    "observed": "15 scénarios de temps monotone/ack/lifecycle ; pas main Android réel",
+    "status": "PASS",
+    "evidence": "jvm XML FreezeWatchdogTest",
+    "fix_reference": "FreezeWatchdog.java"
+  },
+  {
+    "scenario": "Persistance/restart/ZIP/suppression",
+    "preconditions": "Harness hôte / fichiers et processus jetables propres au test",
+    "steps": "Exécuter la suite/harness indiquée",
+    "expected": "Assertions comportementales de la suite satisfaites sans toucher aux données utilisateur",
+    "observed": "15 scénarios filesystem et stream réels JVM",
+    "status": "PASS",
+    "evidence": "jvm XML FreezeReportStoreTest",
+    "fix_reference": "FreezeReportStore.java"
+  },
+  {
+    "scenario": "Erreur provider / confidentialité",
+    "preconditions": "Harness hôte / fichiers et processus jetables propres au test",
+    "steps": "Exécuter la suite/harness indiquée",
+    "expected": "Assertions comportementales de la suite satisfaites sans toucher aux données utilisateur",
+    "observed": "8 cas d’erreurs, aucun message arbitraire réaffiché",
+    "status": "PASS",
+    "evidence": "jvm XML StorageFailureTest",
+    "fix_reference": "KlyroDiagnostics.java"
+  },
+  {
+    "scenario": "Plugin invalide",
+    "preconditions": "Harness hôte / fichiers et processus jetables propres au test",
+    "steps": "Exécuter la suite/harness indiquée",
+    "expected": "Assertions comportementales de la suite satisfaites sans toucher aux données utilisateur",
+    "observed": "Refus de métacaractères et suggestions dangereuses ; pas interaction UI",
+    "status": "PASS",
+    "evidence": "jvm XML KlyroPluginPolicyTest",
+    "fix_reference": "KlyroPluginManager.kt"
+  },
+  {
+    "scenario": "PTY/JNI natifs",
+    "preconditions": "Harness hôte / fichiers et processus jetables propres au test",
+    "steps": "Exécuter la suite/harness indiquée",
+    "expected": "Assertions comportementales de la suite satisfaites sans toucher aux données utilisateur",
+    "observed": "20 PTY, 20 000 lignes, UTF-8, signaux et FD hôte ; pas APK",
+    "status": "PASS",
+    "evidence": "native-final.log",
+    "fix_reference": "tests/native/pty_test.c"
+  }
+]

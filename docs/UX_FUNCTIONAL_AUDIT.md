@@ -101,3 +101,39 @@ Lint MutableCollectionMutableState : types Kotlin List explicités sur les snaps
 workspace/pins/recents (les helpers retournaient déjà des copies/unmodifiable).
 Ce n'est pas présenté comme trois bugs fonctionnels. Reste à vérifier sur Pixel :
 TalkBack, focus, ordre de lecture, grands caractères, contraste effectif.
+
+## Cycle 6 — revue transversale et convergence
+
+Les quinze écrans ci-dessous ont été revus dans leur code et tests disponibles ;
+aucune capture, contraste affiché ou animation physique n'est déclaré validé.
+
+| Écran | Vérification / résultat |
+|---|---|
+| Accueil | Actions gardées par runtime/session ; pas de nouveau stress automatique |
+| Terminal | Octets stdin/stdout et moteur conservés ; compteurs techniques seulement |
+| Sessions | Cible ID et libellés, aucune fermeture ajoutée à lifecycle |
+| Workspaces | Liste read-only, IDs UUID, édition obsolète signalée |
+| Settings | Retour hiérarchique ; requête rapports absorbée par la feuille existante |
+| Appearance | Préférences existantes conservées ; rendu réel UNVERIFIED |
+| Theme picker | Palettes/aperçus existants et tests de couleurs conservés ; aucun branding changé |
+| Color picker | Champs hex ASCII, preview et Cancel existants ; tests HexInput/FavoriteColors conservés |
+| Files | Messages contrôlés et checkpoints ; pas de destruction de document |
+| Packages | Suggestions insérées seulement ; APT/runtime non réécrits |
+| Plugins | Add mène déjà à aperçu/confirmation ; aucune installation silencieuse ajoutée |
+| Palette | Succès conditionné à l'accusé stdin ; collections read-only explicites |
+| Find | Cible revalidée après attente IME ; moteur de coordonnées conservé |
+| Diagnostics | Export sans verrou pendant écriture SAF ; pas de profilage réseau |
+| Freeze reports | Preview bornée, état recovered exact même après gros stacks, suppression ciblée |
+
+Régressions trouvées/corrigées pendant convergence : deux snapshots pouvaient
+être produits au même tick tardif → séparation minimale réelle 5 s ; les callbacks
+PTY pouvaient chasser les transitions du ring → ring critique 32 en plus du ring
+128 ; un preview tronqué pouvait cacher RECOVERED final → summary explicite ;
+les temporaires interrompus pouvaient s'accumuler après redémarrages → récupération
+de seuls .pending-*.tmp avant publication du store ; le stall différé revalide
+absence de sessions et lifecycle RESUMED au moment d'exécuter.
+
+Les tests Convergence couvrent ces limites, plus le script Bash réellement exécuté
+avec 1 500 lignes. Le même script exact est aussi exécuté par un harness PTY du
+guest jetable. Cela ne valide pas le Home/retour dans l'APK. Notification refusée,
+TalkBack, SAF et gestes restent NOT TESTED sur appareil.

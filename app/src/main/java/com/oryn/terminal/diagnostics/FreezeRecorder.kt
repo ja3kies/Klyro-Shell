@@ -69,7 +69,9 @@ object FreezeRecorder {
         app = context.applicationContext
         worker.execute {
             try { guard {
-                store = FreezeReportStore(File(app.noBackupFilesDir, "freeze-reports"))
+                val initialized = FreezeReportStore(File(app.noBackupFilesDir, "freeze-reports"))
+                initialized.recoverInterruptedWrites()
+                store = initialized
                 // A report without RECOVERED survived an interrupted process; do not invent its cause.
                 store!!.list().asReversed().firstOrNull { id ->
                     val body = store!!.read(id)

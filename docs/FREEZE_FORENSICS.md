@@ -108,3 +108,27 @@ et sept tests adversariaux store/export/erreurs. En particulier un provider ZIP
 bloqué n'empêche pas une nouvelle écriture d'incident ; un commit atomique échoué
 ne détruit pas un autre rapport. Les anciens tests P0 sont des non-régressions,
 pas de nouvelles corrections du freeze. Correction du freeze Pixel : UNVERIFIED.
+
+## Convergence
+
+La seconde capture est espacée d'au moins 5 s depuis la première, même si le
+watchdog lui-même se réveille tard. Un ring critique séparé retient lifecycle et
+navigation malgré un flood PTY. FIRST_FRAME distingue le callback Compose initial
+(a=0) et le callback de frame suivant Resume (a=1) : ce n'est pas une mesure de
+fin de dessin ni de frames lentes. Curseur/scrollback ne sont lus qu'au callback
+UI déjà existant et copiés en compteurs ; le watchdog ne lit pas le transcript.
+Les temporaires d'écriture interrompue sont récupérés avant de publier le store.
+
+Le démarrage avant le premier RESUMED n'est pas diagnostiqué comme freeze UI.
+La build 0.4.10-dev / code 17 conserve les mêmes permissions déclarées ; seules
+les dépendances de tests Compose et BuildConfig sont ajoutés. Aucune télémétrie.
+Le diagnostic est implémenté et testé hôte ; son fonctionnement dans l'APK est
+PENDING DEVICE VALIDATION, et la cause du freeze utilisateur reste UNVERIFIED.
+
+onPause marque d'abord PAUSE_BEGIN ; la détection foreground est désactivée
+après les opérations de pause/super, afin de pouvoir observer un blocage dans
+ces opérations. Un main thread bloqué alors que l'état PAUSED/STOPPED est déjà
+acquis peut rester invisible au watchdog jusqu'à un vrai callback Resume ;
+l'historique Android est le recours si le système confirme un ANR. L'absence de
+rapport n'est donc jamais une preuve d'absence de gel. Les événements IME/resize,
+comme les callbacks PTY, ne chassent pas les transitions du ring critique.

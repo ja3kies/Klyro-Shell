@@ -1,0 +1,15 @@
+package com.oryn.terminal.diagnostics;
+import org.junit.*;
+import org.junit.rules.TemporaryFolder;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import static org.junit.Assert.*;
+public class FreezeConvergenceTest {
+ @Rule public TemporaryFolder temp=new TemporaryFolder();
+ @Test public void lateWatchdogWakeDoesNotFakeTwoSeparatedStacks(){FreezeWatchdog w=new FreezeWatchdog();w.lifecycle(true,0);w.tick(1000);assertFalse(w.tick(12000).stream().anyMatch(e->e.kind==FreezeWatchdog.Kind.SECOND_SNAPSHOT));assertFalse(w.tick(16999).stream().anyMatch(e->e.kind==FreezeWatchdog.Kind.SECOND_SNAPSHOT));assertTrue(w.tick(17000).stream().anyMatch(e->e.kind==FreezeWatchdog.Kind.SECOND_SNAPSHOT));}
+ @Test public void lifecycleIsRetainedAcrossPtyFlood(){FreezeEvents e=new FreezeEvents();e.add(FreezeEvents.Code.PAUSED,12,0,0);e.add(FreezeEvents.Code.RESUMED,20,0,0);for(int i=0;i<10000;i++){e.add(FreezeEvents.Code.PTY_CALLBACK,21+i,3,0);e.add(FreezeEvents.Code.IME,21+i,i,0);e.add(FreezeEvents.Code.RESIZE,21+i,i,0);}String s=e.snapshot();assertTrue(s.contains("12 PAUSED"));assertTrue(s.contains("20 RESUMED"));assertTrue(s.contains("PTY_CALLBACK_count=10000"));}
+ @Test public void criticalRingIsAlsoBounded(){FreezeEvents e=new FreezeEvents();for(int i=0;i<10000;i++)e.add(FreezeEvents.Code.RESUMED,i,0,0);assertTrue(e.snapshot().length()<20000);assertFalse(e.snapshot().contains("\n1 RESUMED 0 0\n"));}
+ @Test public void previewShowsRecoveryEvenAfterLargeStacks()throws Exception{FreezeReportStore s=new FreezeReportStore(temp.getRoot());s.write("a","state=UI_FREEZE_DETECTED\n"+"frame\n".repeat(3000)+"state=UI_RECOVERED duration_ms=6500\n");assertTrue(s.preview("a").startsWith("summary_state=UI_RECOVERED duration_ms=6500"));}
+ @Test public void interruptedPrivateTemporariesAreRecoveredWithoutDeletingReports()throws Exception{FreezeReportStore s=new FreezeReportStore(temp.getRoot());s.write("a","kept");java.nio.file.Path partial=temp.getRoot().toPath().resolve(".pending-own.tmp");java.nio.file.Files.write(partial,new byte[20]);java.nio.file.Files.write(temp.getRoot().toPath().resolve("user-file"),new byte[20]);s.recoverInterruptedWrites();assertFalse(java.nio.file.Files.exists(partial));assertTrue(s.list().contains("a"));assertTrue(java.nio.file.Files.exists(temp.getRoot().toPath().resolve("user-file")));}
+ @Test(timeout=15000) public void actualFixedBashScenarioProduces1500Lines()throws Exception{Process p=new ProcessBuilder("bash","-c",StabilityScenario.COMMAND).redirectErrorStream(true).start();String text=new String(p.getInputStream().readAllBytes(),StandardCharsets.UTF_8);assertEquals(0,p.waitFor());assertEquals(1500,text.lines().filter(s->s.matches("P0-STRESS [0-9]{4}")).count());assertTrue(text.contains("P0-STRESS 1500 OUTPUT TEST END"));}
+}

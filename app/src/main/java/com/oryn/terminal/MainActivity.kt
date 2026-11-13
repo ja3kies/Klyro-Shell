@@ -141,6 +141,10 @@ class MainActivity : ComponentActivity() {
     private var exportRelativePath by mutableStateOf("imports/klyro-export.txt")
     private var showExportPathDialog by mutableStateOf(false)
     private var pendingExportPath: String? = null
+    private val resumeFrame = Runnable {
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+            com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.FIRST_FRAME, 1)
+    }
     private val storageBridgeHandler = Handler(Looper.getMainLooper())
     private fun launchPendingStoragePicker() {
         if (pendingStorageRequestToken == null || isFinishing || isDestroyed) return
@@ -693,6 +697,8 @@ class MainActivity : ComponentActivity() {
         // PTYs keep reading in the foreground service while this Activity is
         // backgrounded. Refresh their latest emulator screen once, rather
         // than replaying thousands of stale View invalidations on resume.
+        window.decorView.removeCallbacks(resumeFrame)
+        window.decorView.postOnAnimation(resumeFrame)
         terminalState.sessions.forEach { it.client.setUiActive(true) }
         if (deferredStorageFolderPicker) launchPendingStoragePicker()
         storageBridgeHandler.removeCallbacks(storageBridgePoller)
@@ -700,13 +706,15 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
-        com.oryn.terminal.diagnostics.FreezeRecorder.transition(com.oryn.terminal.diagnostics.FreezeEvents.Code.PAUSED)
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.PAUSE_BEGIN)
         android.util.Log.i("KlyroLifecycle",
             "PAUSE liveSessions=" + terminalState.sessions.size)
         // Only pause UI callbacks; NEVER stop, close or signal a shell here.
+        window.decorView.removeCallbacks(resumeFrame)
         terminalState.sessions.forEach { it.client.setUiActive(false) }
         storageBridgeHandler.removeCallbacks(storageBridgePoller)
         super.onPause()
+        com.oryn.terminal.diagnostics.FreezeRecorder.transition(com.oryn.terminal.diagnostics.FreezeEvents.Code.PAUSED)
     }
 
     override fun onStop() {

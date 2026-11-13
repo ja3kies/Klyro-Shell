@@ -16,6 +16,12 @@ public final class FreezeReportStore {
         if(Files.isSymbolicLink(this.directory)) throw new IOException("Unsafe report directory");
         Files.createDirectories(this.directory);
     }
+    /** Startup only, before writers are published: remove this store's interrupted temporaries. */
+    public synchronized void recoverInterruptedWrites() throws IOException {
+        try(DirectoryStream<Path> entries=Files.newDirectoryStream(directory,".pending-*.tmp")) {
+            for(Path entry:entries) if(!Files.isDirectory(entry,LinkOption.NOFOLLOW_LINKS)) Files.deleteIfExists(entry);
+        }
+    }
     private Path path(String id) {
         if(id==null || !id.matches("[a-zA-Z0-9-]{1,100}")) throw new IllegalArgumentException("Invalid report ID");
         return directory.resolve(id+".report");
@@ -64,7 +70,13 @@ public final class FreezeReportStore {
         if(text.length()<=8192) return text;
         int end=8192;
         if(Character.isHighSurrogate(text.charAt(end-1))) end--;
-        return text.substring(0,end)+"\n[PREVIEW TRUNCATED — export ZIP for full report]";
+        int stateStart=text.lastIndexOf("\nstate=");
+        String summary="state=UNCONFIRMED";
+        if(stateStart>=0) {
+            int stateEnd=text.indexOf('\n',stateStart+1);
+            summary=text.substring(stateStart+1,stateEnd<0?text.length():stateEnd);
+        }
+        return "summary_"+summary+"\n"+text.substring(0,end)+"\n[PREVIEW TRUNCATED — export ZIP for full report]";
     }
     public synchronized void delete(String id) throws IOException { Files.deleteIfExists(path(id)); }
     public void exportZip(OutputStream output) throws IOException {

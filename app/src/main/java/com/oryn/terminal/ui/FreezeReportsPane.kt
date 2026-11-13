@@ -64,7 +64,8 @@ internal fun FreezeReportsPane(storeProvider: () -> com.oryn.terminal.diagnostic
         }
         for ((id, body) in reports) {
             Column(Modifier.fillMaxWidth().testTag("freeze-report-$id")) {
-            val state = body.lineSequence().lastOrNull { it.startsWith("state=") } ?: "unconfirmed"
+            val state = body.lineSequence().firstOrNull { it.startsWith("summary_state=") }?.removePrefix("summary_")
+                ?: body.lineSequence().lastOrNull { it.startsWith("state=") } ?: "unconfirmed"
             Text(java.util.Date(id.substringBefore('-').toLongOrNull() ?: 0).toString())
             Text(state)
             Row {
@@ -149,7 +150,10 @@ private fun FreezeStabilityControls() {
         confirmButton = { TextButton(onClick = {
             val seconds = blockSeconds; blockSeconds = 0
             if (!com.oryn.terminal.KlyroSessionRuntime.sessions.hasLiveSessions())
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ android.os.SystemClock.sleep(seconds * 1000L) }, 1500)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    if (!com.oryn.terminal.KlyroSessionRuntime.sessions.hasLiveSessions() && FreezeRecorder.lifecycle == "RESUMED")
+                        android.os.SystemClock.sleep(seconds * 1000L)
+                }, 1500)
         }) { Text("Run deliberate test") } },
         dismissButton = { TextButton(onClick = { blockSeconds = 0 }) { Text("Cancel") } })
 }

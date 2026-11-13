@@ -12,6 +12,8 @@ import static org.junit.Assert.*;
 /** Deliberate stalls in a test process; never invoked by app startup. */
 public class FreezeRecorderDeviceTest {
     private void verifyStall(long duration, boolean twoStacks) throws Exception {
+        org.junit.Assume.assumeFalse("Deliberate stalls require no live user sessions",
+            com.oryn.terminal.KlyroSessionRuntime.INSTANCE.getSessions().hasLiveSessions());
         FreezeRecorder recorder=FreezeRecorder.INSTANCE;
         recorder.start(InstrumentationRegistry.getInstrumentation().getTargetContext());
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> recorder.transition(FreezeEvents.Code.RESUMED));

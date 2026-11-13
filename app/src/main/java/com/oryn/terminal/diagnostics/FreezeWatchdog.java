@@ -11,7 +11,7 @@ public final class FreezeWatchdog {
         public final long generation, started, duration;
         Event(Kind k, long g, long s, long d) { kind=k; generation=g; started=s; duration=d; }
     }
-    private long generation, eligibleAt, sentAt;
+    private long generation, eligibleAt, sentAt, firstCaptureAt;
     private boolean resumed, pending, stalled, captured, second;
     public synchronized List<Event> lifecycle(boolean active, long now) {
         List<Event> events = acknowledge(generation, now);
@@ -30,8 +30,8 @@ public final class FreezeWatchdog {
         }
         long elapsed=Math.max(0,now-sentAt);
         if (elapsed>=2000 && !stalled) { stalled=true; events.add(new Event(Kind.UI_STALL_DETECTED,generation,sentAt,elapsed)); }
-        if (elapsed>=5000 && !captured) { captured=true; events.add(new Event(Kind.UI_FREEZE_DETECTED,generation,sentAt,elapsed)); }
-        if (elapsed>=10000 && !second) { second=true; events.add(new Event(Kind.SECOND_SNAPSHOT,generation,sentAt,elapsed)); }
+        if (elapsed>=5000 && !captured) { captured=true; firstCaptureAt=now; events.add(new Event(Kind.UI_FREEZE_DETECTED,generation,sentAt,elapsed)); }
+        if (captured && now-firstCaptureAt>=5000 && !second) { second=true; events.add(new Event(Kind.SECOND_SNAPSHOT,generation,sentAt,elapsed)); }
         return events;
     }
     public synchronized List<Event> acknowledge(long token, long now) {

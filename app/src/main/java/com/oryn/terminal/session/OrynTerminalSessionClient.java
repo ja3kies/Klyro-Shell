@@ -100,6 +100,11 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
             if (view != null && view.isAttachedToWindow()) {
                 com.oryn.terminal.diagnostics.FreezeRecorder.INSTANCE.event(
                     com.oryn.terminal.diagnostics.FreezeEvents.Code.VIEW_REFRESH, 0, 0);
+                com.termux.terminal.TerminalEmulator emulator = view.getCurrentSession() == null ? null : view.getCurrentSession().getEmulator();
+                if (emulator != null) com.oryn.terminal.diagnostics.FreezeRecorder.INSTANCE.event(
+                    com.oryn.terminal.diagnostics.FreezeEvents.Code.CURSOR, emulator.getCursorCol(), emulator.getCursorRow());
+                if (emulator != null) com.oryn.terminal.diagnostics.FreezeRecorder.INSTANCE.event(
+                    com.oryn.terminal.diagnostics.FreezeEvents.Code.SCROLLBACK, emulator.getScreen().getActiveTranscriptRows(), 0);
                 view.onScreenUpdated();
             }
             Runnable observer = outputObserver;
@@ -126,7 +131,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     @Override
     public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
         com.oryn.terminal.diagnostics.FreezeRecorder.INSTANCE.event(
-            com.oryn.terminal.diagnostics.FreezeEvents.Code.PTY_CALLBACK, 0, 0);
+            com.oryn.terminal.diagnostics.FreezeEvents.Code.PTY_CALLBACK, session.getPid(), 0);
         // No callbacks are queued while the Activity is paused. One update
         // reads the latest emulator state upon resume, retaining every byte
         // in the PTY's own buffer instead of replaying obsolete UI work.
