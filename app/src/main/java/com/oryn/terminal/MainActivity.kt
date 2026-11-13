@@ -19,6 +19,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -236,6 +238,7 @@ class MainActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
+                val transferContext = currentCoroutineContext()
                 runCatching {
                     val paths = OrynPaths(applicationContext.filesDir,
                         File(applicationContext.applicationInfo.nativeLibraryDir))
@@ -272,18 +275,17 @@ class MainActivity : ComponentActivity() {
                                     val size = if (cursor.isNull(3)) -1L else cursor.getLong(3)
                                     if (size > KlyroFileSafety.MAX_FILE_BYTES) continue
                                     val name = KlyroFileSafety.safeName(cursor.getString(1), "file")
-                                    val target = KlyroFileSafety.availableName(destination, name)
                                     val item = DocumentsContract.buildDocumentUriUsingTree(
                                         tree, cursor.getString(0))
                                     val temporary = File.createTempFile(".klyro-", ".tmp", destination)
                                     try {
                                         contentResolver.openInputStream(item)?.use { input ->
                                             FileOutputStream(temporary).use { output ->
-                                                KlyroFileSafety.copyLimited(input, output)
+                                                KlyroFileSafety.copyLimited(input, output) { transferContext.ensureActive() }
                                             }
                                         } ?: continue
-                                        java.nio.file.Files.move(
-                                            temporary.toPath(), target.toPath())
+                                        transferContext.ensureActive()
+                                        KlyroFileSafety.commitImport(temporary, destination, name)
                                         imported++
                                     } finally {
                                         if (temporary.exists()) temporary.delete()
@@ -321,6 +323,7 @@ class MainActivity : ComponentActivity() {
             if (uri == null) return@registerForActivityResult
             lifecycleScope.launch {
                 val result = withContext(Dispatchers.IO) {
+                    val transferContext = currentCoroutineContext()
                     runCatching {
                         val paths = OrynPaths(
                             applicationContext.filesDir,
@@ -335,19 +338,20 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         val safeName = KlyroFileSafety.safeName(sourceName)
-                        val target = KlyroFileSafety.availableName(destinationDir, safeName)
+                        var importedName = safeName
                         val temporary = File.createTempFile(".klyro-import-", ".tmp", destinationDir)
                         try {
                             contentResolver.openInputStream(uri)?.use { input ->
                                 FileOutputStream(temporary).use { output ->
-                                    KlyroFileSafety.copyLimited(input, output)
+                                    KlyroFileSafety.copyLimited(input, output) { transferContext.ensureActive() }
                                 }
                             } ?: throw IOException("Cannot open selected file")
-                            java.nio.file.Files.move(temporary.toPath(), target.toPath())
+                            transferContext.ensureActive()
+                            importedName = KlyroFileSafety.commitImport(temporary, destinationDir, safeName).name
                         } finally {
                             if (temporary.exists()) temporary.delete()
                         }
-                        target.name
+                        importedName
                     }
                 }
                 result.onSuccess {
@@ -368,16 +372,16 @@ class MainActivity : ComponentActivity() {
             pendingExportPath = null
             lifecycleScope.launch {
                 val outcome = withContext(Dispatchers.IO) {
+                    val transferContext = currentCoroutineContext()
                     runCatching {
                         val root = OrynPaths(
                             applicationContext.filesDir,
                             File(applicationContext.applicationInfo.nativeLibraryDir)
                         )
-                        val source = KlyroFileSafety.exportFile(root.home, relativePath)
-                        FileInputStream(source).use { input ->
+                        KlyroFileSafety.openExport(root.home, relativePath).use { input ->
                             val stream = contentResolver.openOutputStream(uri, "w")
                                 ?: throw IOException("Unable to open destination")
-                            stream.use { output -> KlyroFileSafety.copyLimited(input, output) }
+                            stream.use { output -> KlyroFileSafety.copyLimited(input, output) { transferContext.ensureActive() } }
                         }
                     }
                 }

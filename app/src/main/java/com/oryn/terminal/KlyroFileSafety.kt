@@ -62,12 +62,31 @@ internal object KlyroFileSafety {
         throw IOException("Too many files with this name; rename the source file")
     }
 
-    fun copyLimited(input: InputStream, output: OutputStream): Long {
+    fun openExport(home: File, relativePath: String): InputStream =
+        Files.newInputStream(exportFile(home, relativePath).toPath(), LinkOption.NOFOLLOW_LINKS)
+
+    @Synchronized
+    fun commitImport(temporary: File, directory: File, name: String): File {
+        verifyDestination(directory)
+        if (temporary.parentFile?.canonicalFile != directory.canonicalFile ||
+            !Files.isRegularFile(temporary.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+            throw IOException("Import temporary file must belong to its destination")
+        }
+        val target = availableName(directory, name)
+        Files.move(temporary.toPath(), target.toPath())
+        return target
+    }
+
+    fun copyLimited(input: InputStream, output: OutputStream, checkCancelled: () -> Unit = {}): Long {
         val buffer = ByteArray(8192)
         var bytes = 0L
         while (true) {
+            if (Thread.currentThread().isInterrupted) throw java.io.InterruptedIOException("Transfer interrupted")
+            checkCancelled()
             val count = input.read(buffer)
+            checkCancelled()
             if (count < 0) break
+            if (count == 0) throw IOException("Input stream made no progress")
             bytes += count
             if (bytes > MAX_FILE_BYTES) throw IOException("File exceeds 32 MiB limit")
             output.write(buffer, 0, count)

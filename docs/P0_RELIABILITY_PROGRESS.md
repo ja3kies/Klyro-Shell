@@ -56,3 +56,22 @@ Les observations physiques antérieures du rapport daily-trial sont conservées
 comme antérieures. Home/récents/pression mémoire/force-stop : PENDING DEVICE
 VALIDATION, pas RESOLVED. Aucun appareil ADB connecté ; ne fermer aucune session
 utilisateur pour fabriquer une preuve. P0-06 à P0-10 restent UNVERIFIED à ce stade.
+
+## Cycle 4 — transferts et intégrité des fichiers
+
+15 scénarios FileTransferAdversarialTest : annulation avant lecture/après lecture,
+provider sans progrès, interruption, document vide, lectures courtes, lecture
+révoquée, ENOSPC simulé au stream, huit commits concurrents, fichier utilisateur
+existant, temporaire extérieur, temporaire symlink, temporaire absent, nom caché
+Unicode et export absent. PASS JVM (ce ne sont pas des providers Android).
+
+CONFIRMED : la copie ne consultait pas l'annulation du propriétaire avant de
+committer ; la sélection du nom précédait la copie et pouvait devenir obsolète
+entre deux imports ; un stream retournant constamment zéro provoquait une boucle.
+Correctifs : checkpoints du contexte coroutine, commit local sérialisé avec
+nouvelle sélection du nom, refus d'un stream sans progrès, ouverture export
+NOFOLLOW sur le fichier final. Aucun document utilisateur supprimé en cas d'erreur.
+Les courses avec un processus hostile remplaçant les répertoires parents dans le
+même UID ne sont pas prétendues éliminées par ce verrou applicatif.
+P0-06/07/09 : encore UNVERIFIED ; P0-08 : protections hôte testées, SAF physique
+PENDING DEVICE VALIDATION.
