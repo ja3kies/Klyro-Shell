@@ -6,6 +6,26 @@ import java.util.concurrent.*;
 import static org.junit.Assert.*;
 
 public class ByteQueueTest {
+    @Test public void availableTracksWrappingReadsAndClosedTail() {
+        ByteQueue queue = new ByteQueue(8);
+        assertEquals(0, queue.available());
+        assertTrue(queue.offer(new byte[]{1, 2, 3, 4, 5, 6}, 0, 6));
+        assertEquals(6, queue.available());
+        byte[] prefix = new byte[4];
+        assertEquals(4, queue.read(prefix, false));
+        assertArrayEquals(new byte[]{1, 2, 3, 4}, prefix);
+        assertEquals(2, queue.available());
+        assertTrue(queue.offer(new byte[]{7, 8, 9, 10, 11}, 0, 5));
+        assertEquals(7, queue.available());
+        queue.close();
+        assertEquals(7, queue.available());
+        byte[] tail = new byte[7];
+        assertEquals(7, queue.read(tail, false));
+        assertArrayEquals(new byte[]{5, 6, 7, 8, 9, 10, 11}, tail);
+        assertEquals(0, queue.available());
+        assertEquals(-1, queue.read(tail, true));
+    }
+
     @Test(timeout = 1000) public void fullInputQueueRejectsWholePasteWithoutBlocking() {
         ByteQueue queue = new ByteQueue(128 * 1024);
         byte[] paste = new byte[65536 + 12];
