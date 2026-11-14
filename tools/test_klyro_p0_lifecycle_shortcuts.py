@@ -169,8 +169,8 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         gradle = (ROOT / "app/build.gradle.kts").read_text()
         code = int(re.search(r"versionCode\s*=\s*(\d+)", gradle).group(1))
         version = re.search(r'versionName\s*=\s*"([^"]+)"', gradle).group(1)
-        self.assertGreater(code, 19, "Android rejects downgrades from 0.4.12")
-        self.assertEqual("0.4.16-dev", version)
+        self.assertGreater(code, 23, "Android rejects downgrades from 0.4.16-dev")
+        self.assertEqual("0.4.17-dev", version)
 
     def test_failed_bootstrap_cannot_modify_existing_shell_profile(self):
         installer = (APP / "termux/TermuxBootstrapInstaller.java").read_text()
