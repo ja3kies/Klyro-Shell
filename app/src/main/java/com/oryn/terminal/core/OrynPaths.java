@@ -103,18 +103,23 @@ public final class OrynPaths {
         }
     }
 
+    private static boolean hasContent(File file) {
+        return file.isFile() && file.length() > 0;
+    }
+
     public boolean isBootstrapInstalled() {
-        return new File(prefix, "bin/bash").canExecute()
-                && new File(prefix, "bin/pkg").exists()
-                && new File(prefix, "bin/apt").exists()
-                && new File(prefix, ".oryn-bootstrap-version").isFile();
+        File bash = new File(prefix, "bin/bash");
+        return hasContent(bash) && bash.canExecute()
+                && hasContent(new File(prefix, "bin/pkg"))
+                && hasContent(new File(prefix, "bin/apt"))
+                && hasContent(new File(prefix, ".oryn-bootstrap-version"));
     }
 
     /** True only when the APK-native PRoot runtime and its loader/dependencies exist. */
     public boolean isProotInstalled() {
-        return proot.isFile() && proot.canExecute()
-                && prootLoader.isFile() && prootLoader.canExecute()
-                && new File(prootDependencyDir, "libtalloc.so.2").isFile()
+        return hasContent(proot) && proot.canExecute()
+                && hasContent(prootLoader) && prootLoader.canExecute()
+                && hasContent(new File(prootDependencyDir, "libtalloc.so.2"))
                 && hasLibrary("libandroid-shmem.so");
     }
 
@@ -122,7 +127,7 @@ public final class OrynPaths {
         File[] files = prootLibDir.listFiles();
         if (files == null) return false;
         for (File file : files) {
-            if (file.isFile() && file.getName().startsWith(prefix)) return true;
+            if (hasContent(file) && file.getName().startsWith(prefix)) return true;
         }
         return false;
     }
