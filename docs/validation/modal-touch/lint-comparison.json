@@ -1,0 +1,9 @@
+{
+  "baseline": "Lint Report: 45 warnings and 11 hints",
+  "final": "Lint Report: 45 warnings and 11 hints",
+  "new_issues": [],
+  "removed_issues": [],
+  "baseline_source": "d634b4d (prior delivered APK source)",
+  "final_source": "7c730536d53991eb70d558babc0aa367cf244123",
+  "note": "Comparison ignores source line shifts, retains file and message; existing warnings not suppressed."
+}
