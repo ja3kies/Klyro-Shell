@@ -172,9 +172,6 @@ public final class TermuxBootstrapInstaller {
 
         KlyroStorageCommandBridge.installHelper(staging);
         KlyroTermuxInfo.installHelper(staging);
-        writeKlyroBashProfile(new File(paths.getHome(), ".bashrc"));
-        writeIfAbsent(new File(paths.getHome(), ".profile"),
-                "[ -f \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\"\n");
         writeIfAbsent(new File(staging, ".oryn-bootstrap-version"),
                 BOOTSTRAP_TAG + "\n");
 
@@ -182,6 +179,11 @@ public final class TermuxBootstrapInstaller {
         // the final rename fails; never touch /data/data/com.termux.
         boolean replaced = prefix.exists();
         activatePrefix(staging, prefix, previous);
+        // Only mutate user profiles once the staged runtime has been activated.
+        // A failed extraction or prefix swap must leave existing shell settings intact.
+        writeKlyroBashProfile(new File(paths.getHome(), ".bashrc"));
+        writeIfAbsent(new File(paths.getHome(), ".profile"),
+                "[ -f \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\"\n");
         progress(listener, "Klyro environment installed and validated", 100);
         complete(listener, true, "Installed " + BOOTSTRAP_TAG
                 + " (ARM64, " + extracted + " files) in Klyro private storage."
