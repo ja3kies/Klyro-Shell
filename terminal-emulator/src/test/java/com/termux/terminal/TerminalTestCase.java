@@ -164,7 +164,8 @@ public abstract class TerminalTestCase extends TestCase {
 					assertFalse("Low surrogate without preceding high surrogate", Character.isLowSurrogate(c));
 					codePoint = c;
 				}
-				assertFalse("Screen should never contain unassigned characters", Character.getType(codePoint) == Character.UNASSIGNED);
+				assertTrue("Screen must contain valid Unicode scalar values",
+                        Character.isValidCodePoint(codePoint) && !(codePoint >= 0xD800 && codePoint <= 0xDFFF));
 				int width = WcWidth.width(codePoint);
 				assertFalse("The first column should not start with combining character", currentColumn == 0 && width < 0);
 				if (width > 0) currentColumn += width;

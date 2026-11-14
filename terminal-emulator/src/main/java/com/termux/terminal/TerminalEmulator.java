@@ -490,8 +490,8 @@ public final class TerminalEmulator {
                     int codePoint = (mUtf8InputBuffer[0] & firstByteMask);
                     for (int i = 1; i < mUtf8Index; i++)
                         codePoint = ((codePoint << 6) | (mUtf8InputBuffer[i] & 0b00111111));
-                    if (((codePoint <= 0b1111111) && mUtf8Index > 1) || (codePoint < 0b11111111111 && mUtf8Index > 2)
-                        || (codePoint < 0b1111111111111111 && mUtf8Index > 3)) {
+                    if ((codePoint < 0x80 && mUtf8Index > 1) || (codePoint < 0x800 && mUtf8Index > 2)
+                        || (codePoint < 0x10000 && mUtf8Index > 3)) {
                         // Overlong encoding.
                         codePoint = UNICODE_REPLACEMENT_CHAR;
                     }
@@ -505,11 +505,9 @@ public final class TerminalEmulator {
                         // "It is not possible to use a C1 control obtained from decoding the
                         // UTF-8 text" - http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
                     } else {
-                        switch (Character.getType(codePoint)) {
-                            case Character.UNASSIGNED:
-                            case Character.SURROGATE:
-                                codePoint = UNICODE_REPLACEMENT_CHAR;
-                        }
+                        // UTF-8 scalars do not depend on the platform's Unicode assignment catalogue.
+                        if (codePoint > 0x10FFFF || (codePoint >= 0xD800 && codePoint <= 0xDFFF))
+                            codePoint = UNICODE_REPLACEMENT_CHAR;
                         processCodePoint(codePoint);
                     }
                 }
