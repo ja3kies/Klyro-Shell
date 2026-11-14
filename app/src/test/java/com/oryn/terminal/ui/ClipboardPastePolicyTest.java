@@ -21,10 +21,16 @@ public class ClipboardPastePolicyTest {
         assertFalse(ClipboardPastePolicy.canPaste("a".repeat(ClipboardPastePolicy.MAX_CHARS + 1)));
     }
 
-    @Test public void rejectsBlankAndOversizedUtf8Payloads() {
-        assertFalse(ClipboardPastePolicy.canPaste("   "));
-        assertFalse(ClipboardPastePolicy.canPaste("\u00A0\u2007"));
-        assertFalse(ClipboardPastePolicy.canPaste("\t\n"));
+    @Test public void keepsIndentationPasteAvailableAndConfirmsLineBreaks() {
+        assertTrue(ClipboardPastePolicy.canPaste("   "));
+        assertTrue(ClipboardPastePolicy.canPaste("\u00A0\u2007"));
+        assertTrue(ClipboardPastePolicy.canPaste("\t"));
+        assertTrue(ClipboardPastePolicy.canPaste("\t\n"));
+        assertFalse(ClipboardPastePolicy.requiresConfirmation("   "));
+        assertTrue(ClipboardPastePolicy.requiresConfirmation("\t\n"));
+    }
+
+    @Test public void enforcesUtf8PayloadBounds() {
         assertFalse(ClipboardPastePolicy.canPaste("😀".repeat(20000)));
         assertTrue(ClipboardPastePolicy.canPaste("😀".repeat(1000)));
     }
