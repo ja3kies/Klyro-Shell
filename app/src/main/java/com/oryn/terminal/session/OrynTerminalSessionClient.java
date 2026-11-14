@@ -172,34 +172,54 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         }
     }
 
+    /** A delayed clipboard event belongs to the view that originated it. */
+    private boolean isNativePasteTargetCurrent(@Nullable com.termux.terminal.TerminalSession session,
+                                               @Nullable TerminalView source) {
+        return session != null && source != null && !disposed.get() && uiActive.get()
+                && terminalView == source && source.isAttachedToWindow()
+                && source.getCurrentSession() == session && session.isRunning();
+    }
+
     @Override
     public void onPasteTextFromClipboard(@Nullable com.termux.terminal.TerminalSession session) {
         TerminalView source = terminalView;
-        if (session == null || disposed.get() || !uiActive.get() || source == null
-                || !source.isAttachedToWindow() || source.getCurrentSession() != session || !session.isRunning()) return;
+        if (!isNativePasteTargetCurrent(session, source)) return;
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
         String pasted = com.oryn.terminal.ui.ClipboardTextReader.readPlainText(clipboard);
         if (pasted == null) return;
         if (!ClipboardPastePolicy.canPaste(pasted)) {
-            uiHandler.post(() ->
-                Toast.makeText(context, "Clipboard text is unsupported or too long.",
-                    Toast.LENGTH_SHORT).show());
+            uiHandler.post(() -> {
+                if (isNativePasteTargetCurrent(session, source)) {
+                    Toast.makeText(context, "Clipboard text is unsupported or too long.",
+                        Toast.LENGTH_SHORT).show();
+                }
+            });
             return;
         }
         if (ClipboardPastePolicy.requiresConfirmation(pasted)) {
             if (listener != null) {
                 uiHandler.post(() -> {
-                    if (!disposed.get() && session.isRunning()) {
+                    // Switching away and back must not revive an old clipboard event.
+                    if (isNativePasteTargetCurrent(session, source)) {
                         listener.onNativePasteRequiresConfirmation(pasted);
                     }
                 });
             }
             return;
         }
-        // Respect Bash DECSET 2004: native paste must not bypass bracketed mode.
-        if (!disposed.get() && session.isRunning() && session.getEmulator() != null) {
-            session.getEmulator().paste(pasted);
+        // Single-line native paste follows the same atomic bracketed PTY path
+        // as toolbar Paste. The PTY already reports a full queue via onInputRejected.
+        if (!isNativePasteTargetCurrent(session, source)) return;
+        TerminalEmulator emulator = session.getEmulator();
+        if (emulator == null) {
+            Toast.makeText(context, "Paste not sent — terminal unavailable",
+                Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!emulator.pasteWithResult(pasted) && !session.isRunning()) {
+            Toast.makeText(context, "Paste not sent — terminal closed",
+                Toast.LENGTH_SHORT).show();
         }
     }
 
