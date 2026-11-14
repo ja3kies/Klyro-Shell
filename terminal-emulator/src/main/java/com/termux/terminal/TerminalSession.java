@@ -107,8 +107,8 @@ public final class TerminalSession extends TerminalOutput {
     public void updateSize(int columns, int rows) {
         if (mEmulator == null) {
             initializeEmulator(columns, rows);
-        } else if (isRunning()) {
-            JNI.setPtyWindowSize(mTerminalFileDescriptor, rows, columns);
+        } else {
+            if (isRunning()) JNI.setPtyWindowSize(mTerminalFileDescriptor, rows, columns);
             mEmulator.resize(columns, rows);
         }
     }
@@ -415,7 +415,7 @@ public final class TerminalSession extends TerminalOutput {
                     // Negated signal.
                     exitDescription += " (signal " + (-exitCode) + ")";
                 }
-                exitDescription += " - press Enter]";
+                exitDescription += " - close this tab when finished]";
 
                 byte[] bytesToWrite = exitDescription.getBytes(StandardCharsets.UTF_8);
                 mEmulator.append(bytesToWrite, bytesToWrite.length);

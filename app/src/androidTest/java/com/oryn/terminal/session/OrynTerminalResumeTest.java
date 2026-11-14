@@ -30,16 +30,21 @@ public class OrynTerminalResumeTest {
         });
     }
 
-    @SuppressWarnings("ConstantConditions")
+    private static TerminalSession sessionFor(OrynTerminalSessionClient client) {
+        Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        return new TerminalSession("/system/bin/sh", app.getFilesDir().getAbsolutePath(),
+                new String[] {"sh"}, new String[0], 100, client);
+    }
+
     @Test public void backgroundOutputIsCoalescedToOneForegroundRefresh() {
         AtomicInteger updates = new AtomicInteger();
         OrynTerminalSessionClient client = newClient(updates);
         try {
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
                 client.setUiActive(false);
-                // The callback ignores its session argument; a null avoids
-                // spawning any shell process from this UI-only test.
-                for (int i = 0; i < 4000; i++) client.onTextChanged(null);
+                // Constructing a session does not launch JNI until updateSize().
+                TerminalSession session = sessionFor(client);
+                for (int i = 0; i < 4000; i++) client.onTextChanged(session);
             });
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             assertEquals("No view refresh while Activity is paused", 0, updates.get());
@@ -67,13 +72,12 @@ public class OrynTerminalResumeTest {
         }
     }
 
-    @SuppressWarnings("ConstantConditions")
     @Test public void disposePreventsDeferredOutputFromBeingDelivered() {
         AtomicInteger updates = new AtomicInteger();
         OrynTerminalSessionClient client = newClient(updates);
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             client.setUiActive(false);
-            client.onTextChanged(null);
+            client.onTextChanged(sessionFor(client));
             client.dispose();
             client.setUiActive(true);
         });

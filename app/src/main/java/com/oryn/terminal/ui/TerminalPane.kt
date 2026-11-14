@@ -135,6 +135,7 @@ fun TerminalPane(
     selectedWorkspaceId: String,
     tabWorkspaces: Map<Long, String>,
     tabsWithUnreadOutput: Set<Long>,
+    finishedTabIds: Set<Long>,
     jobSessions: Map<Long, TerminalSession>,
     lastOutputElapsedMs: Map<Long, Long>,
     onSelectWorkspace: (String) -> Unit,
@@ -249,10 +250,10 @@ fun TerminalPane(
         lastOutputElapsedMs[id] ?: 0L, activityElapsedMs
     )
     // Keep TalkBack descriptions stable during duration ticks.
-    fun activitySpeech(id: Long): String = KlyroJobProbe.statusLabel(
-        tabJobActivity[id]?.sample, recentOutput(id)
-    )
+    fun activitySpeech(id: Long): String = if (id in finishedTabIds) "Session ended" else
+        KlyroJobProbe.statusLabel(tabJobActivity[id]?.sample, recentOutput(id))
     fun activityLabel(id: Long): String {
+        if (id in finishedTabIds) return "Session ended"
         val uiState = tabJobActivity[id]
         val result = activitySpeech(id)
         return if (uiState?.sample?.hasForegroundJob() == true) {
@@ -262,6 +263,7 @@ fun TerminalPane(
         } else result
     }
     fun compactActivity(id: Long): String? = when {
+        id in finishedTabIds -> "DONE"
         tabJobActivity[id]?.sample?.hasForegroundJob() == true -> "JOB"
         recentOutput(id) -> "OUT"
         else -> null
@@ -1210,8 +1212,10 @@ fun TerminalPane(
                 sessionId = id,
                 sessionName = name,
                 isActive = id == activeTabId,
+                sessionRunning = id !in finishedTabIds,
                 activityStatus = activityLabel(id),
                 activityDetail = when {
+                    id in finishedTabIds -> "The process has exited. Output remains available until you close the tab."
                     tabJobActivity[id]?.sample?.hasForegroundJob() == true ->
                         "A different process group owns the foreground PTY. Elapsed time is approximate."
                     tabJobActivity[id]?.sample?.state == KlyroJobProbe.State.UNAVAILABLE ->

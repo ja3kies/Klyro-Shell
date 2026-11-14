@@ -28,10 +28,16 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn(".setContentIntent(openApp)", self.service)
 
     def test_notification_reports_actual_session_count(self):
-        self.assertIn("KlyroSessionRuntime.sessions.sessions.size", self.service)
+        self.assertIn("KlyroSessionRuntime.sessions.liveSessionCount", self.service)
+        self.assertNotIn("KlyroSessionRuntime.sessions.sessions.size", self.service)
         self.assertIn('if (sessionCount == 1) "" else "s"', self.service)
 
     def test_foreground_notification_refresh_does_not_realert(self):
+        refresh = self.service.split("fun refreshSessionNotification", 1)[1].split("fun ensureRunning", 1)[0]
+        self.assertIn("FreezeRecorder.serviceActive", refresh)
+        self.assertIn(".notify(", refresh)
+        self.assertNotIn("startForegroundService", refresh)
+        self.assertNotIn("startForeground(", refresh)
         self.assertIn(".setOnlyAlertOnce(true)", self.service)
         self.assertIn(".setCategory(NotificationCompat.CATEGORY_SERVICE)", self.service)
 

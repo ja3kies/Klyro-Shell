@@ -26,7 +26,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         val viewClient: OrynTerminalViewClient,
         val title: String = "Bash",
         val customTitle: String? = null,
-        val workspaceId: String = KlyroWorkspaceCatalog.GENERAL
+        val workspaceId: String = KlyroWorkspaceCatalog.GENERAL,
+        val exitStatus: Int? = null
     )
 
     private val tabs = mutableStateListOf<ShellTab>()
@@ -59,6 +60,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     val lastOutputElapsedMs: Map<Long, Long> get() = lastOutputElapsed.toMap()
     fun outputRevision(tabId: Long?): Long = tabId?.let { outputRevisions[it] } ?: 0L
     val tabsWithUnreadOutput: Set<Long> get() = unreadActivity.keys.toSet()
+    val finishedTabIds: Set<Long> get() = tabs.filter { it.exitStatus != null }.map { it.id }.toSet()
     private val invalidTitleCharacters = Regex("[\\p{Cntrl}\\p{Cf}]")
     val sessions: List<ShellTab> get() = tabs
     private var nextId = 1L
@@ -111,7 +113,9 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (pendingNativePaste?.tabId == tabId) pendingNativePaste = null
     }
 
-    fun hasLiveSessions(): Boolean = tabs.isNotEmpty()
+    // A newly attached PTY starts only when TerminalView supplies its first size.
+    val liveSessionCount: Int get() = tabs.count { it.exitStatus == null }
+    fun hasLiveSessions(): Boolean = liveSessionCount > 0
 
     fun isSessionActive(id: Long): Boolean =
         activeTabId == id && tabs.any { it.id == id }
@@ -171,8 +175,12 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         activeTabId = id
         updateDiagnosticSession()
         unreadActivity.remove(id)
-        sessionFailureMessage = null
-        sessionStatus = ""
+        val exitStatus = selected?.exitStatus
+        sessionFailureMessage = exitStatus?.takeIf { it != 0 }?.let {
+            "Bash exited (code $it). Output is retained until you close this tab."
+        }
+        sessionStatus = if (exitStatus == null) "" else
+            sessionFailureMessage ?: "Bash session ended. Output retained until you close this tab."
     }
 
     fun renameTab(id: Long, rawName: String) {
@@ -229,15 +237,21 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     private fun finishTab(id: Long, session: TerminalSession, exitStatus: Int) {
-        val entry = tabs.firstOrNull { it.id == id } ?: return
-        if (entry.session !== session) return
-        val wasActive = activeTabId == id
-        closeTab(id)
-        if (wasActive) {
+        val index = tabs.indexOfFirst { it.id == id }
+        if (index < 0) return
+        val entry = tabs[index]
+        if (entry.session !== session || entry.exitStatus != null) return
+        // A process exit ends stdin, not the user's access to its transcript.
+        tabs[index] = entry.copy(exitStatus = exitStatus)
+        if (pendingNativePaste?.tabId == id) pendingNativePaste = null
+        outputRevisions[id] = (outputRevisions[id] ?: 0L) + 1L
+        if (activeTabId == id) {
             sessionFailureMessage = if (exitStatus == 0) null else
-                "Bash exited unexpectedly (code $exitStatus). Verify the runtime before starting another session."
-            sessionStatus = sessionFailureMessage ?: "Bash session ended."
-        }
+                "Bash exited (code $exitStatus). Output is retained until you close this tab."
+            sessionStatus = sessionFailureMessage ?:
+                "Bash session ended. Output retained until you close this tab."
+        } else unreadActivity[id] = true
+        updateDiagnosticSession()
     }
 
     // Legacy interface compatibility; normal sessions use listenerFor(tabId)

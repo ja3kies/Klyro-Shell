@@ -1,5 +1,6 @@
 package com.oryn.terminal
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -44,26 +45,7 @@ class KlyroSessionService : Service() {
             stopSelf(startId)
             return START_NOT_STICKY
         }
-        val sessionCount = KlyroSessionRuntime.sessions.sessions.size
-        val openApp = PendingIntent.getActivity(
-            this, 0,
-            Intent(this, MainActivity::class.java).apply {
-                this.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val notification = NotificationCompat.Builder(this, CHANNEL)
-            .setContentTitle("Klyro Shell")
-            .setContentText("$sessionCount active terminal session" +
-                if (sessionCount == 1) "" else "s")
-            .setContentIntent(openApp)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setOnlyAlertOnce(true)
-            .setSmallIcon(R.drawable.ic_klyro_mark_monochrome)
-            .setOngoing(true)
-            .setSilent(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+        val notification = sessionNotification(this, KlyroSessionRuntime.sessions.liveSessionCount)
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIFICATION_ID, notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -94,6 +76,42 @@ class KlyroSessionService : Service() {
     companion object {
         private const val CHANNEL = "klyro_sessions"
         private const val NOTIFICATION_ID = 1001
+        private fun sessionNotification(context: Context, sessionCount: Int): Notification {
+            val openApp = PendingIntent.getActivity(
+                context, 0,
+                Intent(context, MainActivity::class.java).apply {
+                    this.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            return NotificationCompat.Builder(context, CHANNEL)
+                .setContentTitle("Klyro Shell")
+                .setContentText("$sessionCount active terminal session" +
+                    if (sessionCount == 1) "" else "s")
+                .setContentIntent(openApp)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .setOnlyAlertOnce(true)
+                .setSmallIcon(R.drawable.ic_klyro_mark_monochrome)
+                .setOngoing(true)
+                .setSilent(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
+        }
+
+        /** Update an existing service notification; never restart an FGS from a background callback. */
+        fun refreshSessionNotification(context: Context) {
+            if (!KlyroSessionRuntime.sessions.hasLiveSessions()) {
+                stopIfEmpty(context)
+            } else if (com.oryn.terminal.diagnostics.FreezeRecorder.serviceActive) {
+                try {
+                    context.getSystemService(NotificationManager::class.java).notify(
+                        NOTIFICATION_ID, sessionNotification(context, KlyroSessionRuntime.sessions.liveSessionCount))
+                } catch (denied: SecurityException) {
+                    android.util.Log.w("KlyroSessionService", "Cannot update session notification", denied)
+                }
+            }
+        }
+
         fun ensureRunning(context: Context) {
             if (!KlyroSessionRuntime.sessions.hasLiveSessions()) return
             ContextCompat.startForegroundService(context.applicationContext,

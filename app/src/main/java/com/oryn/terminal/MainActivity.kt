@@ -582,6 +582,7 @@ class MainActivity : ComponentActivity() {
                     runtimeInstalled = runtimeInstalled,
                     session = if (showWelcomeScreen) null else terminalState.activeSession,
                     hasRunningSessions = terminalState.sessions.isNotEmpty(),
+                    hasLiveSessions = terminalState.hasLiveSessions(),
                     tabs = terminalState.displayTabs,
                     activeTabId = terminalState.activeTabId,
                     outputRevision = terminalState.outputRevision(terminalState.activeTabId),
@@ -589,6 +590,7 @@ class MainActivity : ComponentActivity() {
                     selectedWorkspaceId = workspaceStore.activeId,
                     tabWorkspaces = terminalState.tabWorkspaceIds,
                     tabsWithUnreadOutput = terminalState.tabsWithUnreadOutput,
+                    finishedTabIds = terminalState.finishedTabIds,
                     jobSessions = terminalState.sessions.associate { it.id to it.session },
                     lastOutputElapsedMs = terminalState.lastOutputElapsedMs,
                     onSelectWorkspace = { workspaceStore.select(it) },
@@ -607,7 +609,7 @@ class MainActivity : ComponentActivity() {
                     onRenameTab = terminalState::renameTab,
                     onCloseTab = { id ->
                         terminalState.closeTab(id)
-                        if (!terminalState.hasLiveSessions()) KlyroSessionService.stopIfEmpty(this)
+                        KlyroSessionService.refreshSessionNotification(this)
                     },
                     onNewTab = ::launchBash,
                     onReturnHome = { showWelcomeScreen = true },
@@ -1035,7 +1037,7 @@ class MainActivity : ComponentActivity() {
 
     private fun closeBash() {
         terminalState.closeSession()
-        if (!terminalState.hasLiveSessions()) KlyroSessionService.stopIfEmpty(this)
+        KlyroSessionService.refreshSessionNotification(this)
     }
 
     private fun refreshReadiness() {
@@ -1084,6 +1086,7 @@ private fun OrynTerminalApp(
     runtimeInstalled: Boolean,
     session: TerminalSession?,
     hasRunningSessions: Boolean,
+    hasLiveSessions: Boolean,
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
     outputRevision: Long,
@@ -1091,6 +1094,7 @@ private fun OrynTerminalApp(
     selectedWorkspaceId: String,
     tabWorkspaces: Map<Long, String>,
     tabsWithUnreadOutput: Set<Long>,
+    finishedTabIds: Set<Long>,
     jobSessions: Map<Long, TerminalSession>,
     lastOutputElapsedMs: Map<Long, Long>,
     onSelectWorkspace: (String) -> Unit,
@@ -1236,6 +1240,7 @@ private fun OrynTerminalApp(
                 selectedWorkspaceId = selectedWorkspaceId,
                 tabWorkspaces = tabWorkspaces,
                 tabsWithUnreadOutput = tabsWithUnreadOutput,
+                finishedTabIds = finishedTabIds,
                 jobSessions = jobSessions,
                 lastOutputElapsedMs = lastOutputElapsedMs,
                 onSelectWorkspace = onSelectWorkspace,
@@ -1480,7 +1485,7 @@ private fun OrynTerminalApp(
                             Button(
                                 onClick = onInstall,
                                 enabled = !installing && !verifyingRuntime &&
-                                    (!hasRunningSessions || runtimeInstalled),
+                                    (!hasLiveSessions || runtimeInstalled),
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (hasRunningSessions) ui.tile else ui.accent,
@@ -1494,7 +1499,7 @@ private fun OrynTerminalApp(
                                     KlyroHomeSetupLabelPolicy.label(
                                         installing, verifyingRuntime, runtimeInstalled,
                                         bootstrapInstalled, technicalErrorDetails != null,
-                                        hasRunningSessions
+                                        hasLiveSessions
                                     ),
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -1502,7 +1507,7 @@ private fun OrynTerminalApp(
                         }
                         if (KlyroRuntimeRepairPolicy.canOffer(
                                 runtimeInstalled, runtimeVerified,
-                                technicalErrorDetails != null, hasRunningSessions,
+                                technicalErrorDetails != null, hasLiveSessions,
                                 installing, verifyingRuntime
                             )) {
                             TextButton(
