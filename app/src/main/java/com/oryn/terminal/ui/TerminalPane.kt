@@ -286,7 +286,7 @@ fun TerminalPane(
             runCatching { clipboardManager?.removePrimaryClipChangedListener(listener) }
         }
     }
-    var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
+    var pendingMultilinePaste by remember(session) { mutableStateOf<TerminalPasteReview?>(null) }
     fun pasteClipboard() {
         val emulator = session.emulator
         if (!session.isRunning() || emulator == null) {
@@ -298,10 +298,19 @@ fun TerminalPane(
         if (!ClipboardPastePolicy.canPaste(content)) {
             Toast.makeText(context, "No supported clipboard text", Toast.LENGTH_SHORT).show()
         } else if (ClipboardPastePolicy.requiresConfirmation(content)) {
-            pendingMultilinePaste = content
+            val tabId = activeTabId
+            if (tabId != null && currentSessionId() == tabId) {
+                pendingMultilinePaste = TerminalPasteReview(tabId, content!!)
+            } else {
+                Toast.makeText(context, "Paste not sent — session changed", Toast.LENGTH_SHORT).show()
+            }
         } else {
             // Termux TerminalEmulator handles DECSET 2004 bracketed paste.
-            TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), content!!) { emulator.pasteWithResult(it) }
+            val accepted = TerminalActionPolicy.pasteIfCurrent(
+                activeTabId, currentSessionId(), session.isRunning(), content!!
+            ) { emulator.pasteWithResult(it) }
+            if (!accepted) Toast.makeText(context,
+                "Paste not sent — session changed or input busy", Toast.LENGTH_SHORT).show()
         }
     }
     LaunchedEffect(nativePasteRequest, session) {
@@ -319,9 +328,19 @@ fun TerminalPane(
                 Toast.makeText(context, "Unsupported or unsafe pasted text",
                     Toast.LENGTH_SHORT).show()
             } else if (ClipboardPastePolicy.requiresConfirmation(incoming)) {
-                pendingMultilinePaste = incoming
+                val tabId = activeTabId
+                if (tabId != null && currentSessionId() == tabId) {
+                    pendingMultilinePaste = TerminalPasteReview(tabId, incoming)
+                } else {
+                    Toast.makeText(context, "Paste not sent — session changed",
+                        Toast.LENGTH_SHORT).show()
+                }
             } else {
-                TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), incoming) { emulator.pasteWithResult(it) }
+                val accepted = TerminalActionPolicy.pasteIfCurrent(
+                    activeTabId, currentSessionId(), session.isRunning(), incoming
+                ) { emulator.pasteWithResult(it) }
+                if (!accepted) Toast.makeText(context,
+                    "Paste not sent — session changed or input busy", Toast.LENGTH_SHORT).show()
             }
             onNativePasteConsumed()
         }
@@ -1160,41 +1179,51 @@ fun TerminalPane(
         )
     }
 
-    if (pendingMultilinePaste != null) {
+    pendingMultilinePaste?.let { review ->
         KlyroModalTheme {
         AlertDialog(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { pendingMultilinePaste = null },
-            title = { Text("Paste multiple lines?") },
+            title = { Text("Review terminal paste") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Pasting multiple lines can execute commands. Review the clipboard content before continuing.")
+                    Text("Pasting multiple lines may execute commands in the terminal.")
+                    Text("${review.lineCount} lines • ${review.utf8ByteCount} UTF-8 bytes",
+                        style = MaterialTheme.typography.labelMedium)
                     Text(
-                        pendingMultilinePaste.orEmpty(),
+                        review.preview,
                         modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
                             .verticalScroll(rememberScrollState()),
                         fontFamily = FontFamily.Monospace,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Text("Entire paste shown; scroll to review all lines before confirming.",
-                        style = MaterialTheme.typography.labelSmall)
+                    if (review.isPreviewTruncated) {
+                        Text(
+                            "Only the first ${review.preview.length} of ${review.text.length} characters are shown. The entire script will be pasted.",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    } else {
+                        Text("Complete clipboard text shown above.",
+                            style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val text = pendingMultilinePaste
+                    val requested = pendingMultilinePaste
                     pendingMultilinePaste = null
                     val emulator = session.emulator
                     if (!session.isRunning() || emulator == null) {
                         Toast.makeText(context, "Terminal unavailable; paste cancelled",
                             Toast.LENGTH_SHORT).show()
-                    } else if (ClipboardPastePolicy.canPaste(text)) {
-                        TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), text!!) { emulator.pasteWithResult(it) }
-                    } else {
-                        Toast.makeText(context, "Clipboard text rejected", Toast.LENGTH_SHORT).show()
+                    } else if (requested == null || !requested.sendIfCurrent(activeTabId, currentSessionId(), session.isRunning()) {
+                            emulator.pasteWithResult(it)
+                        }) {
+                        Toast.makeText(context, "Paste not sent — session changed or input busy",
+                            Toast.LENGTH_SHORT).show()
                     }
-                }) { Text("Paste") }
+                }) { Text("Paste all ${review.lineCount} lines") }
             },
             dismissButton = {
                 TextButton(onClick = { pendingMultilinePaste = null }) { Text("Cancel") }
