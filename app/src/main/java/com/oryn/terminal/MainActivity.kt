@@ -977,9 +977,12 @@ class MainActivity : ComponentActivity() {
         })
     }
 
-    fun startDiagnosticStress(): String {
-        if (!BuildConfig.DEBUG) return "Diagnostic build required."
-        if (terminalState.sessions.size >= 8) return "Maximum 8 sessions; test not started."
+    data class DiagnosticStressResult(val started: Boolean, val message: String)
+
+    fun startDiagnosticStress(): DiagnosticStressResult {
+        if (!BuildConfig.DEBUG) return DiagnosticStressResult(false, "Diagnostic build required.")
+        if (terminalState.sessions.size >= 8)
+            return DiagnosticStressResult(false, "Maximum 8 sessions; test not started.")
         return try {
             val manager = TerminalSessionManager(applicationContext)
             val id = terminalState.reserveTabId()
@@ -991,12 +994,17 @@ class MainActivity : ComponentActivity() {
             KlyroSessionService.ensureRunning(this)
             showWelcomeScreen = false
             val bytes = com.oryn.terminal.diagnostics.StabilityScenario.COMMAND.toByteArray(Charsets.UTF_8)
-            if (!session.tryWrite(bytes, 0, bytes.size)) "Test input rejected; diagnostic tab retained."
-            else {
+            if (!session.tryWrite(bytes, 0, bytes.size)) {
+                DiagnosticStressResult(false, "Test input rejected; diagnostic tab retained.")
+            } else {
                 com.oryn.terminal.diagnostics.FreezeRecorder.recordStabilityRun(id)
-                "Started in separate tab. Go Home → another app → return. Look for the END marker."
+                DiagnosticStressResult(true,
+                    "Started in separate tab. Go Home → another app → return. Look for the END marker.")
             }
-        } catch (e: Exception) { "Test not started (${e.javaClass.simpleName}); existing sessions preserved." }
+        } catch (e: Exception) {
+            DiagnosticStressResult(false,
+                "Test not started (${e.javaClass.simpleName}); existing sessions preserved.")
+        }
     }
 
     private fun launchBash() {
