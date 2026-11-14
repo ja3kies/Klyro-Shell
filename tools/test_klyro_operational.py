@@ -34,8 +34,8 @@ class KlyroOperationalReadinessTest(unittest.TestCase):
               ).read_text()
         self.assertIn("ClipboardPastePolicy.canPaste(incoming)", ui)
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(incoming)", ui)
-        self.assertIn("pendingMultilinePaste = TerminalPasteReview(tabId, incoming)", ui)
-        self.assertIn("if (tabId != null && currentSessionId() == tabId)", ui)
+        self.assertIn("pendingMultilinePaste = TerminalPasteReview(request.tabId, incoming)", ui)
+        self.assertIn("request.tabId != currentSessionId()", ui)
 
     def test_operational_gate_no_package_mutations(self):
         source = (ROOT / "scripts/klyro-operational-gate.sh").read_text()
