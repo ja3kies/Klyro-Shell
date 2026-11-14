@@ -148,6 +148,46 @@ public class OrynPathsTest {
     }
 
     @Test
+    public void bootstrapRejectsExecutableLinksOutsidePrivatePrefix() throws Exception {
+        File files = Files.createTempDirectory("oryn-linked-bootstrap").toFile();
+        OrynPaths paths = new OrynPaths(files);
+        paths.prepareLayout();
+        File bin = new File(paths.getPrefix(), "bin");
+        assertTrue(bin.mkdirs());
+        File outside = Files.createTempFile("outside-shell", ".bin").toFile();
+        Files.write(outside.toPath(), new byte[]{1});
+        assertTrue(outside.setExecutable(true, false));
+        for (String name : new String[]{"bash", "pkg", "apt"}) {
+            File target = new File(bin, name);
+            if ("bash".equals(name)) Files.createSymbolicLink(target.toPath(), outside.toPath());
+            else {
+                Files.write(target.toPath(), new byte[]{1});
+                assertTrue(target.setExecutable(true, false));
+            }
+        }
+        Files.write(new File(paths.getPrefix(), ".oryn-bootstrap-version").toPath(), new byte[]{1});
+        assertFalse("External executable must not validate private bootstrap", paths.isBootstrapInstalled());
+    }
+
+    @Test
+    public void prootRejectsLibraryLinksOutsideManagedRuntime() throws Exception {
+        File files = Files.createTempDirectory("oryn-linked-proot").toFile();
+        OrynPaths paths = new OrynPaths(files);
+        paths.prepareLayout();
+        for (File executable : new File[]{paths.getProot(), paths.getProotLoader()}) {
+            Files.write(executable.toPath(), new byte[]{1});
+            assertTrue(executable.setExecutable(true, false));
+        }
+        File internal = new File(paths.getProotDependencyDir(), "libtalloc.so");
+        Files.write(internal.toPath(), new byte[]{1});
+        Files.createSymbolicLink(new File(paths.getProotDependencyDir(), "libtalloc.so.2").toPath(), internal.toPath());
+        File outside = Files.createTempFile("outside-shmem", ".so").toFile();
+        Files.write(outside.toPath(), new byte[]{1});
+        Files.createSymbolicLink(new File(paths.getProotLibDir(), "libandroid-shmem.so").toPath(), outside.toPath());
+        assertFalse("External library must not count as installed", paths.isProotInstalled());
+    }
+
+    @Test
     public void bootstrapIsNotMarkedInstalledBeforeValidation() throws Exception {
         File files = Files.createTempDirectory("oryn-bootstrap-test").toFile();
         OrynPaths paths = new OrynPaths(files);
