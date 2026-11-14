@@ -26,7 +26,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         val viewClient: OrynTerminalViewClient,
         val title: String = "Bash",
         val customTitle: String? = null,
-        val workspaceId: String = KlyroWorkspaceCatalog.GENERAL
+        val workspaceId: String = KlyroWorkspaceCatalog.GENERAL,
+        val exitStatus: Int? = null
     )
 
     private val tabs = mutableStateListOf<ShellTab>()
@@ -115,6 +116,9 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
 
     fun hasLiveSessions(): Boolean = tabs.isNotEmpty()
 
+    /** Retained failed tabs are inspectable, but do not require a foreground service. */
+    fun hasRunningPtys(): Boolean = tabs.any { it.session.isRunning() }
+
     fun isSessionActive(id: Long): Boolean =
         activeTabId == id && tabs.any { it.id == id }
 
@@ -174,8 +178,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         activeTabId = id
         updateDiagnosticSession()
         unreadActivity.remove(id)
-        sessionFailureMessage = null
-        sessionStatus = ""
+        sessionFailureMessage = selected?.exitStatus?.let(::exitMessage)
+        sessionStatus = if (selected?.exitStatus != null) "Shell finished; output retained for inspection." else ""
     }
 
     fun renameTab(id: Long, rawName: String) {
@@ -208,6 +212,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         entry.session.finishIfRunning()
         if (activeTabId == id) {
             activeTabId = null
+            sessionFailureMessage = null
             tabs.getOrNull(index.coerceAtMost(tabs.lastIndex))?.let { selectTab(it.id) }
         }
         updateDiagnosticSession()
@@ -231,15 +236,28 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         }
     }
 
+    private fun exitMessage(exitStatus: Int): String =
+        "Bash exited unexpectedly (code $exitStatus). Output retained here; inspect or copy it before closing this tab."
+
     private fun finishTab(id: Long, session: TerminalSession, exitStatus: Int) {
-        val entry = tabs.firstOrNull { it.id == id } ?: return
+        val index = tabs.indexOfFirst { it.id == id }
+        if (index < 0) return
+        val entry = tabs[index]
         if (entry.session !== session) return
         val wasActive = activeTabId == id
-        closeTab(id)
+        if (exitStatus == 0) {
+            closeTab(id)
+            if (wasActive) sessionStatus = "Bash session ended."
+            return
+        }
+        // Keep the exited emulator and final screen; input stays disabled
+        // because TerminalSession.isRunning() now returns false.
+        tabs[index] = entry.copy(exitStatus = exitStatus)
+        if (pendingNativePaste?.tabId == id) pendingNativePaste = null
+        if (!wasActive) unreadActivity[id] = true
         if (wasActive) {
-            sessionFailureMessage = if (exitStatus == 0) null else
-                "Bash exited unexpectedly (code $exitStatus). Verify the runtime before starting another session."
-            sessionStatus = sessionFailureMessage ?: "Bash session ended."
+            sessionFailureMessage = exitMessage(exitStatus)
+            sessionStatus = "Shell finished; output retained for inspection."
         }
     }
 
