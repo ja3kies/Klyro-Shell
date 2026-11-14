@@ -38,17 +38,49 @@ public final class KlyroStorageCommandBridge {
         return control.toFile();
     }
 
-    /** Returns a single validated request, atomically consuming the request file. */
+    /** Returns a single validated request, recovering writes abandoned by a killed shell. */
     public String poll() throws IOException {
-        File request = new File(directory(), "storage.request");
-        Path path = request.toPath();
+        Path path = new File(directory(), "storage.request").toPath();
         if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) return null;
-        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) || request.length() > 80) {
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException("Unsafe storage bridge request");
         }
-        String candidate = new String(Files.readAllBytes(path), StandardCharsets.UTF_8).trim();
+
+        // A shell may be killed between creating the request and writing its token.
+        // Never consume a recent partial write or allow an abandoned file to block retries.
+        byte[] data = new byte[81];
+        int size = 0;
+        long ageMillis;
+        try {
+            try (java.io.InputStream input = Files.newInputStream(path, LinkOption.NOFOLLOW_LINKS)) {
+                while (size < data.length) {
+                    int count = input.read(data, size, data.length - size);
+                    if (count < 0) break;
+                    if (count == 0) throw new IOException("Storage bridge read made no progress");
+                    size += count;
+                }
+            }
+            ageMillis = System.currentTimeMillis() -
+                    Files.getLastModifiedTime(path, LinkOption.NOFOLLOW_LINKS).toMillis();
+        } catch (java.nio.file.NoSuchFileException removedByShell) {
+            return null;
+        }
+
+        if (ageMillis >= 180_000) {
+            // The helper stops waiting after roughly two minutes.
+            Files.deleteIfExists(path);
+            return null;
+        }
+        if (size > 80) {
+            if (ageMillis >= 3_000) {
+                Files.deleteIfExists(path);
+                return null;
+            }
+            throw new IOException("Unsafe storage bridge request");
+        }
+        String candidate = new String(data, 0, size, StandardCharsets.UTF_8).trim();
         if (!TOKEN.matcher(candidate).matches()) {
-            // A concurrent writer may not have finished writing the token yet.
+            if (ageMillis >= 3_000) Files.deleteIfExists(path);
             return null;
         }
         Files.deleteIfExists(path);
