@@ -133,7 +133,13 @@ public class OrynPathsTest {
         for (File file : new File[]{bash, pkg, apt, marker}) {
             Files.write(file.toPath(), new byte[]{1});
         }
+        assertFalse("Non-executable pkg and apt must not be accepted", paths.isBootstrapInstalled());
+        assertTrue(pkg.setExecutable(true, false));
+        assertTrue(apt.setExecutable(true, false));
         assertTrue(paths.isBootstrapInstalled());
+        assertTrue(apt.setExecutable(false, false));
+        assertFalse("Lost apt execute permission must invalidate bootstrap", paths.isBootstrapInstalled());
+        assertTrue(apt.setExecutable(true, false));
         Files.write(pkg.toPath(), new byte[0]);
         assertFalse("A truncated package manager cannot form a valid bootstrap", paths.isBootstrapInstalled());
         Files.write(pkg.toPath(), new byte[]{1});
