@@ -103,12 +103,14 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     var sessionFailureMessage by mutableStateOf<String?>(null)
         private set
 
-    data class NativePasteRequest(val tabId: Long, val text: String)
+    data class NativePasteRequest(val tabId: Long, val text: String, val requestId: Long)
+    private var nextNativePasteRequestId = 1L
     var pendingNativePaste by mutableStateOf<NativePasteRequest?>(null)
         private set
 
-    fun clearNativePaste(tabId: Long) {
-        if (pendingNativePaste?.tabId == tabId) pendingNativePaste = null
+    /** An old UI acknowledgement must not clear a newer paste from the same tab. */
+    fun clearNativePaste(request: NativePasteRequest) {
+        if (pendingNativePaste === request) pendingNativePaste = null
     }
 
     fun hasLiveSessions(): Boolean = tabs.isNotEmpty()
@@ -129,7 +131,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             }
             override fun onNativePasteRequiresConfirmation(text: String) {
                 if (isSessionActive(tabId)) {
-                    pendingNativePaste = NativePasteRequest(tabId, text)
+                    check(nextNativePasteRequestId < Long.MAX_VALUE) { "Native paste request ID space exhausted" }
+                    pendingNativePaste = NativePasteRequest(tabId, text, nextNativePasteRequestId++)
                 }
             }
             override fun onShellPid(pid: Int) {
