@@ -44,4 +44,16 @@ public class ClipboardPastePolicyTest {
         assertTrue(ClipboardPastePolicy.requiresConfirmation("echo hello\nrm -i file"));
         assertTrue(ClipboardPastePolicy.requiresConfirmation("echo hello\r"));
     }
+
+    @Test public void preservesLegitimateUnicodeJoinersWithoutAllowingInvisibleAsciiEdits() {
+        assertTrue(ClipboardPastePolicy.canPaste("echo 👩\u200D💻"));
+        assertTrue(ClipboardPastePolicy.canPaste("echo فارسی\u200Cزبان"));
+        assertTrue(ClipboardPastePolicy.canPaste("echo क्\u200Dष"));
+        assertFalse(ClipboardPastePolicy.canPaste("echo a\u200Db"));
+        assertFalse(ClipboardPastePolicy.canPaste("echo \u200D"));
+        assertFalse(ClipboardPastePolicy.canPaste("\u200Ctest"));
+        assertFalse(ClipboardPastePolicy.canPaste("echo \u200Bhidden"));
+        assertFalse(ClipboardPastePolicy.canPaste("echo \u202Erm -rf"));
+    }
+
 }
