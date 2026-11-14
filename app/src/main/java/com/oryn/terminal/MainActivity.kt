@@ -620,11 +620,8 @@ class MainActivity : ComponentActivity() {
                     sessionClient = terminalState.sessionClient,
                     viewClient = terminalState.viewClient,
                     sessionFailureMessage = terminalState.sessionFailureMessage,
-                    nativePasteRequest = terminalState.pendingNativePaste
-                        ?.takeIf { it.tabId == terminalState.activeTabId }?.text,
-                    onNativePasteConsumed = {
-                        terminalState.activeTabId?.let(terminalState::clearNativePaste)
-                    },
+                    nativePasteRequest = terminalState.pendingNativePaste,
+                    onNativePasteConsumed = terminalState::clearNativePaste,
                     onInstall = ::handlePrimaryAction,
                     onRepair = { installEnvironment(forceBootstrapRepair = true) },
                     onLaunch = {
@@ -1112,8 +1109,8 @@ private fun OrynTerminalApp(
     sessionClient: OrynTerminalSessionClient?,
     viewClient: OrynTerminalViewClient?,
     sessionFailureMessage: String?,
-    nativePasteRequest: String?,
-    onNativePasteConsumed: () -> Unit,
+    nativePasteRequest: TerminalSessionViewModel.NativePasteRequest?,
+    onNativePasteConsumed: (TerminalSessionViewModel.NativePasteRequest) -> Unit,
     onInstall: () -> Unit,
     onRepair: () -> Unit,
     onLaunch: () -> Unit,
