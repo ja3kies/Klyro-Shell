@@ -124,7 +124,9 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("if (compact)", self.pane)
 
     def test_native_paste_does_not_auto_run_unvalidated_multiline(self):
-        self.assertIn("pendingMultilinePaste = incoming", self.pane)
+        self.assertIn("ClipboardPastePolicy.requiresConfirmation(incoming)", self.pane)
+        self.assertIn("pendingMultilinePaste = TerminalPasteReview(tabId, incoming)", self.pane)
+        self.assertIn("if (tabId != null && currentSessionId() == tabId)", self.pane)
 
     def test_back_handler_preserves_unsaved_dialog_flow(self):
         self.assertIn("pendingMultilinePaste == null && selectedOutput == null", self.pane)
