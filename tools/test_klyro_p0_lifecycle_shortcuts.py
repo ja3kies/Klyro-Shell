@@ -35,7 +35,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn(".setContentIntent(openApp)", self.service)
 
     def test_notification_reports_actual_session_count(self):
-        self.assertIn("KlyroSessionRuntime.sessions.sessions.size", self.service)
+        self.assertIn("KlyroSessionRuntime.sessions.sessions.count { it.session.isRunning() }", self.service)
         self.assertIn('if (sessionCount == 1) "" else "s"', self.service)
 
     def test_foreground_notification_refresh_does_not_realert(self):
@@ -58,8 +58,8 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("START_NOT_STICKY", self.service)
         self.assertNotIn("START_STICKY", self.service)
 
-    def test_service_stops_only_when_sessions_absent(self):
-        self.assertIn("if (KlyroSessionRuntime.sessions.hasLiveSessions())", self.service)
+    def test_service_stops_when_no_running_ptys_remain(self):
+        self.assertIn("if (KlyroSessionRuntime.sessions.hasRunningPtys())", self.service)
         self.assertIn("else stopSelf()", self.service)
 
     def test_foreground_notification_is_silent(self):
@@ -187,8 +187,8 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertGreater(profile_write, activation)
         self.assertNotIn("writeKlyroBashProfile", installer[installer.index("KlyroStorageCommandBridge.installHelper(staging);"):activation])
 
-    def test_service_start_is_guarded_by_live_sessions(self):
-        self.assertIn("if (!KlyroSessionRuntime.sessions.hasLiveSessions()) return", self.service)
+    def test_service_start_is_guarded_by_running_ptys(self):
+        self.assertIn("if (!KlyroSessionRuntime.sessions.hasRunningPtys()) return", self.service)
 
 
 if __name__ == "__main__":
