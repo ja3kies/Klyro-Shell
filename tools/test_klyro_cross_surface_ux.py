@@ -78,11 +78,11 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         )[0]
         self.assertIn("ClipboardPastePolicy.canPaste(incoming)", section)
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(incoming)", section)
-        self.assertIn("pendingMultilinePaste = TerminalPasteReview(tabId, incoming)", section)
-        self.assertIn("if (tabId != null && currentSessionId() == tabId)", section)
+        self.assertIn("pendingMultilinePaste = TerminalPasteReview(request.tabId, incoming)", section)
+        self.assertIn("request.tabId != currentSessionId()", section)
         self.assertIn("TerminalActionPolicy.pasteIfCurrent(", section)
         self.assertIn("activeTabId, currentSessionId(), session.isRunning(), incoming", section)
-        self.assertIn("onNativePasteConsumed()", section)
+        self.assertIn("onNativePasteConsumed(request)", section)
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(content)", pane)
 
     def test_terminal_toolbar_and_shortcuts_share_identity_and_states(self):
