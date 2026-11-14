@@ -628,7 +628,7 @@ internal fun KlyroSettingsSheet(
                             }
                         }
                     }
-                    "freeze" -> FreezeReportsPane()
+                    "freeze" -> FreezeReportsPane(onStabilityTestStarted = onDismiss)
                     "diagnostics" -> {
                         TextButton(onClick = { section = "freeze" }) { Text("Freeze reports") }
                         KlyroSectionHeading("Diagnostics", "Local checks; no commands run automatically.")
