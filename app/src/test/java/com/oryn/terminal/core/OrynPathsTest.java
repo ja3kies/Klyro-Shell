@@ -96,14 +96,49 @@ public class OrynPathsTest {
         assertTrue(new File(paths.getProotDependencyDir(), "libtalloc.so.2").createNewFile());
         assertFalse(paths.isProotInstalled());
 
-        assertTrue(new File(paths.getProotLibDir(), "libandroid-shmem.so").createNewFile());
+        File shmem = new File(paths.getProotLibDir(), "libandroid-shmem.so");
+        assertTrue(shmem.createNewFile());
+        assertFalse("Zero-byte PRoot runtime must not be called installed", paths.isProotInstalled());
+        for (File part : new File[]{paths.getProot(), loader,
+                new File(paths.getProotDependencyDir(), "libtalloc.so.2"), shmem}) {
+            Files.write(part.toPath(), new byte[]{1});
+        }
         assertTrue(paths.isProotInstalled());
+        Files.write(shmem.toPath(), new byte[0]);
+        assertFalse("Truncated shared library must invalidate runtime", paths.isProotInstalled());
     }
 
     @Test
     public void termuxCompiledPathsAreVirtualCompatibilityTargets() {
         assertEquals("/data/data/com.termux/files/usr", OrynPaths.TERMUX_VIRTUAL_PREFIX);
         assertEquals("/data/data/com.termux/files/home", OrynPaths.TERMUX_VIRTUAL_HOME);
+    }
+
+    @Test
+    public void bootstrapRejectsTruncatedExecutableAndVersionMarker() throws Exception {
+        File files = Files.createTempDirectory("oryn-bootstrap-corrupt").toFile();
+        OrynPaths paths = new OrynPaths(files);
+        paths.prepareLayout();
+        File bin = new File(paths.getPrefix(), "bin");
+        assertTrue(bin.mkdirs());
+        File bash = new File(bin, "bash");
+        File pkg = new File(bin, "pkg");
+        File apt = new File(bin, "apt");
+        File marker = new File(paths.getPrefix(), ".oryn-bootstrap-version");
+        for (File file : new File[]{bash, pkg, apt, marker}) {
+            assertTrue(file.createNewFile());
+        }
+        assertTrue(bash.setExecutable(true, false));
+        assertFalse("A zero-byte executable cannot start a shell", paths.isBootstrapInstalled());
+        for (File file : new File[]{bash, pkg, apt, marker}) {
+            Files.write(file.toPath(), new byte[]{1});
+        }
+        assertTrue(paths.isBootstrapInstalled());
+        Files.write(pkg.toPath(), new byte[0]);
+        assertFalse("A truncated package manager cannot form a valid bootstrap", paths.isBootstrapInstalled());
+        Files.write(pkg.toPath(), new byte[]{1});
+        Files.write(marker.toPath(), new byte[0]);
+        assertFalse("An empty bootstrap marker must not pass validation", paths.isBootstrapInstalled());
     }
 
     @Test
