@@ -105,3 +105,29 @@ mais aucun ne rend correcte une sheet Hidden maintenue par son propriétaire.
 
 Les cycles 2–3 fournissent les tests d'interaction et la clôture technique ; voir
 MODAL_TOUCH_FREEZE_CLOSURE.md. Aucun freeze Pixel n'est annoncé résolu sans test.
+
+## Cycle 2 — tests d'interaction systématiques
+
+18 tests ModalLifecycleUiTest fournis : swipe Appearance, Keyboard, Files,
+Privacy, Diagnostics, About, Freeze reports ; Back interne puis Close ; Close
+Appearance ; Back système ; scrim ; Workspace liste ; draft Workspace protégé ;
+actions Session sans terminaison ; guide Palette ; drag interrompu ; rapports
+standalone par swipe et par Close (StateFlow réel).
+
+Chaque fermeture attend le retrait de la vraie KlyroSheet, puis la restitution
+de focus de la fenêtre Activity, injecte un tap **de test** via UiAutomation /
+Android InputDispatcher sur un bouton sous-jacent, et exige un compteur d'action
+réel. Une simple assertion de bool n'est pas la preuve tactile. Aucune injection
+n'existe dans le produit ; aucune coordonnée n'est persistée. Les fixtures n'ouvrent
+ni shell ni session et ne modifient aucun workspace/plugin utilisateur.
+
+La région scrim doit réellement être visible ; sinon ce seul scénario est
+SKIPPED avec précondition, jamais PASS artificiel. Les contrôles de focus ont
+une attente bornée dans les tests uniquement, pas un timer/polling correctif.
+Les rapports standalone sauvegardent/restaurent la notice globale pour ne pas
+confondre une notice en attente avec un scrim résiduel.
+
+Compilation locale des tests disponible ; exécution NOT TESTED faute de device.
+La matrice finale distingue méthodes présentes, états protégés et contrôles
+physiques impossibles. Les tests ne prouvent pas la continuité d'un PID Android ;
+les tests PTY/JNI séparés et la validation Pixel B restent nécessaires.
