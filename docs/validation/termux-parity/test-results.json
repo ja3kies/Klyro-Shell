@@ -1,0 +1,70 @@
+{
+  "code_commit": "92be2da98055d988bbdc89ceb85f61e405ff9487",
+  "python": {
+    "tests": 523,
+    "result": "PASS"
+  },
+  "native": {
+    "result": "PASS",
+    "pty_instances": 20,
+    "stdout_lines": 20000,
+    "fd_before": 4,
+    "fd_after": 4
+  },
+  "qa_readonly": {
+    "checks": 30,
+    "result": "PASS",
+    "environment": "existing QA rootfs under host Termux UID, not APK UID"
+  },
+  "android_instrumentation": {
+    "result": "BLOCKED",
+    "compiled": true,
+    "executed": false,
+    "reason": "Acceptance runner returned exit 2: no authorized ADB device was connected; no device installation or instrumentation attempted."
+  },
+  "android_metrics": "NOT MEASURED",
+  "initial_ci_failure": {
+    "run": 43602091722,
+    "failures": 3,
+    "cause": "Platform Character.UNASSIGNED catalogue changed decoder output under JDK17; fixed scalar validity with overlong bounds and retained cursor/copy assertions."
+  },
+  "local_jvm": {
+    "app": {
+      "tests": 366,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "runtime": "Java17"
+    },
+    "terminal-emulator": {
+      "tests": 46,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "note": "Also explicitly rerun under Java21 (java21-scalar-build.log), same46cases; Java17 passed in java17-scalar-build.log.",
+      "runtime": "Java21 final XML; also passed Java17 explicitly"
+    }
+  },
+  "ci_jvm": {
+    "app": {
+      "tests": 366,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "terminal-emulator": {
+      "tests": 46,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "ci_status": "success",
+  "final_ci_url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653944038",
+  "reproducibility": "PASS for two independent builds of the exact delivered source (app and test APK byte-identical)",
+  "repeat_ci_url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653490511",
+  "retained_output_stall_guard": {
+    "result": "PASS locally and in CI compilation",
+    "detail": "Deliberate freeze now requires zero open tabs, including completed tabs retaining output; Android instrumentation execution still blocked."
+  }
+}
