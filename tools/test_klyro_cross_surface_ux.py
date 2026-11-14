@@ -78,8 +78,10 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         )[0]
         self.assertIn("ClipboardPastePolicy.canPaste(incoming)", section)
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(incoming)", section)
-        self.assertIn("pendingMultilinePaste = incoming", section)
-        self.assertIn("TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), incoming)", section)
+        self.assertIn("pendingMultilinePaste = TerminalPasteReview(tabId, incoming)", section)
+        self.assertIn("if (tabId != null && currentSessionId() == tabId)", section)
+        self.assertIn("TerminalActionPolicy.pasteIfCurrent(", section)
+        self.assertIn("activeTabId, currentSessionId(), session.isRunning(), incoming", section)
         self.assertIn("onNativePasteConsumed()", section)
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(content)", pane)
 
