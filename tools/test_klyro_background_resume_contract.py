@@ -39,7 +39,8 @@ class BackgroundResumeContract(unittest.TestCase):
         block = CLIENT.split("private void scheduleOutputRefresh()", 1)[1].split(
             "public void dispose()", 1)[0]
         self.assertIn("pendingOutputRefresh.compareAndSet(false, true)", block)
-        self.assertIn("uiHandler.post(", block)
+        self.assertIn("uiHandler.postDelayed(", block)
+        self.assertIn("}, 32L);", block)
         self.assertIn("pendingOutputRefresh.set(false)", block)
         self.assertIn("!uiActive.get()", block)
         self.assertIn("view.isAttachedToWindow()", block)
