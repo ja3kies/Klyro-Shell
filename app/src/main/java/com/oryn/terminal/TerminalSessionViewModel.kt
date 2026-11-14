@@ -116,8 +116,13 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
 
     fun hasLiveSessions(): Boolean = tabs.isNotEmpty()
 
-    /** Retained failed tabs are inspectable, but do not require a foreground service. */
-    fun hasRunningPtys(): Boolean = tabs.any { it.session.isRunning() }
+    /** Include new tabs awaiting their first terminal size; PID is still 0 then. */
+    fun runningPtyCount(): Int = tabs.count {
+        it.exitStatus == null && (it.session.isRunning() || it.session.getPid() == 0)
+    }
+
+    /** Retained failed tabs are inspectable but must not keep a foreground service. */
+    fun hasRunningPtys(): Boolean = runningPtyCount() > 0
 
     fun isSessionActive(id: Long): Boolean =
         activeTabId == id && tabs.any { it.id == id }
