@@ -44,4 +44,20 @@ public class ClipboardPastePolicyTest {
         assertTrue(ClipboardPastePolicy.requiresConfirmation("echo hello\nrm -i file"));
         assertTrue(ClipboardPastePolicy.requiresConfirmation("echo hello\r"));
     }
+    @Test public void acceptsEmojiAndScriptJoinersWithoutExecutingThem() {
+        for (String text : new String[]{"👩‍💻", "👨‍👩‍👧‍👦", "می\u200Cخواهم", "क्\u200Dष", "e\u0301"}) {
+            assertTrue(ClipboardPastePolicy.canPaste(text));
+            assertFalse(ClipboardPastePolicy.requiresConfirmation(text));
+        }
+        assertTrue(ClipboardPastePolicy.requiresConfirmation("👩‍💻\necho review"));
+    }
+
+    @Test public void joinersDoNotBypassBidiControlOrByteLimits() {
+        assertFalse(ClipboardPastePolicy.canPaste("👩‍💻\u202Ehidden"));
+        assertFalse(ClipboardPastePolicy.canPaste("👩‍💻\u2066hidden\u2069"));
+        assertFalse(ClipboardPastePolicy.canPaste("👩‍💻\u001b[201~echo executed"));
+        assertFalse(ClipboardPastePolicy.canPaste("👩‍💻\u200Bhidden"));
+        assertFalse(ClipboardPastePolicy.canPaste("👩‍💻".repeat(10000)));
+        assertFalse(ClipboardPastePolicy.canPaste("👩‍💻\uD800"));
+    }
 }
