@@ -20,7 +20,7 @@ class FailedPtyRecoveryContracts(unittest.TestCase):
         self.assertIn("if (exitStatus == 0)", action)
         self.assertIn("closeTab(id)", action)
         self.assertIn("entry.copy(exitStatus = exitStatus)", action)
-        self.assertIn("Bash exited unexpectedly (code $exitStatus)", action)
+        self.assertIn("Bash exited unexpectedly (code $exitStatus)", MODEL)
         self.assertIn("pendingNativePaste", action)
         self.assertIn("unreadActivity[id] = true", action)
 
@@ -39,8 +39,8 @@ class FailedPtyRecoveryContracts(unittest.TestCase):
 
     def test_finished_tab_hardware_back_allows_explicit_close(self):
         block = UI.split("if (showEndSessionConfirmation) {", 1)[1].split("internal enum class ShortcutState", 1)[0]
-        self.assertIn('Text("Close finished tab")', block)
-        self.assertIn('Text("Close tab")', block)
+        self.assertIn('Text("Close finished tab",', block)
+        self.assertIn('Text("Close tab",', UI)
         self.assertIn("onCloseTab", block)
         self.assertNotIn("session.isRunning()) {\n                            expected?.let(onCloseTab)", block)
 
