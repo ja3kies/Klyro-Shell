@@ -770,10 +770,10 @@ fun TerminalPane(
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(
-                        onClick = onReturnHome,
+                        onClick = { endSessionTargetId = activeTabId },
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                     ) {
-                        Text("Home", color = TerminalText, fontSize = 12.sp)
+                        Text("Close tab", color = TerminalText, fontSize = 12.sp)
                     }
                 }
             }
@@ -1583,16 +1583,25 @@ fun TerminalPane(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { endSessionTargetId = null },
-            title = { Text("End ${tabs.firstOrNull { it.first == endSessionTargetId }?.second ?: "session"}?") },
-            text = { Text("This will stop the running shell and its child processes.") },
+            title = { Text("Close ${tabs.firstOrNull { it.first == endSessionTargetId }?.second ?: "session"}?") },
+            text = { Text(if (session.isRunning())
+                "This will stop the running shell and its child processes."
+                else "The shell has exited. Closing this tab discards its retained output.") },
             confirmButton = {
                 TextButton(onClick = {
                     val expected = endSessionTargetId
                     endSessionTargetId = null
-                    if (!TerminalActionPolicy.runIfCurrent(expected, currentSessionId(), session.isRunning()) {
-                            expected?.let(onCloseTab)
-                        }) Toast.makeText(context, "Session changed; close cancelled", Toast.LENGTH_SHORT).show()
-                }) { Text("End session", color = ui.danger, fontWeight = FontWeight.SemiBold) }
+                    if (expected != null && expected == currentSessionId() &&
+                        tabs.any { it.first == expected }) {
+                        onCloseTab(expected)
+                    } else {
+                        Toast.makeText(context, "Session changed; close cancelled",
+                            Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    if (session.isRunning()) Text("End session", color = ui.danger, fontWeight = FontWeight.SemiBold)
+                    else Text("Close finished tab", color = ui.danger, fontWeight = FontWeight.SemiBold)
+                }
             },
             dismissButton = {
                 TextButton(onClick = { endSessionTargetId = null }) {
