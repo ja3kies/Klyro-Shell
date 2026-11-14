@@ -13,8 +13,8 @@ android {
         applicationId = "com.klyro.shell"
         minSdk = 26
         targetSdk = 36
-        versionCode = 17
-        versionName = "0.4.10-dev"
+        versionCode = 18
+        versionName = "0.4.11-dev"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {

@@ -131,3 +131,38 @@ Compilation locale des tests disponible ; exécution NOT TESTED faute de device.
 La matrice finale distingue méthodes présentes, états protégés et contrôles
 physiques impossibles. Les tests ne prouvent pas la continuité d'un PID Android ;
 les tests PTY/JNI séparés et la validation Pixel B restent nécessaires.
+
+## Cycle 3 — concurrence et non-régression
+
+Une course supplémentaire est CONFIRMED par l'ordre du code : le veto peut
+changer après l'autorisation de hide. Refuser alors le callback final laisse
+une sheet Hidden composée. Le gate distingue désormais le veto avant Hidden
+et la fermeture engagée : si Hidden est atteint, retirer le propriétaire même
+si sa protection vient de changer. Le premier événement de fermeture engagé
+prime sur une navigation concurrente ; aucun traitement métier destructif n'est
+exécuté. Le neuvième test JVM exerce cette course.
+
+14 cas Android supplémentaires, chacun distinct : sombre ; grande police ;
+restauration d'une visibilité fermée ; restauration d'une sous-page ouverte ;
+Activity stopped/resumed ; réouverture immédiate avec navigation neuve ; draft
+rename protégé ; draft couleur protégé (deux Back pour dépasser l'IME) ; annulation
+de confirmation sans terminer la session ; retour Commands du guide ; licence
+puis parent ; ouverture immédiate d'une autre feuille ; retrait du propriétaire
+pendant l'animation ; IME avec draft Workspace puis Cancel. Cela porte le fichier
+à 32 tests. StateRestorationTester n'est pas une rotation physique ; CREATED →
+RESUMED n'est pas Home → application tierce. Ces limites restent explicites.
+
+Autres actions substantielles : correction du robot qui utilisait Android Back
+pour naviguer en interne (tests de résultat conservés) ; événements bornés
+MODAL_OPEN/MODAL_DISPOSE/WINDOW_FOCUS/TOUCH_DISPATCH dans le Freeze Recorder ;
+aucune coordonnée, texte ou commande collectée. Les touches fréquentes n'évinceraient
+pas les transitions critiques du second ring. Le dispatch original est appelé
+sans modification. Ces événements aident à distinguer main bloqué, fenêtre restée
+ouverte et touches reçues sans action ; ils ne constituent pas une preuve de
+WindowManager sur le Pixel sans export réel.
+
+Les 15 méthodes par famille sont consignées sans fausse réussite dans
+validation/modal-touch/dismissal-matrix.json. Certains chemins sont protégés ou
+sans bouton dédié ; le résultat attendu décrit alors le veto ou le retour interne.
+Les scénarios A–E et les gestes PTY restent à exécuter sur Pixel. Aucune permission,
+dépendance, donnée, bootstrap ou processus utilisateur n'est modifié pour tester.

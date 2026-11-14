@@ -70,7 +70,14 @@ internal fun KlyroSheet(
     val enabled = rememberUpdatedState(dismissEnabled)
     val closeOwner = rememberUpdatedState(onDismissRequest)
     val dismissal = remember { ModalDismissal() }
-    DisposableEffect(dismissal) { onDispose { dismissal.dispose() } }
+    DisposableEffect(dismissal) {
+        val id = System.identityHashCode(dismissal).toLong()
+        com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.MODAL_OPEN, id)
+        onDispose {
+            dismissal.dispose()
+            com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.MODAL_DISPOSE, id)
+        }
+    }
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
         confirmValueChange = { it != SheetValue.Hidden || dismissal.canDismiss(enabled.value) }
@@ -79,7 +86,7 @@ internal fun KlyroSheet(
         modifier = Modifier.testTag("klyro-modal-sheet"),
         properties = ModalBottomSheetProperties(shouldDismissOnBackPress = dismissEnabled),
         sheetState = sheetState,
-        onDismissRequest = { dismissal.dismiss(enabled.value) { closeOwner.value() } },
+        onDismissRequest = { dismissal.dismiss(enabled.value, !sheetState.isVisible) { closeOwner.value() } },
         containerColor = colors.sheet,
         contentColor = colors.foreground,
         shape = RoundedCornerShape(
@@ -214,6 +221,7 @@ internal fun KlyroLicenseDialog(
         }.getOrElse { "Licence unavailable in this build." }
     }
     AlertDialog(
+        modifier = Modifier.testTag("klyro-license-dialog"),
         onDismissRequest = onDismissRequest,
         shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
         containerColor = colors.sheet,

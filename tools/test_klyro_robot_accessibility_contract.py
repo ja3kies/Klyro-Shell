@@ -33,7 +33,7 @@ class RobotAccessibleRoutesTests(unittest.TestCase):
 
     def test_settings_close_and_back_actions_exist(self):
         self.assertIn('Text("Close")', SETTINGS)
-        self.assertIn('Text("Settings")', SETTINGS)
+        self.assertIn('Text(if (section == "freeze") "Diagnostics" else "Settings")', SETTINGS)
 
 if __name__ == "__main__":
     unittest.main()

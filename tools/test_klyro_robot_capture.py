@@ -281,7 +281,7 @@ class CaptureTests(unittest.TestCase):
         self.assertIsNone(result)
         self.assertEqual(r.steps[-1]["status"], "FAIL")
 
-    def test_backhandler_restores_settings_root_after_scrolled_appearance(self):
+    def test_internal_return_restores_settings_root_after_scrolled_appearance(self):
         detail = {"shot": "bottom.png", "screen": ("Terminal font", "Accent"),
                   "stage": "Appearance", "sheet_top": 606}
         root = {"shot": "settings.png",
@@ -290,14 +290,15 @@ class CaptureTests(unittest.TestCase):
                 "stage": "Settings", "sheet_top": 1215}
         r = robot.Robot(Path("."), 0)
         with patch.object(robot, "active", return_value=True), \
-             patch.object(robot, "adb", return_value="") as adb, \
+             patch.object(r, "find", return_value={"x": 1, "y": 2}), \
+             patch.object(r, "tap") as tap, \
              patch.object(r, "wait_for_markers", return_value=root):
             after = r.back_to_settings(detail, "Appearance")
         self.assertEqual(after, root)
-        adb.assert_called_once_with("shell", "input", "keyevent", "KEYCODE_BACK")
+        tap.assert_called_once_with({"x": 1, "y": 2})
         self.assertEqual(r.steps[0]["status"], "PASS")
 
-    def test_backhandler_from_scrolled_section_uses_original_route(self):
+    def test_internal_return_from_scrolled_section_uses_original_route(self):
         # After a deep scroll the title has left the accessible viewport.
         # Geometry can misleadingly classify the snapshot as "Settings".
         detail = {"shot": "appearance-bottom.png", "screen": ("Accent",),
@@ -308,37 +309,50 @@ class CaptureTests(unittest.TestCase):
                 "stage": "Settings", "sheet_top": 1200}
         r = robot.Robot(Path("."), 0)
         with patch.object(robot, "active", return_value=True), \
-             patch.object(robot, "adb", return_value="") as adb, \
+             patch.object(r, "find", return_value={"x": 1, "y": 2}), \
+             patch.object(r, "tap") as tap, \
              patch.object(r, "wait_for_markers", return_value=root):
             returned = r.back_to_settings(detail, "Appearance")
         self.assertIs(returned, root)
         self.assertEqual(r.steps[-1]["status"], "PASS")
-        adb.assert_called_once_with("shell", "input", "keyevent", "KEYCODE_BACK")
+        tap.assert_called_once_with({"x": 1, "y": 2})
 
-    def test_backhandler_from_actual_settings_root_does_not_false_pass(self):
+    def test_internal_return_from_actual_settings_root_does_not_false_pass(self):
         root = {"shot": "settings.png", "screen": ("Settings", "Appearance"),
                 "stage": "Settings", "route_stage": "Settings",
                 "labels": ["Settings", "Appearance", "Keyboard", "Storage", "Privacy"],
                 "sheet_top": 1200}
         r = robot.Robot(Path("."), 0)
         with patch.object(robot, "active", return_value=True), \
-             patch.object(robot, "adb", return_value=""), \
+             patch.object(r, "find", return_value={"x": 1, "y": 2}), \
+             patch.object(r, "tap"), \
              patch.object(r, "wait_for_markers", return_value=root):
             returned = r.back_to_settings(root, "Appearance")
         self.assertIsNone(returned)
         self.assertEqual(r.steps[-1]["status"], "FAIL")
 
-    def test_backhandler_failure_if_sheet_was_dismissed(self):
+    def test_internal_return_failure_if_sheet_was_dismissed(self):
         detail = {"shot": "bottom.png", "screen": ("Accent",),
                   "stage": "Appearance", "sheet_top": 606}
         dismissed = {"shot": "home.png", "screen": ("KLYRO",), "labels": ["KLYRO"],
                      "stage": "Home", "sheet_top": None}
         r = robot.Robot(Path("."), 0)
         with patch.object(robot, "active", return_value=True), \
-             patch.object(robot, "adb", return_value=""), \
+             patch.object(r, "find", return_value={"x": 1, "y": 2}), \
+             patch.object(r, "tap"), \
              patch.object(r, "wait_for_markers", return_value=dismissed):
             self.assertIsNone(r.back_to_settings(detail, "Appearance"))
         self.assertEqual(r.steps[0]["status"], "FAIL")
+
+    def test_missing_internal_return_never_falls_back_to_system_back(self):
+        detail = {"shot": "detail.png", "stage": "Appearance"}
+        r = robot.Robot(Path("."), 0)
+        with patch.object(robot, "active", return_value=True), \
+             patch.object(r, "find", return_value=None), \
+             patch.object(robot, "adb") as adb:
+            self.assertIsNone(r.back_to_settings(detail, "Appearance"))
+        adb.assert_not_called()
+        self.assertEqual(r.steps[-1]["status"], "FAIL")
 
     def test_half_expanded_sheet_without_scroll_is_incomplete(self):
         baseline = {"sheet_top": 1400, "handle": None,

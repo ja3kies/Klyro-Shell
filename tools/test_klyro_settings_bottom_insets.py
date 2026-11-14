@@ -19,7 +19,7 @@ class SettingsBottomInsets(unittest.TestCase):
         self.assertIn("skipPartiallyExpanded = true,", sheet)
         self.assertIn("sheetState = sheetState", sheet)
         self.assertIn("dragHandle = if (dismissEnabled)", sheet)
-        self.assertIn("dismissal.dismiss(enabled.value)", sheet)
+        self.assertIn("dismissal.dismiss(enabled.value, !sheetState.isVisible)", sheet)
 
     def test_bottom_action_has_minimum_touch_height(self):
         section = SETTINGS.split('"diagnostics" -> {', 1)[1].split('"about" -> {', 1)[0]

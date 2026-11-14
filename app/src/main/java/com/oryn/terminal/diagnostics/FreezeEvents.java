@@ -4,7 +4,7 @@ package com.oryn.terminal.diagnostics;
 public final class FreezeEvents {
     public enum Code { CREATED, STARTED, RESUMED, PAUSE_BEGIN, PAUSED, STOPPED, DESTROYED, HOME, TERMINAL,
         SETTINGS, REPORTS, PTY_CALLBACK, VIEW_REFRESH, BATCH, SESSION, CURSOR, SCROLL, SCROLLBACK,
-        RESIZE, IME, FIRST_FRAME, STRICT_IO, WORKSPACE, SERVICE_START, SERVICE_STOP, STRESS_START, STRESS_END }
+        MODAL_OPEN, MODAL_DISPOSE, WINDOW_FOCUS, TOUCH_DISPATCH, RESIZE, IME, FIRST_FRAME, STRICT_IO, WORKSPACE, SERVICE_START, SERVICE_STOP, STRESS_START, STRESS_END }
     private final long[][] ring=new long[128][4];
     private int next, size;
     private final long[][] critical=new long[32][4];
@@ -13,7 +13,7 @@ public final class FreezeEvents {
     public synchronized void add(Code code,long monotonic,long a,long b) {
         counts[code.ordinal()]++;
         long[] item=ring[next];item[0]=monotonic;item[1]=code.ordinal();item[2]=a;item[3]=b;
-        if(code!=Code.PTY_CALLBACK && code!=Code.VIEW_REFRESH && code!=Code.BATCH && code!=Code.CURSOR && code!=Code.SCROLLBACK && code!=Code.IME && code!=Code.RESIZE) {
+        if(code!=Code.TOUCH_DISPATCH && code!=Code.PTY_CALLBACK && code!=Code.VIEW_REFRESH && code!=Code.BATCH && code!=Code.CURSOR && code!=Code.SCROLLBACK && code!=Code.IME && code!=Code.RESIZE) {
             System.arraycopy(item,0,critical[criticalNext],0,4);
             criticalNext=(criticalNext+1)%critical.length;criticalSize=Math.min(criticalSize+1,critical.length);
         }

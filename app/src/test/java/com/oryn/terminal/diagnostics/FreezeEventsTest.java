@@ -11,4 +11,16 @@ public class FreezeEventsTest {
  @Test(timeout=5000) public void concurrentWorkerAndUiEventsDoNotLoseCounts()throws Exception{FreezeEvents e=new FreezeEvents();ExecutorService pool=Executors.newFixedThreadPool(4);try{Future<?>[] f=new Future[4];for(int i=0;i<4;i++)f[i]=pool.submit(()->{for(int j=0;j<10000;j++)e.add(FreezeEvents.Code.PTY_CALLBACK,j,0,0);});for(Future<?> v:f)v.get();assertTrue(e.snapshot().contains("PTY_CALLBACK_count=40000"));}finally{pool.shutdownNow();}}
  @Test(timeout=5000) public void snapshotWhileProducingStaysBounded()throws Exception{FreezeEvents e=new FreezeEvents();ExecutorService pool=Executors.newSingleThreadExecutor();try{Future<?> f=pool.submit(()->{for(int j=0;j<100000;j++)e.add(FreezeEvents.Code.BATCH,j,0,0);});for(int i=0;i<100;i++)assertTrue(e.snapshot().length()<20000);f.get();}finally{pool.shutdownNow();}}
  @Test public void lifecycleOrderSurvivesForegroundRoundTrip(){FreezeEvents e=new FreezeEvents();e.add(FreezeEvents.Code.PAUSED,1,0,0);e.add(FreezeEvents.Code.STOPPED,2,0,0);e.add(FreezeEvents.Code.STARTED,3,0,0);e.add(FreezeEvents.Code.RESUMED,4,0,0);String s=e.snapshot();assertTrue(s.indexOf("1 PAUSED")<s.indexOf("2 STOPPED"));assertTrue(s.indexOf("3 STARTED")<s.indexOf("4 RESUMED"));}
+ @Test public void touchFloodCannotEvictModalLifetimeEvidence(){
+  FreezeEvents e=new FreezeEvents();
+  e.add(FreezeEvents.Code.MODAL_OPEN,1,42,0);
+  e.add(FreezeEvents.Code.WINDOW_FOCUS,2,0,0);
+  e.add(FreezeEvents.Code.MODAL_DISPOSE,3,42,0);
+  for(int i=0;i<1000;i++)e.add(FreezeEvents.Code.TOUCH_DISPATCH,i+4,0,0);
+  String snapshot=e.snapshot();
+  assertTrue(snapshot.contains("1 MODAL_OPEN 42 0"));
+  assertTrue(snapshot.contains("3 MODAL_DISPOSE 42 0"));
+  assertTrue(snapshot.contains("TOUCH_DISPATCH_count=1000"));
+  assertTrue(snapshot.length()<20000);
+ }
 }

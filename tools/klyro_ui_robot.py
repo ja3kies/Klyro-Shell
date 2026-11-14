@@ -566,13 +566,17 @@ class Robot:
         return restored if count_unchanged else None
 
     def back_to_settings(self, current, page):
-        """Use Klyro's nested Settings BackHandler, never a downward drag."""
+        """Use the labeled internal return; system Back closes the entire sheet."""
         if not active():
             self.record_blocked("Back to Settings: " + page, current,
                                 "Klyro no longer in foreground")
             return None
-        adb("shell", "input", "keyevent", "KEYCODE_BACK")
-        time.sleep(self.delay)
+        target = self.find(current, "Settings")
+        if target is None:
+            self.record_blocked("Back to Settings: " + page, current,
+                                "Internal Settings return is not visible; no system Back attempted")
+            return None
+        self.tap(target)
         after = self.wait_for_markers("after-back-" + page, SETTINGS_ROOT)
         # A scrolled Appearance/Diagnostics view may lose its heading; the
         # geometry classifier can then call it "Settings". Use the route
@@ -584,7 +588,7 @@ class Robot:
                   origin != "Settings" and
                   after.get("sheet_top") is not None)
         self.record("Back to Settings: " + page, passed, current, after,
-                    "Android BackHandler must restore Settings root without dismissing sheet")
+                    "Internal return must restore Settings root without dismissing sheet")
         return after if passed else None
 
     def smoke(self):

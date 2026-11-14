@@ -194,7 +194,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         # When switching from the Bento home grid to a subsection, reset
         # scroll: the title/back button must not remain above the viewport.
         self.assertIn("remember(section) { ScrollState(0) }", settings)
-        self.assertIn('Text("Settings")', settings)
+        self.assertIn('Text(if (section == "freeze") "Diagnostics" else "Settings")', settings)
         self.assertNotIn("prominent = true", settings)
         self.assertIn('R.drawable.hugeicons_palette', settings)
         self.assertIn('R.drawable.ic_klyro_keyboard_keys', settings)
