@@ -116,6 +116,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     // A newly attached PTY starts only when TerminalView supplies its first size.
     val liveSessionCount: Int get() = tabs.count { it.exitStatus == null }
     fun hasLiveSessions(): Boolean = liveSessionCount > 0
+    fun hasOpenSessions(): Boolean = tabs.isNotEmpty()
 
     fun isSessionActive(id: Long): Boolean =
         activeTabId == id && tabs.any { it.id == id }

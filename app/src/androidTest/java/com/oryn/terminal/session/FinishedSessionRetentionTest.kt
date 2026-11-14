@@ -58,6 +58,7 @@ class FinishedSessionRetentionTest {
         assertEquals(17, model.sessions.single().exitStatus)
         assertEquals(transcript, session.emulator.screen.transcriptText)
         assertFalse(model.hasLiveSessions())
+        assertTrue(model.hasOpenSessions())
         assertEquals(setOf(id), model.finishedTabIds)
         assertFalse(session.tryWrite(byteArrayOf(65), 0, 1))
         assertTrue(model.sessionFailureMessage!!.contains("17"))
@@ -71,6 +72,7 @@ class FinishedSessionRetentionTest {
         assertEquals(0, model.liveSessionCount)
         model.closeTab(id)
         assertTrue(model.sessions.isEmpty())
+        assertFalse(model.hasOpenSessions())
         assertTrue(model.finishedTabIds.isEmpty())
         assertNull(model.activeTabId)
     }

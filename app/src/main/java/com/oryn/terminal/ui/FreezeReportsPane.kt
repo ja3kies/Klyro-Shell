@@ -166,7 +166,7 @@ private fun FreezeStabilityControls(onStabilityTestStarted: () -> Unit) {
         if (result?.started == true) onStabilityTestStarted()
     }) { Text("Start isolated 1,500-line test") }
     Text(feedback)
-    val hasSessions = com.oryn.terminal.KlyroSessionRuntime.sessions.hasLiveSessions()
+    val hasSessions = com.oryn.terminal.KlyroSessionRuntime.sessions.hasOpenSessions()
     Text("Artificial UI stalls can trigger Android termination. Available only with no open sessions.")
     Row {
         TextButton(onClick = { blockSeconds = 6 }, enabled = !hasSessions) { Text("Test 6s stall") }
@@ -177,9 +177,9 @@ private fun FreezeStabilityControls(onStabilityTestStarted: () -> Unit) {
         text = { Text("This deliberate test may cause Android to terminate Klyro. No sessions may be open. The independent recorder should capture before recovery.") },
         confirmButton = { TextButton(onClick = {
             val seconds = blockSeconds; blockSeconds = 0
-            if (!com.oryn.terminal.KlyroSessionRuntime.sessions.hasLiveSessions())
+            if (!com.oryn.terminal.KlyroSessionRuntime.sessions.hasOpenSessions())
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    if (!com.oryn.terminal.KlyroSessionRuntime.sessions.hasLiveSessions() && FreezeRecorder.lifecycle == "RESUMED")
+                    if (!com.oryn.terminal.KlyroSessionRuntime.sessions.hasOpenSessions() && FreezeRecorder.lifecycle == "RESUMED")
                         android.os.SystemClock.sleep(seconds * 1000L)
                 }, 1500)
         }) { Text("Run deliberate test") } },
