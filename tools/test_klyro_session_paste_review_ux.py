@@ -9,7 +9,7 @@ class PasteReviewUxContracts(unittest.TestCase):
     def test_pending_review_has_original_tab_identity(self):
         self.assertIn("var pendingMultilinePaste by remember(session) { mutableStateOf<TerminalPasteReview?>(null) }", PANE)
         self.assertIn("TerminalPasteReview(tabId, content!!)", PANE)
-        self.assertIn("TerminalPasteReview(tabId, incoming)", PANE)
+        self.assertIn("TerminalPasteReview(request.tabId, incoming)", PANE)
 
     def test_confirm_checks_tab_binding_and_reports_failure(self):
         self.assertIn("sendIfCurrent(activeTabId, currentSessionId()", PANE)
