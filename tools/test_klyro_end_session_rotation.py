@@ -10,7 +10,9 @@ class EndSessionRotationTest(unittest.TestCase):
   self.assertIn('onDismissRequest = { endSessionTargetId = null }',S)
  def test_destruction_is_only_user_confirmed(self):
   dialog=S.split("if (showEndSessionConfirmation)",1)[1]
-  self.assertIn("expected?.let(onCloseTab)",dialog)
-  self.assertIn("runIfCurrent(expected, currentSessionId()",dialog)
+  self.assertIn("expected == currentSessionId()",dialog)
+  self.assertIn("tabs.any { it.first == expected }",dialog)
+  self.assertIn("onCloseTab(expected)",dialog)
+  self.assertIn("Close finished tab",dialog)
   self.assertIn("Keep session",dialog)
 if __name__=="__main__":unittest.main()
