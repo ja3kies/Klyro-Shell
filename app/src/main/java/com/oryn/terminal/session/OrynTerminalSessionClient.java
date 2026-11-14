@@ -187,7 +187,13 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
         String pasted = com.oryn.terminal.ui.ClipboardTextReader.readPlainText(clipboard);
-        if (pasted == null) return;
+        if (pasted == null) {
+            if (isNativePasteTargetCurrent(session, source)) {
+                Toast.makeText(context, "No supported clipboard text",
+                    Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
         if (!ClipboardPastePolicy.canPaste(pasted)) {
             uiHandler.post(() -> {
                 if (isNativePasteTargetCurrent(session, source)) {
