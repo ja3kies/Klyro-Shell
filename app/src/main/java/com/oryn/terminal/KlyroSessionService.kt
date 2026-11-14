@@ -19,7 +19,7 @@ class KlyroSessionService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val check = object : Runnable {
         override fun run() {
-            if (KlyroSessionRuntime.sessions.hasLiveSessions()) {
+            if (KlyroSessionRuntime.sessions.hasRunningPtys()) {
                 handler.postDelayed(this, 60_000L)
             } else stopSelf()
         }
@@ -40,11 +40,11 @@ class KlyroSessionService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!KlyroSessionRuntime.sessions.hasLiveSessions()) {
+        if (!KlyroSessionRuntime.sessions.hasRunningPtys()) {
             stopSelf(startId)
             return START_NOT_STICKY
         }
-        val sessionCount = KlyroSessionRuntime.sessions.sessions.size
+        val sessionCount = KlyroSessionRuntime.sessions.sessions.count { it.session.isRunning() }
         val openApp = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java).apply {
@@ -95,12 +95,12 @@ class KlyroSessionService : Service() {
         private const val CHANNEL = "klyro_sessions"
         private const val NOTIFICATION_ID = 1001
         fun ensureRunning(context: Context) {
-            if (!KlyroSessionRuntime.sessions.hasLiveSessions()) return
+            if (!KlyroSessionRuntime.sessions.hasRunningPtys()) return
             ContextCompat.startForegroundService(context.applicationContext,
                 Intent(context, KlyroSessionService::class.java))
         }
         fun stopIfEmpty(context: Context) {
-            if (!KlyroSessionRuntime.sessions.hasLiveSessions()) {
+            if (!KlyroSessionRuntime.sessions.hasRunningPtys()) {
                 context.applicationContext.stopService(
                     Intent(context, KlyroSessionService::class.java))
             }
