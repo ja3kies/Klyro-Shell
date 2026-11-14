@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -21,7 +23,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-internal fun FreezeReportsPane(storeProvider: () -> com.oryn.terminal.diagnostics.FreezeReportStore = FreezeRecorder::repository) {
+internal fun FreezeReportsPane(
+    onStabilityTestStarted: () -> Unit = {},
+    storeProvider: () -> com.oryn.terminal.diagnostics.FreezeReportStore = FreezeRecorder::repository
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var reports by remember { mutableStateOf<List<Pair<String,String>>>(emptyList()) }
@@ -81,7 +86,7 @@ internal fun FreezeReportsPane(storeProvider: () -> com.oryn.terminal.diagnostic
                 modifier = Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState()))
         }
         }
-        if (com.oryn.terminal.BuildConfig.DEBUG) FreezeStabilityControls()
+        if (com.oryn.terminal.BuildConfig.DEBUG) FreezeStabilityControls(onStabilityTestStarted)
     }
     deleteTarget?.let { target ->
         AlertDialog(onDismissRequest = { deleteTarget = null }, title = { Text("Delete this diagnostic?") },
@@ -110,7 +115,11 @@ internal fun FreezeRecoveryNotice() {
                 Column(Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
                     .verticalScroll(rememberScrollState()).padding(20.dp)) {
                     TextButton(onClick = { FreezeRecorder.openReports.value = false }) { Text("Close diagnostics") }
-                    FreezeReportsPane()
+                    FreezeReportsPane(
+                        onStabilityTestStarted = {
+                            FreezeRecorder.openReports.value = false
+                        }
+                    )
                 }
             }
         }
@@ -125,8 +134,21 @@ internal fun FreezeRecoveryNotice() {
     }
 }
 
+/** Compose may provide a themed ContextWrapper rather than MainActivity directly. */
+private fun Context.klyroActivityOrNull(): com.oryn.terminal.MainActivity? {
+    var current: Context = this
+    repeat(16) {
+        if (current is com.oryn.terminal.MainActivity) return current
+        val wrapped = current as? ContextWrapper ?: return null
+        val base = wrapped.baseContext
+        if (base === current) return null
+        current = base
+    }
+    return null
+}
+
 @Composable
-private fun FreezeStabilityControls() {
+private fun FreezeStabilityControls(onStabilityTestStarted: () -> Unit) {
     val context = LocalContext.current
     var blockSeconds by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf("") }
@@ -139,8 +161,9 @@ private fun FreezeStabilityControls() {
     Text("Stability test (diagnostic build)", style = MaterialTheme.typography.titleMedium)
     Text("Creates a separate Bash tab, waits 3 seconds, then prints 1,500 lines. Go Home, open another app, then return. Keep the test tab until you inspect the END marker; close it explicitly when finished. Existing sessions receive no commands.")
     TextButton(onClick = {
-        val activity = context as? com.oryn.terminal.MainActivity
-        feedback = activity?.startDiagnosticStress() ?: "Activity unavailable; test not started."
+        val result = context.klyroActivityOrNull()?.startDiagnosticStress()
+        feedback = result?.message ?: "Activity unavailable; test not started."
+        if (result?.started == true) onStabilityTestStarted()
     }) { Text("Start isolated 1,500-line test") }
     Text(feedback)
     val hasSessions = com.oryn.terminal.KlyroSessionRuntime.sessions.hasLiveSessions()
