@@ -977,9 +977,9 @@ class MainActivity : ComponentActivity() {
         })
     }
 
-    fun startDiagnosticStress(): String {
-        if (!BuildConfig.DEBUG) return "Diagnostic build required."
-        if (terminalState.sessions.size >= 8) return "Maximum 8 sessions; test not started."
+    fun startDiagnosticStress(): Pair<Boolean, String> {
+        if (!BuildConfig.DEBUG) return false to "Diagnostic build required."
+        if (terminalState.sessions.size >= 8) return false to "Maximum 8 sessions; test not started."
         return try {
             val manager = TerminalSessionManager(applicationContext)
             val id = terminalState.reserveTabId()
@@ -991,12 +991,12 @@ class MainActivity : ComponentActivity() {
             KlyroSessionService.ensureRunning(this)
             showWelcomeScreen = false
             val bytes = com.oryn.terminal.diagnostics.StabilityScenario.COMMAND.toByteArray(Charsets.UTF_8)
-            if (!session.tryWrite(bytes, 0, bytes.size)) "Test input rejected; diagnostic tab retained."
+            if (!session.tryWrite(bytes, 0, bytes.size)) false to "Test input rejected; diagnostic tab retained."
             else {
                 com.oryn.terminal.diagnostics.FreezeRecorder.recordStabilityRun(id)
-                "Started in separate tab. Go Home → another app → return. Look for the END marker."
+                true to "Started in separate tab. Go Home → another app → return. Look for the END marker."
             }
-        } catch (e: Exception) { "Test not started (${e.javaClass.simpleName}); existing sessions preserved." }
+        } catch (e: Exception) { false to "Test not started (${e.javaClass.simpleName}); existing sessions preserved." }
     }
 
     private fun launchBash() {
