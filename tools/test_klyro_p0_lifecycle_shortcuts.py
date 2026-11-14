@@ -125,7 +125,8 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
 
     def test_native_paste_does_not_auto_run_unvalidated_multiline(self):
         self.assertIn("ClipboardPastePolicy.requiresConfirmation(incoming)", self.pane)
-        self.assertIn("pendingMultilinePaste = TerminalPasteReview(tabId, incoming)", self.pane)
+        self.assertIn("pendingMultilinePaste = TerminalPasteReview(request.tabId, incoming)", self.pane)
+        self.assertIn("request.tabId != activeTabId", self.pane)
         self.assertIn("if (tabId != null && currentSessionId() == tabId)", self.pane)
 
     def test_back_handler_preserves_unsaved_dialog_flow(self):
@@ -176,8 +177,8 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         gradle = (ROOT / "app/build.gradle.kts").read_text()
         code = int(re.search(r"versionCode\s*=\s*(\d+)", gradle).group(1))
         version = re.search(r'versionName\s*=\s*"([^"]+)"', gradle).group(1)
-        self.assertGreater(code, 23, "Android rejects downgrades from 0.4.16-dev")
-        self.assertEqual("0.4.18-dev", version)
+        self.assertGreater(code, 25, "Android rejects downgrades from 0.4.18-dev")
+        self.assertEqual("0.4.19-dev", version)
 
     def test_failed_bootstrap_cannot_modify_existing_shell_profile(self):
         installer = (APP / "termux/TermuxBootstrapInstaller.java").read_text()
