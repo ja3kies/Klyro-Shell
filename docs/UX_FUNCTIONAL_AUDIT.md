@@ -35,7 +35,7 @@ séparé pour ne jamais faire tourner l'historique réel de l'utilisateur.
 - [Termux](https://termux.dev/en/) et [TerminalView réellement consulté](https://github.com/termux/termux-app/blob/master/terminal-view/src/main/java/com/termux/view/TerminalView.java) : préserver le moteur, les gestes et la sémantique de terminal existants.
 - [Ghostty features](https://ghostty.org/docs/features) : distinguer confort UI et protocoles terminal ; aucun remplacement de rendu.
 - [iTerm2 documentation](https://iterm2.com/documentation-one-page.html) : sélectionner/rechercher reste distinct d'exécuter une commande.
-- [Termius documentation](https://docs.termius.com/) : organisation explicite des sessions, sans copie de son interface.
+- [Termius documentation](https://docs.termius.com/) : documentation overview consultée ; aucune interaction Termius exécutée, aucune interface copiée.
 - [Bottom sheets Android](https://developer.android.com/develop/ui/compose/components/bottom-sheets) : retirer la feuille fermée de la composition, éviter la superposition.
 - [Accessibilité Compose](https://developer.android.com/develop/ui/compose/accessibility/api-defaults) : targets minimum 48dp, états et boutons standards.
 - [Apple feedback](https://developer.apple.com/design/human-interface-guidelines/feedback.md) : feedback lié à l'action et compréhensible ; adapté à Android, sans fausse modale système.
@@ -137,3 +137,21 @@ Les tests Convergence couvrent ces limites, plus le script Bash réellement exé
 avec 1 500 lignes. Le même script exact est aussi exécuté par un harness PTY du
 guest jetable. Cela ne valide pas le Home/retour dans l'APK. Notification refusée,
 TalkBack, SAF et gestes restent NOT TESTED sur appareil.
+
+Revue lint de fin : 45 warnings et 11 hints, sans suppression artificielle.
+Les 3 MutableCollectionMutableState initiaux disparaissent avec les types
+read-only ; deux StaticFieldLeak concernent FreezeRecorder.app, alimenté
+exclusivement par applicationContext (durée de vie processus voulue, aucun
+Activity stocké). Ils sont classés faux positifs probables, pas ignorés.
+ImplicitSamInstance/stopService(Intent) est aussi un faux positif probable.
+ChromeOsAbiSupport est attendu sur une cible ARM64. GradleDependency, UseKtx,
+ModifierParameter, autoboxing, ressources/vector paths et SDK checks restent
+hors correction fonctionnelle sans preuve de défaut ; logos validés conservés.
+UsableSpace est déjà hors UI ; les chemins SdCardPath existants ne confèrent
+aucune permission SAF supplémentaire. Le rapport lint complet est livré.
+
+Validation consolidée : [CI finale 43530165958](https://github.com/ja3kies/Klyro-Shell/actions/runs/43530165958)
+SUCCESS sur d634b4d. JVM/outil/native/build/signatures exécutés, tests Android
+et Compose compilés seulement. La matrice détaillée et le statut TEST BUILD
+sont dans KLYRO_UX_FREEZE_COMPLETION.md. Aucun contraste, geste ou TalkBack
+physique n'est converti en PASS par cette CI.

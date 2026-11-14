@@ -1,0 +1,7 @@
+{
+  "architecture": "aarch64",
+  "page_bytes": 4096,
+  "sdk": "37",
+  "model": "Pixel 9",
+  "scope": "Termux build host; not proof of Klyro UID or Activity behavior"
+}

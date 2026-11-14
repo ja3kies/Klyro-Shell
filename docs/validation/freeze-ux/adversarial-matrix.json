@@ -298,5 +298,25 @@
     "status": "PASS",
     "evidence": "native-final.log",
     "fix_reference": "tests/native/pty_test.c"
+  },
+  {
+    "scenario": "Erreur mémoire du collector injectée",
+    "preconditions": "Build instrumentée dédiée, aucun épuisement réel de RAM",
+    "steps": "FreezeFailureBoundaryTest injecte OutOfMemoryError puis exécute une tâche suivante",
+    "expected": "Erreur visible, aucune exception échappée, tâche suivante exécutée",
+    "observed": "Test fourni et compilation PASS ; exécution appareil indisponible",
+    "status": "NOT TESTED",
+    "evidence": "FreezeFailureBoundaryTest.kt / CI compileAndroidTest",
+    "fix_reference": "FreezeRecorder.guard"
+  },
+  {
+    "scenario": "Timeline de round trip sans freeze",
+    "preconditions": "Session de stabilité isolée démarrée volontairement",
+    "steps": "Home → autre app → retour → Freeze reports → Refresh → Export ZIP",
+    "expected": "Transitions critiques et délais de heartbeats valides exportés ; Completion reste NOT_VERIFIED sans observation de END",
+    "observed": "Correctif fourni ; exécution physique indisponible",
+    "status": "NOT TESTED",
+    "evidence": "FreezeRecorder.snapshotStabilityTimeline / FreezeReportsPane",
+    "fix_reference": "docs/FREEZE_FORENSICS.md"
   }
 ]

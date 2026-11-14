@@ -1,0 +1,5 @@
+Report: .local/freeze/device-attempt/report.html
+Component review: .local/freeze/device-attempt/ux-review.html
+Unique screenshots: 0 Exact duplicates avoided: 0 Repeated layouts: 0
+Assertions: 0 Warnings: 1
+Evidence ZIP: .local/freeze/device-attempt.zip

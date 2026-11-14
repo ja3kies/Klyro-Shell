@@ -148,3 +148,16 @@ heartbeats acquittés sont inclus (pas la durée d'un ping encore bloqué, déj�
 mesurée séparément par blocked_ms). Les générations obsolètes ne contribuent pas
 à ces métriques. La fin reste NOT_VERIFIED tant que l'utilisateur n'a pas observé
 END ; aucun transcript n'est lu pour déduire artificiellement PASS.
+
+## Validation consolidée
+
+Source finale d634b4d : [CI 43530165958](https://github.com/ja3kies/Klyro-Shell/actions/runs/43530165958)
+SUCCESS. 326 JVM app, 34 émulateur, 506 Python, native PTY/JNI, lint et builds
+ARM64 debug/test/release réussis. App et APK tests signés avec le certificat
+Klyro, revalidation locale v2/v3 et ELF 16 KiB PASS. Les 55 tests core directs
+et le PTY guest exact ne sont pas des validations de l'APK sur Pixel.
+
+Voir [rapport final](KLYRO_UX_FREEZE_COMPLETION.md) pour les commits, empreintes,
+liens d'artefacts et guide sans ADB. Statut TEST BUILD, root cause du freeze
+Pixel UNVERIFIED. Aucun appareil ADB autorisé ni rapport exporté de cette build
+permettant de fermer les validations physiques.

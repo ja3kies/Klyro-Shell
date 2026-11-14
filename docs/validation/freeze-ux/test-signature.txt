@@ -1,0 +1,18 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v3.2 scheme (APK Signature Scheme v3.2): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+V3.0 Signer: certificate DN: CN=Klyro Shell, O=Klyro
+V3.0 Signer: certificate SHA-256 digest: 01a7e05326237fdfa4cda54e75fb8164cbe12bbc964d36e2d9c2d1a8ef7e5c14
+V3.0 Signer: certificate SHA-1 digest: e3d9b7512b00c9fa117a436dc041e122d0f3e8b0
+V3.0 Signer: certificate MD5 digest: 4924b50a7e2ed7de6606bc14969061b9
+V3.0 Signer: key algorithm: RSA
+V3.0 Signer: key size (bits): 3072
+V3.0 Signer: public key SHA-256 digest: bf4bca3bb273352d80820ab1a34caf6ebf74b254f7288e332040c9618cb84662
+V3.0 Signer: public key SHA-1 digest: d27ffdda52cac33c76757a14d63b7cb1ce42343d
+V3.0 Signer: public key MD5 digest: 512210e02ad546898237fbd9277154e4
