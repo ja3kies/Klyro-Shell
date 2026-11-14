@@ -100,6 +100,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.oryn.terminal.TerminalSessionViewModel
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.oryn.terminal.core.OrynPaths
@@ -157,8 +158,8 @@ fun TerminalPane(
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
     sessionFailureMessage: String?,
-    nativePasteRequest: String?,
-    onNativePasteConsumed: () -> Unit,
+    nativePasteRequest: TerminalSessionViewModel.NativePasteRequest?,
+    onNativePasteConsumed: (TerminalSessionViewModel.NativePasteRequest) -> Unit,
     onClose: () -> Unit,
     runtimeHasWarnings: Boolean = false,
     verifyingRuntime: Boolean = false,
@@ -314,27 +315,21 @@ fun TerminalPane(
         }
     }
     LaunchedEffect(nativePasteRequest, session) {
-        nativePasteRequest?.let { incoming ->
+        nativePasteRequest?.let { request ->
+            val incoming = request.text
             val emulator = session.emulator
-            if (!session.isRunning() || emulator == null) {
+            // Revalidate the original tab, not whichever pane now has focus.
+            if (request.tabId != activeTabId || request.tabId != currentSessionId()) {
+                Toast.makeText(context, "Paste not sent — session changed",
+                    Toast.LENGTH_SHORT).show()
+            } else if (!session.isRunning() || emulator == null) {
                 Toast.makeText(context, "Terminal unavailable; paste cancelled",
                     Toast.LENGTH_SHORT).show()
-                onNativePasteConsumed()
-                return@let
-            }
-            // Imported single-line text behaves like the clipboard action;
-            // only lines capable of submitting shell commands need confirmation.
-            if (!ClipboardPastePolicy.canPaste(incoming)) {
+            } else if (!ClipboardPastePolicy.canPaste(incoming)) {
                 Toast.makeText(context, "Unsupported or unsafe pasted text",
                     Toast.LENGTH_SHORT).show()
             } else if (ClipboardPastePolicy.requiresConfirmation(incoming)) {
-                val tabId = activeTabId
-                if (tabId != null && currentSessionId() == tabId) {
-                    pendingMultilinePaste = TerminalPasteReview(tabId, incoming)
-                } else {
-                    Toast.makeText(context, "Paste not sent — session changed",
-                        Toast.LENGTH_SHORT).show()
-                }
+                pendingMultilinePaste = TerminalPasteReview(request.tabId, incoming)
             } else {
                 val accepted = TerminalActionPolicy.pasteIfCurrent(
                     activeTabId, currentSessionId(), session.isRunning(), incoming
@@ -342,7 +337,9 @@ fun TerminalPane(
                 if (!accepted) Toast.makeText(context,
                     "Paste not sent — session changed or input busy", Toast.LENGTH_SHORT).show()
             }
-            onNativePasteConsumed()
+            // Consume only this event. A second identical paste can arrive before
+            // Compose dispatches this acknowledgement.
+            onNativePasteConsumed(request)
         }
     }
     var activeTerminalView by remember(session) { mutableStateOf<TerminalView?>(null) }
