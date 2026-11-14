@@ -53,7 +53,7 @@ class ModalLifecycleUiTest {
         ui.waitForIdle()
     }
 
-    @Composable private fun settings(close: () -> Unit) {
+    @Composable private fun SettingsFixture(close: () -> Unit) {
         KlyroSettingsSheet(initialSection = "home", themeMode = if(fixtureDark) "dark" else "light", onThemeModeChange = {},
             accentId = "sage", onAccentIdChange = {}, fontSizeSp = 13.5f, fontFamilyId = "default",
             onFontFamilyChange = {}, onFontChange = {}, onResetFont = {}, onResetModifiers = {},
@@ -93,7 +93,7 @@ class ModalLifecycleUiTest {
     }
 
     private fun settingsSwipe(section: String) {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText(section).performClick()
         swipeAway()
         assertRemovedAndTapUnderlying()
@@ -106,13 +106,13 @@ class ModalLifecycleUiTest {
     @Test fun diagnosticsSwipeRemovesWindowAndUnderlyingTapExecutes() = settingsSwipe("Diagnostics")
     @Test fun aboutSwipeRemovesWindowAndUnderlyingTapExecutes() = settingsSwipe("About")
     @Test fun reportsSwipeRemovesWindowAndUnderlyingTapExecutes() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("Diagnostics").performClick()
         ui.onNodeWithText("Freeze reports").performScrollTo().performClick()
         swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun internalBackKeepsSheetThenCloseRemovesIt() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick()
         ui.onNodeWithText("Settings", substring = false).performClick()
         ui.onNodeWithTag("klyro-modal-sheet").assertExists()
@@ -121,19 +121,19 @@ class ModalLifecycleUiTest {
         assertRemovedAndTapUnderlying()
     }
     @Test fun closeFromAppearanceRemovesWindow() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick()
         ui.onNodeWithText("Close").performClick(); assertRemovedAndTapUnderlying()
     }
     @Test fun systemBackFromAppearanceClosesOwner() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick()
         InstrumentationRegistry.getInstrumentation().uiAutomation.performGlobalAction(
             android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
         ui.waitForIdle(); assertRemovedAndTapUnderlying()
     }
     @Test fun scrimTapFromAppearanceRemovesWindow() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick()
         // Scrim is outside the sheet; use WindowManager injection for this path too.
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
@@ -181,7 +181,7 @@ class ModalLifecycleUiTest {
         swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun interruptedDragKeepsVisibleSheetThenRealSwipeCloses() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick()
         ui.onNodeWithTag("klyro-modal-sheet").performTouchInput {
             down(androidx.compose.ui.geometry.Offset(center.x,12f)); moveBy(androidx.compose.ui.geometry.Offset(0f,5f)); cancel()
@@ -224,37 +224,37 @@ class ModalLifecycleUiTest {
     }
 
     @Test fun darkModeDismissRestoresTouch() {
-        host(dark=true) { close -> settings(close) }
+        host(dark=true) { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick(); swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun largeFontDismissRestoresTouch() {
-        host(fontScale=2f) { close -> settings(close) }
+        host(fontScale=2f) { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick(); swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun closedOwnerCannotResurrectOnSavedStateRestore() {
         val restore=androidx.compose.ui.test.junit4.StateRestorationTester(ui)
-        host(restoration=restore) { close -> settings(close) }
+        host(restoration=restore) { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick(); swipeAway()
         restore.emulateSavedInstanceStateRestore(); ui.waitForIdle()
         assertRemovedAndTapUnderlying()
     }
     @Test fun restoredSubpageCanStillBeDismissed() {
         val restore=androidx.compose.ui.test.junit4.StateRestorationTester(ui)
-        host(restoration=restore) { close -> settings(close) }
+        host(restoration=restore) { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick()
         restore.emulateSavedInstanceStateRestore(); ui.waitForIdle()
         ui.onAllNodesWithTag("klyro-modal-sheet").assertCountEquals(1)
         swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun stoppedAndResumedActivityCanDismissWithoutRestart() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick()
         ui.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
         ui.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
         ui.waitForIdle(); swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun immediateReopenStartsWithFreshNavigation() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick(); swipeAway(); assertRemovedAndTapUnderlying()
         ui.runOnIdle { visible.value=true }; ui.waitForIdle()
         ui.onNodeWithText("Storage").assertExists()
@@ -298,7 +298,7 @@ class ModalLifecycleUiTest {
         swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun licenseDialogClosesBeforeParentAndLeavesNoWindow() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("About").performClick()
         ui.onNodeWithText("JetBrains Mono licence").performScrollTo().performClick()
         ui.onNode(hasText("Close") and hasAnyAncestor(hasTestTag("klyro-license-dialog"))).performClick()
@@ -313,7 +313,7 @@ class ModalLifecycleUiTest {
                 Box(Modifier.fillMaxSize()) {
                     Button(onClick={taps++},modifier=Modifier.testTag("underlying-control")) { Text("Underlying action") }
                     when(mode.value) {
-                        1 -> settings { closes++;mode.value=2 }
+                        1 -> SettingsFixture { closes++;mode.value=2 }
                         2 -> KlyroCommandPalette(installedPrefix=null,pluginCommands=emptyList(),onInsert={true},
                             onDismiss={closes++;mode.value=0})
                     }
@@ -327,7 +327,7 @@ class ModalLifecycleUiTest {
     }
 
     @Test fun removingOwnerDuringClosingAnimationStillRestoresTouch() {
-        host { close -> settings(close) }
+        host { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick()
         ui.mainClock.autoAdvance=false
         ui.onNodeWithTag("klyro-modal-sheet").performTouchInput {
