@@ -74,7 +74,7 @@ class UXFivePriorities(unittest.TestCase):
 
     def test_settings_back_returns_to_root(self):
         self.assertIn('BackHandler(', self.settings)
-        self.assertIn(') { navigateBack() }', self.settings)
+        self.assertIn(') { onDismiss() }', self.settings)
         route = self.settings.split("fun navigateBack()", 1)[1].split("BackHandler(", 1)[0]
         self.assertIn('section != "home" -> section = "home"', route)
         self.assertIn('else -> onDismiss()', route)

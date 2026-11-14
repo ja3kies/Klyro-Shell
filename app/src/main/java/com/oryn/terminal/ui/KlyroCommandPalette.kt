@@ -117,11 +117,6 @@ internal fun KlyroCommandPalette(
             KlyroCommandQuickAccess.encode(next, KlyroCommandQuickAccess.MAX_PINNED)).apply()
         info = null
     }
-    BackHandler(enabled = showingGuide) { showingGuide = false }
-    BackHandler(enabled = pendingCautionCommand != null) {
-        pendingCautionCommand = null; pendingCautionId = null
-    }
-    BackHandler(enabled = confirmClearRecent) { confirmClearRecent = false }
     val matches = remember(query, pinnedIds, recentIds, pinnedOnly, availableOnly, installedPrefix) {
         val ranked = KlyroCommandQuickAccess.rank(
             KlyroCommandCatalog.search(query), pinnedIds, recentIds
@@ -139,16 +134,8 @@ internal fun KlyroCommandPalette(
     }
 
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = {
-            when {
-                pendingCautionCommand != null -> {
-                    pendingCautionCommand = null; pendingCautionId = null
-                }
-                confirmClearRecent -> confirmClearRecent = false
-                showingGuide -> showingGuide = false
-                else -> onDismiss()
-            }
-        }) {
+        KlyroSheet(onDismissRequest = onDismiss,
+            dismissEnabled = pendingCautionCommand == null && !confirmClearRecent) {
             Column(
                 modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().imePadding()

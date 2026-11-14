@@ -1,14 +1,11 @@
-"""Swiping outside a nested palette guide should return to search, not close all."""
+"""Structural contract: guide navigation must not consume external dismissal."""
 from pathlib import Path
 import unittest
 P=(Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal/ui/KlyroCommandPalette.kt").read_text()
 class GuideDismissParity(unittest.TestCase):
- def test_back_and_sheet_dismiss_return_to_commands(self):
-  self.assertIn("BackHandler(enabled = showingGuide) { showingGuide = false }",P)
-  self.assertIn("showingGuide -> showingGuide = false",P)
-  self.assertIn('pendingCautionCommand != null -> {',P)
-  self.assertIn('pendingCautionId = null',P)
-  self.assertIn('confirmClearRecent -> confirmClearRecent = false',P)
-  self.assertIn("else -> onDismiss()",P)
+ def test_external_dismiss_closes_palette_even_from_guide(self):
+  self.assertIn("KlyroSheet(onDismissRequest = onDismiss,",P)
+  self.assertIn("dismissEnabled = pendingCautionCommand == null && !confirmClearRecent",P)
+  self.assertNotIn("showingGuide -> showingGuide = false",P)
   self.assertIn('Text(if (showingGuide) "Commands" else "Welcome guide")',P)
 if __name__=="__main__":unittest.main()

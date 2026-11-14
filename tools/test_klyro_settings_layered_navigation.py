@@ -12,8 +12,8 @@ class LayeredSettingsNavigation(unittest.TestCase):
         "else -> onDismiss()"]
   for key in keys: self.assertIn(key,fragment)
   self.assertEqual([fragment.index(k) for k in keys], sorted(fragment.index(k) for k in keys))
- def test_sheet_dismiss_and_android_back_share_handler(self):
-  self.assertIn("KlyroSheet(onDismissRequest = ::navigateBack)",S)
-  self.assertIn(") { navigateBack() }",S)
-  self.assertIn('enabled = section != "home" || showColorPicker',S)
+ def test_external_dismiss_and_system_back_close_owner(self):
+  self.assertIn("KlyroSheet(onDismissRequest = onDismiss, dismissEnabled = canDismissSheet)",S)
+  self.assertIn("BackHandler(enabled = canDismissSheet) { onDismiss() }",S)
+  self.assertIn('BackHandler(enabled = canDismissSheet) { onDismiss() }',S)
 if __name__=="__main__":unittest.main()

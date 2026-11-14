@@ -20,7 +20,7 @@ class SharedUXClosure(unittest.TestCase):
   self.assertIn('onClick = ::navigateBack',S)
   self.assertIn('Text("Close")',S)
   self.assertIn('cannotOpenPermissions -> cannotOpenPermissions = false',S)
-  self.assertIn('onDismissRequest = ::navigateBack',S)
+  self.assertIn('onDismissRequest = onDismiss, dismissEnabled = canDismissSheet',S)
  def test_privacy_permissions_error_is_actionable(self):
   self.assertIn('KlyroInlineNotice(',S)
   self.assertIn('open App info from',S) if False else None

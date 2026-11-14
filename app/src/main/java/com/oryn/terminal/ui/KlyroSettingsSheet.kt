@@ -158,10 +158,9 @@ internal fun KlyroSettingsSheet(
             else -> onDismiss()
         }
     }
-    BackHandler(
-        enabled = section != "home" || showColorPicker ||
-            showFontLicense || showHugeiconsLicense || cannotOpenPermissions
-    ) { navigateBack() }
+    // System Back is an external dismissal; the labelled Settings button navigates internally.
+    val canDismissSheet = !showColorPicker && !showFontLicense && !showHugeiconsLicense
+    BackHandler(enabled = canDismissSheet) { onDismiss() }
     val density = LocalDensity.current
     val version = com.oryn.terminal.BuildConfig.VERSION_NAME
     LaunchedEffect(section) {
@@ -176,7 +175,7 @@ internal fun KlyroSettingsSheet(
         fontScale = density.fontScale
     )
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = ::navigateBack) {
+        KlyroSheet(onDismissRequest = onDismiss, dismissEnabled = canDismissSheet) {
             Column(
                 modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth()
@@ -205,10 +204,10 @@ internal fun KlyroSettingsSheet(
                             Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
                                 contentDescription = null, tint = colors.muted,
                                 modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                            Text("Settings")
+                            Text(if (section == "freeze") "Diagnostics" else "Settings")
                         }
                     }
-                    TextButton(onClick = onDismiss,
+                    TextButton(onClick = onDismiss, enabled = canDismissSheet,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
                         Text("Close")
                     }

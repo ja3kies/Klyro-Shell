@@ -7,5 +7,5 @@ class SessionConfirmTest(unittest.TestCase):
         self.assertIn("var closeTargetId by rememberSaveable",S)
         self.assertIn("if (confirmClose) {\n            AlertDialog(",S)
         self.assertIn("TerminalActionPolicy.runIfCurrent(expected, sessionId, true, onCloseSession)",S.split("confirmButton = {",1)[1])
-        self.assertIn("onDismissRequest = { if (!confirmClose) onDismiss() }",S)
+        self.assertIn("onDismissRequest = onDismiss, dismissEnabled = !confirmClose",S)
 if __name__=="__main__": unittest.main()

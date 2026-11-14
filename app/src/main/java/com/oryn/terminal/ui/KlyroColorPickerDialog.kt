@@ -120,9 +120,12 @@ internal fun KlyroColorPickerDialog(
         hexInput = "#%06X".format(rgb() and 0xFFFFFF)
     }
 
+    val hasUnsavedColor = argb() != initialArgb
     KlyroModalTheme {
         if (!showAdvanced && pendingFavoriteDeletion == null) AlertDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = { if (!hasUnsavedColor) onDismiss() },
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = !hasUnsavedColor, dismissOnClickOutside = !hasUnsavedColor),
             containerColor = colors.sheet,
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             title = { Text("Custom accent", style = MaterialTheme.typography.titleLarge) },
@@ -133,6 +136,7 @@ internal fun KlyroColorPickerDialog(
                         else Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    if (hasUnsavedColor) KlyroInlineNotice("Apply or Cancel to close this color draft.")
                     // 44dp tall, full-width input; shortened vertically, not horizontally.
                     Row(
                         modifier = Modifier.fillMaxWidth(),

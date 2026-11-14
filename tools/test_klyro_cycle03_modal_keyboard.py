@@ -76,12 +76,12 @@ class CycleThreeUX(unittest.TestCase):
         self.assertEqual(self.workspaces.count("AlertDialog("),
                          self.workspaces.count("shape = RoundedCornerShape(KlyroUiMetrics.modalCorner)"))
 
-    def test_back_cancels_workspace_editor(self):
-        self.assertIn("BackHandler(enabled = editorId != null", self.workspaces)
+    def test_external_dismiss_protects_workspace_editor(self):
+        self.assertIn("dismissEnabled = editorId == null", self.workspaces)
         self.assertIn("editorId = null", self.workspaces)
 
-    def test_back_in_palette_returns_from_guide(self):
-        self.assertIn("BackHandler(enabled = showingGuide) { showingGuide = false }", self.palette)
+    def test_external_dismiss_closes_palette_from_guide(self):
+        self.assertIn("KlyroSheet(onDismissRequest = onDismiss,", self.palette)
 
     def test_appearance_sections_can_scroll(self):
         self.assertIn('rows = if (section == "home") 6 else 7', self.settings)

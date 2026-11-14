@@ -35,6 +35,11 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.material3.ModalBottomSheetProperties
+import androidx.compose.material3.SheetValue
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -55,23 +60,33 @@ import com.oryn.terminal.R
 @Composable
 internal fun KlyroSheet(
     onDismissRequest: () -> Unit,
+    dismissEnabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colors = LocalKlyroColors.current
     // Long Settings pages must open in the expanded detent instead of
     // requiring a second swipe that can collide with nested scrolling.
     // Compact root sheets still size naturally to their content.
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val enabled = rememberUpdatedState(dismissEnabled)
+    val closeOwner = rememberUpdatedState(onDismissRequest)
+    val dismissal = remember { ModalDismissal() }
+    DisposableEffect(dismissal) { onDispose { dismissal.dispose() } }
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { it != SheetValue.Hidden || dismissal.canDismiss(enabled.value) }
+    )
     ModalBottomSheet(
+        modifier = Modifier.testTag("klyro-modal-sheet"),
+        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = dismissEnabled),
         sheetState = sheetState,
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = { dismissal.dismiss(enabled.value) { closeOwner.value() } },
         containerColor = colors.sheet,
         contentColor = colors.foreground,
         shape = RoundedCornerShape(
             topStart = KlyroUiMetrics.sheetCorner,
             topEnd = KlyroUiMetrics.sheetCorner
         ),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = colors.muted) },
+        dragHandle = if (dismissEnabled) { { BottomSheetDefaults.DragHandle(color = colors.muted) } } else null,
         content = content
     )
 }

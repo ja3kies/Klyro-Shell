@@ -77,11 +77,7 @@ internal fun KlyroWorkspaceSheet(
     LaunchedEffect(entries, menuId) {
         if (menuId != null && entries.none { it.id == menuId }) menuId = null
     }
-    // Treat inline editing as a navigation layer, not as a reason to close the sheet.
-    BackHandler(enabled = editorId != null && deletingId == null && menuId == null) {
-        editorId = null
-        editorError = false
-    }
+    // An explicit Save/Cancel ends editing; external dismissal cannot discard the draft.
     val selected = entries.firstOrNull { it.id == selectedId } ?: entries.firstOrNull()
     if (selected == null) {
         KlyroModalTheme {
@@ -119,14 +115,8 @@ internal fun KlyroWorkspaceSheet(
     }
 
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = {
-            when {
-                deletingId != null -> deletingId = null
-                menuId != null -> menuId = null
-                editorId != null -> { editorId = null; editorError = false }
-                else -> onDismiss()
-            }
-        }) {
+        KlyroSheet(onDismissRequest = onDismiss,
+            dismissEnabled = editorId == null && deletingId == null && menuId == null) {
             Column(
                 Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
@@ -271,6 +261,7 @@ internal fun KlyroWorkspaceSheet(
                             Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd),
                             verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
                         ) {
+                            KlyroInlineNotice("Save or Cancel this edit before closing Workspaces.")
                             Text(if (editing) "Rename workspace" else "New workspace",
                                 fontWeight = FontWeight.SemiBold, color = c.foreground)
                             OutlinedTextField(

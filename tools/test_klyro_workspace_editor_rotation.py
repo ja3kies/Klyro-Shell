@@ -6,10 +6,10 @@ class WorkspaceDraftTest(unittest.TestCase):
     def test_draft_state_saved(self):
         for k in ("editorId", "editorText", "editorError", "deletingId", "menuId"):
             self.assertIn(f"var {k} by rememberSaveable",S)
-    def test_dismiss_closes_editor_before_workspace(self):
-        frag=S.split("KlyroSheet(onDismissRequest = {",1)[1].split("}) {",1)[0]
-        self.assertIn("editorId != null -> { editorId = null; editorError = false }",frag)
-        self.assertIn("else -> onDismiss()",frag)
+    def test_external_dismiss_preserves_editor_draft(self):
+        self.assertIn("KlyroSheet(onDismissRequest = onDismiss,", S)
+        self.assertIn("dismissEnabled = editorId == null && deletingId == null && menuId == null", S)
+        self.assertIn("Save or Cancel this edit before closing Workspaces.", S)
     def test_save_requires_nonempty_name(self):
         self.assertIn("enabled = editorText.trim().isNotEmpty()", S)
 if __name__=="__main__": unittest.main()

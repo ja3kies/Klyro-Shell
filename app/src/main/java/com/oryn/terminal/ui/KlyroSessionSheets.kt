@@ -69,7 +69,7 @@ internal fun KlyroSessionSheet(
         fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
     )
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = { if (!confirmClose) onDismiss() }) {
+        KlyroSheet(onDismissRequest = onDismiss, dismissEnabled = !confirmClose) {
             Column(
                 modifier = Modifier.fillMaxWidth()
                     .heightIn(max = KlyroUiMetrics.sheetContentMax)
@@ -159,7 +159,9 @@ internal fun KlyroRenameSessionDialog(
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
         AlertDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = { if (value.text == name) onDismiss() },
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = value.text == name, dismissOnClickOutside = value.text == name),
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = colors.sheet,
             title = { Text("Rename terminal", fontWeight = FontWeight.Bold) },
@@ -175,7 +177,7 @@ internal fun KlyroRenameSessionDialog(
                     modifier = Modifier.fillMaxWidth().focusRequester(requester),
                     isError = value.text.trim().isBlank() && value.text.isNotEmpty(),
                     supportingText = {
-                        Text("Maximum 32 characters. Empty names cannot be saved.")
+                        Text("Maximum 32 characters. Save or Cancel to close a changed name.")
                     },
                     singleLine = true,
                     label = { Text("Session name") },
