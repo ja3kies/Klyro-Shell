@@ -48,6 +48,11 @@ class NativePasteRaceContracts(unittest.TestCase):
         block = CLIENT.split("void onPasteTextFromClipboard(", 1)[1].split("@Override", 1)[0]
         self.assertGreaterEqual(block.count("isNativePasteTargetCurrent(session, source)"), 2)
 
+    def test_invalid_or_inaccessible_native_clipboard_reports_rejection(self):
+        block = CLIENT.split("void onPasteTextFromClipboard(", 1)[1].split("@Override", 1)[0]
+        self.assertIn("if (pasted == null) {", block)
+        self.assertIn('"No supported clipboard text"', block)
+
     def test_native_single_line_reports_failed_enqueue_and_retains_bracket_mode(self):
         block = CLIENT.split("void onPasteTextFromClipboard(", 1)[1].split("@Override", 1)[0]
         self.assertIn("pasteWithResult(pasted)", block)
