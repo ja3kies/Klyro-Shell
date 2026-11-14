@@ -25,9 +25,16 @@ public final class ClipboardPastePolicy {
             if (c == '\uFFFE' || c == '\uFFFF') return false;
             // Reject all Unicode ISO control characters except tab/newline.
             if (Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t') return false;
-            // Bidi overrides, zero-width characters and Unicode line separators
-            // can conceal an executed command or add an invisible newline.
-            if (Character.getType(c) == Character.FORMAT ||
+            // Keep Unicode shaping and emoji joiners, but reject invisible edits
+            // to ASCII commands, isolated joiners, bidi overrides and other format controls.
+            if (c == '\u200C' || c == '\u200D') {
+                if (i == 0 || i + 1 == value.length()) return false;
+                int before = value.codePointBefore(i);
+                int after = value.codePointAt(i + 1);
+                if (before <= 0x7f || after <= 0x7f ||
+                        Character.getType(before) == Character.FORMAT ||
+                        Character.getType(after) == Character.FORMAT) return false;
+            } else if (Character.getType(c) == Character.FORMAT ||
                     c == '\u2028' || c == '\u2029') return false;
             // Reject malformed UTF-16 rather than emitting replacement glyphs
             // into shell commands or accidentally corrupting pasted scripts.
