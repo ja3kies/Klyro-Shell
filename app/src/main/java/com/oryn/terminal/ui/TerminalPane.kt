@@ -1562,12 +1562,14 @@ fun TerminalPane(
             containerColor = ui.sheet,
             onDismissRequest = { endSessionTargetId = null },
             title = { Text("End ${tabs.firstOrNull { it.first == endSessionTargetId }?.second ?: "session"}?") },
-            text = { Text("This will stop the running shell and its child processes.") },
+            text = { Text(if (endSessionTargetId in finishedTabIds)
+                "This removes the retained output. Its process has already exited."
+                else "This will stop the running shell and its child processes.") },
             confirmButton = {
                 TextButton(onClick = {
                     val expected = endSessionTargetId
                     endSessionTargetId = null
-                    if (!TerminalActionPolicy.runIfCurrent(expected, currentSessionId(), session.isRunning()) {
+                    if (!TerminalActionPolicy.runIfCurrent(expected, currentSessionId(), true) {
                             expected?.let(onCloseTab)
                         }) Toast.makeText(context, "Session changed; close cancelled", Toast.LENGTH_SHORT).show()
                 }) { Text("End session", color = ui.danger, fontWeight = FontWeight.SemiBold) }

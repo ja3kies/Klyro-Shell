@@ -25,6 +25,7 @@ CLASSES = (
     "com.oryn.terminal.session.InstalledRuntimeAcceptanceTest",
     "com.oryn.terminal.session.FinishedSessionRetentionTest",
     "com.oryn.terminal.ui.FinishedSessionUiTest",
+    "com.oryn.terminal.ui.FinishedTerminalBackUiTest",
 )
 
 
