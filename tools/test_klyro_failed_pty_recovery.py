@@ -37,6 +37,15 @@ class FailedPtyRecoveryContracts(unittest.TestCase):
         self.assertIn("KlyroSessionRuntime.sessions.hasRunningPtys()", SERVICE)
         self.assertIn("terminalState.hasRunningPtys()", MAIN)
 
+    def test_new_session_without_pid_still_owns_foreground_service(self):
+        # TerminalSession starts its subprocess in updateSize(), not its constructor.
+        self.assertIn("fun runningPtyCount(): Int", MODEL)
+        self.assertIn("it.session.getPid() == 0", MODEL)
+        self.assertIn("it.exitStatus == null", MODEL)
+        self.assertIn("return runningPtyCount() > 0", MODEL)
+        self.assertIn("KlyroSessionRuntime.sessions.runningPtyCount()", SERVICE)
+        self.assertNotIn("sessions.count { it.session.isRunning() }", SERVICE)
+
     def test_finished_tab_hardware_back_allows_explicit_close(self):
         block = UI.split("if (showEndSessionConfirmation) {", 1)[1].split("internal enum class ShortcutState", 1)[0]
         self.assertIn('Text("Close finished tab",', block)
