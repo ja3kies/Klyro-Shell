@@ -111,7 +111,9 @@ public final class OrynPaths {
         File bash = new File(prefix, "bin/bash");
         return hasContent(bash) && bash.canExecute()
                 && hasContent(new File(prefix, "bin/pkg"))
+                && new File(prefix, "bin/pkg").canExecute()
                 && hasContent(new File(prefix, "bin/apt"))
+                && new File(prefix, "bin/apt").canExecute()
                 && hasContent(new File(prefix, ".oryn-bootstrap-version"));
     }
 
