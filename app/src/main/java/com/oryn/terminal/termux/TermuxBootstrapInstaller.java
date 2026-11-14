@@ -16,12 +16,19 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.CharacterCodingException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
 import java.security.MessageDigest;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -569,28 +576,59 @@ public final class TermuxBootstrapInstaller {
                         KlyroWelcomeGuide.augmentGeneratedProfile(content)));
     }
 
+    static final int MAX_PROFILE_BYTES = 128 * 1024;
+
     /** Backup before a tightly scoped, atomic update of a generated prompt. */
-    private static void writeKlyroBashProfile(File file) throws IOException {
+    static void writeKlyroBashProfile(File file) throws IOException {
         String defaultProfile =
                 "# Klyro Shell profile\n"
                 + THEMED_PROMPT + "\n"
                 + "export EDITOR=nano\nexport PAGER=less\n"
                 + "alias ll='ls -lah'\nalias la='ls -A'\n";
-        if (!file.isFile()) {
+        Path profile = file.toPath();
+        if (!Files.exists(profile, LinkOption.NOFOLLOW_LINKS)) {
             writeIfAbsent(file, augmentKlyroProfile(defaultProfile));
             return;
         }
-
-        String existing = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+        // User dotfile links, non-text files and oversized profiles are never migration targets.
+        String existing = readMigratableProfile(profile);
+        if (existing == null || existing.isEmpty()) return;
         String migrated = augmentKlyroProfile(migrateGeneratedPrompt(existing));
         if (existing.equals(migrated)) return;
+        replaceGeneratedProfile(file, existing, migrated);
+    }
 
+    /** Serialize app migrations and refuse a snapshot superseded by a user's edit. */
+    static synchronized void replaceGeneratedProfile(File file, String existing, String migrated)
+            throws IOException {
+        Path profile = file.toPath();
+        if (!existing.equals(readMigratableProfile(profile))) return;
+        Set<PosixFilePermission> permissions;
+        try {
+            permissions = Files.getPosixFilePermissions(profile, LinkOption.NOFOLLOW_LINKS);
+        } catch (UnsupportedOperationException unsupportedProvider) {
+            return;
+        }
         File backup = new File(file.getParentFile(), ".bashrc.klyro-before-color.bak");
-        if (!backup.exists()) Files.copy(file.toPath(), backup.toPath());
+        if (Files.exists(backup.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+            if (!Files.isRegularFile(backup.toPath(), LinkOption.NOFOLLOW_LINKS)) return;
+        } else {
+            try {
+                Files.copy(profile, backup.toPath(), LinkOption.NOFOLLOW_LINKS);
+            } catch (FileAlreadyExistsException concurrentMigration) {
+                return;
+            }
+        }
 
         Path staging = Files.createTempFile(file.getParentFile().toPath(), ".klyro-ps1-", ".tmp");
         try {
             Files.write(staging, migrated.getBytes(StandardCharsets.UTF_8));
+            try {
+                Files.setPosixFilePermissions(staging, permissions);
+            } catch (UnsupportedOperationException unsupportedProvider) {
+                return;
+            }
+            if (!existing.equals(readMigratableProfile(profile))) return;
             try {
                 Files.move(staging, file.toPath(),
                         StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
@@ -604,14 +642,44 @@ public final class TermuxBootstrapInstaller {
         }
     }
 
-    private static void writeIfAbsent(File file, String value) throws IOException {
-        if (file.isFile() && file.length() > 0) return;
+    private static String readMigratableProfile(Path profile) throws IOException {
+        if (!Files.isRegularFile(profile, LinkOption.NOFOLLOW_LINKS)
+                || Files.size(profile) > MAX_PROFILE_BYTES) return null;
+        // Atomic replacement would break hardlinks; unknown provider topology is preserved too.
+        try {
+            Object links = Files.getAttribute(profile, "unix:nlink", LinkOption.NOFOLLOW_LINKS);
+            if (!(links instanceof Number) || ((Number) links).longValue() != 1) return null;
+        } catch (UnsupportedOperationException | IllegalArgumentException unsupportedProvider) {
+            return null;
+        }
+        byte[] bytes = new byte[MAX_PROFILE_BYTES + 1];
+        int length = 0;
+        try (InputStream in = Files.newInputStream(profile, StandardOpenOption.READ,
+                LinkOption.NOFOLLOW_LINKS)) {
+            int count;
+            while (length < bytes.length
+                    && (count = in.read(bytes, length, bytes.length - length)) != -1) length += count;
+        }
+        if (length > MAX_PROFILE_BYTES) return null;
+        try {
+            String text = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes, 0, length)).toString();
+            return text.indexOf('\0') < 0 ? text : null;
+        } catch (CharacterCodingException userEncoding) {
+            return null; // Preserve user bytes rather than replacing malformed UTF-8 during migration.
+        }
+    }
+
+    static void writeIfAbsent(File file, String value) throws IOException {
+        if (Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS)) return;
         File parent = file.getParentFile();
         if (parent != null && !parent.mkdirs() && !parent.isDirectory()) {
             throw new IOException("Cannot create " + parent);
         }
-        try (FileOutputStream out = new FileOutputStream(file)) {
+        try (OutputStream out = Files.newOutputStream(file.toPath(),
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
             out.write(value.getBytes(StandardCharsets.UTF_8));
+        } catch (FileAlreadyExistsException concurrentWriter) {
+            // Exclusive creation preserves a file or symlink created after the initial check.
         }
     }
 

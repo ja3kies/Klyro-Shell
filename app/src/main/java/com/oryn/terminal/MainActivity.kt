@@ -442,7 +442,6 @@ class MainActivity : ComponentActivity() {
             statusMessage = manager.getReadinessMessage()
             bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
             runtimeInstalled = manager.isRuntimeInstalled()
-            if (bootstrapInstalled) installer?.migrateShellProfile()
         } catch (error: IOException) {
             technicalErrorDetails = KlyroDiagnostics.summarize(error)
             statusMessage = "Klyro couldn't verify its private environment."
@@ -834,6 +833,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
+                    TermuxBootstrapInstaller(applicationContext).migrateShellProfile()
                     TerminalSessionManager(applicationContext).verifyBash()
                 }
             }
