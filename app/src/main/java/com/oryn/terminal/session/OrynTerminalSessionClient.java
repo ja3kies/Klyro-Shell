@@ -88,7 +88,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private void scheduleOutputRefresh() {
         if (disposed.get() || !uiActive.get()) return;
         if (!pendingOutputRefresh.compareAndSet(false, true)) return;
-        uiHandler.post(() -> {
+        uiHandler.postDelayed(() -> {
             pendingOutputRefresh.set(false);
             if (disposed.get()) return;
             if (!uiActive.get()) {
@@ -109,7 +109,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
             }
             Runnable observer = outputObserver;
             if (observer != null) observer.run();
-        });
+        }, 32L);
     }
 
     /** Drop stale UI work when the owning PTY tab is permanently closed. */
@@ -131,7 +131,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     @Override
     public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
         com.oryn.terminal.diagnostics.FreezeRecorder.INSTANCE.event(
-            com.oryn.terminal.diagnostics.FreezeEvents.Code.PTY_CALLBACK, session.getPid(), 0);
+            com.oryn.terminal.diagnostics.FreezeEvents.Code.PTY_CALLBACK, session == null ? 0 : session.getPid(), 0);
         // No callbacks are queued while the Activity is paused. One update
         // reads the latest emulator state upon resume, retaining every byte
         // in the PTY's own buffer instead of replaying obsolete UI work.
