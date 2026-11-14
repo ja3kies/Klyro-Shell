@@ -157,7 +157,7 @@ private fun FreezeStabilityControls(onStabilityStarted: () -> Unit) {
         Switch(checked = strictIo, onCheckedChange = { strictIo = it; FreezeRecorder.setStrictIo(it) })
     }
     Text("Stability test (diagnostic build)", style = MaterialTheme.typography.titleMedium)
-    Text("Creates a separate Bash tab, waits 3 seconds, then prints 1,500 lines. Go Home, open another app, then return. Keep the test tab until you inspect the END marker; close it explicitly when finished. Existing sessions receive no commands.")
+    Text("Creates a separate Bash tab, waits 5 seconds, then prints 1,500 lines over about 30 seconds. Go Home, open another app, then return. Keep the test tab until you inspect the END marker; close it explicitly when finished. Existing sessions receive no commands.")
     TextButton(onClick = {
         val result = findKlyroActivity(context)?.startDiagnosticStress()
             ?: (false to "Activity unavailable; test not started.")
