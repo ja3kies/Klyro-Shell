@@ -157,6 +157,21 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertNotIn("KlyroBrandChoice.selected(context)", self.pane)
         self.assertNotIn("R.drawable.ic_klyro_brand_b", self.pane)
 
+    def test_apk_version_advances_past_0412_without_downgrade(self):
+        import re
+        gradle = (ROOT / "app/build.gradle.kts").read_text()
+        code = int(re.search(r"versionCode\\s*=\\s*(\\d+)", gradle).group(1))
+        version = re.search(r'versionName\\s*=\\s*"([^"]+)"', gradle).group(1)
+        self.assertGreater(code, 19, "Android rejects downgrades from 0.4.12")
+        self.assertEqual("0.4.13-dev", version)
+
+    def test_failed_bootstrap_cannot_modify_existing_shell_profile(self):
+        installer = (APP / "termux/TermuxBootstrapInstaller.java").read_text()
+        activation = installer.index("activatePrefix(staging, prefix, previous);")
+        profile_write = installer.index("writeKlyroBashProfile(new File(paths.getHome(), \".bashrc\"));", activation)
+        self.assertGreater(profile_write, activation)
+        self.assertNotIn("writeKlyroBashProfile", installer[installer.index("KlyroStorageCommandBridge.installHelper(staging);"):activation])
+
     def test_service_start_is_guarded_by_live_sessions(self):
         self.assertIn("if (!KlyroSessionRuntime.sessions.hasLiveSessions()) return", self.service)
 
