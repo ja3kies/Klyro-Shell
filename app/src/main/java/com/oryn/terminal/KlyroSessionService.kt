@@ -44,7 +44,7 @@ class KlyroSessionService : Service() {
             stopSelf(startId)
             return START_NOT_STICKY
         }
-        val sessionCount = KlyroSessionRuntime.sessions.sessions.count { it.session.isRunning() }
+        val sessionCount = KlyroSessionRuntime.sessions.runningPtyCount()
         val openApp = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java).apply {
