@@ -135,8 +135,9 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
     def test_clipboard_availability_uses_actual_validated_text(self):
         self.assertIn("return readPlainText(manager) != null;", self.clipboard_reader)
 
-    def test_blank_clipboard_cannot_claim_paste_available(self):
-        self.assertIn("isWhitespaceOnly(value)", self.clipboard_policy)
+    def test_empty_clipboard_cannot_claim_paste_available(self):
+        self.assertIn("value == null || value.isEmpty()", self.clipboard_policy)
+        self.assertIn("return ClipboardPastePolicy.canPaste(text) ? text : null;", self.clipboard_reader)
 
     def test_unicode_noncharacters_cannot_reach_shell(self):
         self.assertIn("Character.toCodePoint(c, value.charAt(i))", self.clipboard_policy)
