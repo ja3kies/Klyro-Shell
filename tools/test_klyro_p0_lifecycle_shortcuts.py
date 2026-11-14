@@ -35,7 +35,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn(".setContentIntent(openApp)", self.service)
 
     def test_notification_reports_actual_session_count(self):
-        self.assertIn("KlyroSessionRuntime.sessions.sessions.count { it.session.isRunning() }", self.service)
+        self.assertIn("KlyroSessionRuntime.sessions.runningPtyCount()", self.service)
         self.assertIn('if (sessionCount == 1) "" else "s"', self.service)
 
     def test_foreground_notification_refresh_does_not_realert(self):
