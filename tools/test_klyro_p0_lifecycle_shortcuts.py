@@ -150,8 +150,13 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("Character.toCodePoint(c, value.charAt(i))", self.clipboard_policy)
         self.assertIn("(cp & 0xFFFE) == 0xFFFE", self.clipboard_policy)
 
-    def test_multiline_paste_preview_not_truncated_at_500_chars(self):
-        self.assertIn("pendingMultilinePaste.orEmpty(),", self.pane)
+    def test_multiline_paste_preview_is_bounded_and_disclosed(self):
+        review = (APP / "ui/TerminalPasteReview.java").read_text()
+        self.assertIn("private static final int PREVIEW_LIMIT = 3072", review)
+        self.assertIn("review.preview,", self.pane)
+        self.assertIn("if (review.isPreviewTruncated)", self.pane)
+        self.assertIn("The entire script will be pasted.", self.pane)
+        self.assertIn("Character.isHighSurrogate(text.charAt(end - 1))", review)
         self.assertNotIn("pendingMultilinePaste.orEmpty().take(500)", self.pane)
 
     def test_transcript_preview_does_not_split_surrogate_pairs(self):
