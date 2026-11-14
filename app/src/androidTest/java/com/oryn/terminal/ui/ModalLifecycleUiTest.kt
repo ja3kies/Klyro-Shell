@@ -108,7 +108,7 @@ class ModalLifecycleUiTest {
     @Test fun reportsSwipeRemovesWindowAndUnderlyingTapExecutes() {
         host { close -> settings(close) }
         ui.onNodeWithText("Diagnostics").performClick()
-        ui.onNodeWithText("Freeze reports").performClick()
+        ui.onNodeWithText("Freeze reports").performScrollTo().performClick()
         swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun internalBackKeepsSheetThenCloseRemovesIt() {
@@ -300,7 +300,7 @@ class ModalLifecycleUiTest {
     @Test fun licenseDialogClosesBeforeParentAndLeavesNoWindow() {
         host { close -> settings(close) }
         ui.onNodeWithText("About").performClick()
-        ui.onNodeWithText("JetBrains Mono · OFL 1.1").performClick()
+        ui.onNodeWithText("JetBrains Mono licence").performScrollTo().performClick()
         ui.onNode(hasText("Close") and hasAnyAncestor(hasTestTag("klyro-license-dialog"))).performClick()
         ui.waitForIdle(); ui.onNodeWithTag("klyro-modal-sheet").assertExists()
         swipeAway(); assertRemovedAndTapUnderlying()
