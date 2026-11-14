@@ -608,7 +608,7 @@ class MainActivity : ComponentActivity() {
                     onRenameTab = terminalState::renameTab,
                     onCloseTab = { id ->
                         terminalState.closeTab(id)
-                        if (!terminalState.hasLiveSessions()) KlyroSessionService.stopIfEmpty(this)
+                        if (!terminalState.hasRunningPtys()) KlyroSessionService.stopIfEmpty(this)
                     },
                     onNewTab = ::launchBash,
                     onReturnHome = { showWelcomeScreen = true },
@@ -1032,7 +1032,7 @@ class MainActivity : ComponentActivity() {
 
     private fun closeBash() {
         terminalState.closeSession()
-        if (!terminalState.hasLiveSessions()) KlyroSessionService.stopIfEmpty(this)
+        if (!terminalState.hasRunningPtys()) KlyroSessionService.stopIfEmpty(this)
     }
 
     private fun refreshReadiness() {
