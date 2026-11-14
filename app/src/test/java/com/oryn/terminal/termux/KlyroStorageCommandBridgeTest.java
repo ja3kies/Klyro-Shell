@@ -81,6 +81,47 @@ public class KlyroStorageCommandBridgeTest {
         }
     }
 
+    @Test public void abandonedRequestsAreReclaimedWithoutDeletingActiveWrites() throws Exception {
+        Path home = Files.createTempDirectory("klyro-stale-storage");
+        try {
+            KlyroStorageCommandBridge bridge = new KlyroStorageCommandBridge(home.toFile());
+            assertNull(bridge.poll());
+            Path request = home.resolve(".klyro-control/storage.request");
+            Files.write(request, new byte[0]);
+            assertNull("An in-progress write must be left alone", bridge.poll());
+            assertTrue(Files.exists(request));
+
+            Files.setLastModifiedTime(request, java.nio.file.attribute.FileTime.fromMillis(
+                    System.currentTimeMillis() - 10_000));
+            assertNull(bridge.poll());
+            assertFalse("Interrupted empty writes must not block new requests", Files.exists(request));
+
+            Files.write(request, "../../escape\n".getBytes(StandardCharsets.UTF_8));
+            Files.setLastModifiedTime(request, java.nio.file.attribute.FileTime.fromMillis(
+                    System.currentTimeMillis() - 10_000));
+            assertNull(bridge.poll());
+            assertFalse("Malformed requests must not remain forever", Files.exists(request));
+
+            Files.write(request, new byte[81]);
+            Files.setLastModifiedTime(request, java.nio.file.attribute.FileTime.fromMillis(
+                    System.currentTimeMillis() - 10_000));
+            assertNull(bridge.poll());
+            assertFalse("Oversized requests must be recoverable", Files.exists(request));
+
+            Files.write(request, "1234-234-456\n".getBytes(StandardCharsets.UTF_8));
+            Files.setLastModifiedTime(request, java.nio.file.attribute.FileTime.fromMillis(
+                    System.currentTimeMillis() - 240_000));
+            assertNull("Expired helper must not open an unsolicited picker", bridge.poll());
+            assertFalse(Files.exists(request));
+        } finally {
+            try (java.util.stream.Stream<Path> walk = Files.walk(home)) {
+                walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                    try { Files.deleteIfExists(p); } catch (IOException ignored) {}
+                });
+            }
+        }
+    }
+
     @Test public void rejectsSymlinkControlDirectory() throws Exception {
         Path home = Files.createTempDirectory("klyro-home");
         Path external = Files.createTempDirectory("klyro-external");
