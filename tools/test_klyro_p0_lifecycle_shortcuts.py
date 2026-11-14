@@ -17,6 +17,13 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         cls.clipboard_reader = (APP / "ui/ClipboardTextReader.java").read_text()
         cls.clipboard_policy = (APP / "ui/ClipboardPastePolicy.java").read_text()
 
+    def test_native_pty_refresh_is_bounded_to_a_frame(self):
+        client = (APP / "session/OrynTerminalSessionClient.java").read_text()
+        refresh = client.split("private void scheduleOutputRefresh()", 1)[1].split(
+            "/** Drop stale UI work", 1)[0]
+        self.assertIn("uiHandler.postDelayed(() -> {", refresh)
+        self.assertIn("}, 32L);", refresh)
+
     def test_service_destruction_does_not_kill_process_owned_ptys(self):
         body = self.service.split("override fun onDestroy()", 1)[1].split("override fun onBind", 1)[0]
         self.assertNotIn("closeAllSessions()", body)
