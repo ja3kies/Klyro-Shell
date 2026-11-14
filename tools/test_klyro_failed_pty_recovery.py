@@ -42,7 +42,7 @@ class FailedPtyRecoveryContracts(unittest.TestCase):
         self.assertIn("fun runningPtyCount(): Int", MODEL)
         self.assertIn("it.session.getPid() == 0", MODEL)
         self.assertIn("it.exitStatus == null", MODEL)
-        self.assertIn("return runningPtyCount() > 0", MODEL)
+        self.assertIn("fun hasRunningPtys(): Boolean = runningPtyCount() > 0", MODEL)
         self.assertIn("KlyroSessionRuntime.sessions.runningPtyCount()", SERVICE)
         self.assertNotIn("sessions.count { it.session.isRunning() }", SERVICE)
 
