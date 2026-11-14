@@ -770,6 +770,12 @@ fun TerminalPane(
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(
+                        onClick = onReturnHome,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                    ) {
+                        Text("Home", color = TerminalText, fontSize = 12.sp)
+                    }
+                    TextButton(
                         onClick = { endSessionTargetId = activeTabId },
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                     ) {
