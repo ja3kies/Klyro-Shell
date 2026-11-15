@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.provider.Settings
 import android.provider.DocumentsContract
 import androidx.activity.result.contract.ActivityResultContracts
 import com.oryn.terminal.core.OrynPaths
@@ -106,7 +107,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalMotionDurationScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -1923,7 +1924,15 @@ private fun KlyroHomePixelCover(height: androidx.compose.ui.unit.Dp, screenChrom
             modifier = Modifier.fillMaxSize()
         )
 
-        if (LocalMotionDurationScale.current.scaleFactor > 0f) {
+        val context = LocalContext.current
+        val motionEnabled = remember(context) {
+            runCatching {
+                Settings.Global.getFloat(
+                    context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f
+                ) > 0f
+            }.getOrDefault(false)
+        }
+        if (motionEnabled) {
             val stars = rememberInfiniteTransition(label = "Klyro night stars")
             val shimmer by stars.animateFloat(
                 initialValue = .15f,
