@@ -59,7 +59,6 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     val lastOutputElapsedMs: Map<Long, Long> get() = lastOutputElapsed.toMap()
     fun outputRevision(tabId: Long?): Long = tabId?.let { outputRevisions[it] } ?: 0L
     val tabsWithUnreadOutput: Set<Long> get() = unreadActivity.keys.toSet()
-    private val invalidTitleCharacters = Regex("[\\p{Cntrl}\\p{Cf}]")
     val sessions: List<ShellTab> get() = tabs
     private var nextId = 1L
     var activeTabId by mutableStateOf<Long?>(null)
