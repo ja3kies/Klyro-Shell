@@ -1354,8 +1354,8 @@ private fun OrynTerminalApp(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(60.dp)
-                            .clip(RoundedCornerShape(19.dp))
+                        modifier = Modifier.size(56.dp)
+                            .clip(RoundedCornerShape(17.dp))
                             .background(ui.tile),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1364,15 +1364,15 @@ private fun OrynTerminalApp(
                                 if (homeLauncherIcon == KlyroBrandChoice.ALTERNATIVE)
                                     R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
                             ),
-                            contentDescription = "Klyro Shell logo",
+                            contentDescription = null,
                             tint = Color.Unspecified,
-                            modifier = Modifier.size(60.dp)
+                            modifier = Modifier.size(56.dp)
                         )
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                            Text("KLYRO", color = ui.foreground, fontSize = 18.sp,
+                            Text("KLYRO", color = ui.foreground, fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                             Surface(
                                 color = ui.key,
@@ -1397,7 +1397,7 @@ private fun OrynTerminalApp(
                 ) {
                     Column(
                         modifier = Modifier.padding(KlyroUiMetrics.cardPadding),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
@@ -1538,7 +1538,7 @@ private fun OrynTerminalApp(
                             Button(
                                 onClick = onLaunch,
                                 enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = ui.accent,
                                     contentColor = ui.onAccent
@@ -1608,7 +1608,7 @@ private fun OrynTerminalApp(
                 Surface(
                     modifier = Modifier.fillMaxWidth()
                         .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
-                        .semantics { contentDescription = "Plugins" },
+                        .semantics { contentDescription = "Plugins, extend the command palette" },
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
                     border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
@@ -1643,7 +1643,7 @@ private fun OrynTerminalApp(
                         .clickable(role = Role.Button,
                             onClickLabel = "Open Klyro settings") {
                             showHomeSettings = true
-                        }.semantics { contentDescription = "Settings" },
+                        }.semantics { contentDescription = "Settings, customize Klyro Shell" },
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
