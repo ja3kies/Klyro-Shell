@@ -25,7 +25,7 @@ class SharedUXClosure(unittest.TestCase):
   self.assertIn('KlyroInlineNotice(',S)
   self.assertIn('open App info from',S) if False else None
   self.assertIn('Text("Dismiss")',S)
- def test_home_message_is_functional_not_marketing(self):
-  self.assertIn('Private shell · Local workspace',M)
+ def test_home_avoids_nonessential_privacy_slogan(self):
+  self.assertNotIn('Private shell · Local workspace · No cloud account required',M)
   self.assertNotIn('Your own space.',M)
 if __name__=="__main__":unittest.main()

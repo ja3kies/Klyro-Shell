@@ -29,8 +29,14 @@ class KotlinProvenanceContract(unittest.TestCase):
                 with self.subTest(route=route, name=source["name"]):
                     self.assertEqual(source["status"], "FOUND", source)
 
-    def test_actual_style_tokens_extracted_from_code(self):
-        source = report.source_for("Navigate: Plugins", "Home", ROOT)
+    def test_actual_style_tokens_extracted_from_navigation_implementation(self):
+        entry = report.source_for("Navigate: Plugins", "Home", ROOT)
+        self.assertEqual(entry["status"], "FOUND")
+        components = report.related_code_for("Navigate: Plugins", ROOT)
+        self.assertEqual([x["name"] for x in components],
+                         ["Impl: KlyroHomeNavigationTile"])
+        source = components[0]
+        self.assertEqual(source["status"], "FOUND")
         tokens = report.style_tokens(source.get("code"))
         self.assertTrue(any(x.startswith("ui.") or x.startswith("KlyroUiMetrics.")
                             for x in tokens), tokens)

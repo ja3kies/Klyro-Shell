@@ -18,7 +18,7 @@ class PluginPaletteClosure(unittest.TestCase):
   self.assertIn('if (mutationBusy || confirmedMutationPending) return',P)
   self.assertIn('confirmedBundledId = id',P)
   self.assertIn('confirmedBundledId = null',P)
-  self.assertIn('enabled = !mutationBusy && !confirmedMutationPending',P)
+  self.assertIn('enabled = !registryLoading && !mutationBusy && !confirmedMutationPending',P)
  def test_available_mode_does_not_mislabel_plugin_suggestions(self):
   self.assertIn('remember(query, pluginCommands, pinnedOnly, availableOnly)',C)
   self.assertIn('if (pinnedOnly || availableOnly) emptyList()',C)

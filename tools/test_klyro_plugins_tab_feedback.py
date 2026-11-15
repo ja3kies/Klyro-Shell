@@ -8,5 +8,5 @@ class PluginTabFeedbackIsolation(unittest.TestCase):
   self.assertIn('page = id',block)
   self.assertIn('error = null',block)
   self.assertNotIn('installed =',block)
-  self.assertIn('enabled = !mutationBusy',S)
+  self.assertIn('enabled = !registryLoading && !mutationBusy',S)
 if __name__=="__main__":unittest.main()

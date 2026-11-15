@@ -35,4 +35,9 @@ class KlyroFavoriteColorsTest {
         assertEquals(null, KlyroFavoriteColors.normalizeHex("#123"))
         assertEquals("#FF00AABB", KlyroFavoriteColors.normalizeHex("#ff00aabb"))
     }
+
+    @Test fun labelLimitDoesNotSplitSupplementaryCharacters() {
+        val wanted = "a".repeat(21) + "😀"
+        assertEquals(wanted, KlyroFavoriteColors.normalizeLabel(wanted + "x"))
+    }
 }

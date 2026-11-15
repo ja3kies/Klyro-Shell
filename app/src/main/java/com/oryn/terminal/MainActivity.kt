@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.provider.Settings
 import android.provider.DocumentsContract
 import androidx.activity.result.contract.ActivityResultContracts
 import com.oryn.terminal.core.OrynPaths
@@ -25,6 +26,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
@@ -32,11 +41,15 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.BorderStroke
@@ -88,7 +101,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -1282,15 +1301,30 @@ private fun OrynTerminalApp(
         )
     }
     val screenChrome = ui.chrome
-    Surface(
-        // Paint before insets; the transparent status bar must show Klyro, not
-        // Android's default gray window background.
-        modifier = Modifier.fillMaxSize()
-            .background(screenChrome)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
-            .imePadding(),
-        color = screenChrome
-    ) {
+    val homeVisible = !showPlugins &&
+        !(session != null && sessionClient != null && viewClient != null)
+    val compactHomeHeight = LocalConfiguration.current.screenHeightDp < 660
+    val bannerHeight = if (compactHomeHeight) 148.dp else 256.dp
+    val bannerSpace = if (compactHomeHeight) 80.dp else 194.dp
+    // The cover is dark in every theme, so its status-bar icons must stay light.
+    // Restore normal light-theme icons when navigating away from Home.
+    LaunchedEffect(homeVisible, darkChrome, screenChrome) {
+        (context as? ComponentActivity)?.let { activity ->
+            WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+                .isAppearanceLightStatusBars = !homeVisible && !darkChrome
+        }
+    }
+
+    Box(Modifier.fillMaxSize().background(screenChrome)) {
+        if (homeVisible) {
+            KlyroHomePixelCover(bannerHeight, screenChrome)
+        }
+        Surface(
+            modifier = Modifier.fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .imePadding(),
+            color = if (homeVisible) Color.Transparent else screenChrome
+        ) {
         if (showPlugins) {
             KlyroPluginsPage(onBack = { showPlugins = false })
         } else if (session != null && sessionClient != null && viewClient != null) {
@@ -1340,22 +1374,29 @@ private fun OrynTerminalApp(
                 onClose = onClose
             )
         } else {
+            // The primary action, runtime and tools are one scrollable group.
+            // Avoid separating the CTA from its context with an empty viewport.
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                modifier = Modifier.fillMaxSize()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter,
                         vertical = KlyroUiMetrics.spaceLg),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceLg)
             ) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceLg)
+                ) {
+                // The identity sits just beneath the faded cover art.
+                Spacer(Modifier.fillMaxWidth().height(bannerSpace))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(60.dp)
-                            .clip(RoundedCornerShape(19.dp))
+                        modifier = Modifier.size(56.dp)
+                            .clip(RoundedCornerShape(17.dp))
                             .background(ui.tile),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1366,72 +1407,182 @@ private fun OrynTerminalApp(
                             ),
                             contentDescription = "Klyro Shell logo",
                             tint = Color.Unspecified,
-                            modifier = Modifier.size(60.dp)
+                            modifier = Modifier.size(56.dp)
                         )
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                            Text("KLYRO", color = ui.foreground, fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("KLYRO", color = ui.foreground, fontSize = 23.sp,
+                            fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("SHELL", color = ui.muted, fontSize = 11.sp,
+                                letterSpacing = 2.sp)
                             Surface(
-                                color = ui.key,
-                                shape = RoundedCornerShape(7.dp)
+                                color = ui.key.copy(alpha = .55f),
+                                shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text("ARM64", color = ui.muted,
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium)
                             }
                         }
-                        Text("SHELL", color = ui.muted, fontSize = 11.sp,
-                            letterSpacing = 2.5.sp)
                     }
                     Spacer(Modifier.weight(1f))
                 }
 
-                Surface(
+                // Keep the terminal action with the content it serves, not
+                // isolated across an empty screen from the runtime and tools.
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    color = ui.chrome,
-                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // An existing PTY remains reachable while runtime checks fail or run.
+                    if (homeAction != KlyroHomeAction.NONE) {
+                        Button(
+                            onClick = onLaunch,
+                            enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ui.accent,
+                                contentColor = ui.onAccent
+                            ),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                        ) {
+                            if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                                    color = ui.onAccent)
+                                Spacer(Modifier.width(10.dp))
+                            }
+                            Text(
+                                if (homeAction == KlyroHomeAction.RESUME_SESSION)
+                                    "Return to terminal"
+                                else if (launchingBash) "Starting Bash…"
+                                else "Launch Bash",
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start
+                            )
+                            Icon(
+                                painter = painterResource(R.drawable.hugeicons_chevron_right),
+                                contentDescription = null,
+                                tint = ui.onAccent,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                    if (!runtimeVerified) {
+                        Button(
+                            onClick = onInstall,
+                            enabled = !installing && !verifyingRuntime &&
+                                (!hasLiveSessions || runtimeInstalled),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (hasRunningSessions) ui.tile else ui.accent,
+                                contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
+                                disabledContainerColor = ui.tile,
+                                disabledContentColor = ui.muted
+                            ),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                        ) {
+                            Text(
+                                KlyroHomeSetupLabelPolicy.label(
+                                    installing, verifyingRuntime, runtimeInstalled,
+                                    bootstrapInstalled, technicalErrorDetails != null,
+                                    hasLiveSessions
+                                ),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth().animateContentSize(),
+                    color = ui.sheet,
+                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+                    border = BorderStroke(1.dp, ui.key.copy(alpha = .5f))
                 ) {
                     Column(
-                        modifier = Modifier.padding(KlyroUiMetrics.cardPadding),
+                        modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Column(
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            horizontalAlignment = Alignment.Start
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("RUNTIME STATUS", color = ui.muted,
-                                style = MaterialTheme.typography.labelSmall,
-                                letterSpacing = .6.sp)
-                            Surface(
-                                color = stateColor.copy(alpha = .11f),
-                                shape = RoundedCornerShape(50),
-                                border = BorderStroke(1.dp, stateColor.copy(alpha = .22f))
+                            Box(
+                                modifier = Modifier.size(44.dp).background(
+                                    stateColor.copy(alpha = .12f), RoundedCornerShape(14.dp)
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (badge.severity == KlyroRuntimeBadgeSeverity.READY) {
+                                    Icon(
+                                        painterResource(R.drawable.hugeicons_checkmark_circle_01),
+                                        contentDescription = null,
+                                        tint = stateColor,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        if (badge.severity == KlyroRuntimeBadgeSeverity.NEUTRAL) "·" else "!",
+                                        modifier = Modifier.clearAndSetSemantics { },
+                                        color = stateColor, fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
                             ) {
                                 Text(
-                                    (if (badge.severity == KlyroRuntimeBadgeSeverity.READY) "✓ " else "") +
-                                        stateLabel,
-                                    color = stateColor,
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 2
+                                    stateLabel,
+                                    color = ui.foreground,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    lineHeight = 20.sp
+                                )
+                                Text(
+                                    if (badge.severity == KlyroRuntimeBadgeSeverity.READY)
+                                        homeStatus.runtimeMessage.substringAfter(
+                                            " · ", homeStatus.runtimeMessage)
+                                    else homeStatus.runtimeMessage,
+                                    modifier = Modifier.semantics {
+                                        liveRegion = LiveRegionMode.Polite
+                                    },
+                                    color = if (runtimeHasWarnings) ui.warningInk
+                                        else if (technicalErrorDetails != null) ui.danger
+                                        else ui.muted,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp
                                 )
                             }
+                            if (runtimeVerified) {
+                                TextButton(
+                                    onClick = onRecheck,
+                                    enabled = !verifyingRuntime && !installing,
+                                    modifier = Modifier.heightIn(min = 48.dp)
+                                        .semantics {
+                                            contentDescription = "Recheck environment"
+                                            if (verifyingRuntime) stateDescription = "Checking environment"
+                                            else if (installing) stateDescription = "Unavailable during installation"
+                                        },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        if (verifyingRuntime) "Checking…" else "Recheck",
+                                        color = if (verifyingRuntime || installing) ui.muted else ui.accent,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
                         }
-                        Text(
-                            homeStatus.runtimeMessage,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                            color = if (runtimeHasWarnings) ui.warningInk
-                                else if (technicalErrorDetails != null)
-                                    ui.danger
-                                else ui.foreground,
-                            fontSize = 13.sp,
-                            lineHeight = 19.sp
-                        )
                         homeStatus.terminalFailure?.let { failure ->
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1533,57 +1684,6 @@ private fun OrynTerminalApp(
                             Text("$progress%", color = ui.accent, fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace)
                         }
-                        // An existing PTY remains reachable while runtime checks fail or run.
-                        if (homeAction != KlyroHomeAction.NONE) {
-                            Button(
-                                onClick = onLaunch,
-                                enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = ui.accent,
-                                    contentColor = ui.onAccent
-                                ),
-                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                            ) {
-                                if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
-                                    androidx.compose.material3.CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
-                                        color = ui.onAccent)
-                                    Spacer(Modifier.width(10.dp))
-                                }
-                                Text(
-                                    if (homeAction == KlyroHomeAction.RESUME_SESSION)
-                                        "Return to terminal"
-                                    else if (launchingBash) "Starting Bash…"
-                                    else "Launch Bash",
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                        if (!runtimeVerified) {
-                            Button(
-                                onClick = onInstall,
-                                enabled = !installing && !verifyingRuntime &&
-                                    (!hasLiveSessions || runtimeInstalled),
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (hasRunningSessions) ui.tile else ui.accent,
-                                    contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
-                                    disabledContainerColor = ui.tile,
-                                    disabledContentColor = ui.muted
-                                ),
-                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                            ) {
-                                Text(
-                                    KlyroHomeSetupLabelPolicy.label(
-                                        installing, verifyingRuntime, runtimeInstalled,
-                                        bootstrapInstalled, technicalErrorDetails != null,
-                                        hasLiveSessions
-                                    ),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
                         if (KlyroRuntimeRepairPolicy.canOffer(
                                 runtimeInstalled, runtimeVerified,
                                 technicalErrorDetails != null, hasLiveSessions,
@@ -1594,93 +1694,69 @@ private fun OrynTerminalApp(
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                             ) { Text("Repair private bootstrap", color = ui.warningInk) }
                         }
-                        if (runtimeVerified) {
-                            TextButton(
-                                onClick = onRecheck,
-                                enabled = !verifyingRuntime && !installing,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                            ) {
-                                Text("Recheck environment", color = ui.accent, fontSize = 13.sp)
-                            }
-                        }
-                    }
-                }
-                Surface(
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
-                        .semantics { contentDescription = "Plugins" },
-                    color = ui.tile,
-                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-                    border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier.size(42.dp).background(
-                                ui.accent.copy(alpha = .12f), RoundedCornerShape(13.dp)
-                            ), contentAlignment = Alignment.Center
-                        ) {
-                            Icon(painterResource(R.drawable.ic_klyro_plugins),
-                                contentDescription = null, tint = ui.accent,
-                                modifier = Modifier.size(23.dp))
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text("Plugins", color = ui.foreground, fontWeight = FontWeight.SemiBold)
-                            Text("Extend the command palette", color = ui.muted,
-                                fontSize = 12.sp)
-                        }
-                        Icon(painterResource(R.drawable.hugeicons_arrow_up_right_01),
-                            contentDescription = null, tint = ui.accent,
-                            modifier = Modifier.size(20.dp))
                     }
                 }
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable(role = Role.Button,
-                            onClickLabel = "Open Klyro settings") {
-                            showHomeSettings = true
-                        }.semantics { contentDescription = "Settings" },
-                    color = ui.tile,
-                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier.size(42.dp).background(
-                                ui.key, RoundedCornerShape(13.dp)
-                            ), contentAlignment = Alignment.Center
-                        ) {
-                            Icon(painterResource(R.drawable.hugeicons_settings_01),
-                                contentDescription = null, tint = ui.muted,
-                                modifier = Modifier.size(23.dp))
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val compactTiles = maxWidth < 340.dp ||
+                        LocalDensity.current.fontScale >= 1.3f
+                    if (compactTiles) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            KlyroHomeNavigationTile(
+                                title = "Plugins",
+                                description = "Extend your commands",
+                                iconRes = R.drawable.ic_klyro_plugins,
+                                emphasized = true,
+                                horizontal = compactTiles,
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                        showPlugins = true
+                                    }.semantics { contentDescription = "Plugins" }
+                            )
+                            KlyroHomeNavigationTile(
+                                title = "Settings",
+                                description = "Look & behavior",
+                                iconRes = R.drawable.hugeicons_settings_01,
+                                emphasized = false,
+                                horizontal = compactTiles,
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                        showHomeSettings = true
+                                    }.semantics { contentDescription = "Settings" }
+                            )
                         }
-                        Column(Modifier.weight(1f)) {
-                            Text("Settings", color = ui.foreground, fontWeight = FontWeight.SemiBold)
-                            Text("Appearance, keyboard, storage & diagnostics",
-                                color = ui.muted, fontSize = 12.sp)
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            KlyroHomeNavigationTile(
+                                title = "Plugins",
+                                description = "Extend your commands",
+                                iconRes = R.drawable.ic_klyro_plugins,
+                                emphasized = true,
+                                horizontal = compactTiles,
+                                modifier = Modifier.weight(1f)
+                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                        showPlugins = true
+                                    }.semantics { contentDescription = "Plugins" }
+                            )
+                            KlyroHomeNavigationTile(
+                                title = "Settings",
+                                description = "Look & behavior",
+                                iconRes = R.drawable.hugeicons_settings_01,
+                                emphasized = false,
+                                horizontal = compactTiles,
+                                modifier = Modifier.weight(1f)
+                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                        showHomeSettings = true
+                                    }.semantics { contentDescription = "Settings" }
+                            )
                         }
-                        Icon(painterResource(R.drawable.hugeicons_chevron_right),
-                            contentDescription = null, tint = ui.muted,
-                            modifier = Modifier.size(20.dp))
                     }
                 }
-
-                Text(
-                    "Private shell · Local workspace · No cloud account required",
-                    color = ui.muted,
-                    style = MaterialTheme.typography.bodySmall
-                )
-
+                }
 
             }
         }
+    }
     }
     if (showHomeSettings) {
         KlyroSettingsSheet(
@@ -1764,6 +1840,131 @@ private fun OrynTerminalApp(
                     Text("Cancel")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun KlyroHomeNavigationTile(
+    title: String,
+    description: String,
+    iconRes: Int,
+    emphasized: Boolean,
+    horizontal: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val ui = LocalKlyroColors.current
+    val iconColor = if (emphasized) ui.accent else ui.muted
+    Surface(
+        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 124.dp),
+        color = ui.tile,
+        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+    ) {
+        if (horizontal) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier.size(40.dp).background(
+                        ui.key,
+                        RoundedCornerShape(13.dp)
+                    ), contentAlignment = Alignment.Center
+                ) {
+                    Icon(painterResource(iconRes), contentDescription = null,
+                        tint = iconColor, modifier = Modifier.size(22.dp))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(title, color = ui.foreground,
+                        fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text(description, color = ui.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                }
+                Icon(painterResource(R.drawable.hugeicons_chevron_right),
+                    contentDescription = null, tint = ui.muted, modifier = Modifier.size(18.dp))
+            }
+        } else {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(40.dp).background(
+                            ui.key,
+                            RoundedCornerShape(13.dp)
+                        ), contentAlignment = Alignment.Center
+                    ) {
+                        Icon(painterResource(iconRes), contentDescription = null,
+                            tint = iconColor, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Icon(painterResource(R.drawable.hugeicons_chevron_right),
+                        contentDescription = null, tint = ui.muted, modifier = Modifier.size(18.dp))
+                }
+                Text(title, color = ui.foreground,
+                    fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(description, color = ui.muted, fontSize = 12.sp, lineHeight = 17.sp)
+            }
+        }
+    }
+}
+
+/** Low-cost native twinkle avoids looping GIF decoding and respects reduced motion. */
+@Composable
+private fun KlyroHomePixelCover(height: androidx.compose.ui.unit.Dp, screenChrome: Color) {
+    Box(Modifier.fillMaxWidth().height(height)) {
+        Image(
+            painter = painterResource(R.drawable.klyro_home_pixel_landscape),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        val context = LocalContext.current
+        val motionEnabled = remember(context) {
+            runCatching {
+                Settings.Global.getFloat(
+                    context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f
+                ) > 0f
+            }.getOrDefault(false)
+        }
+        if (motionEnabled) {
+            val stars = rememberInfiniteTransition(label = "Klyro night stars")
+            val shimmer by stars.animateFloat(
+                initialValue = .15f,
+                targetValue = .9f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 3600),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "Star shimmer"
+            )
+            val starColor = LocalKlyroColors.current.accent
+            Canvas(Modifier.fillMaxSize()) {
+                val unitX = size.width / 320f
+                val unitY = size.height / 153f
+                val lit = starColor.copy(alpha = shimmer * .55f)
+                for ((x, y) in listOf(44f to 30f, 124f to 17f, 217f to 38f, 287f to 22f)) {
+                    drawRect(
+                        color = lit,
+                        topLeft = Offset(x * unitX, y * unitY),
+                        size = Size(2f * unitX, 2f * unitY)
+                    )
+                }
+            }
+        }
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    .66f to Color.Transparent,
+                    1f to screenChrome
+                )
+            )
         )
     }
 }
