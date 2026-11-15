@@ -1520,6 +1520,20 @@ private fun OrynTerminalApp(
                                     lineHeight = 18.sp
                                 )
                             }
+                            if (runtimeVerified) {
+                                TextButton(
+                                    onClick = onRecheck,
+                                    enabled = !verifyingRuntime && !installing,
+                                    modifier = Modifier.heightIn(min = 48.dp),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        "Recheck",
+                                        color = if (verifyingRuntime || installing) ui.muted else ui.accent,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
                         }
                         homeStatus.terminalFailure?.let { failure ->
                             Surface(
@@ -1631,20 +1645,6 @@ private fun OrynTerminalApp(
                                 onClick = { showRepairConfirmation = true },
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                             ) { Text("Repair private bootstrap", color = ui.warningInk) }
-                        }
-                        if (runtimeVerified) {
-                            TextButton(
-                                onClick = onRecheck,
-                                enabled = !verifyingRuntime && !installing,
-                                modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    "Recheck environment",
-                                    color = if (verifyingRuntime || installing) ui.muted else ui.accent,
-                                    fontSize = 12.sp
-                                )
-                            }
                         }
                     }
                 }
