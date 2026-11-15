@@ -617,16 +617,20 @@ fun TerminalPane(
             }
         }
 
+        // The new-session action remains reachable even with 8 horizontally scrolling tabs.
         Row(
-            modifier = Modifier.fillMaxWidth()
-                .background(TerminalSurface)
-                .horizontalScroll(tabStripScroll)
-                .padding(horizontal = 10.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().background(TerminalSurface),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (compact) toolsMenu()
-            tabs.forEach { (id, tabTitle) ->
+            Row(
+                modifier = Modifier.weight(1f)
+                    .horizontalScroll(tabStripScroll)
+                    .padding(start = 10.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (compact) toolsMenu()
+                tabs.forEach { (id, tabTitle) ->
                 val active = id == activeTabId
                 val activityTag = compactActivity(id)
                 Box(
@@ -694,6 +698,7 @@ fun TerminalPane(
                         }
                     }
                 }
+            }
             }
             Box(
                 modifier = Modifier
