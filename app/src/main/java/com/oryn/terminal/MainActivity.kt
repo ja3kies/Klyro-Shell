@@ -1345,8 +1345,8 @@ private fun OrynTerminalApp(
                 onClose = onClose
             )
         } else {
-            // Keep runtime diagnostics and navigation scrollable; the terminal
-            // action stays visible at the bottom on tall and small devices.
+            // The primary action, runtime and tools are one scrollable group.
+            // Avoid separating the CTA from its context with an empty viewport.
             Column(
                 modifier = Modifier.fillMaxSize()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter,
@@ -1400,6 +1400,73 @@ private fun OrynTerminalApp(
                         }
                     }
                     Spacer(Modifier.weight(1f))
+                }
+
+                // Keep the terminal action with the content it serves, not
+                // isolated across an empty screen from the runtime and tools.
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // An existing PTY remains reachable while runtime checks fail or run.
+                    if (homeAction != KlyroHomeAction.NONE) {
+                        Button(
+                            onClick = onLaunch,
+                            enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ui.accent,
+                                contentColor = ui.onAccent
+                            ),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                        ) {
+                            if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                                    color = ui.onAccent)
+                                Spacer(Modifier.width(10.dp))
+                            }
+                            Text(
+                                if (homeAction == KlyroHomeAction.RESUME_SESSION)
+                                    "Return to terminal"
+                                else if (launchingBash) "Starting Bash…"
+                                else "Launch Bash",
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start
+                            )
+                            Icon(
+                                painter = painterResource(R.drawable.hugeicons_chevron_right),
+                                contentDescription = null,
+                                tint = ui.onAccent,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                    if (!runtimeVerified) {
+                        Button(
+                            onClick = onInstall,
+                            enabled = !installing && !verifyingRuntime &&
+                                (!hasLiveSessions || runtimeInstalled),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (hasRunningSessions) ui.tile else ui.accent,
+                                contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
+                                disabledContainerColor = ui.tile,
+                                disabledContentColor = ui.muted
+                            ),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                        ) {
+                            Text(
+                                KlyroHomeSetupLabelPolicy.label(
+                                    installing, verifyingRuntime, runtimeInstalled,
+                                    bootstrapInstalled, technicalErrorDetails != null,
+                                    hasLiveSessions
+                                ),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
 
                 Surface(
@@ -1655,72 +1722,7 @@ private fun OrynTerminalApp(
                     }
                 }
                 }
-                // Keep the primary terminal action within thumb reach and visible
-                // even when diagnostics or setup content requires scrolling.
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // An existing PTY remains reachable while runtime checks fail or run.
-                    if (homeAction != KlyroHomeAction.NONE) {
-                        Button(
-                            onClick = onLaunch,
-                            enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = ui.accent,
-                                contentColor = ui.onAccent
-                            ),
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                        ) {
-                            if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
-                                    color = ui.onAccent)
-                                Spacer(Modifier.width(10.dp))
-                            }
-                            Text(
-                                if (homeAction == KlyroHomeAction.RESUME_SESSION)
-                                    "Return to terminal"
-                                else if (launchingBash) "Starting Bash…"
-                                else "Launch Bash",
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Start
-                            )
-                            Icon(
-                                painter = painterResource(R.drawable.hugeicons_chevron_right),
-                                contentDescription = null,
-                                tint = ui.onAccent,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                    if (!runtimeVerified) {
-                        Button(
-                            onClick = onInstall,
-                            enabled = !installing && !verifyingRuntime &&
-                                (!hasLiveSessions || runtimeInstalled),
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (hasRunningSessions) ui.tile else ui.accent,
-                                contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
-                                disabledContainerColor = ui.tile,
-                                disabledContentColor = ui.muted
-                            ),
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                        ) {
-                            Text(
-                                KlyroHomeSetupLabelPolicy.label(
-                                    installing, verifyingRuntime, runtimeInstalled,
-                                    bootstrapInstalled, technicalErrorDetails != null,
-                                    hasLiveSessions
-                                ),
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
+
             }
         }
     }
