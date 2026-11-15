@@ -9,7 +9,7 @@ class PluginRotationCompletion(unittest.TestCase):
   self.assertIn('manager.observeRegistry',S)
   self.assertIn('onDispose { stopObserving() }',S)
   self.assertIn('LaunchedEffect(manager, registryRevision)',S)
-  self.assertIn('installed = withContext(Dispatchers.IO) { manager.installed() }',S)
+  self.assertIn('val result = withContext(Dispatchers.IO) { runCatching { manager.installed() } }',S)
   self.assertIn('scope.launch { registryRevision += 1 }',S)
  def test_completed_mutations_are_reconciled_by_ids(self):
   self.assertIn('var confirmedImportId by rememberSaveable',S)
