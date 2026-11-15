@@ -26,6 +26,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -96,8 +102,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalMotionDurationScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -1299,22 +1308,7 @@ private fun OrynTerminalApp(
 
     Box(Modifier.fillMaxSize().background(screenChrome)) {
         if (homeVisible) {
-            // Offline artwork can extend behind the transparent status bar.
-            Image(
-                painter = painterResource(R.drawable.klyro_home_pixel_landscape),
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier.fillMaxWidth().height(bannerHeight)
-            )
-            Box(
-                Modifier.fillMaxWidth().height(bannerHeight).background(
-                    Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        .66f to Color.Transparent,
-                        1f to screenChrome
-                    )
-                )
-            )
+            KlyroHomePixelCover(bannerHeight, screenChrome)
         }
         Surface(
             modifier = Modifier.fillMaxSize()
@@ -1907,5 +1901,52 @@ private fun KlyroHomeNavigationTile(
                 Text(description, color = ui.muted, fontSize = 12.sp, lineHeight = 17.sp)
             }
         }
+    }
+}
+
+/** Low-cost native twinkle avoids looping GIF decoding and respects reduced motion. */
+@Composable
+private fun KlyroHomePixelCover(height: androidx.compose.ui.unit.Dp, screenChrome: Color) {
+    Box(Modifier.fillMaxWidth().height(height)) {
+        Image(
+            painter = painterResource(R.drawable.klyro_home_pixel_landscape),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        if (LocalMotionDurationScale.current.scaleFactor > 0f) {
+            val stars = rememberInfiniteTransition(label = "Klyro night stars")
+            val shimmer by stars.animateFloat(
+                initialValue = .15f,
+                targetValue = .9f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 3600),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "Star shimmer"
+            )
+            Canvas(Modifier.fillMaxSize()) {
+                val unitX = size.width / 320f
+                val unitY = size.height / 153f
+                val lit = Color(0xFF9AF8ED).copy(alpha = shimmer * .55f)
+                for ((x, y) in listOf(44f to 30f, 124f to 17f, 217f to 38f, 287f to 22f)) {
+                    drawRect(
+                        color = lit,
+                        topLeft = Offset(x * unitX, y * unitY),
+                        size = Size(2f * unitX, 2f * unitY)
+                    )
+                }
+            }
+        }
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    .66f to Color.Transparent,
+                    1f to screenChrome
+                )
+            )
+        )
     }
 }
