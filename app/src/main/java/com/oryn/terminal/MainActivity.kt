@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.rememberScrollState
@@ -1422,16 +1423,21 @@ private fun OrynTerminalApp(
                                 ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    when (badge.severity) {
-                                        KlyroRuntimeBadgeSeverity.READY -> "✓"
-                                        KlyroRuntimeBadgeSeverity.NEUTRAL -> "·"
-                                        else -> "!"
-                                    },
-                                    modifier = Modifier.clearAndSetSemantics { },
-                                    color = stateColor, fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                if (badge.severity == KlyroRuntimeBadgeSeverity.READY) {
+                                    Icon(
+                                        painterResource(R.drawable.hugeicons_checkmark_circle_01),
+                                        contentDescription = null,
+                                        tint = stateColor,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        if (badge.severity == KlyroRuntimeBadgeSeverity.NEUTRAL) "·" else "!",
+                                        modifier = Modifier.clearAndSetSemantics { },
+                                        color = stateColor, fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                             Column(
                                 modifier = Modifier.weight(1f),
@@ -1464,7 +1470,11 @@ private fun OrynTerminalApp(
                                     onClick = onRecheck,
                                     enabled = !verifyingRuntime && !installing,
                                     modifier = Modifier.heightIn(min = 48.dp)
-                                        .semantics { contentDescription = "Recheck environment" },
+                                        .semantics {
+                                            contentDescription = "Recheck environment"
+                                            if (verifyingRuntime) stateDescription = "Checking environment"
+                                            else if (installing) stateDescription = "Unavailable during installation"
+                                        },
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                                 ) {
                                     Text(
