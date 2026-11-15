@@ -29,6 +29,7 @@ These are discrete user-visible fixes across input, persistence, rendering and l
 - Existing Python source-contract suite: **526 tests passed**. These checks are not Android runtime tests.
 - `git diff --check`: passed.
 - Android/JVM Gradle build and instrumentation execution: **NOT RUN**; this environment has no configured Android SDK (`local.properties` / `ANDROID_HOME`). GitHub Actions is required to compile and execute the configured jobs.
+- First GitHub Actions attempt failed before creating jobs because the new branch trigger line was misindented. The workflow indentation is corrected in a follow-up commit; that retry is the build verdict to use.
 - Physical Pixel validation: **NOT RUN**.
 
 ## Scope and limits
