@@ -1364,7 +1364,7 @@ private fun OrynTerminalApp(
                                 if (homeLauncherIcon == KlyroBrandChoice.ALTERNATIVE)
                                     R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
                             ),
-                            contentDescription = null,
+                            contentDescription = "Klyro Shell logo",
                             tint = Color.Unspecified,
                             modifier = Modifier.size(56.dp)
                         )
@@ -1608,7 +1608,7 @@ private fun OrynTerminalApp(
                 Surface(
                     modifier = Modifier.fillMaxWidth()
                         .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
-                        .semantics { contentDescription = "Plugins, extend the command palette" },
+                        .semantics { contentDescription = "Plugins" },
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
                     border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
@@ -1643,7 +1643,7 @@ private fun OrynTerminalApp(
                         .clickable(role = Role.Button,
                             onClickLabel = "Open Klyro settings") {
                             showHomeSettings = true
-                        }.semantics { contentDescription = "Settings, customize Klyro Shell" },
+                        }.semantics { contentDescription = "Settings" },
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
