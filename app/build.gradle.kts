@@ -4,6 +4,26 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// A semantic base changes only when the release scope changes. CI builds get
+// globally increasing numbers from this one workflow, including reruns.
+val baseKlyroVersionCode = 19
+val baseKlyroVersionName = "0.4.12-dev"
+val ciBuild = if (System.getenv("GITHUB_ACTIONS") == "true") {
+    val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+        ?: error("GitHub build missing a numeric GITHUB_RUN_NUMBER")
+    val attempt = System.getenv("GITHUB_RUN_ATTEMPT")?.toIntOrNull()
+        ?: error("GitHub build missing a numeric GITHUB_RUN_ATTEMPT")
+    require(run in 1..20_000_000 && attempt in 1..99) {
+        "GitHub build number out of Android versionCode range"
+    }
+    run to attempt
+} else null
+
+val finalVersionCode = baseKlyroVersionCode +
+    (ciBuild?.let { (run, attempt) -> run * 100 + attempt } ?: 0)
+val finalVersionName = baseKlyroVersionName +
+    (ciBuild?.let { (run, attempt) -> ".$run.$attempt" } ?: "")
+
 android {
     namespace = "com.oryn.terminal"
     compileSdk = 36
@@ -13,8 +33,8 @@ android {
         applicationId = "com.klyro.shell"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "0.4.11-dev"
+        versionCode = finalVersionCode
+        versionName = finalVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
@@ -73,6 +93,12 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+
+// Read exactly the same values that Android Gradle Plugin packs into APKs.
+tasks.register("printKlyroVersion") {
+    doLast { println("$finalVersionCode|$finalVersionName") }
 }
 
 dependencies {
