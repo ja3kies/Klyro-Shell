@@ -8,7 +8,7 @@ apk = root / "app/build/outputs/apk/debug/app-debug.apk"
 report = [
     "## Klyro CI build summary",
     "",
-    f"- Commit: \`{os.environ.get('GITHUB_SHA', 'local')}\`",
+    f"- Commit: `{os.environ.get('GITHUB_SHA', 'local')}`",
     f"- Run: {os.environ.get('GITHUB_RUN_NUMBER', 'local')} / attempt {os.environ.get('GITHUB_RUN_ATTEMPT', '1')}",
     f"- Fast gate: {os.environ.get('FAST_GATE_RESULT', 'unknown')}",
     f"- Android build job: {os.environ.get('ANDROID_JOB_RESULT', 'unknown')}",
