@@ -16,7 +16,7 @@ class AutomationContracts(unittest.TestCase):
         self.assertIn("python3 tools/ci_targeted_tests.py", BUILD)
 
     def test_cache_is_used_without_unverified_native_asset_caching(self):
-        self.assertIn("cache: gradle", BUILD)
+        self.assertIn("gradle/actions/setup-gradle@v4", BUILD)
         self.assertIn("cache-read-only:", BUILD)
         self.assertNotIn("actions/cache@v3", BUILD)
 
