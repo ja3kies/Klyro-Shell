@@ -46,8 +46,10 @@ import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
@@ -118,9 +120,12 @@ internal fun KlyroSettingsSheet(
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var cannotOpenPermissions by rememberSaveable { mutableStateOf(false) }
     var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
+    var brandSelectionReady by remember { mutableStateOf(false) }
+    var brandSwitching by remember { mutableStateOf(false) }
     var brandSwitchError by rememberSaveable { mutableStateOf(false) }
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var authorizedFolderCount by remember { mutableStateOf(-1) }
     LaunchedEffect(context, section) {
         if (section == "files") {
@@ -146,6 +151,7 @@ internal fun KlyroSettingsSheet(
             runCatching { KlyroBrandChoice.selected(context) }
                 .getOrDefault(KlyroBrandChoice.DEFAULT)
         }
+        brandSelectionReady = true
     }
     fun navigateBack() {
         when {
@@ -159,7 +165,8 @@ internal fun KlyroSettingsSheet(
         }
     }
     // System Back is an external dismissal; the labelled Settings button navigates internally.
-    val canDismissSheet = !showColorPicker && !showFontLicense && !showHugeiconsLicense
+    val canDismissSheet = !showColorPicker && !showFontLicense &&
+        !showHugeiconsLicense && !brandSwitching
     BackHandler(enabled = canDismissSheet) { onDismiss() }
     val density = LocalDensity.current
     val version = com.oryn.terminal.BuildConfig.VERSION_NAME
@@ -250,6 +257,11 @@ internal fun KlyroSettingsSheet(
                         Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)) {
                             Text("Launcher icon", fontWeight = FontWeight.SemiBold,
                                 color = colors.foreground)
+                            if (!brandSelectionReady) {
+                                KlyroInlineNotice("Checking current launcher icon…")
+                            } else if (brandSwitching) {
+                                KlyroInlineNotice("Updating launcher icon…")
+                            }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
@@ -261,17 +273,28 @@ internal fun KlyroSettingsSheet(
                                     Surface(
                                         modifier = Modifier.weight(1f)
                                             .heightIn(min = 96.dp)
-                                            .clickable(role = Role.RadioButton,
+                                            .clickable(enabled = brandSelectionReady && !brandSwitching,
+                                                role = Role.RadioButton,
                                                 onClickLabel = "Select launcher icon $title") {
-                                                if (!KlyroBrandChoice.isVerifiedSelection(context, choice)) {
-                                                    brandSwitchError = !KlyroBrandChoice.select(context, choice)
-                                                    selectedBrand = KlyroBrandChoice.selected(context)
-                                                } else {
-                                                    brandSwitchError = false
+                                                scope.launch {
+                                                    brandSwitching = true
+                                                    try {
+                                                        val (selected, failed) = withContext(Dispatchers.IO) {
+                                                            val verified = KlyroBrandChoice.isVerifiedSelection(context, choice)
+                                                            val succeeded = verified || KlyroBrandChoice.select(context, choice)
+                                                            KlyroBrandChoice.selected(context) to !succeeded
+                                                        }
+                                                        selectedBrand = selected
+                                                        brandSwitchError = failed
+                                                    } finally {
+                                                        brandSwitching = false
+                                                    }
                                                 }
                                             }.semantics {
                                                 contentDescription = "Launcher icon $title"
                                                 selected = selectedBrand == choice
+                                                if (!brandSelectionReady) stateDescription = "Checking"
+                                                else if (brandSwitching) stateDescription = "Updating"
                                             },
                                         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
                                         color = if (selectedBrand == choice)

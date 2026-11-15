@@ -75,6 +75,7 @@ import com.oryn.terminal.ui.KlyroColors
 import com.oryn.terminal.ui.KlyroUiMetrics
 import com.oryn.terminal.ui.KlyroSettingsSheet
 import com.oryn.terminal.ui.KlyroTerminalFonts
+import com.oryn.terminal.ui.KlyroBrandChoice
 import com.oryn.terminal.ui.LocalKlyroColors
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.Composable
@@ -1132,6 +1133,17 @@ private fun OrynTerminalApp(
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
     var showHomeSettings by rememberSaveable { mutableStateOf(false) }
+    var homeLauncherIcon by remember(context) {
+        mutableStateOf(KlyroBrandChoice.DEFAULT)
+    }
+    LaunchedEffect(showHomeSettings) {
+        if (!showHomeSettings) {
+            // PackageManager uses Binder; keep it off the UI thread and out of composition.
+            homeLauncherIcon = withContext(Dispatchers.IO) {
+                KlyroBrandChoice.selected(context)
+            }
+        }
+    }
     // Settings must remain available even before Bash can start.
     val homeFontPrefs = remember(context) {
         context.getSharedPreferences("klyro_terminal_preferences", android.content.Context.MODE_PRIVATE)
@@ -1291,7 +1303,7 @@ private fun OrynTerminalApp(
                     ) {
                         Icon(
                             painter = painterResource(
-                                if (com.oryn.terminal.ui.KlyroBrandChoice.selected(context) == "a")
+                                if (homeLauncherIcon == KlyroBrandChoice.ALTERNATIVE)
                                     R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
                             ),
                             contentDescription = "Klyro Shell logo",
