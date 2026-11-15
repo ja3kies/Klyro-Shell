@@ -48,7 +48,10 @@ class BackgroundResumeContract(unittest.TestCase):
     def test_remote_clipboard_write_requires_matching_visible_tab(self):
         copy = CLIENT.split("void onCopyTextToClipboard(", 1)[1].split(
             "@Override", 1)[0]
-        self.assertGreaterEqual(copy.count("isVisibleOwner(session)"), 2)
+        self.assertEqual(copy.count("isVisibleOwner(session)"), 1)
+        self.assertIn("uiHandler.post(() -> {", copy)
+        self.assertIn("text, uiActive.get(), session.isRunning()", copy)
+        self.assertIn("text, uiActive.get() && isVisibleOwner(session), session.isRunning()", copy)
         owner = CLIENT.split("private boolean isVisibleOwner(", 1)[1].split("}", 1)[0]
         self.assertIn("terminalView", owner)
         self.assertIn("view.isAttachedToWindow()", owner)
