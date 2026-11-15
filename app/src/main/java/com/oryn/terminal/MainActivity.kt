@@ -1344,8 +1344,8 @@ private fun OrynTerminalApp(
                 onClose = onClose
             )
         } else {
-            // Keep secondary information scrollable while the privacy promise
-            // anchors the bottom of tall screens instead of floating mid-page.
+            // Keep runtime diagnostics and navigation scrollable; the terminal
+            // action stays visible at the bottom on tall and small devices.
             Column(
                 modifier = Modifier.fillMaxSize()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter,
@@ -1387,79 +1387,18 @@ private fun OrynTerminalApp(
                         ) {
                             Text("SHELL", color = ui.muted, fontSize = 11.sp,
                                 letterSpacing = 2.sp)
-                            Text("ARM64", color = ui.muted,
-                                fontFamily = FontFamily.Monospace, fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium)
+                            Surface(
+                                color = ui.key.copy(alpha = .55f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("ARM64", color = ui.muted,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium)
+                            }
                         }
                     }
                     Spacer(Modifier.weight(1f))
-                }
-
-                // Primary actions live outside diagnostics so they are discoverable
-                // without interpreting the runtime status card.
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // An existing PTY remains reachable while runtime checks fail or run.
-                    if (homeAction != KlyroHomeAction.NONE) {
-                        Button(
-                            onClick = onLaunch,
-                            enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = ui.accent,
-                                contentColor = ui.onAccent
-                            ),
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                        ) {
-                            if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
-                                    color = ui.onAccent)
-                                Spacer(Modifier.width(10.dp))
-                            }
-                            Text(
-                                if (homeAction == KlyroHomeAction.RESUME_SESSION)
-                                    "Return to terminal"
-                                else if (launchingBash) "Starting Bash…"
-                                else "Launch Bash",
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Start
-                            )
-                            Icon(
-                                painter = painterResource(R.drawable.hugeicons_chevron_right),
-                                contentDescription = null,
-                                tint = ui.onAccent,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                    if (!runtimeVerified) {
-                        Button(
-                            onClick = onInstall,
-                            enabled = !installing && !verifyingRuntime &&
-                                (!hasLiveSessions || runtimeInstalled),
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (hasRunningSessions) ui.tile else ui.accent,
-                                contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
-                                disabledContainerColor = ui.tile,
-                                disabledContentColor = ui.muted
-                            ),
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                        ) {
-                            Text(
-                                KlyroHomeSetupLabelPolicy.label(
-                                    installing, verifyingRuntime, runtimeInstalled,
-                                    bootstrapInstalled, technicalErrorDetails != null,
-                                    hasLiveSessions
-                                ),
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
                 }
 
                 Surface(
@@ -1529,7 +1468,7 @@ private fun OrynTerminalApp(
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                                 ) {
                                     Text(
-                                        "Recheck",
+                                        if (verifyingRuntime) "Checking…" else "Recheck",
                                         color = if (verifyingRuntime || installing) ui.muted else ui.accent,
                                         fontSize = 12.sp
                                     )
@@ -1650,12 +1589,6 @@ private fun OrynTerminalApp(
                     }
                 }
 
-                Text(
-                    "TOOLS & PREFERENCES",
-                    color = ui.muted,
-                    style = MaterialTheme.typography.labelSmall,
-                    letterSpacing = .6.sp
-                )
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val compactTiles = maxWidth < 340.dp ||
                         LocalDensity.current.fontScale >= 1.3f
@@ -1711,13 +1644,72 @@ private fun OrynTerminalApp(
                         }
                     }
                 }
-                Text(
-                    "Private shell · Local workspace · No cloud account required",
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    color = ui.muted,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
+                }
+                // Keep the primary terminal action within thumb reach and visible
+                // even when diagnostics or setup content requires scrolling.
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // An existing PTY remains reachable while runtime checks fail or run.
+                    if (homeAction != KlyroHomeAction.NONE) {
+                        Button(
+                            onClick = onLaunch,
+                            enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ui.accent,
+                                contentColor = ui.onAccent
+                            ),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                        ) {
+                            if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                                    color = ui.onAccent)
+                                Spacer(Modifier.width(10.dp))
+                            }
+                            Text(
+                                if (homeAction == KlyroHomeAction.RESUME_SESSION)
+                                    "Return to terminal"
+                                else if (launchingBash) "Starting Bash…"
+                                else "Launch Bash",
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start
+                            )
+                            Icon(
+                                painter = painterResource(R.drawable.hugeicons_chevron_right),
+                                contentDescription = null,
+                                tint = ui.onAccent,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                    if (!runtimeVerified) {
+                        Button(
+                            onClick = onInstall,
+                            enabled = !installing && !verifyingRuntime &&
+                                (!hasLiveSessions || runtimeInstalled),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (hasRunningSessions) ui.tile else ui.accent,
+                                contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
+                                disabledContainerColor = ui.tile,
+                                disabledContentColor = ui.muted
+                            ),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                        ) {
+                            Text(
+                                KlyroHomeSetupLabelPolicy.label(
+                                    installing, verifyingRuntime, runtimeInstalled,
+                                    bootstrapInstalled, technicalErrorDetails != null,
+                                    hasLiveSessions
+                                ),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1832,7 +1824,7 @@ private fun KlyroHomeNavigationTile(
             ) {
                 Box(
                     modifier = Modifier.size(40.dp).background(
-                        if (emphasized) ui.accent.copy(alpha = .12f) else ui.key,
+                        ui.key,
                         RoundedCornerShape(13.dp)
                     ), contentAlignment = Alignment.Center
                 ) {
@@ -1858,7 +1850,7 @@ private fun KlyroHomeNavigationTile(
                 ) {
                     Box(
                         modifier = Modifier.size(40.dp).background(
-                            if (emphasized) ui.accent.copy(alpha = .12f) else ui.key,
+                            ui.key,
                             RoundedCornerShape(13.dp)
                         ), contentAlignment = Alignment.Center
                     ) {
