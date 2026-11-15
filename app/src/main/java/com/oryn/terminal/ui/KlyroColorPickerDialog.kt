@@ -7,7 +7,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -78,6 +80,7 @@ internal fun KlyroColorPickerDialog(
 ) {
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val prefs = remember(context) {
         context.getSharedPreferences("klyro_ui_theme", Context.MODE_PRIVATE)
     }
@@ -176,6 +179,9 @@ internal fun KlyroColorPickerDialog(
                                     keyboardOptions = KeyboardOptions(
                                         keyboardType = KeyboardType.Ascii,
                                         imeAction = ImeAction.Done
+                                    ),
+                                    keyboardActions = KeyboardActions(
+                                        onDone = { keyboardController?.hide() }
                                     ),
                                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                                         fontFamily = FontFamily.Monospace,

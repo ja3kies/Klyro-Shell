@@ -354,8 +354,8 @@ fun TerminalPane(
         activeTerminalView?.setBackgroundColor(ui.terminal.toArgb())
         activeTerminalView?.invalidate()
     }
-    fun changeTerminalFont(delta: Float) {
-        terminalFontSp = (terminalFontSp + delta).coerceIn(9f, 24f)
+    fun changeTerminalFont(size: Float) {
+        terminalFontSp = size.coerceIn(9f, 24f)
         fontPreferences.edit().putFloat("font_size_sp", terminalFontSp).apply()
     }
     var showTranscriptSearch by rememberSaveable(session) { mutableStateOf(false) }

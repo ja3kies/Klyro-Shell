@@ -1628,8 +1628,8 @@ private fun OrynTerminalApp(
                 homeFontFamily = KlyroTerminalFonts.normalize(value)
                 homeFontPrefs.edit().putString("font_family", homeFontFamily).apply()
             },
-            onFontChange = { delta ->
-                homeFontSize = (homeFontSize + delta).coerceIn(9f, 24f)
+            onFontChange = { size ->
+                homeFontSize = size.coerceIn(9f, 24f)
                 homeFontPrefs.edit().putFloat("font_size_sp", homeFontSize).apply()
             },
             onResetFont = {

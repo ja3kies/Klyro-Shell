@@ -490,7 +490,7 @@ internal fun KlyroSettingsSheet(
                                 }
                                 KlyroThinSlider(
                                     value = fontSizeSp.coerceIn(9f, 24f),
-                                    onValueChange = { onFontChange(it - fontSizeSp) },
+                                    onValueChange = onFontChange,
                                     valueRange = 9f..24f,
                                     steps = 29,
                                     modifier = Modifier.fillMaxWidth().semantics {
