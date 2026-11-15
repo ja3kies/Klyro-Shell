@@ -6,7 +6,9 @@ class SessionActivitySheet(unittest.TestCase):
  def test_status_and_uncertainty_visible_without_touching_pty(self):
   self.assertIn('activityStatus: String? = null',P)
   self.assertIn('activityDetail: String? = null',P)
-  self.assertIn('rows = if (activityStatus.isNullOrBlank()) 4 else 5',P)
+  self.assertIn('.weight(1f, fill = false)',P)
+  self.assertIn('.verticalScroll(rememberScrollState())',P)
+  self.assertIn('Text("Done")',P)
   self.assertIn('if (!activityStatus.isNullOrBlank())',P)
   self.assertIn('Text(activityDetail, color = colors.muted',P)
   self.assertNotIn('session.write(',P)
