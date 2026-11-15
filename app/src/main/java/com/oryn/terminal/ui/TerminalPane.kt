@@ -705,14 +705,22 @@ fun TerminalPane(
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             if (activityTag != null) {
-                                Text(
-                                    activityTag,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (active) ui.onAccent else if (activityTag == "JOB")
-                                        ui.readyInk else ui.muted,
-                                    maxLines = 1
-                                )
+                                Box(
+                                    modifier = Modifier.background(
+                                        if (active) ui.onAccent.copy(alpha = 0.14f)
+                                        else TerminalAccent.copy(alpha = 0.12f),
+                                        androidx.compose.foundation.shape.RoundedCornerShape(6.dp)
+                                    ).padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        activityTag,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (active) ui.onAccent else if (activityTag == "JOB")
+                                            ui.readyInk else ui.muted,
+                                        maxLines = 1
+                                    )
+                                }
                             }
                         }
                     }
