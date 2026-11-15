@@ -4,6 +4,29 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class KlyroWorkspaceCatalogTest {
+    @Test public void malformedUtf16NamesAreNotPersistedAsReplacementGlyphs() {
+        assertEquals("Project", KlyroWorkspaceCatalog.cleanName("Project\uD800"));
+        assertEquals("Project", KlyroWorkspaceCatalog.cleanName("Project\uDC00"));
+        assertEquals("😀", KlyroWorkspaceCatalog.cleanName("😀"));
+    }
+
+    @Test public void corruptUtf8AndInvalidUuidShapesCannotBecomeWorkspaces() {
+        String valid = "12345678-1234-1234-1234-123456789abc";
+        String invalidUtf8 = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(new byte[] {(byte) 0xc3, (byte) 0x28});
+        KlyroWorkspaceCatalog catalog = KlyroWorkspaceCatalog.decode(
+            "v1\n" + valid + "\t" + invalidUtf8 + "\n", valid);
+        assertEquals(1, catalog.entries().size());
+        assertEquals(KlyroWorkspaceCatalog.GENERAL, catalog.activeId());
+
+        String malformed = "12345678-1234-1234---------------------";
+        String name = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("Ghost".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        KlyroWorkspaceCatalog invalid = KlyroWorkspaceCatalog.decode(
+            "v1\n" + malformed + "\t" + name + "\n", malformed);
+        assertEquals(1, invalid.entries().size());
+    }
+
     @Test public void generalIsAlwaysAvailable() {
         KlyroWorkspaceCatalog catalog = new KlyroWorkspaceCatalog();
         assertEquals(KlyroWorkspaceCatalog.GENERAL, catalog.activeId());
