@@ -4,6 +4,7 @@ import android.content.Context;
 
 import com.oryn.terminal.core.OrynPaths;
 import com.oryn.terminal.core.KlyroDiagnostics;
+import com.oryn.terminal.workspace.KlyroWorkspaceCatalog;
 import com.oryn.terminal.termux.TermuxBootstrapInstaller;
 
 import java.io.ByteArrayOutputStream;
@@ -28,7 +29,6 @@ public final class TerminalSessionManager {
     private static final String VERIFY_MARKER = "__KLYRO_BASH_START_OK__";
     private static final int VERIFY_TIMEOUT_SECONDS = 20;
     private static final int MAX_DIAGNOSTIC_BYTES = 16 * 1024;
-    private static final int MAX_SESSION_NAME = 32;
 
 
     public static final class VerificationResult {
@@ -262,9 +262,8 @@ public final class TerminalSessionManager {
                         5000,
                         client
                 );
-        String displayName = name == null ? "" : name.trim().replaceAll("[\\p{Cntrl}]", "");
-        session.mSessionName = displayName.isEmpty() ? "Bash"
-                : displayName.substring(0, Math.min(MAX_SESSION_NAME, displayName.length()));
+        String displayName = KlyroWorkspaceCatalog.cleanName(name);
+        session.mSessionName = displayName.isEmpty() ? "Bash" : displayName;
         return session;
     }
 
