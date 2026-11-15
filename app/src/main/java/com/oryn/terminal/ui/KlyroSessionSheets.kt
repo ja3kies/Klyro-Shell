@@ -1,6 +1,8 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +45,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 
 /** Session management follows the compact dsh-Go pattern: actions first, form on demand. */
@@ -170,6 +173,12 @@ internal fun KlyroRenameSessionDialog(
     }
     val requester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
+    val canSave = value.text.trim().isNotBlank() && value.text.trim() != name
+    fun saveRename() {
+        if (!canSave) return
+        keyboard?.hide()
+        onSave(value.text.trim())
+    }
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
         AlertDialog(
@@ -185,7 +194,13 @@ internal fun KlyroRenameSessionDialog(
                     onValueChange = {
                         val cleaned = it.text.replace("\n", "").replace("\r", "")
                         if (cleaned.length <= 32) {
-                            value = it.copy(text = cleaned)
+                            value = it.copy(
+                                text = cleaned,
+                                selection = TextRange(
+                                    it.selection.start.coerceIn(0, cleaned.length),
+                                    it.selection.end.coerceIn(0, cleaned.length)
+                                )
+                            )
                         }
                     },
                     modifier = Modifier.fillMaxWidth().focusRequester(requester),
@@ -194,18 +209,20 @@ internal fun KlyroRenameSessionDialog(
                         Text("Maximum 32 characters. Save or Cancel to close a changed name.")
                     },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { saveRename() }),
                     label = { Text("Session name") },
                 )
             },
             confirmButton = {
                 Button(
-                    enabled = value.text.trim().isNotBlank() && value.text.trim() != name,
-                    onClick = { onSave(value.text.trim()) },
+                    enabled = canSave,
+                    onClick = { saveRename() },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                 ) { Text("Save") }
             },
             dismissButton = {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = { keyboard?.hide(); onDismiss() }) { Text("Cancel") }
             }
         )
     }
