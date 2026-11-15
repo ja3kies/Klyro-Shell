@@ -47,7 +47,7 @@ class AutomationContracts(unittest.TestCase):
         self.assertNotIn("actions/cache@v3", BUILD)
 
     def test_targeted_tests_fail_closed_to_full_suite(self):
-        self.assertIn("unittest discover", TARGET)
+        self.assertIn('"unittest", "discover"', TARGET)
         self.assertIn("git diff", TARGET)
         self.assertIn("test_", TARGET)
 
