@@ -146,12 +146,12 @@ class KlyroSessionService : Service() {
 
         /** Update an existing service notification; never restart an FGS from a background callback. */
         fun refreshSessionNotification(context: Context) {
-            if (!KlyroSessionRuntime.sessions.hasLiveSessions()) {
+            if (!KlyroSessionRuntime.sessions.hasRunningPtys()) {
                 stopIfEmpty(context)
             } else if (com.oryn.terminal.diagnostics.FreezeRecorder.serviceActive) {
                 try {
                     context.getSystemService(NotificationManager::class.java).notify(
-                        NOTIFICATION_ID, sessionNotification(context, KlyroSessionRuntime.sessions.liveSessionCount))
+                        NOTIFICATION_ID, sessionNotification(context, KlyroSessionRuntime.sessions.runningPtyCount()))
                 } catch (denied: SecurityException) {
                     android.util.Log.w("KlyroSessionService", "Cannot update session notification", denied)
                 }
