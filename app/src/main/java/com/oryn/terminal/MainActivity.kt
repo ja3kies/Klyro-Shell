@@ -1561,123 +1561,140 @@ private fun OrynTerminalApp(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                                    // An existing PTY remains reachable while runtime checks fail or run.
-                                    if (homeAction != KlyroHomeAction.NONE) {
-                                        Button(
-                                            onClick = onLaunch,
-                                            enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
-                                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = ui.accent,
-                                                contentColor = ui.onAccent
-                                            ),
-                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                                        ) {
-                                            if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
-                                                androidx.compose.material3.CircularProgressIndicator(
-                                                    modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
-                                                    color = ui.onAccent)
-                                                Spacer(Modifier.width(10.dp))
-                                            }
-                                            Text(
-                                                if (homeAction == KlyroHomeAction.RESUME_SESSION)
-                                                    "Return to terminal"
-                                                else if (launchingBash) "Starting Bash…"
-                                                else "Launch Bash",
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
-                                    }
-                                    if (!runtimeVerified) {
-                                        Button(
-                                            onClick = onInstall,
-                                            enabled = !installing && !verifyingRuntime &&
-                                                (!hasLiveSessions || runtimeInstalled),
-                                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (hasRunningSessions) ui.tile else ui.accent,
-                                                contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
-                                                disabledContainerColor = ui.tile,
-                                                disabledContentColor = ui.muted
-                                            ),
-                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                                        ) {
-                                            Text(
-                                                KlyroHomeSetupLabelPolicy.label(
-                                                    installing, verifyingRuntime, runtimeInstalled,
-                                                    bootstrapInstalled, technicalErrorDetails != null,
-                                                    hasLiveSessions
+                                        // An existing PTY remains reachable while runtime checks fail or run.
+                                        if (homeAction != KlyroHomeAction.NONE) {
+                                            Button(
+                                                onClick = onLaunch,
+                                                enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
+                                                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = ui.accent,
+                                                    contentColor = ui.onAccent
                                                 ),
-                                                fontWeight = FontWeight.SemiBold
-                                            )
+                                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                            ) {
+                                                if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
+                                                    androidx.compose.material3.CircularProgressIndicator(
+                                                        modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                                                        color = ui.onAccent)
+                                                    Spacer(Modifier.width(10.dp))
+                                                }
+                                                Text(
+                                                    if (homeAction == KlyroHomeAction.RESUME_SESSION)
+                                                        "Return to terminal"
+                                                    else if (launchingBash) "Starting Bash…"
+                                                    else "Launch Bash",
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
                                         }
-                                    }
+                                        if (!runtimeVerified) {
+                                            Button(
+                                                onClick = onInstall,
+                                                enabled = !installing && !verifyingRuntime &&
+                                                    (!hasLiveSessions || runtimeInstalled),
+                                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = if (hasRunningSessions) ui.tile else ui.accent,
+                                                    contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
+                                                    disabledContainerColor = ui.tile,
+                                                    disabledContentColor = ui.muted
+                                                ),
+                                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                            ) {
+                                                Text(
+                                                    KlyroHomeSetupLabelPolicy.label(
+                                                        installing, verifyingRuntime, runtimeInstalled,
+                                                        bootstrapInstalled, technicalErrorDetails != null,
+                                                        hasLiveSessions
+                                                    ),
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
                 }
 
+                Text(
+                    "TOOLS & PREFERENCES",
+                    color = ui.muted,
+                    style = MaterialTheme.typography.labelSmall,
+                    letterSpacing = .6.sp
+                )
                 Surface(
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
-                        .semantics { contentDescription = "Plugins" },
-                    color = ui.tile,
-                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-                    border = BorderStroke(1.dp, ui.accent.copy(alpha = .25f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier.size(42.dp).background(
-                                ui.accent.copy(alpha = .12f), RoundedCornerShape(13.dp)
-                            ), contentAlignment = Alignment.Center
-                        ) {
-                            Icon(painterResource(R.drawable.ic_klyro_plugins),
-                                contentDescription = null, tint = ui.accent,
-                                modifier = Modifier.size(23.dp))
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text("Plugins", color = ui.foreground, fontWeight = FontWeight.SemiBold)
-                            Text("Extend the command palette", color = ui.muted,
-                                fontSize = 12.sp)
-                        }
-                        Icon(painterResource(R.drawable.hugeicons_arrow_up_right_01),
-                            contentDescription = null, tint = ui.accent,
-                            modifier = Modifier.size(20.dp))
-                    }
-                }
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth()
-                        .clickable(role = Role.Button,
-                            onClickLabel = "Open Klyro settings") {
-                            showHomeSettings = true
-                        }.semantics { contentDescription = "Settings" },
+                    modifier = Modifier.fillMaxWidth(),
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier.size(42.dp).background(
-                                ui.key, RoundedCornerShape(13.dp)
-                            ), contentAlignment = Alignment.Center
+                    Column {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
+                                .semantics { contentDescription = "Plugins" },
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+                            border = null
                         ) {
-                            Icon(painterResource(R.drawable.hugeicons_settings_01),
-                                contentDescription = null, tint = ui.muted,
-                                modifier = Modifier.size(23.dp))
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(42.dp).background(
+                                        ui.accent.copy(alpha = .12f), RoundedCornerShape(13.dp)
+                                    ), contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(painterResource(R.drawable.ic_klyro_plugins),
+                                        contentDescription = null, tint = ui.accent,
+                                        modifier = Modifier.size(23.dp))
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text("Plugins", color = ui.foreground, fontWeight = FontWeight.SemiBold)
+                                    Text("Extend the command palette", color = ui.muted,
+                                        fontSize = 12.sp)
+                                }
+                                Icon(painterResource(R.drawable.hugeicons_arrow_up_right_01),
+                                    contentDescription = null, tint = ui.accent,
+                                    modifier = Modifier.size(20.dp))
+                            }
                         }
-                        Column(Modifier.weight(1f)) {
-                            Text("Settings", color = ui.foreground, fontWeight = FontWeight.SemiBold)
-                            Text("Appearance, keyboard, storage & diagnostics",
-                                color = ui.muted, fontSize = 12.sp)
+
+                        Spacer(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(ui.key))
+
+                        Surface(
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable(role = Role.Button,
+                                    onClickLabel = "Open Klyro settings") {
+                                    showHomeSettings = true
+                                }.semantics { contentDescription = "Settings" },
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(42.dp).background(
+                                        ui.key, RoundedCornerShape(13.dp)
+                                    ), contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(painterResource(R.drawable.hugeicons_settings_01),
+                                        contentDescription = null, tint = ui.muted,
+                                        modifier = Modifier.size(23.dp))
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text("Settings", color = ui.foreground, fontWeight = FontWeight.SemiBold)
+                                    Text("Appearance, keyboard, storage & diagnostics",
+                                        color = ui.muted, fontSize = 12.sp)
+                                }
+                                Icon(painterResource(R.drawable.hugeicons_chevron_right),
+                                    contentDescription = null, tint = ui.muted,
+                                    modifier = Modifier.size(20.dp))
+                            }
                         }
-                        Icon(painterResource(R.drawable.hugeicons_chevron_right),
-                            contentDescription = null, tint = ui.muted,
-                            modifier = Modifier.size(20.dp))
+
                     }
                 }
 
