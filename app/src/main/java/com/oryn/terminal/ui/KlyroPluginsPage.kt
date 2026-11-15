@@ -183,7 +183,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 confirmedBundledId = null
                 confirmedImportId = null
                 confirmedRemovalId = null
-                error = failure.message?.take(160) ?: "Action failed"
+                error = failure.message?.let(::truncatePluginError) ?: "Action failed"
             }
         }
     }
@@ -205,7 +205,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         if (pendingImportUri != selectedUri) return@LaunchedEffect
         result.onSuccess { pendingImport = it; error = null }
             .onFailure { failure ->
-                error = failure.message?.take(160) ?: "Invalid plugin manifest"
+                error = failure.message?.let(::truncatePluginError) ?: "Invalid plugin manifest"
                 pendingImportUri = null
             }
     }
@@ -571,3 +571,7 @@ private fun PluginHeading(plugin: KlyroPluginRecord, detail: String) {
         }
     }
 }
+
+/** Keep the last visible character intact when an error contains emoji. */
+private fun truncatePluginError(message: String): String =
+    message.substring(0, message.offsetByCodePoints(0, minOf(160, message.codePointCount(0, message.length))))
