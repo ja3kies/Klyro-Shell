@@ -9,6 +9,32 @@ TARGET = (ROOT / "tools/ci_targeted_tests.py").read_text()
 REPORT = (ROOT / "tools/ci_build_report.py").read_text()
 
 
+import importlib.util
+
+spec = importlib.util.spec_from_file_location("ci_targeted_tests", ROOT / "tools/ci_targeted_tests.py")
+selector = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(selector)
+
+
+class TargetedSelectorTests(unittest.TestCase):
+    def test_single_test_file_runs_only_that_test(self):
+        command = selector.command_for(["tools/test_klyro_ci_automation.py"])
+        self.assertIn("tools.test_klyro_ci_automation", command)
+        self.assertNotIn("discover", command)
+
+    def test_kotlin_change_forces_full_suite(self):
+        self.assertIn("discover", selector.command_for(["app/src/main/java/Foo.kt"]))
+
+    def test_python_runtime_change_forces_full_suite(self):
+        self.assertIn("discover", selector.command_for(["tools/klyro_ui_robot.py"]))
+
+    def test_unknown_base_forces_full_suite(self):
+        self.assertIn("discover", selector.command_for(None))
+
+    def test_empty_diff_forces_full_suite(self):
+        self.assertIn("discover", selector.command_for([]))
+
+
 class AutomationContracts(unittest.TestCase):
     def test_progressive_gate_precedes_expensive_android_job(self):
         self.assertIn("fast-gate:", BUILD)
