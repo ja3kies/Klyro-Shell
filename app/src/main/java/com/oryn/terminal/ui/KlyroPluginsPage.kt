@@ -70,7 +70,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     var mutationBusy by remember { mutableStateOf(false) }
     var previewBusy by remember { mutableStateOf(false) }
     var installed by remember { mutableStateOf<List<KlyroPluginRecord>>(emptyList()) }
-    var page by rememberSaveable { mutableStateOf("installed") }
+    var page by rememberSaveable { mutableStateOf("explore") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var removeId by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
