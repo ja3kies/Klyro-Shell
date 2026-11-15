@@ -10,6 +10,13 @@ class PluginPersistenceTest(unittest.TestCase):
         self.assertIn("withContext(Dispatchers.IO + NonCancellable)",f)
         self.assertIn("manager.installed()",f)
         self.assertIn("mutationBusy = false",f)
-        self.assertIn("enabled = !mutationBusy",SRC)
+        self.assertIn("enabled = !registryLoading && !mutationBusy",SRC)
+    def test_registry_initial_load_is_async_and_has_loading_feedback(self):
+        self.assertIn("var registryLoading by remember { mutableStateOf(true) }", SRC)
+        effect = SRC.split("LaunchedEffect(manager, registryRevision)", 1)[1].split(
+            "// Recover after rotation", 1)[0]
+        self.assertIn("withContext(Dispatchers.IO) { manager.installed() }", effect)
+        self.assertIn('KlyroInlineNotice("Loading local plugins…")', SRC)
+
 if __name__ == "__main__":
     unittest.main()
