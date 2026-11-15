@@ -16,20 +16,24 @@ public final class OutputUpdateBatch implements AutoCloseable {
                              Consumer<Set<Long>> publish) {
         this.schedule = schedule; this.cancel = cancel; this.publish = publish;
     }
-    public void mark(long id) {
+    public synchronized void mark(long id) {
         if (closed) return;
         pending.add(id);
         if (!scheduled) { scheduled = true; schedule.accept(task); }
     }
-    public void remove(long id) { pending.remove(id); }
+    public synchronized void remove(long id) { pending.remove(id); }
     private void flush() {
-        scheduled = false;
-        if (closed || pending.isEmpty()) return;
-        Set<Long> batch = new LinkedHashSet<>(pending);
-        pending.clear();
+        final Set<Long> batch;
+        synchronized (this) {
+            scheduled = false;
+            if (closed || pending.isEmpty()) return;
+            batch = new LinkedHashSet<>(pending);
+            pending.clear();
+        }
+        // Publish outside the lock: a callback may enqueue the next burst.
         publish.accept(batch);
     }
-    @Override public void close() {
+    @Override public synchronized void close() {
         closed = true; pending.clear(); cancel.accept(task); scheduled = false;
     }
 }
