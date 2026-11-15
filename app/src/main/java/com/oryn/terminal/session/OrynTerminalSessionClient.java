@@ -42,6 +42,8 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private final AtomicBoolean uiActive = new AtomicBoolean(true);
     private final AtomicBoolean outputReceivedWhilePaused = new AtomicBoolean(false);
     private final AtomicBoolean disposed = new AtomicBoolean(false);
+    private final AtomicBoolean inputRejectedWhilePaused = new AtomicBoolean(false);
+    private final InputRejectionNotice inputRejections;
     private volatile String latestTitle;
     private final AtomicBoolean titleDirty = new AtomicBoolean(false);
     private final OutputUpdateBatch titleUpdates;
