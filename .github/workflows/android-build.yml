@@ -155,9 +155,13 @@ jobs:
           next_code="${next%%|*}"
           [[ "$first_code" =~ ^[0-9]+$ && "$retry_code" =~ ^[0-9]+$ && "$next_code" =~ ^[0-9]+$ ]]
           (( first_code < retry_code && retry_code < next_code ))
-          [[ "$first" == "10020|0.4.12-dev.100.1" ]]
-          [[ "$retry" == "10021|0.4.12-dev.100.2" ]]
-          [[ "$next" == "10120|0.4.12-dev.101.1" ]]
+          baseline="$(GITHUB_ACTIONS=false gradle -q :app:printKlyroVersion)"
+          base_code="${baseline%%|*}"
+          base_name="${baseline#*|}"
+          [[ "$base_code" =~ ^[0-9]+$ ]]
+          [[ "$first" == "$((base_code + 10001))|${base_name}.100.1" ]]
+          [[ "$retry" == "$((base_code + 10002))|${base_name}.100.2" ]]
+          [[ "$next" == "$((base_code + 10101))|${base_name}.101.1" ]]
 
       - name: Android lint and UI accessibility checks
         run: gradle :app:lintDebug
