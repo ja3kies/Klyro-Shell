@@ -45,6 +45,15 @@ class BackgroundResumeContract(unittest.TestCase):
         self.assertIn("!uiActive.get()", block)
         self.assertIn("view.isAttachedToWindow()", block)
 
+    def test_remote_clipboard_write_requires_matching_visible_tab(self):
+        copy = CLIENT.split("void onCopyTextToClipboard(", 1)[1].split(
+            "@Override", 1)[0]
+        self.assertGreaterEqual(copy.count("isVisibleOwner(session)"), 2)
+        owner = CLIENT.split("private boolean isVisibleOwner(", 1)[1].split("}", 1)[0]
+        self.assertIn("terminalView", owner)
+        self.assertIn("view.isAttachedToWindow()", owner)
+        self.assertIn("view.getCurrentSession() == session", owner)
+
     def test_ui_resumes_from_emulator_without_restarting_shell(self):
         callback = CLIENT.split("void setUiActive(", 1)[1].split(
             "private void scheduleOutputRefresh()", 1)[0]
