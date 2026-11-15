@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import android.content.Context
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +33,7 @@ import androidx.compose.ui.res.painterResource
 import com.oryn.terminal.R
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +42,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -67,6 +73,7 @@ internal fun KlyroCommandPalette(
 ) {
     val colors = LocalKlyroColors.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val searchFocus = remember { FocusRequester() }
     val context = LocalContext.current
     val prefs = remember(context) {
         context.getSharedPreferences("klyro_command_quick_access", Context.MODE_PRIVATE)
@@ -89,6 +96,9 @@ internal fun KlyroCommandPalette(
     }
     var query by rememberSaveable { mutableStateOf("") }
     var showingGuide by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(showingGuide) {
+        if (!showingGuide) searchFocus.requestFocus()
+    }
     var info by remember { mutableStateOf<String?>(null) }
     var unsafeFeedback by remember { mutableStateOf(false) }
     var pendingCautionCommand by rememberSaveable { mutableStateOf<String?>(null) }
@@ -133,12 +143,16 @@ internal fun KlyroCommandPalette(
         }
     }
 
+    val resultCount = matches.size + pluginMatches.size
+
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onDismiss,
             dismissEnabled = pendingCautionCommand == null && !confirmClearRecent) {
             Column(
                 modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
-                    .fillMaxWidth().imePadding()
+                    .fillMaxWidth()
+                    .heightIn(max = KlyroUiMetrics.sheetContentMax)
+                    .imePadding()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
@@ -178,7 +192,9 @@ internal fun KlyroCommandPalette(
                             info = null
                             unsafeFeedback = false
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().focusRequester(searchFocus),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
                         label = { Text("Find a shell command") },
                         placeholder = { Text("pwd, pkg search, exit…") },
                         singleLine = true,
@@ -228,6 +244,13 @@ internal fun KlyroCommandPalette(
                                 "are hidden because their dependencies cannot be verified."
                         )
                     }
+                    Text(
+                        if (query.isBlank()) "$resultCount commands"
+                        else "$resultCount matching commands",
+                        color = colors.muted,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                    )
                     if (recentIds.isNotEmpty() && !pinnedOnly) {
                         Row(modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -242,7 +265,9 @@ internal fun KlyroCommandPalette(
                     }
                     info?.let { KlyroInlineNotice(it, isError = unsafeFeedback) }
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.paletteListMax),
+                        modifier = Modifier.fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .heightIn(max = KlyroUiMetrics.paletteListMax),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         if (matches.isEmpty() && pluginMatches.isEmpty()) {
