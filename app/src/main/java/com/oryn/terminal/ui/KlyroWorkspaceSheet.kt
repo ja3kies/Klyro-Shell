@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -97,14 +98,7 @@ internal fun KlyroWorkspaceSheet(
     val projectTabs = tabs.filter {
         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == selected.id
     }
-    // Avoid scrolling short sheets; preserve reachability for long session lists and accessibility scaling.
-    // A short combined list fits at once; count workspaces and visible session rows together.
-    val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
-        rows = entries.size + projectTabs.size,
-        screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp,
-        fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale,
-        editing = editorId != null
-    )
+    // Measured overflow, not row count, controls scrolling.
     val workspaceScroll = rememberScrollState()
     LaunchedEffect(selectedId) { workspaceScroll.scrollTo(0) }
     fun editProject(id: String, title: String) {
@@ -120,8 +114,8 @@ internal fun KlyroWorkspaceSheet(
             Column(
                 Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
-                    .then(if (needsScroll) Modifier.verticalScroll(workspaceScroll) else Modifier)
                     .imePadding()
+                    .navigationBarsPadding()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
@@ -148,6 +142,13 @@ internal fun KlyroWorkspaceSheet(
                         }
                     }
                 }
+                // Fixed heading/New action; all varying content scrolls independently.
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(workspaceScroll),
+                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
+                ) {
                 if (entries.size >= KlyroWorkspaceCatalog.MAX_PROJECTS) {
                     Text(
                         "Workspace limit reached. Remove an unused workspace to add another.",
@@ -384,6 +385,7 @@ internal fun KlyroWorkspaceSheet(
                         modifier = Modifier.fillMaxWidth()
                             .heightIn(min = KlyroUiMetrics.minTouch)
                     ) { Text("Move current session here") }
+                }
                 }
             }
         }
