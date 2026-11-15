@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,22 +64,34 @@ internal fun KlyroSessionSheet(
     var closeTargetId by rememberSaveable { mutableStateOf<Long?>(null) }
     val confirmClose = closeTargetId == sessionId
     val colors = LocalKlyroColors.current
-    val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
-        rows = if (activityStatus.isNullOrBlank()) 4 else 5,
-        screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp,
-        fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
-    )
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onDismiss, dismissEnabled = !confirmClose) {
             Column(
                 modifier = Modifier.fillMaxWidth()
                     .heightIn(max = KlyroUiMetrics.sheetContentMax)
-                    .then(if (needsScroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                    .navigationBarsPadding()
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
             ) {
-                KlyroSheetTitle(sessionName.ifBlank { "Session" })
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    KlyroSheetTitle(sessionName.ifBlank { "Session" },
+                        modifier = Modifier.weight(1f))
+                    TextButton(onClick = onDismiss,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                        Text("Done")
+                    }
+                }
+                // Terminal identity and dismissal stay visible while actions scroll.
+                Column(
+                    modifier = Modifier.weight(1f, fill = false)
+                        .fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
+                ) {
                 if (!activityStatus.isNullOrBlank()) {
                     Surface(
                         color = colors.tile,
@@ -117,6 +130,7 @@ internal fun KlyroSessionSheet(
                         KlyroActionRow("Close terminal", R.drawable.hugeicons_cancel_circle,
                             onClick = { closeTargetId = sessionId }, destructive = true)
                     }
+                }
                 }
             }
         }
