@@ -976,29 +976,53 @@ class MainActivity : ComponentActivity() {
 
     data class DiagnosticStressResult(val started: Boolean, val message: String)
 
-    fun startDiagnosticStress(): DiagnosticStressResult {
+    /** Prepares a disposable diagnostic on IO; PTY initialization stays on the main thread. */
+    suspend fun startDiagnosticStress(): DiagnosticStressResult {
         if (!BuildConfig.DEBUG) return DiagnosticStressResult(false, "Diagnostic build required.")
         if (terminalState.sessions.size >= 8)
             return DiagnosticStressResult(false, "Maximum 8 sessions; test not started.")
+
+        val id = terminalState.reserveTabId()
+        var attached = false
         return try {
-            val manager = TerminalSessionManager(applicationContext)
-            val id = terminalState.reserveTabId()
             val client = OrynTerminalSessionClient(applicationContext, terminalState.listenerFor(id))
-            val session = manager.startBash("Stability test", client)
-            terminalState.attachSession(session, client, OrynTerminalViewClient(applicationContext), id)
-            terminalState.renameTab(id, "Stability test")
-            session.updateSize(80, 24)
-            KlyroSessionService.ensureRunning(this)
-            showWelcomeScreen = false
-            val bytes = com.oryn.terminal.diagnostics.StabilityScenario.COMMAND.toByteArray(Charsets.UTF_8)
-            if (!session.tryWrite(bytes, 0, bytes.size)) {
-                DiagnosticStressResult(false, "Test input rejected; diagnostic tab retained.")
-            } else {
-                com.oryn.terminal.diagnostics.FreezeRecorder.recordStabilityRun(id)
-                DiagnosticStressResult(true,
-                    "Started in separate tab. Go Home → another app → return. Look for the END marker.")
+            // TerminalSessionManager creates private directory layout and resolves
+            // PRoot/command paths. Never do this work inside a UI button callback.
+            val session = withContext(Dispatchers.IO) {
+                val manager = TerminalSessionManager(applicationContext)
+                manager.startBash("Stability test", client)
             }
+            // Another button/Activity may have added a session while IO was busy.
+            if (terminalState.sessions.size >= 8) {
+                DiagnosticStressResult(false, "Maximum 8 sessions; test not started.")
+            } else {
+                terminalState.attachSession(session, client, OrynTerminalViewClient(applicationContext), id)
+                attached = true
+                terminalState.renameTab(id, "Stability test")
+                // Termux requires emulator initialization and callbacks on main.
+                session.updateSize(80, 24)
+                KlyroSessionService.ensureRunning(this)
+                showWelcomeScreen = false
+                val bytes = com.oryn.terminal.diagnostics.StabilityScenario.COMMAND.toByteArray(Charsets.UTF_8)
+                if (!session.tryWrite(bytes, 0, bytes.size)) {
+                    DiagnosticStressResult(false, "Test input rejected; diagnostic tab retained.")
+                } else {
+                    com.oryn.terminal.diagnostics.FreezeRecorder.recordStabilityRun(id)
+                    DiagnosticStressResult(true,
+                        "Command queued in separate tab. Go Home → another app → return. Check for the END marker.")
+                }
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            if (attached) {
+                terminalState.closeTab(id)
+                KlyroSessionService.stopIfEmpty(this)
+            }
+            throw cancelled
         } catch (e: Exception) {
+            if (attached) {
+                terminalState.closeTab(id)
+                KlyroSessionService.stopIfEmpty(this)
+            }
             DiagnosticStressResult(false,
                 "Test not started (${e.javaClass.simpleName}); existing sessions preserved.")
         }
