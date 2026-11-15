@@ -48,7 +48,7 @@ class AutomationContracts(unittest.TestCase):
 
     def test_targeted_tests_fail_closed_to_full_suite(self):
         self.assertIn('"unittest", "discover"', TARGET)
-        self.assertIn("git diff", TARGET)
+        self.assertIn('"git", "diff"', TARGET)
         self.assertIn("test_", TARGET)
 
     def test_report_always_runs_and_persists(self):
