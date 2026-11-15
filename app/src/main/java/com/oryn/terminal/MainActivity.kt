@@ -123,6 +123,7 @@ class MainActivity : ComponentActivity() {
     private var runtimeVerified by mutableStateOf(false)
     private var runtimeHasWarnings by mutableStateOf(false)
     private var bashStarted by mutableStateOf(false)
+    private var bashLaunchInProgress by mutableStateOf(false)
     private var showWelcomeScreen by mutableStateOf(false)
     private var isVerifyingRuntime by mutableStateOf(false)
     private var observingPreviousInstall = false
@@ -553,6 +554,7 @@ class MainActivity : ComponentActivity() {
                     },
                     progress = installProgress,
                     installing = isInstalling,
+                    launchingBash = bashLaunchInProgress,
                     status = statusMessage,
                     runtimeVerified = runtimeVerified,
                     runtimeHasWarnings = runtimeHasWarnings,
@@ -1029,28 +1031,60 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchBash() {
+        if (bashLaunchInProgress) return
         if (terminalState.sessions.size >= 8) {
             Toast.makeText(this, "Maximum of 8 sessions. Close one to continue.",
                 Toast.LENGTH_SHORT).show()
             return
         }
-        try {
-            KlyroTerminalPalette.apply(activePalette, terminalState.sessions.map { it.session })
-            val manager = TerminalSessionManager(this)
+        val targetWorkspaceId = workspaceStore.activeId
+        bashLaunchInProgress = true
+        lifecycleScope.launch {
             val tabId = terminalState.reserveTabId()
-            val newSessionClient = OrynTerminalSessionClient(applicationContext, terminalState.listenerFor(tabId))
-            val newViewClient = OrynTerminalViewClient(applicationContext)
-            val newSession = manager.startBash("Bash", newSessionClient)
-            terminalState.attachSession(newSession, newSessionClient, newViewClient,
-                tabId, workspaceStore.activeId)
-            KlyroSessionService.ensureRunning(this)
-            showWelcomeScreen = false
-        } catch (error: Exception) {
-            runtimeVerified = false
-            bashStarted = false
-            technicalErrorDetails = KlyroDiagnostics.summarize(error)
-            showTechnicalDetails = false
-            statusMessage = "Klyro couldn't start Bash. Check the technical details."
+            val newSessionClient = OrynTerminalSessionClient(
+                applicationContext, terminalState.listenerFor(tabId))
+            var attached = false
+            try {
+                // Private directory and PRoot path resolution belongs on IO.
+                val newSession = withContext(Dispatchers.IO) {
+                    val manager = TerminalSessionManager(applicationContext)
+                    manager.startBash("Bash", newSessionClient)
+                }
+                // Another entry point can fill the eighth slot while IO runs.
+                if (terminalState.sessions.size >= 8) {
+                    Toast.makeText(this@MainActivity,
+                        "Maximum of 8 sessions. Close one to continue.", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                KlyroTerminalPalette.apply(activePalette, terminalState.sessions.map { it.session })
+                val newViewClient = OrynTerminalViewClient(applicationContext)
+                terminalState.attachSession(newSession, newSessionClient, newViewClient,
+                    tabId, workspaceId = targetWorkspaceId)
+                attached = true
+                KlyroSessionService.ensureRunning(this@MainActivity)
+                showWelcomeScreen = false
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                if (attached) {
+                    terminalState.closeTab(tabId)
+                    KlyroSessionService.stopIfEmpty(this@MainActivity)
+                }
+                throw cancelled
+            } catch (error: Exception) {
+                if (attached) {
+                    terminalState.closeTab(tabId)
+                    KlyroSessionService.stopIfEmpty(this@MainActivity)
+                }
+                runtimeVerified = false
+                bashStarted = false
+                technicalErrorDetails = KlyroDiagnostics.summarize(error)
+                showTechnicalDetails = false
+                statusMessage = "Klyro couldn't start Bash. Check the technical details."
+                Toast.makeText(this@MainActivity,
+                    "Couldn't start Bash. See Home for details.", Toast.LENGTH_LONG).show()
+            } finally {
+                if (!attached) newSessionClient.dispose()
+                bashLaunchInProgress = false
+            }
         }
     }
 
@@ -1092,6 +1126,7 @@ private fun OrynTerminalApp(
     onThemeModeChange: (String) -> Unit,
     progress: Int,
     installing: Boolean,
+    launchingBash: Boolean,
     status: String,
     runtimeVerified: Boolean,
     runtimeHasWarnings: Boolean,
@@ -1253,6 +1288,7 @@ private fun OrynTerminalApp(
                 tabs = tabs,
                 activeTabId = activeTabId,
                 outputRevision = outputRevision,
+                launchingBash = launchingBash,
                 workspaces = workspaces,
                 selectedWorkspaceId = selectedWorkspaceId,
                 tabWorkspaces = tabWorkspaces,
@@ -1483,6 +1519,7 @@ private fun OrynTerminalApp(
                         if (homeAction != KlyroHomeAction.NONE) {
                             Button(
                                 onClick = onLaunch,
+                                enabled = homeAction != KlyroHomeAction.LAUNCH_BASH || !launchingBash,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = ui.accent,
@@ -1490,9 +1527,17 @@ private fun OrynTerminalApp(
                                 ),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
+                                if (launchingBash && homeAction == KlyroHomeAction.LAUNCH_BASH) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                                        color = ui.onAccent)
+                                    Spacer(Modifier.width(10.dp))
+                                }
                                 Text(
                                     if (homeAction == KlyroHomeAction.RESUME_SESSION)
-                                        "Return to terminal" else "Launch Bash",
+                                        "Return to terminal"
+                                    else if (launchingBash) "Starting Bash…"
+                                    else "Launch Bash",
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }

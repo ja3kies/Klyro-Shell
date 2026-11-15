@@ -57,6 +57,7 @@ internal fun KlyroSessionSheet(
     onRename: () -> Unit,
     onChooseShell: () -> Unit,
     canCreateSession: Boolean = true,
+    launchingBash: Boolean = false,
     onActivate: () -> Unit,
     onCloseSession: () -> Unit
 ) {
@@ -107,7 +108,8 @@ internal fun KlyroSessionSheet(
                         KlyroActionRow("New terminal", R.drawable.hugeicons_plus_sign,
                             onChooseShell,
                             trailing = true, enabled = canCreateSession,
-                            subtitle = if (canCreateSession) null else "Maximum 8 sessions")
+                            subtitle = if (launchingBash) "Starting Bash…" else
+                                if (canCreateSession) null else "Maximum 8 sessions")
                         if (!isActive) KlyroActionRow("Switch to session",
                             R.drawable.hugeicons_arrow_up_right_01, onActivate)
                     }
@@ -207,7 +209,8 @@ internal fun KlyroRenameSessionDialog(
 internal fun KlyroChooseShellSheet(
     onBack: () -> Unit,
     onNewBash: () -> Unit,
-    canStartBash: Boolean = true
+    canStartBash: Boolean = true,
+    launchingBash: Boolean = false
 ) {
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
@@ -237,7 +240,8 @@ internal fun KlyroChooseShellSheet(
                         modifier = Modifier.fillMaxWidth()
                             .heightIn(min = KlyroUiMetrics.minTouch)
                             .clickable(enabled = canStartBash, role = Role.Button,
-                                onClickLabel = if (canStartBash) "Start a Bash terminal"
+                                onClickLabel = if (launchingBash) "Starting Bash…"
+                                    else if (canStartBash) "Start a Bash terminal"
                                     else "Maximum 8 sessions reached", onClick = onNewBash)
                             .semantics {
                                 role = Role.Button
@@ -253,8 +257,8 @@ internal fun KlyroChooseShellSheet(
                             modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
                         Column {
                             Text("bash", fontWeight = FontWeight.SemiBold)
-                            Text(if (canStartBash) "/bin/bash" else
-                                "Maximum 8 sessions. Close a terminal first.",
+                            Text(if (canStartBash) "/bin/bash" else if (launchingBash)
+                                "Starting Bash…" else "Maximum 8 sessions. Close a terminal first.",
                                 color = colors.muted,
                                 style = MaterialTheme.typography.bodySmall)
                         }

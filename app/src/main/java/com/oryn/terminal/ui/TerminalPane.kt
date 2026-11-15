@@ -132,6 +132,7 @@ fun TerminalPane(
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
     outputRevision: Long,
+    launchingBash: Boolean,
     workspaces: List<KlyroWorkspaceCatalog.Entry>,
     selectedWorkspaceId: String,
     tabWorkspaces: Map<Long, String>,
@@ -715,14 +716,16 @@ fun TerminalPane(
                 modifier = Modifier
                     .size(48.dp)
                     .clickable(
-                        enabled = tabs.size < 8,
+                        enabled = tabs.size < 8 && !launchingBash,
                         role = Role.Button,
-                        onClickLabel = if (tabs.size < 8) "New terminal" else
+                        onClickLabel = if (launchingBash) "Starting Bash…"
+                            else if (tabs.size < 8) "New terminal" else
                             "Maximum 8 terminal sessions",
                         onClick = onNewTab
                     )
                     .semantics {
-                        contentDescription = if (tabs.size < 8) "New terminal" else
+                        contentDescription = if (launchingBash) "Starting Bash…"
+                            else if (tabs.size < 8) "New terminal" else
                             "Maximum 8 terminal sessions"
                     },
                 contentAlignment = Alignment.Center
@@ -730,15 +733,19 @@ fun TerminalPane(
                 Surface(
                     modifier = Modifier.size(38.dp),
                     // A translucent affordance, distinct from the active tab.
-                    color = if (tabs.size < 8) TerminalAccent.copy(alpha = 0.14f) else inactiveTabSurface,
-                    contentColor = if (tabs.size < 8) TerminalAccent else TerminalMuted,
+                    color = if (tabs.size < 8 && !launchingBash) TerminalAccent.copy(alpha = 0.14f) else inactiveTabSurface,
+                    contentColor = if (tabs.size < 8 && !launchingBash) TerminalAccent else TerminalMuted,
                     shape = androidx.compose.foundation.shape.CircleShape,
-                    border = if (tabs.size < 8) androidx.compose.foundation.BorderStroke(
+                    border = if (tabs.size < 8 && !launchingBash) androidx.compose.foundation.BorderStroke(
                         1.dp, TerminalAccent.copy(alpha = 0.25f)
                     ) else null
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        if (tabs.size < 8) {
+                        if (launchingBash) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                                color = TerminalAccent)
+                        } else if (tabs.size < 8) {
                             Icon(painterResource(R.drawable.hugeicons_plus_sign),
                                 contentDescription = null,
                                 modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
@@ -1259,7 +1266,8 @@ fun TerminalPane(
                     sessionSheetId = null
                     shellChooserSourceId = id
                 },
-                canCreateSession = tabs.size < 8,
+                canCreateSession = tabs.size < 8 && !launchingBash,
+                launchingBash = launchingBash,
                 onActivate = {
                     sessionSheetId = null
                     onSelectTab(id)
@@ -1294,7 +1302,8 @@ fun TerminalPane(
                 shellChooserSourceId = null
                 onNewTab()
             },
-            canStartBash = tabs.size < 8
+            canStartBash = tabs.size < 8 && !launchingBash,
+            launchingBash = launchingBash
         )
     }
 
