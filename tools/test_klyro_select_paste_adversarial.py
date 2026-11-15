@@ -50,7 +50,7 @@ class SelectPasteAdversarialAudit(unittest.TestCase):
 
     def test_finished_session_cannot_receive_native_paste(self):
         self.assertIn("Terminal unavailable; paste cancelled", self.pane)
-        self.assertIn("onNativePasteConsumed()", self.pane)
+        self.assertIn("onNativePasteConsumed(request)", self.pane)
 
     def test_finished_session_cannot_receive_confirmed_multiline_paste(self):
         self.assertIn('if (!session.isRunning() || emulator == null) {\n                        Toast.makeText(context, "Terminal unavailable; paste cancelled"', self.pane)

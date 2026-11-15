@@ -17,16 +17,36 @@ import androidx.core.content.ContextCompat
 /** Maintains PTYs independently of the UI task; never restarts after process death. */
 class KlyroSessionService : Service() {
     private val handler = Handler(Looper.getMainLooper())
+    private var foregroundReady = false
     private val check = object : Runnable {
         override fun run() {
-            if (KlyroSessionRuntime.sessions.hasLiveSessions()) {
+            if (KlyroSessionRuntime.sessions.hasRunningPtys()) {
+                if (foregroundReady) {
+                    showActiveSessionsNotification(KlyroSessionRuntime.sessions.runningPtyCount())
+                }
                 handler.postDelayed(this, 60_000L)
             } else stopSelf()
         }
     }
 
+    private val inventoryRefresh = Runnable {
+        if (!foregroundReady) return@Runnable
+        val liveCount = KlyroSessionRuntime.sessions.runningPtyCount()
+        if (liveCount == 0) stopSelf()
+        else showActiveSessionsNotification(liveCount)
+    }
+
+    private fun scheduleInventoryRefresh() {
+        if (!foregroundReady) return
+        handler.removeCallbacks(inventoryRefresh)
+        handler.post(inventoryRefresh)
+    }
+
     override fun onCreate() {
         super.onCreate()
+        KlyroSessionRuntime.sessions.setRunningPtyInventoryListener {
+            scheduleInventoryRefresh()
+        }
         com.oryn.terminal.diagnostics.FreezeRecorder.serviceActive = true
         com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.SERVICE_START)
         getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -40,11 +60,18 @@ class KlyroSessionService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!KlyroSessionRuntime.sessions.hasLiveSessions()) {
+        if (!KlyroSessionRuntime.sessions.hasRunningPtys()) {
             stopSelf(startId)
             return START_NOT_STICKY
         }
-        val sessionCount = KlyroSessionRuntime.sessions.sessions.size
+        showActiveSessionsNotification(KlyroSessionRuntime.sessions.runningPtyCount())
+        foregroundReady = true
+        handler.removeCallbacks(check)
+        handler.postDelayed(check, 60_000L)
+        return START_NOT_STICKY
+    }
+
+    private fun showActiveSessionsNotification(sessionCount: Int) {
         val openApp = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java).apply {
@@ -70,9 +97,6 @@ class KlyroSessionService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
-        handler.removeCallbacks(check)
-        handler.postDelayed(check, 60_000L)
-        return START_NOT_STICKY
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -80,9 +104,12 @@ class KlyroSessionService : Service() {
     }
 
     override fun onDestroy() {
+        foregroundReady = false
+        KlyroSessionRuntime.sessions.setRunningPtyInventoryListener(null)
         com.oryn.terminal.diagnostics.FreezeRecorder.serviceActive = false
         com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.SERVICE_STOP)
         handler.removeCallbacks(check)
+        handler.removeCallbacks(inventoryRefresh)
         // The service is a notification owner, not the PTY owner. Android may
         // recreate or stop this service while the process and sessions survive.
         // Only explicit session close owns PTY termination.
@@ -95,12 +122,12 @@ class KlyroSessionService : Service() {
         private const val CHANNEL = "klyro_sessions"
         private const val NOTIFICATION_ID = 1001
         fun ensureRunning(context: Context) {
-            if (!KlyroSessionRuntime.sessions.hasLiveSessions()) return
+            if (!KlyroSessionRuntime.sessions.hasRunningPtys()) return
             ContextCompat.startForegroundService(context.applicationContext,
                 Intent(context, KlyroSessionService::class.java))
         }
         fun stopIfEmpty(context: Context) {
-            if (!KlyroSessionRuntime.sessions.hasLiveSessions()) {
+            if (!KlyroSessionRuntime.sessions.hasRunningPtys()) {
                 context.applicationContext.stopService(
                     Intent(context, KlyroSessionService::class.java))
             }

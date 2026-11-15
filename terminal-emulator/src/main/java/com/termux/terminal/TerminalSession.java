@@ -2,6 +2,7 @@ package com.termux.terminal;
 
 import android.annotation.SuppressLint;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.system.ErrnoException;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A terminal session, consisting of a process coupled to a terminal interface.
@@ -30,6 +32,7 @@ public final class TerminalSession extends TerminalOutput {
 
     private static final int MSG_NEW_INPUT = 1;
     private static final int MSG_PROCESS_EXITED = 4;
+    private static final int MAX_BYTES_PER_DISPATCH = 16 * 1024;
 
     public final String mHandle = UUID.randomUUID().toString();
 
@@ -39,7 +42,7 @@ public final class TerminalSession extends TerminalOutput {
      * A queue written to from a separate thread when the process outputs, and read by main thread to process by
      * terminal emulator.
      */
-    final ByteQueue mProcessToTerminalIOQueue = new ByteQueue(4096);
+    final ByteQueue mProcessToTerminalIOQueue = new ByteQueue(64 * 1024);
     /**
      * A queue written to from the main thread due to user interaction, and read by another thread which forwards by
      * writing to the {@link #mTerminalFileDescriptor}.
@@ -60,6 +63,7 @@ public final class TerminalSession extends TerminalOutput {
     int mShellExitStatus;
     private boolean mFinishing;
     private volatile boolean mProcessReaped;
+    private final AtomicBoolean mInputMessagePending = new AtomicBoolean(false);
 
     /**
      * The file descriptor referencing the master half of a pseudo-terminal pair, resulting from calling
@@ -124,6 +128,12 @@ public final class TerminalSession extends TerminalOutput {
      * @param columns The number of columns in the terminal window.
      * @param rows    The number of rows in the terminal window.
      */
+    private void scheduleNewInput() {
+        if (mInputMessagePending.compareAndSet(false, true)) {
+            mMainThreadHandler.sendEmptyMessage(MSG_NEW_INPUT);
+        }
+    }
+
     public void initializeEmulator(int columns, int rows) {
         mEmulator = new TerminalEmulator(this, columns, rows, mTranscriptRows, mClient);
 
@@ -166,7 +176,7 @@ public final class TerminalSession extends TerminalOutput {
                         if (read == -1) return;
                         diagnosticBytesRead += read;
                         if (!mProcessToTerminalIOQueue.write(buffer, 0, read)) return;
-                        mMainThreadHandler.sendEmptyMessage(MSG_NEW_INPUT);
+                        scheduleNewInput();
                     }
                 } catch (Exception e) {
                     // Ignore, just shutting down.
@@ -389,21 +399,47 @@ public final class TerminalSession extends TerminalOutput {
     @SuppressLint("HandlerLeak")
     class MainThreadHandler extends Handler {
 
+        // Session creation can run on IO; PTY parsing and callbacks belong to UI.
+        MainThreadHandler() {
+            super(Looper.getMainLooper());
+        }
+
         final byte[] mReceiveBuffer = new byte[4 * 1024];
 
         @Override
         public void handleMessage(Message msg) {
-            int bytesRead;
-            do {
-                bytesRead = mProcessToTerminalIOQueue.read(mReceiveBuffer, false);
-                if (bytesRead > 0) {
+            if (msg.what == MSG_NEW_INPUT) {
+                // One pending message per session: bound parser work per dispatch
+                // so keyboard, gestures and window events retain UI thread time.
+                int bytesProcessed = 0;
+                int bytesRead;
+                while (bytesProcessed < MAX_BYTES_PER_DISPATCH &&
+                        (bytesRead = mProcessToTerminalIOQueue.read(mReceiveBuffer, false)) > 0) {
                     mEmulator.append(mReceiveBuffer, bytesRead);
                     diagnosticBytesParsed += bytesRead;
+                    bytesProcessed += bytesRead;
                 }
-            } while (msg.what == MSG_PROCESS_EXITED && bytesRead > 0);
-            notifyScreenUpdate();
+                // Clear before checking the queue: concurrent producers can
+                // schedule the next message without losing a wakeup.
+                mInputMessagePending.set(false);
+                if (mProcessToTerminalIOQueue.available() > 0) scheduleNewInput();
+                if (bytesProcessed > 0) notifyScreenUpdate();
+                return;
+            }
 
             if (msg.what == MSG_PROCESS_EXITED) {
+                // Process exit must flush the final queued output before the
+                // completed marker, dropping obsolete wakeups from the queue.
+                removeMessages(MSG_NEW_INPUT);
+                mInputMessagePending.set(false);
+                int bytesRead;
+                int bytesProcessed = 0;
+                while ((bytesRead = mProcessToTerminalIOQueue.read(mReceiveBuffer, false)) > 0) {
+                    mEmulator.append(mReceiveBuffer, bytesRead);
+                    diagnosticBytesParsed += bytesRead;
+                    bytesProcessed += bytesRead;
+                }
+                if (bytesProcessed > 0) notifyScreenUpdate();
                 int exitCode = (Integer) msg.obj;
                 cleanupResources(exitCode);
 

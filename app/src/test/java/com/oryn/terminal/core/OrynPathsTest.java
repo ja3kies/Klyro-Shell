@@ -96,14 +96,95 @@ public class OrynPathsTest {
         assertTrue(new File(paths.getProotDependencyDir(), "libtalloc.so.2").createNewFile());
         assertFalse(paths.isProotInstalled());
 
-        assertTrue(new File(paths.getProotLibDir(), "libandroid-shmem.so").createNewFile());
+        File shmem = new File(paths.getProotLibDir(), "libandroid-shmem.so");
+        assertTrue(shmem.createNewFile());
+        assertFalse("Zero-byte PRoot runtime must not be called installed", paths.isProotInstalled());
+        for (File part : new File[]{paths.getProot(), loader,
+                new File(paths.getProotDependencyDir(), "libtalloc.so.2"), shmem}) {
+            Files.write(part.toPath(), new byte[]{1});
+        }
         assertTrue(paths.isProotInstalled());
+        Files.write(shmem.toPath(), new byte[0]);
+        assertFalse("Truncated shared library must invalidate runtime", paths.isProotInstalled());
     }
 
     @Test
     public void termuxCompiledPathsAreVirtualCompatibilityTargets() {
         assertEquals("/data/data/com.termux/files/usr", OrynPaths.TERMUX_VIRTUAL_PREFIX);
         assertEquals("/data/data/com.termux/files/home", OrynPaths.TERMUX_VIRTUAL_HOME);
+    }
+
+    @Test
+    public void bootstrapRejectsTruncatedExecutableAndVersionMarker() throws Exception {
+        File files = Files.createTempDirectory("oryn-bootstrap-corrupt").toFile();
+        OrynPaths paths = new OrynPaths(files);
+        paths.prepareLayout();
+        File bin = new File(paths.getPrefix(), "bin");
+        assertTrue(bin.mkdirs());
+        File bash = new File(bin, "bash");
+        File pkg = new File(bin, "pkg");
+        File apt = new File(bin, "apt");
+        File marker = new File(paths.getPrefix(), ".oryn-bootstrap-version");
+        for (File file : new File[]{bash, pkg, apt, marker}) {
+            assertTrue(file.createNewFile());
+        }
+        assertTrue(bash.setExecutable(true, false));
+        assertFalse("A zero-byte executable cannot start a shell", paths.isBootstrapInstalled());
+        for (File file : new File[]{bash, pkg, apt, marker}) {
+            Files.write(file.toPath(), new byte[]{1});
+        }
+        assertFalse("Non-executable pkg and apt must not be accepted", paths.isBootstrapInstalled());
+        assertTrue(pkg.setExecutable(true, false));
+        assertTrue(apt.setExecutable(true, false));
+        assertTrue(paths.isBootstrapInstalled());
+        assertTrue(apt.setExecutable(false, false));
+        assertFalse("Lost apt execute permission must invalidate bootstrap", paths.isBootstrapInstalled());
+        assertTrue(apt.setExecutable(true, false));
+        Files.write(pkg.toPath(), new byte[0]);
+        assertFalse("A truncated package manager cannot form a valid bootstrap", paths.isBootstrapInstalled());
+        Files.write(pkg.toPath(), new byte[]{1});
+        Files.write(marker.toPath(), new byte[0]);
+        assertFalse("An empty bootstrap marker must not pass validation", paths.isBootstrapInstalled());
+    }
+
+    @Test
+    public void bootstrapRejectsExecutableLinksOutsidePrivatePrefix() throws Exception {
+        File files = Files.createTempDirectory("oryn-linked-bootstrap").toFile();
+        OrynPaths paths = new OrynPaths(files);
+        paths.prepareLayout();
+        File bin = new File(paths.getPrefix(), "bin");
+        assertTrue(bin.mkdirs());
+        File outside = Files.createTempFile("outside-shell", ".bin").toFile();
+        Files.write(outside.toPath(), new byte[]{1});
+        assertTrue(outside.setExecutable(true, false));
+        for (String name : new String[]{"bash", "pkg", "apt"}) {
+            File target = new File(bin, name);
+            if ("bash".equals(name)) Files.createSymbolicLink(target.toPath(), outside.toPath());
+            else {
+                Files.write(target.toPath(), new byte[]{1});
+                assertTrue(target.setExecutable(true, false));
+            }
+        }
+        Files.write(new File(paths.getPrefix(), ".oryn-bootstrap-version").toPath(), new byte[]{1});
+        assertFalse("External executable must not validate private bootstrap", paths.isBootstrapInstalled());
+    }
+
+    @Test
+    public void prootRejectsLibraryLinksOutsideManagedRuntime() throws Exception {
+        File files = Files.createTempDirectory("oryn-linked-proot").toFile();
+        OrynPaths paths = new OrynPaths(files);
+        paths.prepareLayout();
+        for (File executable : new File[]{paths.getProot(), paths.getProotLoader()}) {
+            Files.write(executable.toPath(), new byte[]{1});
+            assertTrue(executable.setExecutable(true, false));
+        }
+        File internal = new File(paths.getProotDependencyDir(), "libtalloc.so");
+        Files.write(internal.toPath(), new byte[]{1});
+        Files.createSymbolicLink(new File(paths.getProotDependencyDir(), "libtalloc.so.2").toPath(), internal.toPath());
+        File outside = Files.createTempFile("outside-shmem", ".so").toFile();
+        Files.write(outside.toPath(), new byte[]{1});
+        Files.createSymbolicLink(new File(paths.getProotLibDir(), "libandroid-shmem.so").toPath(), outside.toPath());
+        assertFalse("External library must not count as installed", paths.isProotInstalled());
     }
 
     @Test

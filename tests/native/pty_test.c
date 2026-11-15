@@ -76,6 +76,38 @@ int main(void) {
     assert(exited == pid && ((WIFSIGNALED(status) && WTERMSIG(status) == SIGHUP) ||
                             (WIFEXITED(status) && WEXITSTATUS(status) == 128 + SIGHUP)));
 
+    // Exercise actual PTY stdin and window-size propagation, not just stdout.
+    fd = spawn("stty -echo; IFS= read -r reply; printf 'KLYRO-READ:%s\n' \"$reply\"; stty size", &pid);
+    assert(fd >= 0 && pid > 0);
+    struct winsize resized = {.ws_row = 37, .ws_col = 109};
+    assert(ioctl(fd, TIOCSWINSZ, &resized) == 0);
+    const char *input = "interactive-klyro\n";
+    assert(write(fd, input, strlen(input)) == (ssize_t)strlen(input));
+    char interactive[1024] = {0};
+    size_t received = 0;
+    for (int attempt = 0; attempt < 60; attempt++) {
+        struct pollfd event = {.fd = fd, .events = POLLIN};
+        int result = poll(&event, 1, 100);
+        if (result < 0 && errno == EINTR) continue;
+        assert(result >= 0);
+        if (result == 0) continue;
+        ssize_t count = read(fd, interactive + received,
+                sizeof(interactive) - 1 - received);
+        if (count < 0 && errno == EINTR) continue;
+        if (count < 0 && errno == EIO) break;
+        assert(count >= 0);
+        if (count == 0) break;
+        received += (size_t) count;
+        interactive[received] = '\0';
+        if (strstr(interactive, "KLYRO-READ:interactive-klyro") &&
+                strstr(interactive, "37 109")) break;
+        assert(received < sizeof(interactive) - 1);
+    }
+    assert(strstr(interactive, "KLYRO-READ:interactive-klyro"));
+    assert(strstr(interactive, "37 109"));
+    assert(Java_com_termux_terminal_JNI_waitFor(NULL, NULL, pid) == 0);
+    close(fd);
+
     struct timespec before, after;
     struct rusage usage;
     clock_gettime(CLOCK_MONOTONIC, &before);

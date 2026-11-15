@@ -17,6 +17,12 @@ final class ByteQueue {
         notifyAll();
     }
 
+    /** Unread bytes, including the tail remaining after close(). */
+    public synchronized int available() {
+        return mStoredBytes;
+    }
+
+
     public synchronized int read(byte[] buffer, boolean block) {
         while (mStoredBytes == 0 && mOpen) {
             if (block) {
