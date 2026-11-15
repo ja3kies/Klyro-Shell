@@ -7,8 +7,9 @@ D=(ROOT/"KlyroDesign.kt").read_text()
 class TerminalUXClosure(unittest.TestCase):
  def test_tab_strip_tracks_workspace_selection_without_tty_side_effects(self):
   self.assertIn('val tabStripScroll = rememberScrollState()',S)
-  self.assertIn('LaunchedEffect(activeTabId, tabs)',S)
-  self.assertIn('tabStripScroll.animateScrollTo(target)',S)
+  self.assertIn('LaunchedEffect(activeTabId, tabs, compact)',S)
+  self.assertIn('selectedTabRequester.bringIntoView()',S)
+  self.assertIn('Modifier.bringIntoViewRequester(selectedTabRequester)',S)
   self.assertIn('.horizontalScroll(tabStripScroll)',S)
  def test_find_preview_scrolls_while_actions_remain_visible(self):
   block=S.split('if (showTranscriptSearch) {',1)[1].split('if (showWorkspaceSheet) {',1)[0]
