@@ -1,0 +1,14 @@
+{
+  "status": "BLOCKED",
+  "source_commit": "92be2da98055d988bbdc89ceb85f61e405ff9487",
+  "started_utc": "2026-11-14T23:35:38Z",
+  "limits": [
+    "No Android installation, package mutation or permission changes.",
+    "One device does not validate Android 14–17 or prolonged physical use.",
+    "source_commit is caller-supplied linkage to CI metadata, not decoded from the APK; installed hashes verify the supplied artifacts."
+  ],
+  "reason": "Exactly one authorized ADB device is required (or select --serial).",
+  "runner_exit_code": 2,
+  "app_apk_sha256": "a5fcdbeb5aa9624c466d904c6949ebcb7dec7ecfe71dcd05b1a5a75df8613dcb",
+  "test_apk_sha256": "da20af6b87b0026afe4a41d30442e345285c0ddcfdddf1260821e82240cfe5bb"
+}

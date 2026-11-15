@@ -1,0 +1,11 @@
+{
+  "base_commit": "f63f77e1fa047827de3703e0126da89c16d08829",
+  "base_ci": 43592797991,
+  "base": "Lint Report: 45 warnings and 11 hints",
+  "final": "Lint Report: 45 warnings and 11 hints",
+  "new_issues": [],
+  "removed_issues": [],
+  "final_source_commit": "92be2da98055d988bbdc89ceb85f61e405ff9487",
+  "final_ci_run": 43653944038,
+  "final_rule_counts_match_base": true
+}
