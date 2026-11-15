@@ -44,6 +44,12 @@ public final class ClipboardPastePolicy {
         return true;
     }
 
+    /** OSC 52 output may request a system clipboard write; only honor it
+     * for a live, visible session and a bounded, safe text payload. */
+    public static boolean canCopyFromTerminal(String value, boolean uiVisible, boolean running) {
+        return uiVisible && running && canPaste(value);
+    }
+
     public static boolean requiresConfirmation(String value) {
         return value != null && (value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0);
     }
