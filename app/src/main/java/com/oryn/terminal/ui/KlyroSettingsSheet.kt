@@ -120,15 +120,12 @@ internal fun KlyroSettingsSheet(
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var cannotOpenPermissions by rememberSaveable { mutableStateOf(false) }
     var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
-    var brandSelectionReady by remember { mutableStateOf(false) }
-    var brandSwitching by remember { mutableStateOf(false) }
     var brandSwitchError by rememberSaveable { mutableStateOf(false) }
     var brandReady by remember { mutableStateOf(false) }
     var brandUpdating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var authorizedFolderCount by remember { mutableStateOf(-1) }
     LaunchedEffect(context, section) {
         if (section == "files") {
@@ -169,7 +166,7 @@ internal fun KlyroSettingsSheet(
     }
     // System Back is an external dismissal; the labelled Settings button navigates internally.
     val canDismissSheet = !showColorPicker && !showFontLicense &&
-        !showHugeiconsLicense && !brandSwitching
+        !showHugeiconsLicense && !brandUpdating
     BackHandler(enabled = canDismissSheet) { onDismiss() }
     val version = com.oryn.terminal.BuildConfig.VERSION_NAME
     LaunchedEffect(section) {
@@ -260,9 +257,9 @@ internal fun KlyroSettingsSheet(
                         Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)) {
                             Text("Launcher icon", fontWeight = FontWeight.SemiBold,
                                 color = colors.foreground)
-                            if (!brandSelectionReady) {
+                            if (!brandReady) {
                                 KlyroInlineNotice("Checking current launcher icon…")
-                            } else if (brandSwitching) {
+                            } else if (brandUpdating) {
                                 KlyroInlineNotice("Updating launcher icon…")
                             }
                             Row(
