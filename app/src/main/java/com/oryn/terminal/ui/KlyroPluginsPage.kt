@@ -363,7 +363,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                                 "text/plain", "application/octet-stream"
                             ))
                         },
-                        enabled = !previewBusy && !mutationBusy && !confirmedMutationPending &&
+                        enabled = !registryLoading && !previewBusy && !mutationBusy && !confirmedMutationPending &&
                             pendingImportUri == null,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
