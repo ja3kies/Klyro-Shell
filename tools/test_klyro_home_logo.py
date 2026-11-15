@@ -9,7 +9,7 @@ class HomeLogoTest(unittest.TestCase):
         part = MAIN.split("contentDescription = \"Klyro Shell logo\"", 1)[0][-600:]
         self.assertIn(".background(ui.tile)", part)
         around = MAIN.split('contentDescription = "Klyro Shell logo"', 1)[1][:150]
-        self.assertIn("Modifier.size(60.dp)", around)
+        self.assertIn("Modifier.size(56.dp)", around)
         self.assertNotIn("Modifier.size(80.dp)", around)
 if __name__ == "__main__":
     unittest.main()
