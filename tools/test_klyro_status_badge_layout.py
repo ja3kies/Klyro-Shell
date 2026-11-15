@@ -4,10 +4,12 @@ import unittest
 MAIN = (Path(__file__).resolve().parents[1] /
         "app/src/main/java/com/oryn/terminal/MainActivity.kt").read_text()
 class RuntimeBadgeResponsiveTest(unittest.TestCase):
-    def test_badge_stacks_under_section_header_and_allows_two_lines(self):
-        p = MAIN.split('Text("RUNTIME STATUS"', 1)[0]
-        self.assertIn("Column(", p[-300:])
-        q = MAIN.split('Text("RUNTIME STATUS"', 1)[1].split("homeStatus.runtimeMessage",1)[0]
-        self.assertIn("maxLines = 2", q)
+    def test_status_summary_wraps_without_truncation(self):
+        # The compact tile keeps full status text reachable at large font scales.
+        status = MAIN.split('stateLabel,', 1)[1].split('homeStatus.terminalFailure?.let', 1)[0]
+        self.assertIn('homeStatus.runtimeMessage', status)
+        self.assertIn('liveRegion = LiveRegionMode.Polite', status)
+        self.assertNotIn('maxLines =', status)
+        self.assertIn('modifier = Modifier.weight(1f)', MAIN)
 if __name__ == "__main__":
     unittest.main()
