@@ -15,7 +15,9 @@ class PluginPersistenceTest(unittest.TestCase):
         self.assertIn("var registryLoading by remember { mutableStateOf(true) }", SRC)
         effect = SRC.split("LaunchedEffect(manager, registryRevision)", 1)[1].split(
             "// Recover after rotation", 1)[0]
-        self.assertIn("withContext(Dispatchers.IO) { manager.installed() }", effect)
+        self.assertIn("withContext(Dispatchers.IO) { runCatching { manager.installed() } }", effect)
+        self.assertIn("registryLoading = false", effect)
+        self.assertIn("Unable to load local plugins", effect)
         self.assertIn('KlyroInlineNotice("Loading local plugins…")', SRC)
 
 if __name__ == "__main__":
