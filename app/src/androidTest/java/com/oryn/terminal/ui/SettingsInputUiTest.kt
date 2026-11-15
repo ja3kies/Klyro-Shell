@@ -4,7 +4,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -61,7 +60,7 @@ class SettingsInputUiTest {
             }
         }
 
-        ui.onNodeWithContentDescription("Hex color value").assertExists().performImeAction()
+        ui.onNodeWithContentDescription("Hex color value").performImeAction()
         ui.runOnIdle { assertEquals(1, hideRequests) }
     }
 }
