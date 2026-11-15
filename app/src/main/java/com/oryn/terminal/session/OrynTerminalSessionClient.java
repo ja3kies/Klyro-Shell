@@ -166,11 +166,23 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
 
     @Override
     public void onCopyTextToClipboard(@NonNull com.termux.terminal.TerminalSession session, String text) {
-        ClipboardManager clipboard = (ClipboardManager)
-                context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (!disposed.get() && clipboard != null && text != null && !text.isEmpty()) {
-            clipboard.setPrimaryClip(ClipData.newPlainText("Klyro Shell", text));
-        }
+        if (disposed.get() || !ClipboardPastePolicy.canCopyFromTerminal(
+                text, uiActive.get(), session.isRunning())) return;
+        // OSC 52 can originate in an arbitrary shell program. Never let
+        // background output or stale callbacks write the system clipboard.
+        uiHandler.post(() -> {
+            if (disposed.get() || !ClipboardPastePolicy.canCopyFromTerminal(
+                    text, uiActive.get(), session.isRunning())) return;
+            try {
+                ClipboardManager clipboard = (ClipboardManager)
+                        context.getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Klyro Shell", text));
+                }
+            } catch (SecurityException | IllegalStateException denied) {
+                Log.w("KlyroClipboard", "Clipboard write denied by Android");
+            }
+        });
     }
 
     @Override
