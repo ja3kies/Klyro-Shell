@@ -96,7 +96,8 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn("R.drawable.hugeicons_checkmark_circle_01", self.settings)
 
     def test_launcher_error_can_recover_on_verified_choice(self):
-        self.assertIn("brandSwitchError = false", self.settings)
+        self.assertIn("val succeeded = verified || KlyroBrandChoice.select(context, choice)", self.settings)
+        self.assertIn("brandSwitchError = failed", self.settings)
 
     def test_terminal_errors_are_announced(self):
         self.assertGreaterEqual(self.pane.count("liveRegion = LiveRegionMode.Polite"), 2)

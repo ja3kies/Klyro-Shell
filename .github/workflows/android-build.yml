@@ -19,6 +19,8 @@ on:
       - 'scripts/klyro-qa.sh'
       - 'scripts/klyro-qa-bootstrap.sh'
       - 'docs/AUTOMATED_UX_QA.md'
+      - 'docs/TERMUX_PARITY_ENGINEERING.md'
+      - 'docs/validation/termux-parity/**'
       - 'docs/MODAL_LIFECYCLE_AUDIT.md'
       - 'docs/MODAL_TOUCH_FREEZE_CLOSURE.md'
       - 'docs/validation/modal-touch/**'

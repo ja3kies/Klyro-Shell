@@ -113,7 +113,10 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (pendingNativePaste === request) pendingNativePaste = null
     }
 
-    fun hasLiveSessions(): Boolean = tabs.isNotEmpty()
+    // A newly attached PTY starts only when TerminalView supplies its first size.
+    val liveSessionCount: Int get() = tabs.count { it.exitStatus == null }
+    fun hasLiveSessions(): Boolean = liveSessionCount > 0
+    fun hasOpenSessions(): Boolean = tabs.isNotEmpty()
 
     /** Process-service hook; no Activity is retained and no terminal text is exposed. */
     private var runningPtyInventoryListener: (() -> Unit)? = null

@@ -20,6 +20,7 @@ import com.termux.view.TerminalView;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.oryn.terminal.OutputUpdateBatch;
+import com.oryn.terminal.InputRejectionNotice;
 
 /** Bridges Termux's terminal engine callbacks to Oryn-owned UI and clipboard handling. */
 public final class OrynTerminalSessionClient implements TerminalSessionClient {
@@ -49,6 +50,14 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     public OrynTerminalSessionClient(Context context, Listener listener) {
         this.context = context.getApplicationContext();
         this.listener = listener;
+        inputRejections = new InputRejectionNotice(android.os.SystemClock::uptimeMillis,
+                (task, at) -> uiHandler.postAtTime(task, at), uiHandler::removeCallbacks, () -> {
+                    if (disposed.get()) return;
+                    if (!uiActive.get()) { inputRejectedWhilePaused.set(true); return; }
+                    Toast.makeText(this.context,
+                            "Terminal input was not sent because its buffer was full. Wait and retry.",
+                            Toast.LENGTH_LONG).show();
+                });
         titleUpdates = new OutputUpdateBatch(task -> uiHandler.postDelayed(task, 120L),
                 task -> uiHandler.removeCallbacks(task), ids -> {
                     if (!disposed.get() && uiActive.get() && listener != null &&
@@ -117,6 +126,8 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     public void dispose() {
         disposed.set(true);
         titleUpdates.close();
+        inputRejections.close();
+        inputRejectedWhilePaused.set(false);
         terminalView = null;
         outputObserver = null;
         uiHandler.removeCallbacksAndMessages(null);
@@ -159,7 +170,10 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         if (listener != null) {
             int status = session.getExitStatus();
             uiHandler.post(() -> {
-                if (!disposed.get()) listener.onSessionFinished(session, status);
+                if (!disposed.get()) {
+                    listener.onSessionFinished(session, status);
+                    com.oryn.terminal.KlyroSessionService.Companion.refreshSessionNotification(context);
+                }
             });
         }
     }
@@ -250,11 +264,14 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
 
     @Override
     public void onInputRejected(@NonNull com.termux.terminal.TerminalSession session) {
-        uiHandler.post(() -> {
-            if (!disposed.get()) Toast.makeText(context,
-                    "Terminal input buffer full. Input was not sent; wait and retry.",
-                    Toast.LENGTH_LONG).show();
-        });
+        if (disposed.get()) return;
+        if (!uiActive.get()) {
+            inputRejectedWhilePaused.set(true);
+            // A worker may race the main-thread resume which consumes this flag.
+            if (uiActive.get() && inputRejectedWhilePaused.getAndSet(false)) inputRejections.reject();
+            return;
+        }
+        inputRejections.reject();
     }
 
     @Override

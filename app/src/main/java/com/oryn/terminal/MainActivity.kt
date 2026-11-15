@@ -76,6 +76,7 @@ import com.oryn.terminal.ui.KlyroColors
 import com.oryn.terminal.ui.KlyroUiMetrics
 import com.oryn.terminal.ui.KlyroSettingsSheet
 import com.oryn.terminal.ui.KlyroTerminalFonts
+import com.oryn.terminal.ui.KlyroBrandChoice
 import com.oryn.terminal.ui.LocalKlyroColors
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.Composable
@@ -444,7 +445,6 @@ class MainActivity : ComponentActivity() {
             statusMessage = manager.getReadinessMessage()
             bootstrapInstalled = manager.getPaths().isBootstrapInstalled()
             runtimeInstalled = manager.isRuntimeInstalled()
-            if (bootstrapInstalled) installer?.migrateShellProfile()
         } catch (error: IOException) {
             technicalErrorDetails = KlyroDiagnostics.summarize(error)
             statusMessage = "Klyro couldn't verify its private environment."
@@ -586,6 +586,7 @@ class MainActivity : ComponentActivity() {
                     runtimeInstalled = runtimeInstalled,
                     session = if (showWelcomeScreen) null else terminalState.activeSession,
                     hasRunningSessions = terminalState.sessions.isNotEmpty(),
+                    hasLiveSessions = terminalState.hasLiveSessions(),
                     tabs = terminalState.displayTabs,
                     activeTabId = terminalState.activeTabId,
                     outputRevision = terminalState.outputRevision(terminalState.activeTabId),
@@ -593,6 +594,7 @@ class MainActivity : ComponentActivity() {
                     selectedWorkspaceId = workspaceStore.activeId,
                     tabWorkspaces = terminalState.tabWorkspaceIds,
                     tabsWithUnreadOutput = terminalState.tabsWithUnreadOutput,
+                    finishedTabIds = terminalState.finishedTabIds,
                     jobSessions = terminalState.sessions.associate { it.id to it.session },
                     lastOutputElapsedMs = terminalState.lastOutputElapsedMs,
                     onSelectWorkspace = { workspaceStore.select(it) },
@@ -834,6 +836,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
+                    TermuxBootstrapInstaller(applicationContext).migrateShellProfile()
                     TerminalSessionManager(applicationContext).verifyBash()
                 }
             }
@@ -1141,6 +1144,7 @@ private fun OrynTerminalApp(
     runtimeInstalled: Boolean,
     session: TerminalSession?,
     hasRunningSessions: Boolean,
+    hasLiveSessions: Boolean,
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
     outputRevision: Long,
@@ -1148,6 +1152,7 @@ private fun OrynTerminalApp(
     selectedWorkspaceId: String,
     tabWorkspaces: Map<Long, String>,
     tabsWithUnreadOutput: Set<Long>,
+    finishedTabIds: Set<Long>,
     jobSessions: Map<Long, TerminalSession>,
     lastOutputElapsedMs: Map<Long, Long>,
     onSelectWorkspace: (String) -> Unit,
@@ -1185,6 +1190,17 @@ private fun OrynTerminalApp(
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
     var showHomeSettings by rememberSaveable { mutableStateOf(false) }
+    var homeLauncherIcon by remember(context) {
+        mutableStateOf(KlyroBrandChoice.DEFAULT)
+    }
+    LaunchedEffect(showHomeSettings) {
+        if (!showHomeSettings) {
+            // PackageManager uses Binder; keep it off the UI thread and out of composition.
+            homeLauncherIcon = withContext(Dispatchers.IO) {
+                KlyroBrandChoice.selected(context)
+            }
+        }
+    }
     // Settings must remain available even before Bash can start.
     val homeFontPrefs = remember(context) {
         context.getSharedPreferences("klyro_terminal_preferences", android.content.Context.MODE_PRIVATE)
@@ -1294,6 +1310,7 @@ private fun OrynTerminalApp(
                 selectedWorkspaceId = selectedWorkspaceId,
                 tabWorkspaces = tabWorkspaces,
                 tabsWithUnreadOutput = tabsWithUnreadOutput,
+                finishedTabIds = finishedTabIds,
                 jobSessions = jobSessions,
                 lastOutputElapsedMs = lastOutputElapsedMs,
                 onSelectWorkspace = onSelectWorkspace,
@@ -1344,7 +1361,7 @@ private fun OrynTerminalApp(
                     ) {
                         Icon(
                             painter = painterResource(
-                                if (com.oryn.terminal.ui.KlyroBrandChoice.selected(context) == "a")
+                                if (homeLauncherIcon == KlyroBrandChoice.ALTERNATIVE)
                                     R.drawable.ic_klyro_brand_a else R.drawable.ic_klyro_brand_b
                             ),
                             contentDescription = "Klyro Shell logo",
@@ -1547,7 +1564,7 @@ private fun OrynTerminalApp(
                             Button(
                                 onClick = onInstall,
                                 enabled = !installing && !verifyingRuntime &&
-                                    (!hasRunningSessions || runtimeInstalled),
+                                    (!hasLiveSessions || runtimeInstalled),
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (hasRunningSessions) ui.tile else ui.accent,
@@ -1561,7 +1578,7 @@ private fun OrynTerminalApp(
                                     KlyroHomeSetupLabelPolicy.label(
                                         installing, verifyingRuntime, runtimeInstalled,
                                         bootstrapInstalled, technicalErrorDetails != null,
-                                        hasRunningSessions
+                                        hasLiveSessions
                                     ),
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -1569,7 +1586,7 @@ private fun OrynTerminalApp(
                         }
                         if (KlyroRuntimeRepairPolicy.canOffer(
                                 runtimeInstalled, runtimeVerified,
-                                technicalErrorDetails != null, hasRunningSessions,
+                                technicalErrorDetails != null, hasLiveSessions,
                                 installing, verifyingRuntime
                             )) {
                             TextButton(
@@ -1678,8 +1695,8 @@ private fun OrynTerminalApp(
                 homeFontFamily = KlyroTerminalFonts.normalize(value)
                 homeFontPrefs.edit().putString("font_family", homeFontFamily).apply()
             },
-            onFontChange = { delta ->
-                homeFontSize = (homeFontSize + delta).coerceIn(9f, 24f)
+            onFontChange = { size ->
+                homeFontSize = size.coerceIn(9f, 24f)
                 homeFontPrefs.edit().putFloat("font_size_sp", homeFontSize).apply()
             },
             onResetFont = {
