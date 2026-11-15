@@ -29,6 +29,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -570,15 +572,12 @@ fun TerminalPane(
             }
     }
     val tabStripScroll = rememberScrollState()
-    LaunchedEffect(activeTabId, tabs) {
-        // Follow a tab selected from Workspaces or newly created off-screen.
-        // Wait for layout before reading maxValue; never affect terminal output.
-        withFrameNanos { }
-        val selectedIndex = tabs.indexOfFirst { it.first == activeTabId }
-        if (selectedIndex >= 0 && tabs.size > 1) {
-            val target = (tabStripScroll.maxValue.toLong() * selectedIndex /
-                (tabs.size - 1)).toInt().coerceIn(0, tabStripScroll.maxValue)
-            tabStripScroll.animateScrollTo(target)
+    val selectedTabRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(activeTabId, tabs, compact) {
+        // Real tab widths vary with titles, activity badges and accessibility font scaling.
+        if (activeTabId != null && tabs.any { it.first == activeTabId }) {
+            withFrameNanos { }
+            selectedTabRequester.bringIntoView()
         }
     }
     Column(
@@ -637,6 +636,7 @@ fun TerminalPane(
                     modifier = Modifier
                         .height(48.dp)
                         .widthIn(min = KlyroUiMetrics.minTouch)
+                        .then(if (active) Modifier.bringIntoViewRequester(selectedTabRequester) else Modifier)
                         .combinedClickable(
                             onClickLabel = if (active) "Edit session" else "Switch session",
                             onLongClickLabel = "Edit session",
