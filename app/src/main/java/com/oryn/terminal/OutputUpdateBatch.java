@@ -4,7 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 
-/** Main-thread batch ownership; scheduling never depends on whether a tab was removed. */
+/** Thread-safe bounded UI batching; callbacks may originate on independent PTY workers. */
 public final class OutputUpdateBatch implements AutoCloseable {
     private final Set<Long> pending = new LinkedHashSet<>();
     private final Consumer<Runnable> schedule, cancel;
