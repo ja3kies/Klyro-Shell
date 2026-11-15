@@ -1631,8 +1631,7 @@ private fun OrynTerminalApp(
                                 .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
                                 .semantics { contentDescription = "Plugins" },
                             color = Color.Transparent,
-                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-                            border = null
+                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
