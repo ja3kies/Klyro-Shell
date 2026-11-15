@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +41,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -46,6 +52,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.R
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
@@ -100,7 +107,16 @@ internal fun KlyroWorkspaceSheet(
     }
     // Measured overflow, not row count, controls scrolling.
     val workspaceScroll = rememberScrollState()
+    val editorFocus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(selectedId) { workspaceScroll.scrollTo(0) }
+    LaunchedEffect(editorId) {
+        if (editorId != null) {
+            withFrameNanos { }
+            editorFocus.requestFocus()
+            keyboard?.show()
+        }
+    }
     fun editProject(id: String, title: String) {
         editorId = id
         editorText = title
@@ -256,6 +272,20 @@ internal fun KlyroWorkspaceSheet(
                 if (editorId != null) {
                     val editing = !editorId.isNullOrEmpty()
                     val editTarget = entries.firstOrNull { it.id == editorId }
+                    val canSave = editorText.trim().isNotEmpty() &&
+                        (!editing || (editTarget != null &&
+                            editorText.trim() != editTarget.name))
+                    fun saveWorkspaceEdit() {
+                        if (!canSave || editorId == null) return
+                        val saved = if (editing) {
+                            editTarget != null && onRenameProject(editTarget.id, editorText)
+                        } else onCreateProject(editorText)
+                        if (saved) {
+                            keyboard?.hide()
+                            editorId = null
+                            editorError = false
+                        } else editorError = true
+                    }
                     Surface(color = c.tile,
                         shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                         Column(
@@ -277,7 +307,9 @@ internal fun KlyroWorkspaceSheet(
                                 supportingText = {
                                     Text("${KlyroWorkspaceCatalog.MAX_NAME_CHARS - editorText.length} characters remaining")
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().focusRequester(editorFocus),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { if (canSave) saveWorkspaceEdit() }),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             )
                             if (editing && editTarget == null) {
@@ -292,23 +324,13 @@ internal fun KlyroWorkspaceSheet(
                                 horizontalArrangement = Arrangement.End
                             ) {
                                 TextButton(onClick = {
+                                    keyboard?.hide()
                                     editorId = null
                                     editorError = false
                                 }) { Text("Cancel") }
                                 Button(
-                                    enabled = editorText.trim().isNotEmpty() &&
-                                        (!editing || (editTarget != null &&
-                                            editorText.trim() != editTarget.name)),
-                                    onClick = {
-                                        val saved = if (editing) {
-                                            editTarget != null &&
-                                                onRenameProject(editTarget.id, editorText)
-                                        } else onCreateProject(editorText)
-                                        if (saved) {
-                                            editorId = null
-                                            editorError = false
-                                        } else editorError = true
-                                    },
+                                    enabled = canSave,
+                                    onClick = { saveWorkspaceEdit() },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = c.accent, contentColor = c.onAccent
                                     ), shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
