@@ -175,10 +175,15 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
     def test_apk_version_advances_past_0412_without_downgrade(self):
         import re
         gradle = (ROOT / "app/build.gradle.kts").read_text()
-        code = int(re.search(r"versionCode\s*=\s*(\d+)", gradle).group(1))
-        version = re.search(r'versionName\s*=\s*"([^"]+)"', gradle).group(1)
-        self.assertGreater(code, 29, "Android rejects downgrades from 0.4.22-dev")
-        self.assertEqual("0.4.23-dev", version)
+        code_match = re.search(r"val baseKlyroVersionCode\\s*=\\s*(\\d+)", gradle)
+        version_match = re.search(r'val baseKlyroVersionName\\s*=\\s*"0\\.4\\.(\\d+)-dev"', gradle)
+        self.assertIsNotNone(code_match)
+        self.assertIsNotNone(version_match)
+        code, patch = int(code_match.group(1)), int(version_match.group(1))
+        self.assertGreaterEqual(code, 31, "Standalone APK must not downgrade 0.4.23-dev")
+        self.assertGreaterEqual(patch, 24)
+        self.assertEqual(code, patch + 7)
+        self.assertIn("versionCode = finalVersionCode", gradle)
 
     def test_failed_bootstrap_cannot_modify_existing_shell_profile(self):
         installer = (APP / "termux/TermuxBootstrapInstaller.java").read_text()

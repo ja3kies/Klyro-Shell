@@ -53,7 +53,9 @@ class ThreeMajorUiRegressions(unittest.TestCase):
         self.assertIn("Modifier.weight(1f)", region)
         self.assertLess(region.index('tabs.forEach { (id, tabTitle) ->'),
                         region.index('onClick = onNewTab'))
-        self.assertIn('contentDescription = if (tabs.size < 8) "New terminal"', region)
+        self.assertIn('enabled = tabs.size < 8 && !launchingBash', region)
+        self.assertIn('contentDescription = if (launchingBash) "Starting Bash…"', region)
+        self.assertIn('else if (tabs.size < 8) "New terminal"', region)
 
 
 if __name__ == "__main__":

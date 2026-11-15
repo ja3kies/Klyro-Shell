@@ -12,11 +12,11 @@ The evolving 0.4.x development branches cover the standalone private Bash/PRoot/
 
 ### Automatically version every CI-distributed APK
 
-- The manually chosen semantic baseline for this branch is `0.4.12-dev`, Android base `versionCode=19`. Only change that baseline when the **scope** changes; do not auto-bump 0.5.0.
-- The existing `android-build.yml` workflow automatically builds each APK with `versionName=0.4.12-dev.<GITHUB_RUN_NUMBER>.<GITHUB_RUN_ATTEMPT>` and `versionCode=19 + 100 * GITHUB_RUN_NUMBER + GITHUB_RUN_ATTEMPT`. This applies to the debug, release and instrumented APK built in that run; the separately signed debug APK retains the same manifest.
+- The reconciled P0 semantic baseline for this branch is `0.4.24-dev`, Android base `versionCode=31` (higher than the prior local 0.4.23-dev APK). Only change that baseline when the **scope** changes; do not auto-bump 0.5.0.
+- The existing `android-build.yml` workflow automatically builds each APK with `versionName=0.4.24-dev.<GITHUB_RUN_NUMBER>.<GITHUB_RUN_ATTEMPT>` and `versionCode=31 + 100 * GITHUB_RUN_NUMBER + GITHUB_RUN_ATTEMPT`. This applies to the debug, release and instrumented APK built in that run; the separately signed debug APK retains the same manifest.
 - The CI rejects missing/invalid counters; supported `GITHUB_RUN_ATTEMPT` is 1..99, `GITHUB_RUN_NUMBER` is 1..20,000,000, keeping Android's code ceiling intact. Build verification compares the **packaged** debug APK metadata with the Gradle-calculated values.
 - The run counter is scoped to this single workflow, **not** other repositories or workflow names. Avoid renaming or duplicating the APK-producing workflow without migrating the counter. A rerun of an *older* workflow execution remains an older build relative to more recently triggered executions, even if it finishes later; this prevents old code from upgrading over newer builds.
-- Standalone local Gradle builds intentionally stay at reproducible `0.4.12-dev`, `versionCode=19`. **For installation/upgrades on Pixel, use the signed GitHub CI APK**, not the locally built debug APK, which can have a lower versionCode and a different signing key.
+- Standalone local Gradle builds intentionally stay at reproducible `0.4.24-dev`, `versionCode=31`. **For installation/upgrades on Pixel, use the signed GitHub CI APK**, not the locally built debug APK, which can have a lower versionCode and a different signing key.
 - A successful build does not prove an Android runtime/UI check. No version number or green CI automatically authorizes merging into `main`, tagging a release, or declaring the app production-ready.
 
 ## Protected reference
