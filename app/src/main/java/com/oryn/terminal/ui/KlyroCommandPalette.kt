@@ -24,6 +24,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -53,6 +55,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.termux.KlyroWelcomeGuide
 import com.oryn.terminal.plugins.KlyroPluginManager
@@ -212,31 +215,45 @@ internal fun KlyroCommandPalette(
                         color = colors.muted,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Row(modifier = Modifier.fillMaxWidth(),
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilterChip(
+                            selected = pinnedOnly,
                             onClick = { pinnedOnly = !pinnedOnly },
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = if (pinnedOnly) colors.accent else colors.foreground
-                            ),
-                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                .semantics { contentDescription = if (pinnedOnly)
-                                    "Show all commands" else "Show pinned commands only" }
-                        ) {
-                            Text(if (pinnedOnly) "Pinned only ✓" else "Pinned ${pinnedIds.size}/8")
-                        }
-                        TextButton(
+                            modifier = Modifier.weight(1f)
+                                .heightIn(min = KlyroUiMetrics.minTouch),
+                            label = {
+                                Text("Pinned ${pinnedIds.size}/8",
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            },
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = colors.tile,
+                                labelColor = colors.foreground,
+                                selectedContainerColor = colors.accent.copy(alpha = .17f),
+                                selectedLabelColor = colors.foreground
+                            )
+                        )
+                        FilterChip(
+                            selected = availableOnly,
                             onClick = { availableOnly = !availableOnly },
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = if (availableOnly) colors.accent else colors.foreground
-                            ),
-                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                .semantics { contentDescription = if (availableOnly)
-                                    "Include unavailable commands" else "Show available commands only" }
-                        ) {
-                            Text(if (availableOnly) "Available ✓" else "All commands")
-                        }
+                            modifier = Modifier.weight(1f)
+                                .heightIn(min = KlyroUiMetrics.minTouch),
+                            label = {
+                                Text("Available only",
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            },
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = colors.tile,
+                                labelColor = colors.foreground,
+                                selectedContainerColor = colors.accent.copy(alpha = .17f),
+                                selectedLabelColor = colors.foreground
+                            )
+                        )
                     }
                     if (availableOnly) {
                         KlyroInlineNotice(
