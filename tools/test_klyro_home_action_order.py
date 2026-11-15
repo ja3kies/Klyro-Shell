@@ -6,6 +6,6 @@ MAIN = (Path(__file__).resolve().parents[1] /
 class HomeOrderingTest(unittest.TestCase):
     def test_runtime_status_and_primary_action_precede_plugins(self):
         self.assertLess(MAIN.index('if (homeAction != KlyroHomeAction.NONE)'), MAIN.index('stateLabel,'))
-        self.assertLess(MAIN.index('stateLabel,'), MAIN.index('Text("Plugins"'))
+        self.assertLess(MAIN.index('stateLabel,'), MAIN.index('title = "Plugins"'))
 if __name__ == "__main__":
     unittest.main()
