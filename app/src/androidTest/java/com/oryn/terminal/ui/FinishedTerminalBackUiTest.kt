@@ -36,6 +36,7 @@ class FinishedTerminalBackUiTest {
                         session=session, darkChrome=true, themeMode="dark", accentId="mint",
                         onAccentIdChange={}, onThemeModeChange={}, title="Finished",
                         tabs=listOf(7L to "Finished"), activeTabId=7L, outputRevision=0,
+                        launchingBash=false,
                         workspaces=listOf(KlyroWorkspaceCatalog.Entry("general","General")),
                         selectedWorkspaceId="general", tabWorkspaces=mapOf(7L to "general"),
                         tabsWithUnreadOutput=emptySet(), finishedTabIds=setOf(7L),
