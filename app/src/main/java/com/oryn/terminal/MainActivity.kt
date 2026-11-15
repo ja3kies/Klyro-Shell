@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
@@ -38,6 +39,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.BorderStroke
@@ -1460,7 +1463,7 @@ private fun OrynTerminalApp(
                 }
 
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().animateContentSize(),
                     color = ui.sheet,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
                     border = BorderStroke(1.dp, ui.key.copy(alpha = .5f))
@@ -1652,80 +1655,58 @@ private fun OrynTerminalApp(
                     style = MaterialTheme.typography.labelSmall,
                     letterSpacing = .6.sp
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Surface(
-                        modifier = Modifier.weight(1f).heightIn(min = 142.dp)
-                            .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
-                            .semantics { contentDescription = "Plugins" },
-                        color = ui.tile,
-                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier.size(40.dp).background(
-                                        ui.accent.copy(alpha = .12f), RoundedCornerShape(13.dp)
-                                    ), contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(painterResource(R.drawable.ic_klyro_plugins),
-                                        contentDescription = null, tint = ui.accent,
-                                        modifier = Modifier.size(22.dp))
-                                }
-                                Spacer(Modifier.weight(1f))
-                                Icon(painterResource(R.drawable.hugeicons_chevron_right),
-                                    contentDescription = null, tint = ui.muted,
-                                    modifier = Modifier.size(18.dp))
-                            }
-                            Text("Plugins", color = ui.foreground,
-                                fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                            Text("Extend your commands", color = ui.muted,
-                                fontSize = 12.sp, lineHeight = 17.sp)
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val compactTiles = maxWidth < 340.dp ||
+                        LocalDensity.current.fontScale >= 1.3f
+                    if (compactTiles) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            KlyroHomeNavigationTile(
+                                title = "Plugins",
+                                description = "Extend your commands",
+                                iconRes = R.drawable.ic_klyro_plugins,
+                                emphasized = true,
+                                horizontal = compactTiles,
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                        showPlugins = true
+                                    }.semantics { contentDescription = "Plugins" }
+                            )
+                            KlyroHomeNavigationTile(
+                                title = "Settings",
+                                description = "Look & behavior",
+                                iconRes = R.drawable.hugeicons_settings_01,
+                                emphasized = false,
+                                horizontal = compactTiles,
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                        showHomeSettings = true
+                                    }.semantics { contentDescription = "Settings" }
+                            )
                         }
-                    }
-                    Surface(
-                        modifier = Modifier.weight(1f).heightIn(min = 142.dp)
-                            .clickable(role = Role.Button,
-                                onClickLabel = "Open Klyro settings") {
-                                showHomeSettings = true
-                            }.semantics { contentDescription = "Settings" },
-                        color = ui.tile,
-                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier.size(40.dp).background(
-                                        ui.key, RoundedCornerShape(13.dp)
-                                    ), contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(painterResource(R.drawable.hugeicons_settings_01),
-                                        contentDescription = null, tint = ui.muted,
-                                        modifier = Modifier.size(22.dp))
-                                }
-                                Spacer(Modifier.weight(1f))
-                                Icon(painterResource(R.drawable.hugeicons_chevron_right),
-                                    contentDescription = null, tint = ui.muted,
-                                    modifier = Modifier.size(18.dp))
-                            }
-                            Text("Settings", color = ui.foreground,
-                                fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                            Text("Look & behavior", color = ui.muted,
-                                fontSize = 12.sp, lineHeight = 17.sp)
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            KlyroHomeNavigationTile(
+                                title = "Plugins",
+                                description = "Extend your commands",
+                                iconRes = R.drawable.ic_klyro_plugins,
+                                emphasized = true,
+                                horizontal = compactTiles,
+                                modifier = Modifier.weight(1f)
+                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                        showPlugins = true
+                                    }.semantics { contentDescription = "Plugins" }
+                            )
+                            KlyroHomeNavigationTile(
+                                title = "Settings",
+                                description = "Look & behavior",
+                                iconRes = R.drawable.hugeicons_settings_01,
+                                emphasized = false,
+                                horizontal = compactTiles,
+                                modifier = Modifier.weight(1f)
+                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                        showHomeSettings = true
+                                    }.semantics { contentDescription = "Settings" }
+                            )
                         }
                     }
                 }
@@ -1824,5 +1805,74 @@ private fun OrynTerminalApp(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun KlyroHomeNavigationTile(
+    title: String,
+    description: String,
+    iconRes: Int,
+    emphasized: Boolean,
+    horizontal: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val ui = LocalKlyroColors.current
+    val iconColor = if (emphasized) ui.accent else ui.muted
+    Surface(
+        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 142.dp),
+        color = ui.tile,
+        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+    ) {
+        if (horizontal) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier.size(40.dp).background(
+                        if (emphasized) ui.accent.copy(alpha = .12f) else ui.key,
+                        RoundedCornerShape(13.dp)
+                    ), contentAlignment = Alignment.Center
+                ) {
+                    Icon(painterResource(iconRes), contentDescription = null,
+                        tint = iconColor, modifier = Modifier.size(22.dp))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(title, color = ui.foreground,
+                        fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text(description, color = ui.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                }
+                Icon(painterResource(R.drawable.hugeicons_chevron_right),
+                    contentDescription = null, tint = ui.muted, modifier = Modifier.size(18.dp))
+            }
+        } else {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.size(40.dp).background(
+                            if (emphasized) ui.accent.copy(alpha = .12f) else ui.key,
+                            RoundedCornerShape(13.dp)
+                        ), contentAlignment = Alignment.Center
+                    ) {
+                        Icon(painterResource(iconRes), contentDescription = null,
+                            tint = iconColor, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Icon(painterResource(R.drawable.hugeicons_chevron_right),
+                        contentDescription = null, tint = ui.muted, modifier = Modifier.size(18.dp))
+                }
+                Text(title, color = ui.foreground,
+                    fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(description, color = ui.muted, fontSize = 12.sp, lineHeight = 17.sp)
+            }
+        }
     }
 }
