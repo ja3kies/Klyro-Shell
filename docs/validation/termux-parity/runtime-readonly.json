@@ -1,0 +1,197 @@
+{
+  "time_utc": "2026-11-14T13:31:13Z",
+  "uid": 10453,
+  "machine": "aarch64",
+  "fixture": "/data/data/com.termux/files/home/projects/Klyro-Shell/.local/production/guest-complete",
+  "fixture_launch_sha256": "ac8f3b4d01b294ec213005257ccf2a91c60f77cc5cfbf20d70f093daf9193bda",
+  "scope": "Current availability of previously installed QA-only rootfs under host Termux UID; not APK/Klyro UID/SELinux or Termux-free-device validation",
+  "package_mutations": false,
+  "results": [
+    {
+      "name": "paths-and-uid",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 1.249
+    },
+    {
+      "name": "apt-version",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.787
+    },
+    {
+      "name": "pkg-list-installed",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 1.8
+    },
+    {
+      "name": "dpkg-audit",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.892
+    },
+    {
+      "name": "version-bash",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.403
+    },
+    {
+      "name": "version-ls",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.53
+    },
+    {
+      "name": "version-find",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.441
+    },
+    {
+      "name": "version-grep",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.403
+    },
+    {
+      "name": "version-sed",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.504
+    },
+    {
+      "name": "version-awk",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.602
+    },
+    {
+      "name": "version-tar",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.482
+    },
+    {
+      "name": "version-gzip",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.452
+    },
+    {
+      "name": "version-unzip",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.676
+    },
+    {
+      "name": "version-rsync",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.628
+    },
+    {
+      "name": "version-curl",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.488
+    },
+    {
+      "name": "version-wget",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.229
+    },
+    {
+      "name": "version-ssh",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.368
+    },
+    {
+      "name": "version-git",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.454
+    },
+    {
+      "name": "version-python",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.445
+    },
+    {
+      "name": "version-node",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.919
+    },
+    {
+      "name": "version-npm",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.029
+    },
+    {
+      "name": "version-clang",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 3.439
+    },
+    {
+      "name": "version-make",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.473
+    },
+    {
+      "name": "version-pkg-config",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.515
+    },
+    {
+      "name": "version-nano",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.517
+    },
+    {
+      "name": "version-vim",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.629
+    },
+    {
+      "name": "version-less",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.636
+    },
+    {
+      "name": "isolated-unicode-projects",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 7.254
+    },
+    {
+      "name": "https-tls-readonly",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.929
+    },
+    {
+      "name": "top-help",
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 0.569
+    }
+  ],
+  "harness_correction": {
+    "initial": "top -V failed because Termux top wrapper uses Android toybox, which does not accept -V",
+    "corrected": "top --help",
+    "initial_evidence": "runtime-readonly-initial.json / runtime-readonly-initial.log",
+    "limitation": "Help invocation verifies availability only, not interactive process monitoring"
+  }
+}

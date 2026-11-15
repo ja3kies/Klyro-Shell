@@ -18,7 +18,7 @@ class SetupRecoveryUXContract(unittest.TestCase):
         self.assertIn("if (runtimeInstalled)", section)
         self.assertIn("terminalState.hasLiveSessions()", section)
         self.assertIn("installEnvironment()", section)
-        self.assertIn("(!hasRunningSessions || runtimeInstalled)", HOME)
+        self.assertIn("(!hasLiveSessions || runtimeInstalled)", HOME)
 
     def test_runtime_badge_ignores_unrelated_session_error(self):
         section = HOME.split("KlyroRuntimeBadgePolicy.resolve(",1)[1].split(")",1)[0]

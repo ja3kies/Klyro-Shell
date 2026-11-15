@@ -1,0 +1,26 @@
+{
+  "code_commit": "92be2da98055d988bbdc89ceb85f61e405ff9487",
+  "runs": [
+    43653490511,
+    43653944038
+  ],
+  "results": [
+    {
+      "artifact": "klyro-shell-debug",
+      "first_sha256": "a5fcdbeb5aa9624c466d904c6949ebcb7dec7ecfe71dcd05b1a5a75df8613dcb",
+      "second_sha256": "a5fcdbeb5aa9624c466d904c6949ebcb7dec7ecfe71dcd05b1a5a75df8613dcb",
+      "byte_identical": true,
+      "bytes_first": 10622904,
+      "bytes_second": 10622904
+    },
+    {
+      "artifact": "klyro-shell-tests",
+      "first_sha256": "da20af6b87b0026afe4a41d30442e345285c0ddcfdddf1260821e82240cfe5bb",
+      "second_sha256": "da20af6b87b0026afe4a41d30442e345285c0ddcfdddf1260821e82240cfe5bb",
+      "byte_identical": true,
+      "bytes_first": 1153435,
+      "bytes_second": 1153435
+    }
+  ],
+  "scope": "Two independent GitHub-hosted builds of the same source/workflow/toolchain; not universal cross-environment reproducibility."
+}

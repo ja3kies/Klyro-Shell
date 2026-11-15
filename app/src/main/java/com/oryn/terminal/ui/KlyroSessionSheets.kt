@@ -63,7 +63,8 @@ internal fun KlyroSessionSheet(
     canCreateSession: Boolean = true,
     launchingBash: Boolean = false,
     onActivate: () -> Unit,
-    onCloseSession: () -> Unit
+    onCloseSession: () -> Unit,
+    sessionRunning: Boolean = true
 ) {
     var closeTargetId by rememberSaveable { mutableStateOf<Long?>(null) }
     val confirmClose = closeTargetId == sessionId
@@ -146,7 +147,9 @@ internal fun KlyroSessionSheet(
                 containerColor = colors.sheet,
                 title = { Text("Close ${sessionName.ifBlank { "session" }}?") },
                 text = {
-                    Text("This stops its Bash process and running child commands. Other sessions remain open.")
+                    Text(if (sessionRunning)
+                        "This stops its Bash process and running child commands. Other sessions remain open."
+                        else "This removes the retained output. Its process has already exited. Other sessions remain open.")
                 },
                 confirmButton = {
                     TextButton(onClick = {

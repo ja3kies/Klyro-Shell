@@ -1,0 +1,40 @@
+{
+  "source_commit": "92be2da98055d988bbdc89ceb85f61e405ff9487",
+  "branch": "feat/termux-parity-reliability",
+  "ci_url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653944038",
+  "ci_status": "success",
+  "first_ci_url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653490511",
+  "certificate_sha256": "01a7e05326237fdfa4cda54e75fb8164cbe12bbc964d36e2d9c2d1a8ef7e5c14",
+  "version": "0.4.12-dev",
+  "version_code": 19,
+  "permissions": [
+    "android.permission.INTERNET",
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+    "android.permission.POST_NOTIFICATIONS",
+    "com.klyro.shell.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+  ],
+  "permissions_changed": false,
+  "dependencies_changed": false,
+  "artifacts": {
+    "klyro-shell-tests-debug-key": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653944038/artifacts/14137477124",
+    "klyro-shell-tests": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653944038/artifacts/14137900553",
+    "klyro-shell-debug": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653944038/artifacts/14137636740",
+    "android-ui-lint": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653944038/artifacts/14137746263",
+    "klyro-shell-debug-key": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653944038/artifacts/14137711511",
+    "native-16kb-audit": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653944038/artifacts/14137841056",
+    "p0-jvm-test-results": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43653944038/artifacts/14136814992"
+  },
+  "apk": {
+    "app": {
+      "path": ".local/parity/run-43653944038/klyro-shell-debug/klyro-shell-signed.apk",
+      "sha256": "a5fcdbeb5aa9624c466d904c6949ebcb7dec7ecfe71dcd05b1a5a75df8613dcb",
+      "bytes": 10622904
+    },
+    "instrumentation": {
+      "path": ".local/parity/run-43653944038/klyro-shell-tests/klyro-shell-tests-signed.apk",
+      "sha256": "da20af6b87b0026afe4a41d30442e345285c0ddcfdddf1260821e82240cfe5bb",
+      "bytes": 1153435
+    }
+  }
+}

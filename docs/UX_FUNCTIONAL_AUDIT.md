@@ -10,6 +10,7 @@ restent conservés dans P0_RELIABILITY_CLOSURE.md.
 | Action examinée | Résultat / preuve | Décision |
 |---|---|---|
 | Home avec sessions existantes | HomeActionPolicy : reprend une session même si la vérification runtime échoue | Conserver ; Android UNVERIFIED |
+| Logo du launcher sur Home | CONFIRMED : `PackageManager` était appelé depuis le rendu Compose ; lecture déplacée sur `Dispatchers.IO`. La sélection depuis Appearance est asynchrone, annoncée et non dismissible pendant la transaction. Compilation GitHub requise. |
 | Home sans runtime vérifié | HomeActionPolicy : pas de nouveau Bash automatique | Conserver |
 | Messages runtime et erreurs session | HomeStatusPolicy sépare les deux messages | Conserver |
 | Home interne | Navigation n'appelle pas closeTab ; fermeture réservée à confirmation | Audité, physique UNVERIFIED |
@@ -114,7 +115,7 @@ aucune capture, contraste affiché ou animation physique n'est déclaré validé
 | Sessions | Cible ID et libellés, aucune fermeture ajoutée à lifecycle |
 | Workspaces | Liste read-only, IDs UUID, édition obsolète signalée |
 | Settings | Retour hiérarchique ; requête rapports absorbée par la feuille existante |
-| Appearance | Préférences existantes conservées ; rendu réel UNVERIFIED |
+| Appearance | FIXED au niveau du layout : hauteur minimale extensible pour grandes polices ; test Compose ajouté mais non compilé (NDK 27 absent) ; rendu Pixel UNVERIFIED |
 | Theme picker | Palettes/aperçus existants et tests de couleurs conservés ; aucun branding changé |
 | Color picker | Champs hex ASCII, preview et Cancel existants ; tests HexInput/FavoriteColors conservés |
 | Files | Messages contrôlés et checkpoints ; pas de destruction de document |

@@ -50,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
@@ -164,7 +165,8 @@ internal fun KlyroSettingsSheet(
         }
     }
     // System Back is an external dismissal; the labelled Settings button navigates internally.
-    val canDismissSheet = !showColorPicker && !showFontLicense && !showHugeiconsLicense
+    val canDismissSheet = !showColorPicker && !showFontLicense &&
+        !showHugeiconsLicense && !brandUpdating
     BackHandler(enabled = canDismissSheet) { onDismiss() }
     val version = com.oryn.terminal.BuildConfig.VERSION_NAME
     LaunchedEffect(section) {
@@ -255,6 +257,11 @@ internal fun KlyroSettingsSheet(
                         Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)) {
                             Text("Launcher icon", fontWeight = FontWeight.SemiBold,
                                 color = colors.foreground)
+                            if (!brandReady) {
+                                KlyroInlineNotice("Checking current launcher icon…")
+                            } else if (brandUpdating) {
+                                KlyroInlineNotice("Updating launcher icon…")
+                            }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
@@ -494,7 +501,7 @@ internal fun KlyroSettingsSheet(
                                 }
                                 KlyroThinSlider(
                                     value = fontSizeSp.coerceIn(9f, 24f),
-                                    onValueChange = { onFontChange(it - fontSizeSp) },
+                                    onValueChange = onFontChange,
                                     valueRange = 9f..24f,
                                     steps = 29,
                                     modifier = Modifier.fillMaxWidth().semantics {

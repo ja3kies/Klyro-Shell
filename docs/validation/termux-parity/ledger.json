@@ -1,0 +1,113 @@
+{
+  "base_commit": "f63f77e1fa047827de3703e0126da89c16d08829",
+  "branch": "feat/termux-parity-reliability",
+  "whole_priority_definition": "VALIDATED requires all requested operational evidence; passing subchecks alone do not qualify.",
+  "priorities": [
+    {
+      "id": "KLY-01",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Runner and APK-UID runtime tests implemented; no authorized Android14–17 ARM64 device. No real instrumentation executed."
+    },
+    {
+      "id": "KLY-02",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "30 current QA-rootfs read-only checks pass under host Termux UID; full current APK-UID first setup/package transaction lifecycle unavailable."
+    },
+    {
+      "id": "KLY-03",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Private PRoot/Termux virtual-prefix contract retained after comparison; SDK36 execution/SELinux and no-Termux installation unverified."
+    },
+    {
+      "id": "KLY-04",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Profile preservation and interruption-conscious existing activation tested on filesystem; real install interruption/storage exhaustion/version transition requires app device."
+    },
+    {
+      "id": "KLY-05",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Pinned signatures/extraction and profile preservation tested on host; real APK download/interruption/extraction/permission failure paths unavailable. Package signatures authenticate trusted publishers, not a package-code sandbox."
+    },
+    {
+      "id": "KLY-06",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Exited output retention implemented; native PTY/JNI host checks pass. APK interaction and probable final-tail race need actual Looper/PTY execution."
+    },
+    {
+      "id": "KLY-07",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Live versus finished service ownership corrected; Home/lock/recents/FGS/process-death under APK UID unavailable."
+    },
+    {
+      "id": "KLY-08",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Latest remote stress-launch fixes preserved, modal fixtures retained. Physical touch/IME/1500-line lifecycle not revalidated."
+    },
+    {
+      "id": "KLY-09",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Unicode15 tables match Termux wcwidthv4; joined-text paste preserved; JVM cursor/reflow/UTF8 tests pass. Physical graphemes/IME/selection unverified."
+    },
+    {
+      "id": "KLY-10",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Input rejection notices bounded/coalesced with concurrency tests; sustained Android UI/CPU/memory/jank metrics unavailable."
+    },
+    {
+      "id": "KLY-11",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Existing SAF integrity implementation preserved; actual provider/revocation/rotation cases need Android device."
+    },
+    {
+      "id": "KLY-12",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "QA tool/HTTPS availability rechecked; prior isolated SSH loopback evidence retained. Klyro UID LAN/VPN/IPv6/server/forwarding not exercised."
+    },
+    {
+      "id": "KLY-13",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Finished IDs, live counts and stable callbacks made explicit; actual Activity recreation/rebind/process death validation unavailable."
+    },
+    {
+      "id": "KLY-14",
+      "status": "NOT STARTED",
+      "evidence_or_blocker": "No complete user-controlled environment backup/restore workflow exists. Runtime/platform P0 contract must be proven before adding migration format/UI; not claimed implemented."
+    },
+    {
+      "id": "KLY-15",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Existing signed APT/pkg integration retained; current full APK recovery/upgrade/mirror and background transactions need device. No locks/data deleted."
+    },
+    {
+      "id": "KLY-16",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Upstream exit policy compared. terminal-view0.118.0/forked emulator JNI resize ABI cannot be independently upgraded without integrated device regressions."
+    },
+    {
+      "id": "KLY-17",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Two independent same-source signed app/test APK builds byte-identical; signatures, ELF and CI gates pass. Required actual APK installation/platform compatibility remains unavailable; no release published."
+    },
+    {
+      "id": "KLY-18",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Official API37 all-app/targeted changes reviewed; compile/target36 retained. Real Android17 memory/IME/network/lifecycle readiness not established."
+    },
+    {
+      "id": "KLY-19",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Existing issue13 remains open; physical themes/system-bar/large-font/TalkBack validation unavailable. No duplicate issue or unrelated redesign."
+    },
+    {
+      "id": "KLY-20",
+      "status": "BLOCKED",
+      "evidence_or_blocker": "Freeze Recorder and existing plugin trust gates retained; full device diagnostics/privacy/notification/plugin integration not proven. Termux API/Boot/Widget parity absent."
+    }
+  ],
+  "protected_local_refs": {
+    "main": "d62bfaa26d7ce06d1308e13345fab20246025dc5",
+    "fix/proot-5.1.107.102": "335202af373028f467c25ba43ef803cfd73e7de9",
+    "fix/modal-lifecycle-touch-freeze": "349c373d8c63dcd5502ded7fd14b3cdb139c5725"
+  },
+  "code_commit": "92be2da98055d988bbdc89ceb85f61e405ff9487"
+}

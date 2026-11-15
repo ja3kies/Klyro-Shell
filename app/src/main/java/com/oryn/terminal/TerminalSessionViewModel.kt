@@ -61,6 +61,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     fun outputRevision(tabId: Long?): Long = tabId?.let { outputRevisions[it] } ?: 0L
     val tabsWithUnreadOutput: Set<Long> get() = unreadActivity.keys.toSet()
     val sessions: List<ShellTab> get() = tabs
+    /** Exited PTYs retain their output until the user closes the tab. */
+    val finishedTabIds: Set<Long> get() = tabs.filter { it.exitStatus != null }.map { it.id }.toSet()
     private var nextId = 1L
     var activeTabId by mutableStateOf<Long?>(null)
         private set
@@ -113,7 +115,10 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         if (pendingNativePaste === request) pendingNativePaste = null
     }
 
-    fun hasLiveSessions(): Boolean = tabs.isNotEmpty()
+    // A newly attached PTY starts only when TerminalView supplies its first size.
+    val liveSessionCount: Int get() = tabs.count { it.exitStatus == null }
+    fun hasLiveSessions(): Boolean = liveSessionCount > 0
+    fun hasOpenSessions(): Boolean = tabs.isNotEmpty()
 
     /** Process-service hook; no Activity is retained and no terminal text is exposed. */
     private var runningPtyInventoryListener: (() -> Unit)? = null
