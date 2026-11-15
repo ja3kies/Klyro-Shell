@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -59,9 +60,10 @@ internal fun KlyroThemePreviewCard(
     val shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
     Surface(
         modifier = modifier
-            .height(78.dp)
+            .heightIn(min = 78.dp)
             .clickable(role = Role.RadioButton, onClickLabel = "Use $label theme", onClick = onClick)
-            .semantics { selected = active },
+            .semantics { selected = active }
+            .testTag("theme-preview-$mode"),
         shape = shape,
         color = current.tile,
         border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder, current.accent) else null
