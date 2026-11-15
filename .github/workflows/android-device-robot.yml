@@ -1,0 +1,62 @@
+name: Klyro Android device robot (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: "Successful Android build workflow run ID containing signed ARM64 APK"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: klyro-physical-robot
+  cancel-in-progress: false
+
+jobs:
+  physical-robot:
+    # A trusted, explicitly provisioned ARM64 device is required. GitHub's
+    # standard x86 emulator cannot install Klyro's ARM64-only native libraries.
+    runs-on: [self-hosted, linux, klyro-android-device]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify authorized Android device
+        shell: bash
+        run: |
+          set -euo pipefail
+          adb devices
+          test "$(adb devices | awk '$2 == "device" { n++ } END { print n+0 }')" -eq 1
+          adb shell getprop ro.product.cpu.abilist | grep -q arm64-v8a
+      - name: Download signed build artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.build_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          gh run view "$RUN_ID" -R "${{ github.repository }}" --json conclusion --jq '.conclusion' | grep -qx success
+          mkdir -p "$RUNNER_TEMP/klyro-apk"
+          gh run download "$RUN_ID" -R "${{ github.repository }}" -n klyro-shell-debug -D "$RUNNER_TEMP/klyro-apk"
+          find "$RUNNER_TEMP/klyro-apk" -maxdepth 1 -name '*.apk' -type f | grep -q .
+      - name: Install and run read-only UI robot
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find "$RUNNER_TEMP/klyro-apk" -maxdepth 1 -name '*.apk' -type f | head -n 1)"
+          adb install -r "$APK"
+          python3 tools/klyro_ui_robot.py --mode smoke --output "$RUNNER_TEMP/klyro-robot" --source-root app/src/main/java
+      - name: Upload device screenshots and UX evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: klyro-device-robot-evidence
+          path: |
+            ${{ runner.temp }}/klyro-robot/
+            ${{ runner.temp }}/klyro-robot.zip
+          if-no-files-found: error
+          retention-days: 14
