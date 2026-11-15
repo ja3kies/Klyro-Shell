@@ -2,6 +2,7 @@ package com.oryn.terminal.session;
 
 import android.content.Context;
 import android.view.View;
+import android.os.SystemClock;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.oryn.terminal.ui.OrynTerminalViewClient;
@@ -18,6 +19,13 @@ import static org.junit.Assert.*;
  */
 @RunWith(AndroidJUnit4.class)
 public class OrynTerminalResumeTest {
+
+    private static void awaitRefresh(AtomicInteger updates) {
+        long deadline = SystemClock.uptimeMillis() + 2000;
+        while (updates.get() == 0 && SystemClock.uptimeMillis() < deadline) {
+            SystemClock.sleep(20);
+        }
+    }
 
     private static OrynTerminalSessionClient newClient(AtomicInteger observed) {
         Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
@@ -45,8 +53,25 @@ public class OrynTerminalResumeTest {
             assertEquals("No view refresh while Activity is paused", 0, updates.get());
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() ->
                     client.setUiActive(true));
+            awaitRefresh(updates);
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             assertEquals("Entire backlog must become one UI refresh", 1, updates.get());
+        } finally {
+            client.dispose();
+        }
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    @Test public void foregroundOutputBurstTriggersOneFrameRefresh() {
+        AtomicInteger updates = new AtomicInteger();
+        OrynTerminalSessionClient client = newClient(updates);
+        try {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+                for (int i = 0; i < 4000; i++) client.onTextChanged(null);
+            });
+            awaitRefresh(updates);
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertEquals("A single burst must only redraw once", 1, updates.get());
         } finally {
             client.dispose();
         }

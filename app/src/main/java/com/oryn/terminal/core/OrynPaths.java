@@ -103,28 +103,40 @@ public final class OrynPaths {
         }
     }
 
+    private static boolean hasContent(File file) {
+        return file.isFile() && file.length() > 0;
+    }
+
+    private static boolean hasContentInside(File file, File directory) {
+        if (!hasContent(file)) return false;
+        try {
+            // A valid internal library symlink is allowed; an external one is not.
+            return file.getCanonicalFile().toPath().startsWith(directory.getCanonicalFile().toPath());
+        } catch (IOException invalidPath) {
+            return false;
+        }
+    }
+
     public boolean isBootstrapInstalled() {
-        return new File(prefix, "bin/bash").canExecute()
-                && new File(prefix, "bin/pkg").exists()
-                && new File(prefix, "bin/apt").exists()
-                && new File(prefix, ".oryn-bootstrap-version").isFile();
+        File bash = new File(prefix, "bin/bash");
+        File pkg = new File(prefix, "bin/pkg");
+        File apt = new File(prefix, "bin/apt");
+        return hasContentInside(bash, prefix) && bash.canExecute()
+                && hasContentInside(pkg, prefix) && pkg.canExecute()
+                && hasContentInside(apt, prefix) && apt.canExecute()
+                && hasContentInside(new File(prefix, ".oryn-bootstrap-version"), prefix);
     }
 
     /** True only when the APK-native PRoot runtime and its loader/dependencies exist. */
     public boolean isProotInstalled() {
-        return proot.isFile() && proot.canExecute()
-                && prootLoader.isFile() && prootLoader.canExecute()
-                && new File(prootDependencyDir, "libtalloc.so.2").isFile()
+        return hasContentInside(proot, prootLibDir) && proot.canExecute()
+                && hasContentInside(prootLoader, prootLibDir) && prootLoader.canExecute()
+                && hasContentInside(new File(prootDependencyDir, "libtalloc.so.2"), prootDependencyDir)
                 && hasLibrary("libandroid-shmem.so");
     }
 
-    private boolean hasLibrary(String prefix) {
-        File[] files = prootLibDir.listFiles();
-        if (files == null) return false;
-        for (File file : files) {
-            if (file.isFile() && file.getName().startsWith(prefix)) return true;
-        }
-        return false;
+    private boolean hasLibrary(String name) {
+        return hasContentInside(new File(prootLibDir, name), prootLibDir);
     }
 
     /** Deletes an Oryn-owned path without following symbolic links. */

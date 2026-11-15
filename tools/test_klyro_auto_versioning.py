@@ -10,8 +10,10 @@ POLICY = (ROOT / "docs/BRANCH_AND_RELEASE_POLICY.md").read_text(encoding="utf-8"
 
 class KlyroAutomaticVersioning(unittest.TestCase):
     def test_base_patch_is_bumped_once_for_this_change(self):
-        self.assertIn('val baseKlyroVersionCode = 19', GRADLE)
-        self.assertIn('val baseKlyroVersionName = "0.4.12-dev"', GRADLE)
+        from klyro_version_contract import assert_supported_klyro_version
+        assert_supported_klyro_version(self, GRADLE)
+        self.assertIn('val baseKlyroVersionCode = 31', GRADLE)
+        self.assertIn('val baseKlyroVersionName = "0.4.24-dev"', GRADLE)
 
     def test_github_run_and_attempt_are_both_monotonic_inputs(self):
         self.assertIn('GITHUB_ACTIONS', GRADLE)

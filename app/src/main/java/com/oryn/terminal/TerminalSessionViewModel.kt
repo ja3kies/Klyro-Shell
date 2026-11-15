@@ -26,7 +26,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         val viewClient: OrynTerminalViewClient,
         val title: String = "Bash",
         val customTitle: String? = null,
-        val workspaceId: String = KlyroWorkspaceCatalog.GENERAL
+        val workspaceId: String = KlyroWorkspaceCatalog.GENERAL,
+        val exitStatus: Int? = null
     )
 
     private val tabs = mutableStateListOf<ShellTab>()
@@ -102,15 +103,36 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     var sessionFailureMessage by mutableStateOf<String?>(null)
         private set
 
-    data class NativePasteRequest(val tabId: Long, val text: String)
+    data class NativePasteRequest(val tabId: Long, val text: String, val requestId: Long)
+    private var nextNativePasteRequestId = 1L
     var pendingNativePaste by mutableStateOf<NativePasteRequest?>(null)
         private set
 
-    fun clearNativePaste(tabId: Long) {
-        if (pendingNativePaste?.tabId == tabId) pendingNativePaste = null
+    /** An old UI acknowledgement must not clear a newer paste from the same tab. */
+    fun clearNativePaste(request: NativePasteRequest) {
+        if (pendingNativePaste === request) pendingNativePaste = null
     }
 
     fun hasLiveSessions(): Boolean = tabs.isNotEmpty()
+
+    /** Process-service hook; no Activity is retained and no terminal text is exposed. */
+    private var runningPtyInventoryListener: (() -> Unit)? = null
+
+    fun setRunningPtyInventoryListener(listener: (() -> Unit)?) {
+        runningPtyInventoryListener = listener
+    }
+
+    private fun notifyRunningPtyInventoryChanged() {
+        runningPtyInventoryListener?.invoke()
+    }
+
+    /** Include new tabs awaiting their first terminal size; PID is still 0 then. */
+    fun runningPtyCount(): Int = tabs.count {
+        it.exitStatus == null && (it.session.isRunning() || it.session.getPid() == 0)
+    }
+
+    /** Retained failed tabs are inspectable but must not keep a foreground service. */
+    fun hasRunningPtys(): Boolean = runningPtyCount() > 0
 
     fun isSessionActive(id: Long): Boolean =
         activeTabId == id && tabs.any { it.id == id }
@@ -128,7 +150,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             }
             override fun onNativePasteRequiresConfirmation(text: String) {
                 if (isSessionActive(tabId)) {
-                    pendingNativePaste = NativePasteRequest(tabId, text)
+                    check(nextNativePasteRequestId < Long.MAX_VALUE) { "Native paste request ID space exhausted" }
+                    pendingNativePaste = NativePasteRequest(tabId, text, nextNativePasteRequestId++)
                 }
             }
             override fun onShellPid(pid: Int) {
@@ -157,6 +180,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         selectTab(tabId)
         sessionStatus = "Starting private Bash session…"
         sessionFailureMessage = null
+        notifyRunningPtyInventoryChanged()
     }
 
     fun selectTab(id: Long) {
@@ -170,8 +194,8 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         activeTabId = id
         updateDiagnosticSession()
         unreadActivity.remove(id)
-        sessionFailureMessage = null
-        sessionStatus = ""
+        sessionFailureMessage = selected?.exitStatus?.let(::exitMessage)
+        sessionStatus = if (selected?.exitStatus != null) "Shell finished; output retained for inspection." else ""
     }
 
     fun renameTab(id: Long, rawName: String) {
@@ -204,9 +228,11 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         entry.session.finishIfRunning()
         if (activeTabId == id) {
             activeTabId = null
+            sessionFailureMessage = null
             tabs.getOrNull(index.coerceAtMost(tabs.lastIndex))?.let { selectTab(it.id) }
         }
         updateDiagnosticSession()
+        notifyRunningPtyInventoryChanged()
     }
 
     fun closeSession() {
@@ -227,16 +253,30 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         }
     }
 
+    private fun exitMessage(exitStatus: Int): String =
+        "Bash exited unexpectedly (code $exitStatus). Output retained here; inspect or copy it before closing this tab."
+
     private fun finishTab(id: Long, session: TerminalSession, exitStatus: Int) {
-        val entry = tabs.firstOrNull { it.id == id } ?: return
+        val index = tabs.indexOfFirst { it.id == id }
+        if (index < 0) return
+        val entry = tabs[index]
         if (entry.session !== session) return
         val wasActive = activeTabId == id
-        closeTab(id)
-        if (wasActive) {
-            sessionFailureMessage = if (exitStatus == 0) null else
-                "Bash exited unexpectedly (code $exitStatus). Verify the runtime before starting another session."
-            sessionStatus = sessionFailureMessage ?: "Bash session ended."
+        if (exitStatus == 0) {
+            closeTab(id)
+            if (wasActive) sessionStatus = "Bash session ended."
+            return
         }
+        // Keep the exited emulator and final screen; input stays disabled
+        // because TerminalSession.isRunning() now returns false.
+        tabs[index] = entry.copy(exitStatus = exitStatus)
+        if (pendingNativePaste?.tabId == id) pendingNativePaste = null
+        if (!wasActive) unreadActivity[id] = true
+        if (wasActive) {
+            sessionFailureMessage = exitMessage(exitStatus)
+            sessionStatus = "Shell finished; output retained for inspection."
+        }
+        notifyRunningPtyInventoryChanged()
     }
 
     // Legacy interface compatibility; normal sessions use listenerFor(tabId)
@@ -263,6 +303,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     override fun onCleared() {
+        setRunningPtyInventoryListener(null)
         publishPendingOutput.close()
         super.onCleared()
     }

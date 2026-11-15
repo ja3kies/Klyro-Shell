@@ -17,6 +17,13 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         cls.clipboard_reader = (APP / "ui/ClipboardTextReader.java").read_text()
         cls.clipboard_policy = (APP / "ui/ClipboardPastePolicy.java").read_text()
 
+    def test_native_pty_refresh_is_bounded_to_a_frame(self):
+        client = (APP / "session/OrynTerminalSessionClient.java").read_text()
+        refresh = client.split("private void scheduleOutputRefresh()", 1)[1].split(
+            "/** Drop stale UI work", 1)[0]
+        self.assertIn("uiHandler.postDelayed(() -> {", refresh)
+        self.assertIn("}, 32L);", refresh)
+
     def test_service_destruction_does_not_kill_process_owned_ptys(self):
         body = self.service.split("override fun onDestroy()", 1)[1].split("override fun onBind", 1)[0]
         self.assertNotIn("closeAllSessions()", body)
@@ -28,7 +35,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn(".setContentIntent(openApp)", self.service)
 
     def test_notification_reports_actual_session_count(self):
-        self.assertIn("KlyroSessionRuntime.sessions.sessions.size", self.service)
+        self.assertIn("KlyroSessionRuntime.sessions.runningPtyCount()", self.service)
         self.assertIn('if (sessionCount == 1) "" else "s"', self.service)
 
     def test_foreground_notification_refresh_does_not_realert(self):
@@ -51,8 +58,8 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("START_NOT_STICKY", self.service)
         self.assertNotIn("START_STICKY", self.service)
 
-    def test_service_stops_only_when_sessions_absent(self):
-        self.assertIn("if (KlyroSessionRuntime.sessions.hasLiveSessions())", self.service)
+    def test_service_stops_when_no_running_ptys_remain(self):
+        self.assertIn("if (KlyroSessionRuntime.sessions.hasRunningPtys())", self.service)
         self.assertIn("else stopSelf()", self.service)
 
     def test_foreground_notification_is_silent(self):
@@ -117,7 +124,10 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("if (compact)", self.pane)
 
     def test_native_paste_does_not_auto_run_unvalidated_multiline(self):
-        self.assertIn("pendingMultilinePaste = incoming", self.pane)
+        self.assertIn("ClipboardPastePolicy.requiresConfirmation(incoming)", self.pane)
+        self.assertIn("pendingMultilinePaste = TerminalPasteReview(request.tabId, incoming)", self.pane)
+        self.assertIn("request.tabId != activeTabId", self.pane)
+        self.assertIn("if (tabId != null && currentSessionId() == tabId)", self.pane)
 
     def test_back_handler_preserves_unsaved_dialog_flow(self):
         self.assertIn("pendingMultilinePaste == null && selectedOutput == null", self.pane)
@@ -135,15 +145,21 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
     def test_clipboard_availability_uses_actual_validated_text(self):
         self.assertIn("return readPlainText(manager) != null;", self.clipboard_reader)
 
-    def test_blank_clipboard_cannot_claim_paste_available(self):
-        self.assertIn("isWhitespaceOnly(value)", self.clipboard_policy)
+    def test_empty_clipboard_cannot_claim_paste_available(self):
+        self.assertIn("value == null || value.isEmpty()", self.clipboard_policy)
+        self.assertIn("return ClipboardPastePolicy.canPaste(text) ? text : null;", self.clipboard_reader)
 
     def test_unicode_noncharacters_cannot_reach_shell(self):
         self.assertIn("Character.toCodePoint(c, value.charAt(i))", self.clipboard_policy)
         self.assertIn("(cp & 0xFFFE) == 0xFFFE", self.clipboard_policy)
 
-    def test_multiline_paste_preview_not_truncated_at_500_chars(self):
-        self.assertIn("pendingMultilinePaste.orEmpty(),", self.pane)
+    def test_multiline_paste_preview_is_bounded_and_disclosed(self):
+        review = (APP / "ui/TerminalPasteReview.java").read_text()
+        self.assertIn("private static final int PREVIEW_LIMIT = 3072", review)
+        self.assertIn("review.preview,", self.pane)
+        self.assertIn("if (review.isPreviewTruncated)", self.pane)
+        self.assertIn("The entire script will be pasted.", self.pane)
+        self.assertIn("Character.isHighSurrogate(text.charAt(end - 1))", review)
         self.assertNotIn("pendingMultilinePaste.orEmpty().take(500)", self.pane)
 
     def test_transcript_preview_does_not_split_surrogate_pairs(self):
@@ -156,8 +172,28 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertNotIn("KlyroBrandChoice.selected(context)", self.pane)
         self.assertNotIn("R.drawable.ic_klyro_brand_b", self.pane)
 
-    def test_service_start_is_guarded_by_live_sessions(self):
-        self.assertIn("if (!KlyroSessionRuntime.sessions.hasLiveSessions()) return", self.service)
+    def test_apk_version_advances_past_0412_without_downgrade(self):
+        import re
+        gradle = (ROOT / "app/build.gradle.kts").read_text()
+        code_match = re.search(r"val baseKlyroVersionCode\s*=\s*(\d+)", gradle)
+        version_match = re.search(r'val baseKlyroVersionName\s*=\s*"0\.4\.(\d+)-dev"', gradle)
+        self.assertIsNotNone(code_match)
+        self.assertIsNotNone(version_match)
+        code, patch = int(code_match.group(1)), int(version_match.group(1))
+        self.assertGreaterEqual(code, 31, "Standalone APK must not downgrade 0.4.23-dev")
+        self.assertGreaterEqual(patch, 24)
+        self.assertEqual(code, patch + 7)
+        self.assertIn("versionCode = finalVersionCode", gradle)
+
+    def test_failed_bootstrap_cannot_modify_existing_shell_profile(self):
+        installer = (APP / "termux/TermuxBootstrapInstaller.java").read_text()
+        activation = installer.index("activatePrefix(staging, prefix, previous);")
+        profile_write = installer.index("writeKlyroBashProfile(new File(paths.getHome(), \".bashrc\"));", activation)
+        self.assertGreater(profile_write, activation)
+        self.assertNotIn("writeKlyroBashProfile", installer[installer.index("KlyroStorageCommandBridge.installHelper(staging);"):activation])
+
+    def test_service_start_is_guarded_by_running_ptys(self):
+        self.assertIn("if (!KlyroSessionRuntime.sessions.hasRunningPtys()) return", self.service)
 
 
 if __name__ == "__main__":

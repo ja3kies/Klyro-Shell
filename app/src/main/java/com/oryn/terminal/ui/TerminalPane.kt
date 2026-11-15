@@ -102,6 +102,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.oryn.terminal.TerminalSessionViewModel
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.oryn.terminal.core.OrynPaths
@@ -133,6 +134,7 @@ fun TerminalPane(
     tabs: List<Pair<Long, String>>,
     activeTabId: Long?,
     outputRevision: Long,
+    launchingBash: Boolean,
     workspaces: List<KlyroWorkspaceCatalog.Entry>,
     selectedWorkspaceId: String,
     tabWorkspaces: Map<Long, String>,
@@ -159,8 +161,8 @@ fun TerminalPane(
     sessionClient: OrynTerminalSessionClient,
     viewClient: OrynTerminalViewClient,
     sessionFailureMessage: String?,
-    nativePasteRequest: String?,
-    onNativePasteConsumed: () -> Unit,
+    nativePasteRequest: TerminalSessionViewModel.NativePasteRequest?,
+    onNativePasteConsumed: (TerminalSessionViewModel.NativePasteRequest) -> Unit,
     onClose: () -> Unit,
     runtimeHasWarnings: Boolean = false,
     verifyingRuntime: Boolean = false,
@@ -288,7 +290,7 @@ fun TerminalPane(
             runCatching { clipboardManager?.removePrimaryClipChangedListener(listener) }
         }
     }
-    var pendingMultilinePaste by remember(session) { mutableStateOf<String?>(null) }
+    var pendingMultilinePaste by remember(session) { mutableStateOf<TerminalPasteReview?>(null) }
     fun pasteClipboard() {
         val emulator = session.emulator
         if (!session.isRunning() || emulator == null) {
@@ -300,32 +302,47 @@ fun TerminalPane(
         if (!ClipboardPastePolicy.canPaste(content)) {
             Toast.makeText(context, "No supported clipboard text", Toast.LENGTH_SHORT).show()
         } else if (ClipboardPastePolicy.requiresConfirmation(content)) {
-            pendingMultilinePaste = content
+            val tabId = activeTabId
+            if (tabId != null && currentSessionId() == tabId) {
+                pendingMultilinePaste = TerminalPasteReview(tabId, content!!)
+            } else {
+                Toast.makeText(context, "Paste not sent — session changed", Toast.LENGTH_SHORT).show()
+            }
         } else {
             // Termux TerminalEmulator handles DECSET 2004 bracketed paste.
-            TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), content!!) { emulator.pasteWithResult(it) }
+            val accepted = TerminalActionPolicy.pasteIfCurrent(
+                activeTabId, currentSessionId(), session.isRunning(), content!!
+            ) { emulator.pasteWithResult(it) }
+            if (!accepted) Toast.makeText(context,
+                "Paste not sent — session changed or input busy", Toast.LENGTH_SHORT).show()
         }
     }
     LaunchedEffect(nativePasteRequest, session) {
-        nativePasteRequest?.let { incoming ->
+        nativePasteRequest?.let { request ->
+            val incoming = request.text
             val emulator = session.emulator
-            if (!session.isRunning() || emulator == null) {
+            // Revalidate the original tab, not whichever pane now has focus.
+            if (request.tabId != activeTabId || request.tabId != currentSessionId()) {
+                Toast.makeText(context, "Paste not sent — session changed",
+                    Toast.LENGTH_SHORT).show()
+            } else if (!session.isRunning() || emulator == null) {
                 Toast.makeText(context, "Terminal unavailable; paste cancelled",
                     Toast.LENGTH_SHORT).show()
-                onNativePasteConsumed()
-                return@let
-            }
-            // Imported single-line text behaves like the clipboard action;
-            // only lines capable of submitting shell commands need confirmation.
-            if (!ClipboardPastePolicy.canPaste(incoming)) {
+            } else if (!ClipboardPastePolicy.canPaste(incoming)) {
                 Toast.makeText(context, "Unsupported or unsafe pasted text",
                     Toast.LENGTH_SHORT).show()
             } else if (ClipboardPastePolicy.requiresConfirmation(incoming)) {
-                pendingMultilinePaste = incoming
+                pendingMultilinePaste = TerminalPasteReview(request.tabId, incoming)
             } else {
-                TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), incoming) { emulator.pasteWithResult(it) }
+                val accepted = TerminalActionPolicy.pasteIfCurrent(
+                    activeTabId, currentSessionId(), session.isRunning(), incoming
+                ) { emulator.pasteWithResult(it) }
+                if (!accepted) Toast.makeText(context,
+                    "Paste not sent — session changed or input busy", Toast.LENGTH_SHORT).show()
             }
-            onNativePasteConsumed()
+            // Consume only this event. A second identical paste can arrive before
+            // Compose dispatches this acknowledgement.
+            onNativePasteConsumed(request)
         }
     }
     var activeTerminalView by remember(session) { mutableStateOf<TerminalView?>(null) }
@@ -704,14 +721,16 @@ fun TerminalPane(
                 modifier = Modifier
                     .size(48.dp)
                     .clickable(
-                        enabled = tabs.size < 8,
+                        enabled = tabs.size < 8 && !launchingBash,
                         role = Role.Button,
-                        onClickLabel = if (tabs.size < 8) "New terminal" else
+                        onClickLabel = if (launchingBash) "Starting Bash…"
+                            else if (tabs.size < 8) "New terminal" else
                             "Maximum 8 terminal sessions",
                         onClick = onNewTab
                     )
                     .semantics {
-                        contentDescription = if (tabs.size < 8) "New terminal" else
+                        contentDescription = if (launchingBash) "Starting Bash…"
+                            else if (tabs.size < 8) "New terminal" else
                             "Maximum 8 terminal sessions"
                     },
                 contentAlignment = Alignment.Center
@@ -719,15 +738,19 @@ fun TerminalPane(
                 Surface(
                     modifier = Modifier.size(38.dp),
                     // A translucent affordance, distinct from the active tab.
-                    color = if (tabs.size < 8) TerminalAccent.copy(alpha = 0.14f) else inactiveTabSurface,
-                    contentColor = if (tabs.size < 8) TerminalAccent else TerminalMuted,
+                    color = if (tabs.size < 8 && !launchingBash) TerminalAccent.copy(alpha = 0.14f) else inactiveTabSurface,
+                    contentColor = if (tabs.size < 8 && !launchingBash) TerminalAccent else TerminalMuted,
                     shape = androidx.compose.foundation.shape.CircleShape,
-                    border = if (tabs.size < 8) androidx.compose.foundation.BorderStroke(
+                    border = if (tabs.size < 8 && !launchingBash) androidx.compose.foundation.BorderStroke(
                         1.dp, TerminalAccent.copy(alpha = 0.25f)
                     ) else null
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        if (tabs.size < 8) {
+                        if (launchingBash) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                                color = TerminalAccent)
+                        } else if (tabs.size < 8) {
                             Icon(painterResource(R.drawable.hugeicons_plus_sign),
                                 contentDescription = null,
                                 modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
@@ -763,6 +786,12 @@ fun TerminalPane(
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                     ) {
                         Text("Home", color = TerminalText, fontSize = 12.sp)
+                    }
+                    TextButton(
+                        onClick = { endSessionTargetId = activeTabId },
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                    ) {
+                        Text("Close tab", color = TerminalText, fontSize = 12.sp)
                     }
                 }
             }
@@ -1165,41 +1194,51 @@ fun TerminalPane(
         )
     }
 
-    if (pendingMultilinePaste != null) {
+    pendingMultilinePaste?.let { review ->
         KlyroModalTheme {
         AlertDialog(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { pendingMultilinePaste = null },
-            title = { Text("Paste multiple lines?") },
+            title = { Text("Review terminal paste") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Pasting multiple lines can execute commands. Review the clipboard content before continuing.")
+                    Text("Pasting multiple lines may execute commands in the terminal.")
+                    Text("${review.lineCount} lines • ${review.utf8ByteCount} UTF-8 bytes",
+                        style = MaterialTheme.typography.labelMedium)
                     Text(
-                        pendingMultilinePaste.orEmpty(),
+                        review.preview,
                         modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
                             .verticalScroll(rememberScrollState()),
                         fontFamily = FontFamily.Monospace,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Text("Entire paste shown; scroll to review all lines before confirming.",
-                        style = MaterialTheme.typography.labelSmall)
+                    if (review.isPreviewTruncated) {
+                        Text(
+                            "Only the first ${review.preview.length} of ${review.text.length} characters are shown. The entire script will be pasted.",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    } else {
+                        Text("Complete clipboard text shown above.",
+                            style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val text = pendingMultilinePaste
+                    val requested = pendingMultilinePaste
                     pendingMultilinePaste = null
                     val emulator = session.emulator
                     if (!session.isRunning() || emulator == null) {
                         Toast.makeText(context, "Terminal unavailable; paste cancelled",
                             Toast.LENGTH_SHORT).show()
-                    } else if (ClipboardPastePolicy.canPaste(text)) {
-                        TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), text!!) { emulator.pasteWithResult(it) }
-                    } else {
-                        Toast.makeText(context, "Clipboard text rejected", Toast.LENGTH_SHORT).show()
+                    } else if (requested == null || !requested.sendIfCurrent(activeTabId, currentSessionId(), session.isRunning()) {
+                            emulator.pasteWithResult(it)
+                        }) {
+                        Toast.makeText(context, "Paste not sent — session changed or input busy",
+                            Toast.LENGTH_SHORT).show()
                     }
-                }) { Text("Paste") }
+                }) { Text("Paste all ${review.lineCount} lines") }
             },
             dismissButton = {
                 TextButton(onClick = { pendingMultilinePaste = null }) { Text("Cancel") }
@@ -1232,7 +1271,8 @@ fun TerminalPane(
                     sessionSheetId = null
                     shellChooserSourceId = id
                 },
-                canCreateSession = tabs.size < 8,
+                canCreateSession = tabs.size < 8 && !launchingBash,
+                launchingBash = launchingBash,
                 onActivate = {
                     sessionSheetId = null
                     onSelectTab(id)
@@ -1267,7 +1307,8 @@ fun TerminalPane(
                 shellChooserSourceId = null
                 onNewTab()
             },
-            canStartBash = tabs.size < 8
+            canStartBash = tabs.size < 8 && !launchingBash,
+            launchingBash = launchingBash
         )
     }
 
@@ -1562,16 +1603,25 @@ fun TerminalPane(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
             onDismissRequest = { endSessionTargetId = null },
-            title = { Text("End ${tabs.firstOrNull { it.first == endSessionTargetId }?.second ?: "session"}?") },
-            text = { Text("This will stop the running shell and its child processes.") },
+            title = { Text("Close ${tabs.firstOrNull { it.first == endSessionTargetId }?.second ?: "session"}?") },
+            text = { Text(if (session.isRunning())
+                "This will stop the running shell and its child processes."
+                else "The shell has exited. Closing this tab discards its retained output.") },
             confirmButton = {
                 TextButton(onClick = {
                     val expected = endSessionTargetId
                     endSessionTargetId = null
-                    if (!TerminalActionPolicy.runIfCurrent(expected, currentSessionId(), session.isRunning()) {
-                            expected?.let(onCloseTab)
-                        }) Toast.makeText(context, "Session changed; close cancelled", Toast.LENGTH_SHORT).show()
-                }) { Text("End session", color = ui.danger, fontWeight = FontWeight.SemiBold) }
+                    if (expected != null && expected == currentSessionId() &&
+                        tabs.any { it.first == expected }) {
+                        onCloseTab(expected)
+                    } else {
+                        Toast.makeText(context, "Session changed; close cancelled",
+                            Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    if (session.isRunning()) Text("End session", color = ui.danger, fontWeight = FontWeight.SemiBold)
+                    else Text("Close finished tab", color = ui.danger, fontWeight = FontWeight.SemiBold)
+                }
             },
             dismissButton = {
                 TextButton(onClick = { endSessionTargetId = null }) {

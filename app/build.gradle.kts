@@ -6,8 +6,8 @@ plugins {
 
 // A semantic base changes only when the release scope changes. CI builds get
 // globally increasing numbers from this one workflow, including reruns.
-val baseKlyroVersionCode = 19
-val baseKlyroVersionName = "0.4.12-dev"
+val baseKlyroVersionCode = 31
+val baseKlyroVersionName = "0.4.24-dev"
 val ciBuild = if (System.getenv("GITHUB_ACTIONS") == "true") {
     val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
         ?: error("GitHub build missing a numeric GITHUB_RUN_NUMBER")

@@ -6,16 +6,8 @@ public final class ClipboardPastePolicy {
     public static final int MAX_UTF8_BYTES = 65536;
     private ClipboardPastePolicy() {}
 
-    private static boolean isWhitespaceOnly(String value) {
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (!Character.isWhitespace(c) && !Character.isSpaceChar(c)) return false;
-        }
-        return true;
-    }
-
     public static boolean canPaste(String value) {
-        if (value == null || value.isEmpty() || value.length() > MAX_CHARS || isWhitespaceOnly(value)) return false;
+        if (value == null || value.isEmpty() || value.length() > MAX_CHARS) return false;
         // Large multibyte pastes are bounded by bytes as well as UTF-16 code units.
         if (value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_UTF8_BYTES) return false;
         for (int i = 0; i < value.length(); i++) {
@@ -25,9 +17,16 @@ public final class ClipboardPastePolicy {
             if (c == '\uFFFE' || c == '\uFFFF') return false;
             // Reject all Unicode ISO control characters except tab/newline.
             if (Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t') return false;
-            // Bidi overrides, zero-width characters and Unicode line separators
-            // can conceal an executed command or add an invisible newline.
-            if (Character.getType(c) == Character.FORMAT ||
+            // Keep Unicode shaping and emoji joiners, but reject invisible edits
+            // to ASCII commands, isolated joiners, bidi overrides and other format controls.
+            if (c == '\u200C' || c == '\u200D') {
+                if (i == 0 || i + 1 == value.length()) return false;
+                int before = value.codePointBefore(i);
+                int after = value.codePointAt(i + 1);
+                if (before <= 0x7f || after <= 0x7f ||
+                        Character.getType(before) == Character.FORMAT ||
+                        Character.getType(after) == Character.FORMAT) return false;
+            } else if (Character.getType(c) == Character.FORMAT ||
                     c == '\u2028' || c == '\u2029') return false;
             // Reject malformed UTF-16 rather than emitting replacement glyphs
             // into shell commands or accidentally corrupting pasted scripts.

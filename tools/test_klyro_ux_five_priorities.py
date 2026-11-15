@@ -36,7 +36,8 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn("value.text.trim().isNotBlank()", self.sessions)
 
     def test_shell_selection_has_role_and_hit_target(self):
-        self.assertIn('onClickLabel = if (canStartBash) "Start a Bash terminal"', self.sessions)
+        self.assertIn('onClickLabel = if (launchingBash) "Starting Bash…"', self.sessions)
+        self.assertIn('else if (canStartBash) "Start a Bash terminal"', self.sessions)
         self.assertIn('canStartBash: Boolean = true', self.sessions)
         self.assertIn(".heightIn(min = KlyroUiMetrics.minTouch)", self.sessions)
 
