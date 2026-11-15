@@ -53,7 +53,7 @@ class SettingsAnrContracts(unittest.TestCase):
         self.assertIn('KlyroBrandChoice.selected(context)', section)
 
     def test_launcher_switch_package_manager_calls_run_on_io(self):
-        section = SETTINGS.split('.clickable(enabled = brandSelectionReady', 1)[1].split(
+        section = SETTINGS.split('enabled = brandReady && !brandUpdating', 1)[1].split(
             '}.semantics {', 1)[0]
         self.assertIn('scope.launch', section)
         self.assertIn('withContext(Dispatchers.IO)', section)
