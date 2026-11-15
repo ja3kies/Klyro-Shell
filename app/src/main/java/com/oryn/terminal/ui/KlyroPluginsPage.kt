@@ -86,6 +86,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
 
     // A revision cancels stale IO refreshes: an older read cannot overwrite a
     // newer registry snapshot when two rapid writes finish out of order.
+    var registryLoading by remember { mutableStateOf(true) }
     var registryRevision by remember { mutableStateOf(0) }
     DisposableEffect(manager) {
         // Listen first, then refresh to close the registration/read race.
@@ -96,7 +97,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         onDispose { stopObserving() }
     }
     LaunchedEffect(manager, registryRevision) {
+        registryLoading = true
         installed = withContext(Dispatchers.IO) { manager.installed() }
+        registryLoading = false
     }
     // Recover after rotation if the old Activity's confirmed commit never
     // reports completion (e.g. its coroutine failed after destruction).
@@ -222,7 +225,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
             TextButton(
                 onClick = ::navigateBack,
-                enabled = !mutationBusy && !confirmedMutationPending,
+                enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
             ) {
                 Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
@@ -251,7 +254,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     modifier = Modifier.weight(1f)
                         .heightIn(min = KlyroUiMetrics.minTouch)
                         .clickable(
-                            enabled = !mutationBusy && !confirmedMutationPending, role = Role.Tab,
+                            enabled = !registryLoading && !mutationBusy && !confirmedMutationPending, role = Role.Tab,
                             onClickLabel = "Show $label"
                         ) {
                             page = id
@@ -272,9 +275,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         if (mutationBusy || confirmedMutationPending) {
             KlyroInlineNotice("Updating local plugins…")
         }
+        if (registryLoading) KlyroInlineNotice("Loading local plugins…")
         error?.let { KlyroInlineNotice(it, isError = true) }
         if (page == "installed") {
-            if (installed.isEmpty()) {
+            if (installed.isEmpty() && !registryLoading) {
                 KlyroEmptyState(
                     title = "Nothing installed yet",
                     detail = "Explore curated packs or import a local JSON manifest.",
@@ -301,10 +305,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                                 onCheckedChange = { checked ->
                                     applyChange({ manager.setEnabled(plugin.id, checked) })
                                 },
-                                enabled = !mutationBusy && !confirmedMutationPending)
+                                enabled = !registryLoading && !mutationBusy && !confirmedMutationPending)
                             TextButton(
                                 onClick = { error = null; removeId = plugin.id },
-                                enabled = !mutationBusy && !confirmedMutationPending,
+                                enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                             ) {
                                 Text("Remove", color = colors.danger)
@@ -327,7 +331,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("Bundled · Offline", color = colors.muted, fontSize = 12.sp)
                             Button(
-                                enabled = !isInstalled && !mutationBusy && !confirmedMutationPending,
+                                enabled = !isInstalled && !registryLoading && !mutationBusy && !confirmedMutationPending,
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
                                     error = null
@@ -410,7 +414,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 },
                 confirmButton = {
                     Button(
-                        enabled = !mutationBusy && !confirmedMutationPending,
+                        enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
                         onClick = {
                             confirmedBundledId = id
                             applyChange({ manager.installBundled(id) }) {
@@ -428,7 +432,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 },
                 dismissButton = {
                     TextButton(
-                        enabled = !mutationBusy && !confirmedMutationPending,
+                        enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
                         onClick = {
                             pendingBundledId = null; confirmedBundledId = null; error = null
                         }
@@ -480,7 +484,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                Button(enabled = !mutationBusy && !confirmedMutationPending, onClick = {
+                Button(enabled = !registryLoading && !mutationBusy && !confirmedMutationPending, onClick = {
                     confirmedImportId = record.id
                     applyChange({ manager.installPreview(record) }) {
                         pendingImport = null
@@ -499,7 +503,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         pendingImport = null; pendingImportUri = null
                         confirmedImportId = null; error = null
                     },
-                    enabled = !mutationBusy && !confirmedMutationPending,
+                    enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                 ) { Text("Cancel") }
             }
@@ -540,7 +544,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     onClick = {
                         removeId = null; confirmedRemovalId = null; error = null
                     },
-                    enabled = !mutationBusy && !confirmedMutationPending,
+                    enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                 ) { Text("Cancel") }
             }
