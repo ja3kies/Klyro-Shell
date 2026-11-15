@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.termux.KlyroWelcomeGuide
+import com.oryn.terminal.core.KlyroTextLimit
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginCommand
 import java.io.File
@@ -191,7 +192,7 @@ internal fun KlyroCommandPalette(
                     OutlinedTextField(
                         value = query,
                         onValueChange = {
-                            query = it.take(KlyroCommandSearch.MAX_QUERY_LENGTH)
+                            query = KlyroTextLimit.takeCodePoints(it, KlyroCommandSearch.MAX_QUERY_LENGTH)
                             info = null
                             unsafeFeedback = false
                         },
