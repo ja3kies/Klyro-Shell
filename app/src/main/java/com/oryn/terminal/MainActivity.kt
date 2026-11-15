@@ -26,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
@@ -93,7 +94,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -1287,15 +1291,37 @@ private fun OrynTerminalApp(
         )
     }
     val screenChrome = ui.chrome
-    Surface(
-        // Paint before insets; the transparent status bar must show Klyro, not
-        // Android's default gray window background.
-        modifier = Modifier.fillMaxSize()
-            .background(screenChrome)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
-            .imePadding(),
-        color = screenChrome
-    ) {
+    val homeVisible = !showPlugins &&
+        !(session != null && sessionClient != null && viewClient != null)
+    val compactHomeHeight = LocalConfiguration.current.screenHeightDp < 660
+    val bannerHeight = if (compactHomeHeight) 148.dp else 256.dp
+    val bannerSpace = if (compactHomeHeight) 80.dp else 194.dp
+
+    Box(Modifier.fillMaxSize().background(screenChrome)) {
+        if (homeVisible) {
+            // Offline artwork can extend behind the transparent status bar.
+            Image(
+                painter = painterResource(R.drawable.klyro_home_pixel_landscape),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.fillMaxWidth().height(bannerHeight)
+            )
+            Box(
+                Modifier.fillMaxWidth().height(bannerHeight).background(
+                    Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        .66f to Color.Transparent,
+                        1f to screenChrome
+                    )
+                )
+            )
+        }
+        Surface(
+            modifier = Modifier.fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .imePadding(),
+            color = if (homeVisible) Color.Transparent else screenChrome
+        ) {
         if (showPlugins) {
             KlyroPluginsPage(onBack = { showPlugins = false })
         } else if (session != null && sessionClient != null && viewClient != null) {
@@ -1358,6 +1384,8 @@ private fun OrynTerminalApp(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceLg)
                 ) {
+                // The identity sits just beneath the faded cover art.
+                Spacer(Modifier.fillMaxWidth().height(bannerSpace))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1725,6 +1753,7 @@ private fun OrynTerminalApp(
 
             }
         }
+    }
     }
     if (showHomeSettings) {
         KlyroSettingsSheet(
