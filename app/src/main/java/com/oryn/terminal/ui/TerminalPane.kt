@@ -625,7 +625,7 @@ fun TerminalPane(
             Row(
                 modifier = Modifier.weight(1f)
                     .horizontalScroll(tabStripScroll)
-                    .padding(start = 10.dp, vertical = 2.dp),
+                    .padding(start = 10.dp, top = 2.dp, bottom = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
