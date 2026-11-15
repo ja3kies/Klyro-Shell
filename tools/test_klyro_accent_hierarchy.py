@@ -10,9 +10,10 @@ PLUGINS = (APP / "ui/KlyroPluginsPage.kt").read_text(encoding="utf-8")
 
 class AccentHierarchyContract(unittest.TestCase):
     def test_architecture_badge_is_neutral(self):
-        badge = HOME.split('Text("ARM64"', 1)[0][-230:]
-        self.assertIn("color = ui.key,", badge)
+        # Architecture is quiet metadata beside the brand, not an accent CTA.
+        metadata = HOME.split('Text("ARM64"', 1)[1][:160]
         self.assertIn('Text("ARM64", color = ui.muted', HOME)
+        self.assertNotIn('ui.accent', metadata)
 
     def test_menu_and_repeated_icons_do_not_mimic_primary_ctas(self):
         self.assertIn('contentDescription = "More actions", tint = TerminalMuted', PANE)
