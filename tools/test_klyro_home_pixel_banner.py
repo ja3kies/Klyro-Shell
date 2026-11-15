@@ -22,6 +22,14 @@ class HomePixelBannerContract(unittest.TestCase):
         self.assertIn('.66f to Color.Transparent', HOME)
         self.assertIn('1f to screenChrome', HOME)
 
+    def test_animation_stops_when_system_reduces_motion(self):
+        cover = HOME.split('private fun KlyroHomePixelCover(', 1)[1]
+        self.assertIn('LocalMotionDurationScale.current.scaleFactor > 0f', cover)
+        self.assertIn('rememberInfiniteTransition(label = "Klyro night stars")', cover)
+        self.assertIn('Canvas(Modifier.fillMaxSize())', cover)
+        self.assertIn('Image(', cover)
+        self.assertIn('contentDescription = null', cover)
+
     def test_profile_header_and_primary_action_follow_banner(self):
         home = HOME.split('// The primary action, runtime and tools', 1)[1]
         self.assertLess(home.index('Spacer(Modifier.fillMaxWidth().height(bannerSpace))'),
