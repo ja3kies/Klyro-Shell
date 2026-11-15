@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.ui.res.painterResource
 import com.oryn.terminal.R
+import com.oryn.terminal.core.KlyroTextLimit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -173,9 +174,12 @@ internal fun KlyroRenameSessionDialog(
                     value = value,
                     onValueChange = {
                         val cleaned = it.text.replace("\n", "").replace("\r", "")
-                        if (cleaned.length <= 32) {
-                            value = it.copy(text = cleaned)
-                        }
+                        val bounded = KlyroTextLimit.takeCodePoints(cleaned, 32)
+                        val selection = TextRange(
+                            it.selection.start.coerceAtMost(bounded.length),
+                            it.selection.end.coerceAtMost(bounded.length)
+                        )
+                        value = it.copy(text = bounded, selection = selection)
                     },
                     modifier = Modifier.fillMaxWidth().focusRequester(requester),
                     isError = value.text.trim().isBlank() && value.text.isNotEmpty(),

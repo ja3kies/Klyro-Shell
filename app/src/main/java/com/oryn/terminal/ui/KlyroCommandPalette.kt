@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.ui.res.painterResource
 import com.oryn.terminal.R
+import com.oryn.terminal.core.KlyroTextLimit
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -174,7 +175,7 @@ internal fun KlyroCommandPalette(
                     OutlinedTextField(
                         value = query,
                         onValueChange = {
-                            query = it.take(KlyroCommandSearch.MAX_QUERY_LENGTH)
+                            query = KlyroTextLimit.takeCodePoints(it, KlyroCommandSearch.MAX_QUERY_LENGTH)
                             info = null
                             unsafeFeedback = false
                         },

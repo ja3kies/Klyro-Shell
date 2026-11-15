@@ -185,7 +185,9 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     fun renameTab(id: Long, rawName: String) {
-        val name = rawName.trim().replace(invalidTitleCharacters, "").take(32).trim()
+        val name = com.oryn.terminal.core.KlyroTextLimit.takeCodePoints(
+            rawName.trim().replace(invalidTitleCharacters, ""), 32
+        ).trim()
         if (name.isBlank()) return
         val index = tabs.indexOfFirst { it.id == id }
         if (index >= 0 && tabs[index].customTitle != name) {

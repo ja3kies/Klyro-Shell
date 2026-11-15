@@ -27,7 +27,7 @@ class SelectPasteAdversarialAudit(unittest.TestCase):
         self.assertIn("selectTerminalOutput(expectedSelection = true)", self.pane)
 
     def test_lifecycle_observer_uses_supported_activity_owner(self):
-        self.assertIn("context as? LifecycleOwner", self.pane)
+        self.assertIn("val lifecycleOwner = LocalLifecycleOwner.current", self.pane)
         self.assertIn("Lifecycle.Event.ON_RESUME", self.pane)
 
     def test_select_mode_never_silently_switches_to_paste(self):

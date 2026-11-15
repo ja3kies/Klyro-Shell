@@ -50,7 +50,7 @@ public final class KlyroWorkspaceCatalog {
             if (Character.isISOControl(point) || type == Character.FORMAT ||
                     type == Character.LINE_SEPARATOR || type == Character.PARAGRAPH_SEPARATOR)
                 continue;
-            if (result.length() + Character.charCount(point) > MAX_NAME_CHARS) break;
+            if (result.codePointCount(0, result.length()) >= MAX_NAME_CHARS) break;
             result.appendCodePoint(point);
         }
         return result.toString().trim();

@@ -66,6 +66,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
+import com.oryn.terminal.core.KlyroTextLimit
 
 /**
  * Original native Compose translation of the Moduix React color-picker concept.
@@ -407,9 +408,9 @@ internal fun KlyroColorPickerDialog(
                         Text("My colors", style = MaterialTheme.typography.titleSmall)
                         OutlinedTextField(
                             value = favoriteName,
-                            onValueChange = { favoriteName = it.take(22) },
+                            onValueChange = { favoriteName = KlyroTextLimit.takeCodePoints(it, 22) },
                             label = { Text("Color name") },
-                            supportingText = { Text("${22 - favoriteName.length} characters remaining") },
+                            supportingText = { Text("${22 - KlyroTextLimit.codePointCount(favoriteName)} characters remaining") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )

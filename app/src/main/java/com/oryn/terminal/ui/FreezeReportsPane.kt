@@ -16,6 +16,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.unit.dp
+import java.text.DateFormat
+import java.util.Date
 import com.oryn.terminal.diagnostics.FreezeRecorder
 import com.oryn.terminal.diagnostics.FreezeEvents
 import kotlinx.coroutines.Dispatchers
@@ -76,7 +78,9 @@ internal fun FreezeReportsPane(
             Column(Modifier.fillMaxWidth().testTag("freeze-report-$id")) {
             val state = body.lineSequence().firstOrNull { it.startsWith("summary_state=") }?.removePrefix("summary_")
                 ?: body.lineSequence().lastOrNull { it.startsWith("state=") } ?: "unconfirmed"
-            Text(java.util.Date(id.substringBefore('-').toLongOrNull() ?: 0).toString())
+            Text(DateFormat.getDateTimeInstance().format(
+                Date(id.substringBefore('-').toLongOrNull() ?: 0)
+            ))
             Text(state)
             Row {
                 TextButton(onClick = { selected = if (selected == id) null else id }) { Text("Details") }

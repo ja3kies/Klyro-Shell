@@ -66,6 +66,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -78,9 +79,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.stateDescription
@@ -103,6 +104,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.oryn.terminal.core.OrynPaths
+import com.oryn.terminal.core.KlyroTextLimit
 import com.oryn.terminal.plugins.KlyroPluginManager
 import java.io.File
 import com.termux.terminal.TerminalSession
@@ -217,7 +219,7 @@ fun TerminalPane(
     var clipboardAvailable by remember(session) {
         mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
-    val lifecycleOwner = context as? LifecycleOwner
+    val lifecycleOwner = LocalLifecycleOwner.current
     var tabJobActivity by remember { mutableStateOf<Map<Long, JobActivityUi>>(emptyMap()) }
     var activityElapsedMs by remember { mutableStateOf(SystemClock.elapsedRealtime()) }
 
@@ -225,8 +227,7 @@ fun TerminalPane(
         while (true) {
             // No /proc polling while the app is backgrounded. Sampling uses the
             // IO dispatcher so terminal rendering and typing never block.
-            val foreground = lifecycleOwner?.lifecycle?.currentState
-                ?.isAtLeast(Lifecycle.State.RESUMED) != false
+            val foreground = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
             if (foreground) {
                 val measured = withContext(Dispatchers.IO) {
                     jobSessions.mapValues { (_, terminal) -> KlyroJobProbe.sample(terminal) }
@@ -280,11 +281,11 @@ fun TerminalPane(
                 clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
             }
         }
-        lifecycleOwner?.lifecycle?.addObserver(observer)
+        lifecycleOwner.lifecycle.addObserver(observer)
         runCatching { clipboardManager?.addPrimaryClipChangedListener(listener) }
         clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
         onDispose {
-            lifecycleOwner?.lifecycle?.removeObserver(observer)
+            lifecycleOwner.lifecycle.removeObserver(observer)
             runCatching { clipboardManager?.removePrimaryClipChangedListener(listener) }
         }
     }
@@ -1305,7 +1306,7 @@ fun TerminalPane(
                     OutlinedTextField(
                         value = transcriptQuery,
                         onValueChange = {
-                            transcriptQuery = it.take(128)
+                            transcriptQuery = KlyroTextLimit.takeCodePoints(it, 128)
                             searchIndex = 0
                             searchPage = 0
                             searchSnapshot = null
@@ -1534,9 +1535,17 @@ fun TerminalPane(
                     File(context.applicationInfo.nativeLibraryDir)).prefix
             }.getOrNull()
         }
+        val pluginCommands by produceState(
+            initialValue = emptyList<com.oryn.terminal.plugins.KlyroPluginCommand>(),
+            key1 = context
+        ) {
+            value = withContext(Dispatchers.IO) {
+                KlyroPluginManager(context).activeCommands()
+            }
+        }
         KlyroCommandPalette(
             installedPrefix = privatePrefix,
-            pluginCommands = remember(context) { KlyroPluginManager(context).activeCommands() },
+            pluginCommands = pluginCommands,
             onInsert = { snippet ->
                 // A curated command is pasted, never submitted with Enter.
                 // Full-screen applications retain their own keyboard focus.
