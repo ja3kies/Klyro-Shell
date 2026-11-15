@@ -33,7 +33,7 @@ class AutomationContracts(unittest.TestCase):
 
     def test_robot_requires_real_device_and_uploads_evidence(self):
         self.assertIn("workflow_dispatch:", ROBOT)
-        self.assertIn("android-emulator-runner", ROBOT)
+        self.assertIn("self-hosted", ROBOT)\n        self.assertIn("adb devices", ROBOT)
         self.assertIn("tools/klyro_ui_robot.py", ROBOT)
         self.assertIn("klyro-device-robot-evidence", ROBOT)
         self.assertIn("if-no-files-found: error", ROBOT)
