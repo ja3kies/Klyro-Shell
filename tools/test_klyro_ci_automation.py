@@ -56,6 +56,8 @@ class AutomationContracts(unittest.TestCase):
         self.assertIn("tools/ci_build_report.py", BUILD)
         self.assertIn("klyro-build-summary", BUILD)
         self.assertIn("GITHUB_STEP_SUMMARY", REPORT)
+        self.assertIn("klyro-shell-signed.apk", REPORT)
+        self.assertIn("versionName", REPORT)
 
     def test_robot_requires_real_device_and_uploads_evidence(self):
         self.assertIn("workflow_dispatch:", ROBOT)
