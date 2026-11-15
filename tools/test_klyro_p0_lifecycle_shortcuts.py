@@ -175,8 +175,8 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
     def test_apk_version_advances_past_0412_without_downgrade(self):
         import re
         gradle = (ROOT / "app/build.gradle.kts").read_text()
-        code_match = re.search(r"val baseKlyroVersionCode\\s*=\\s*(\\d+)", gradle)
-        version_match = re.search(r'val baseKlyroVersionName\\s*=\\s*"0\\.4\\.(\\d+)-dev"', gradle)
+        code_match = re.search(r"val baseKlyroVersionCode\s*=\s*(\d+)", gradle)
+        version_match = re.search(r'val baseKlyroVersionName\s*=\s*"0\.4\.(\d+)-dev"', gradle)
         self.assertIsNotNone(code_match)
         self.assertIsNotNone(version_match)
         code, patch = int(code_match.group(1)), int(version_match.group(1))
