@@ -69,8 +69,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var mutationBusy by remember { mutableStateOf(false) }
     var previewBusy by remember { mutableStateOf(false) }
-    var installed by remember { mutableStateOf(manager.installed()) }
-    var page by rememberSaveable { mutableStateOf(if (installed.isEmpty()) "explore" else "installed") }
+    var installed by remember { mutableStateOf<List<KlyroPluginRecord>>(emptyList()) }
+    var page by rememberSaveable { mutableStateOf("installed") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var removeId by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
