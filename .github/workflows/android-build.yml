@@ -44,7 +44,28 @@ permissions:
   contents: read
 
 jobs:
+  fast-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax and targeted regression gate
+        shell: bash
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/ci_targeted_tests.py tools/ci_build_report.py
+          bash -n scripts/klyro-operational-gate.sh
+          python3 tools/ci_targeted_tests.py
+
   debug-apk:
+    needs: fast-gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -65,6 +86,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
+          cache-read-only: ${{ github.ref_name == 'main' }}
 
       - name: Prepare signed ARM64 PRoot runtime assets
         shell: bash
@@ -271,5 +293,22 @@ jobs:
         with:
           name: klyro-shell-tests
           path: app/build/outputs/apk/androidTest/debug/klyro-shell-tests-signed.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Write build report
+        if: always()
+        shell: bash
+        env:
+          FAST_GATE_RESULT: ${{ needs.fast-gate.result }}
+          ANDROID_JOB_RESULT: ${{ job.status }}
+        run: python3 tools/ci_build_report.py
+
+      - name: Upload build summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: klyro-build-summary
+          path: klyro-build-summary.md
           if-no-files-found: error
           retention-days: 14
