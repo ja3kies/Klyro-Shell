@@ -10,10 +10,26 @@ MAIN = (ROOT / "app/src/main/java/com/oryn/terminal/MainActivity.kt").read_text(
 PANE = (ROOT / "app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt").read_text()
 SHEETS = (ROOT / "app/src/main/java/com/oryn/terminal/ui/KlyroSessionSheets.kt").read_text()
 MANAGER = (ROOT / "app/src/main/java/com/oryn/terminal/session/TerminalSessionManager.java").read_text()
+SESSION = (ROOT / "terminal-emulator/src/main/java/com/termux/terminal/TerminalSession.java").read_text()
 
 class AsyncBashLaunchUX(unittest.TestCase):
     def launch(self):
         return MAIN.split("private fun launchBash()", 1)[1].split("private fun closeBash()", 1)[0]
+
+    def test_terminal_parser_handler_is_bound_to_main_even_if_created_on_io(self):
+        # A Handler() without an explicit Looper would fail on Dispatchers.IO.
+        self.assertIn("import android.os.Looper;", SESSION)
+        self.assertIn("final Handler mMainThreadHandler = new MainThreadHandler();", SESSION)
+        handler = SESSION.split("class MainThreadHandler extends Handler", 1)[1].split(
+            "final byte[] mReceiveBuffer", 1
+        )[0]
+        self.assertIn("MainThreadHandler() {", handler)
+        self.assertIn("super(Looper.getMainLooper());", handler)
+        diagnostic = MAIN.split("suspend fun startDiagnosticStress()", 1)[1].split(
+            "private fun launchBash()", 1
+        )[0]
+        self.assertIn("withContext(Dispatchers.IO)", diagnostic)
+        self.assertIn("withContext(Dispatchers.IO)", self.launch())
 
     def test_root_cause_file_layout_is_not_repeated_on_main(self):
         self.assertIn("this.paths.prepareLayout();", MANAGER)

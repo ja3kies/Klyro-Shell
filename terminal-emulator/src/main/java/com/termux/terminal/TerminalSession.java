@@ -2,6 +2,7 @@ package com.termux.terminal;
 
 import android.annotation.SuppressLint;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.system.ErrnoException;
@@ -397,6 +398,11 @@ public final class TerminalSession extends TerminalOutput {
 
     @SuppressLint("HandlerLeak")
     class MainThreadHandler extends Handler {
+
+        // Session creation can run on IO; PTY parsing and callbacks belong to UI.
+        MainThreadHandler() {
+            super(Looper.getMainLooper());
+        }
 
         final byte[] mReceiveBuffer = new byte[4 * 1024];
 

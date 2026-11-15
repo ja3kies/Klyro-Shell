@@ -12,6 +12,7 @@
 
 ## Boundaries and review focus
 - [ ] No disk-heavy `TerminalSessionManager(...).startBash` on UI thread; Termux emulator view initialization remains Android main/UI thread.
+- [ ] Bind Termux `TerminalSession.MainThreadHandler` explicitly to `Looper.getMainLooper()`: sessions created on IO must never dispatch terminal parsing onto IO or require an IO-thread Looper (also protects the existing diagnostic launcher).
 - [ ] Prevent two rapid same-frame taps, re-check eight-tab limit after suspension, no bogus "Maximum 8" explanation merely due to loading.
 - [ ] Preserve the selected workspace captured at tap time, even if user switches workspaces during preparation.
 - [ ] Existing shell sessions remain interactive while preparing; keep ability to return Home or inspect other tabs.
