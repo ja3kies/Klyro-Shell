@@ -17,7 +17,7 @@ class ThreeMajorUiRegressions(unittest.TestCase):
         header = sheet.split("when (section)", 1)[0]
         self.assertIn("onClick = ::navigateBack", header)
         self.assertIn('Text("Close")', header)
-        self.assertIn("Modifier.weight(1f, fill = false)", header)
+        self.assertIn(".weight(1f, fill = false)", header)
         self.assertIn(".verticalScroll(remember(section)", header)
         self.assertLess(header.index('Text("Close")'), header.index(".verticalScroll(remember(section)"))
         self.assertIn(".navigationBarsPadding()", header)
