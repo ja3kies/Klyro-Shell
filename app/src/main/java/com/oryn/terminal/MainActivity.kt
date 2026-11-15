@@ -1465,42 +1465,53 @@ private fun OrynTerminalApp(
                     border = BorderStroke(1.dp, ui.key.copy(alpha = .5f))
                 ) {
                     Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Column(
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            horizontalAlignment = Alignment.Start
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("RUNTIME STATUS", color = ui.muted,
-                                style = MaterialTheme.typography.labelSmall,
-                                letterSpacing = .6.sp)
-                            Surface(
-                                color = stateColor.copy(alpha = .11f),
-                                shape = RoundedCornerShape(50),
-                                border = BorderStroke(1.dp, stateColor.copy(alpha = .22f))
+                            Box(
+                                modifier = Modifier.size(44.dp).background(
+                                    stateColor.copy(alpha = .12f), RoundedCornerShape(14.dp)
+                                ),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    (if (badge.severity == KlyroRuntimeBadgeSeverity.READY) "✓ " else "") +
-                                        stateLabel,
-                                    color = stateColor,
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 2
+                                    if (badge.severity == KlyroRuntimeBadgeSeverity.READY) "✓" else "!",
+                                    color = stateColor, fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Text(
+                                    stateLabel,
+                                    color = ui.foreground,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    lineHeight = 20.sp
+                                )
+                                Text(
+                                    if (badge.severity == KlyroRuntimeBadgeSeverity.READY)
+                                        homeStatus.runtimeMessage.substringAfter(
+                                            " · ", homeStatus.runtimeMessage)
+                                    else homeStatus.runtimeMessage,
+                                    modifier = Modifier.semantics {
+                                        liveRegion = LiveRegionMode.Polite
+                                    },
+                                    color = if (runtimeHasWarnings) ui.warningInk
+                                        else if (technicalErrorDetails != null) ui.danger
+                                        else ui.muted,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp
                                 )
                             }
                         }
-                        Text(
-                            homeStatus.runtimeMessage,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                            color = if (runtimeHasWarnings) ui.warningInk
-                                else if (technicalErrorDetails != null)
-                                    ui.danger
-                                else ui.foreground,
-                            fontSize = 14.sp,
-                            lineHeight = 21.sp
-                        )
                         homeStatus.terminalFailure?.let { failure ->
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1616,9 +1627,10 @@ private fun OrynTerminalApp(
                             TextButton(
                                 onClick = onRecheck,
                                 enabled = !verifyingRuntime && !installing,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                                modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                             ) {
-                                Text("Recheck environment", color = ui.accent, fontSize = 13.sp)
+                                Text("Recheck environment", color = ui.accent, fontSize = 12.sp)
                             }
                         }
                     }
