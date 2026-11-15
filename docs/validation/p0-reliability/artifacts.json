@@ -1,0 +1,27 @@
+{
+  "source_commit": "3d0b447cc660f02ee22d54009f13aa1ae8fcd2ba",
+  "ci_status": "success",
+  "ci_url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352",
+  "certificate_sha256": "01a7e05326237fdfa4cda54e75fb8164cbe12bbc964d36e2d9c2d1a8ef7e5c14",
+  "apk": {
+    "app": {
+      "path": ".local/p0/ci-artifacts/klyro-shell-debug/klyro-shell-signed.apk",
+      "sha256": "80e2d088e81b9219ef992d7a2fddd342d8935accbefc895978ff299e14129145",
+      "bytes": 10544922
+    },
+    "instrumentation": {
+      "path": ".local/p0/ci-artifacts/klyro-shell-tests/klyro-shell-tests-signed.apk",
+      "sha256": "07b070bb81eea970d60faff2fe2c6fc497abdeff34e8b2ebbe7405e40a530836",
+      "bytes": 369413
+    }
+  },
+  "artifacts": {
+    "klyro-shell-debug-key": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352/artifacts/14029231981",
+    "klyro-shell-tests": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352/artifacts/14029112245",
+    "p0-jvm-test-results": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352/artifacts/14029087360",
+    "klyro-shell-debug": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352/artifacts/14028892679",
+    "native-16kb-audit": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352/artifacts/14028643464",
+    "android-ui-lint": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352/artifacts/14028634465",
+    "klyro-shell-tests-debug-key": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352/artifacts/14028244544"
+  }
+}

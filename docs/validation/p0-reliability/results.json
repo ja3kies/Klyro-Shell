@@ -1,0 +1,63 @@
+{
+  "source_commit": "3d0b447cc660f02ee22d54009f13aa1ae8fcd2ba",
+  "host": {
+    "architecture": "aarch64",
+    "sdk": "37",
+    "model": "Pixel 9",
+    "page_size": 4096
+  },
+  "tests": {
+    "app_jvm": 263,
+    "emulator_jvm": 34,
+    "python": 506,
+    "targeted_scenarios_by_cycle": [
+      15,
+      15,
+      15,
+      15,
+      15,
+      18
+    ],
+    "native_pty": "PASS host Android ARM64",
+    "queue_recheck": "PASS 9 JUnit tests",
+    "instrumentation": "BLOCKED: no ADB device",
+    "robot_smoke": "BLOCKED: no ADB device",
+    "physical_apk_validation": "NOT TESTED"
+  },
+  "measurements": {
+    "native_lines": 20000,
+    "native_bytes": 128894,
+    "native_seconds": 0.044688,
+    "harness_maxrss_kib": 3540,
+    "fd_before": 4,
+    "fd_after": 4,
+    "queue_bytes": 4194304,
+    "queue_elapsed_ns": 398041505,
+    "settings_latency": "NOT MEASURED",
+    "slow_frames": "NOT MEASURED",
+    "apk_cpu_memory_gc": "NOT MEASURED",
+    "resume_pid_continuity": "NOT MEASURED"
+  },
+  "fixture_package_check": {
+    "scope": "existing disposable PRoot fixture; not APK",
+    "exit": 0,
+    "seconds": 7.170217003964353
+  },
+  "fixture_package_network": {
+    "scope": "existing disposable PRoot fixture; not APK",
+    "exit": 0,
+    "seconds": 22.74057951901341
+  },
+  "fixture_package_errors": {
+    "scope": "disposable guest; frontend lock and unreachable repo",
+    "exit": 0,
+    "seconds": 5.721923343022354
+  },
+  "ci": {
+    "url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352",
+    "status": "success",
+    "source_commit": "3d0b447cc660f02ee22d54009f13aa1ae8fcd2ba",
+    "lint_warnings": 45,
+    "lint_hints": 11
+  }
+}

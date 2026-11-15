@@ -12,3 +12,11 @@ find_library(log-lib log)
 
 # forkpty is provided by Android's libc; no separate libutil is needed.
 target_link_libraries(oryn_pty ${log-lib})
+
+# NDK r27 defaults to 4 KiB ELF PT_LOAD segment alignment. Android 15+
+# may use 16 KiB pages; this applies only to the binaries built by this target.
+# Third-party prebuilt libraries must be audited independently.
+target_link_options(oryn_pty PRIVATE
+    "-Wl,-z,max-page-size=16384"
+    "-Wl,-z,common-page-size=16384"
+)

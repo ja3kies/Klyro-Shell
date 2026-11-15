@@ -1,0 +1,77 @@
+{
+  "local_jvm": {
+    "app": {
+      "tests": 336,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "terminal-emulator": {
+      "tests": 34,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "python": {
+    "tests": 507,
+    "failures": 0,
+    "status": "PASS"
+  },
+  "android_ui": {
+    "new_modal_tests": 32,
+    "compiled": true,
+    "executed": false,
+    "status": "NOT TESTED",
+    "reason": "No authorized ADB device/emulator",
+    "system_back_policy": "Close root; internal Settings/Diagnostics buttons navigate"
+  },
+  "native": {
+    "status": "PASS",
+    "pty_count": 20,
+    "stdout_lines": 20000,
+    "fd_before": 4,
+    "fd_after": 4
+  },
+  "metrics": {
+    "dismissal_duration": "NOT MEASURED",
+    "focus_return": "NOT MEASURED",
+    "first_successful_touch": "NOT MEASURED",
+    "recompositions": "NOT MEASURED",
+    "android_window_count": "NOT MEASURED",
+    "post_resume_gesture_latency": "NOT MEASURED"
+  },
+  "physical_pixel_resolution": "PENDING DEVICE VALIDATION",
+  "protected_refs": {
+    "main": "d62bfaa26d7ce06d1308e13345fab20246025dc5",
+    "fix/proot-5.1.107.102": "335202af373028f467c25ba43ef803cfd73e7de9",
+    "fix/p0-reliability-closure": "ecdf89c83463d345e110c0ee07562999b79af54f",
+    "fix/freeze-forensics-ux-completion": "4e765b5ae7af4cd0e629a5ecdc062dafdb761fd8"
+  },
+  "source_commit": "7c730536d53991eb70d558babc0aa367cf244123",
+  "ci_url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43549053497",
+  "local_android_test_compilation_log": "lint-fixture-final-compile.log",
+  "ci_jvm": {
+    "app": {
+      "tests": 336,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "terminal-emulator": {
+      "tests": 34,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "ci_status": "success",
+  "apk_validation": {
+    "signatures_v2_v3": "PASS (app and tests, identical certificate)",
+    "elf_16k": "PASS (7 shared libraries)",
+    "zipalign_4": "PASS",
+    "arm64_build": "PASS (debug, release, AndroidTest)",
+    "permissions": "UNCHANGED",
+    "lint": "PASS; 45 warnings and 11 hints; zero new file/message issues"
+  }
+}

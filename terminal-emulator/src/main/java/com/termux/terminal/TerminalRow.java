@@ -171,7 +171,8 @@ public final class TerminalRow {
         if (newIsCombining) {
             // Combining characters are added to the contents of the column instead of overwriting them, so that they
             // modify the existing contents.
-            // FIXME: Put a limit of combining characters.
+            // shortcut: cap cell text at 64 UTF-16 units; raise only for demonstrated longer grapheme clusters.
+            if (oldCharactersUsedForColumn + newCharactersUsedForColumn > 64) return;
             // FIXME: Unassigned characters also get width=0.
             newCharactersUsedForColumn += oldCharactersUsedForColumn;
         }

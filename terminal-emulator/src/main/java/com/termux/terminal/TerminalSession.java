@@ -3,17 +3,15 @@ package com.termux.terminal;
 import android.annotation.SuppressLint;
 import android.os.Handler;
 import android.os.Message;
+import android.os.ParcelFileDescriptor;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
 
 import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
@@ -46,7 +44,7 @@ public final class TerminalSession extends TerminalOutput {
      * A queue written to from the main thread due to user interaction, and read by another thread which forwards by
      * writing to the {@link #mTerminalFileDescriptor}.
      */
-    final ByteQueue mTerminalToProcessIOQueue = new ByteQueue(4096);
+    final ByteQueue mTerminalToProcessIOQueue = new ByteQueue(128 * 1024);
     /** Buffer to write translate code points into utf8 before writing to mTerminalToProcessIOQueue */
     private final byte[] mUtf8InputBuffer = new byte[5];
 
@@ -55,15 +53,21 @@ public final class TerminalSession extends TerminalOutput {
 
     /** The pid of the shell process. 0 if not started and -1 if finished running. */
     int mShellPid;
+    /** Approximate monotonic byte counters; diagnostics never acquire the emulator lock. */
+    public volatile long diagnosticBytesRead, diagnosticBytesParsed;
 
     /** The exit status of the shell process. Only valid if ${@link #mShellPid} is -1. */
     int mShellExitStatus;
+    private boolean mFinishing;
+    private volatile boolean mProcessReaped;
 
     /**
      * The file descriptor referencing the master half of a pseudo-terminal pair, resulting from calling
      * {@link JNI#createSubprocess(String, String, String[], String[], int[], int, int)}.
      */
-    private int mTerminalFileDescriptor;
+    private int mTerminalFileDescriptor = -1;
+    private InputStream mTerminalInput;
+    private FileOutputStream mTerminalOutput;
 
     /** Set by the application for user identification of session, not by terminal. */
     public String mSessionName;
@@ -103,7 +107,7 @@ public final class TerminalSession extends TerminalOutput {
     public void updateSize(int columns, int rows) {
         if (mEmulator == null) {
             initializeEmulator(columns, rows);
-        } else {
+        } else if (isRunning()) {
             JNI.setPtyWindowSize(mTerminalFileDescriptor, rows, columns);
             mEmulator.resize(columns, rows);
         }
@@ -124,19 +128,43 @@ public final class TerminalSession extends TerminalOutput {
         mEmulator = new TerminalEmulator(this, columns, rows, mTranscriptRows, mClient);
 
         int[] processId = new int[1];
-        mTerminalFileDescriptor = JNI.createSubprocess(mShellPath, mCwd, mArgs, mEnv, processId, rows, columns);
+        try {
+            mTerminalFileDescriptor = JNI.createSubprocess(mShellPath, mCwd, mArgs, mEnv, processId, rows, columns);
+        } catch (RuntimeException error) {
+            mShellPid = -1;
+            mShellExitStatus = 126;
+            mClient.logStackTraceWithMessage(LOG_TAG, "Unable to start PTY", error);
+            mClient.onSessionFinished(this);
+            return;
+        }
         mShellPid = processId[0];
+        final int childPid = mShellPid;
+        try {
+            // Each stream owns its own dup; cleanup owns the original master exactly once.
+            mTerminalInput = new ParcelFileDescriptor.AutoCloseInputStream(
+                    ParcelFileDescriptor.fromFd(mTerminalFileDescriptor));
+            mTerminalOutput = new ParcelFileDescriptor.AutoCloseOutputStream(
+                    ParcelFileDescriptor.fromFd(mTerminalFileDescriptor));
+        } catch (IOException error) {
+            mClient.logStackTraceWithMessage(LOG_TAG, "Cannot attach PTY streams", error);
+            finishIfRunning();
+            new Thread(() -> {
+                int exit = JNI.waitFor(childPid);
+                mProcessReaped = true;
+                mMainThreadHandler.sendMessage(mMainThreadHandler.obtainMessage(MSG_PROCESS_EXITED, exit));
+            }, "TermSessionFailedStartupWaiter").start();
+            return;
+        }
 
-        final FileDescriptor terminalFileDescriptorWrapped = wrapFileDescriptor(mTerminalFileDescriptor, mClient);
-
-        new Thread("TermSessionInputReader[pid=" + mShellPid + "]") {
+        final Thread reader = new Thread("TermSessionInputReader[pid=" + mShellPid + "]") {
             @Override
             public void run() {
-                try (InputStream termIn = new FileInputStream(terminalFileDescriptorWrapped)) {
+                try (InputStream termIn = mTerminalInput) {
                     final byte[] buffer = new byte[4096];
                     while (true) {
                         int read = termIn.read(buffer);
                         if (read == -1) return;
+                        diagnosticBytesRead += read;
                         if (!mProcessToTerminalIOQueue.write(buffer, 0, read)) return;
                         mMainThreadHandler.sendEmptyMessage(MSG_NEW_INPUT);
                     }
@@ -144,13 +172,14 @@ public final class TerminalSession extends TerminalOutput {
                     // Ignore, just shutting down.
                 }
             }
-        }.start();
+        };
+        reader.start();
 
         new Thread("TermSessionOutputWriter[pid=" + mShellPid + "]") {
             @Override
             public void run() {
                 final byte[] buffer = new byte[4096];
-                try (FileOutputStream termOut = new FileOutputStream(terminalFileDescriptorWrapped)) {
+                try (FileOutputStream termOut = mTerminalOutput) {
                     while (true) {
                         int bytesToWrite = mTerminalToProcessIOQueue.read(buffer, true);
                         if (bytesToWrite == -1) return;
@@ -165,7 +194,14 @@ public final class TerminalSession extends TerminalOutput {
         new Thread("TermSessionWaiter[pid=" + mShellPid + "]") {
             @Override
             public void run() {
-                int processExitCode = JNI.waitFor(mShellPid);
+                int processExitCode = JNI.waitFor(childPid);
+                mProcessReaped = true;
+                // Let the reader enqueue the final output before the exit notification.
+                try {
+                    reader.join(1000);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                }
                 mMainThreadHandler.sendMessage(mMainThreadHandler.obtainMessage(MSG_PROCESS_EXITED, processExitCode));
             }
         }.start();
@@ -175,7 +211,15 @@ public final class TerminalSession extends TerminalOutput {
     /** Write data to the shell process. */
     @Override
     public void write(byte[] data, int offset, int count) {
-        if (mShellPid > 0) mTerminalToProcessIOQueue.write(data, offset, count);
+        tryWrite(data, offset, count);
+    }
+
+    @Override
+    public boolean tryWrite(byte[] data, int offset, int count) {
+        if (!isRunning()) return false;
+        if (mTerminalToProcessIOQueue.offer(data, offset, count)) return true;
+        mClient.onInputRejected(this);
+        return false;
     }
 
     /** Write the Unicode code point to the terminal encoded in UTF-8. */
@@ -230,13 +274,30 @@ public final class TerminalSession extends TerminalOutput {
         notifyScreenUpdate();
     }
 
-    /** Finish this terminal session by sending SIGKILL to the shell. */
-    public void finishIfRunning() {
-        if (isRunning()) {
+    /** Ask PRoot to reap its tracees, then bound shutdown time for an unresponsive child. */
+    public synchronized void finishIfRunning() {
+        if (mShellPid <= 0 || mFinishing || mProcessReaped) return;
+        mFinishing = true;
+        final int pid = mShellPid;
+        // PRoot handles SIGQUIT by killing tracees in all job-control process groups.
+        // SIGKILL alone bypasses that handler and can leave foreground/background jobs alive.
+        signalProcessGroup(pid, OsConstants.SIGQUIT);
+        mMainThreadHandler.postDelayed(() -> {
+            synchronized (TerminalSession.this) {
+                // waitpid may finish before final output reaches the main thread.
+                if (mShellPid == pid && !mProcessReaped) signalProcessGroup(pid, OsConstants.SIGKILL);
+            }
+        }, 1000);
+    }
+
+    private void signalProcessGroup(int pid, int signal) {
+        try {
+            Os.kill(-pid, signal);
+        } catch (ErrnoException groupError) {
             try {
-                Os.kill(mShellPid, OsConstants.SIGKILL);
-            } catch (ErrnoException e) {
-                mClient.logWarn(LOG_TAG, "Failed sending SIGKILL: " + e.getMessage());
+                Os.kill(pid, signal);
+            } catch (ErrnoException processError) {
+                mClient.logWarn(LOG_TAG, "Cannot signal terminal: " + processError.getMessage());
             }
         }
     }
@@ -251,7 +312,19 @@ public final class TerminalSession extends TerminalOutput {
         // Stop the reader and writer threads, and close the I/O streams
         mTerminalToProcessIOQueue.close();
         mProcessToTerminalIOQueue.close();
-        JNI.close(mTerminalFileDescriptor);
+        closeStream(mTerminalInput);
+        closeStream(mTerminalOutput);
+        if (mTerminalFileDescriptor >= 0) JNI.close(mTerminalFileDescriptor);
+        mTerminalFileDescriptor = -1;
+    }
+
+    private void closeStream(java.io.Closeable stream) {
+        if (stream == null) return;
+        try {
+            stream.close();
+        } catch (IOException error) {
+            mClient.logWarn(LOG_TAG, "Cannot close PTY stream: " + error.getMessage());
+        }
     }
 
     @Override
@@ -260,7 +333,7 @@ public final class TerminalSession extends TerminalOutput {
     }
 
     public synchronized boolean isRunning() {
-        return mShellPid != -1;
+        return mShellPid > 0 && !mProcessReaped;
     }
 
     /** Only valid if not {@link #isRunning()}. */
@@ -313,25 +386,6 @@ public final class TerminalSession extends TerminalOutput {
         return null;
     }
 
-    private static FileDescriptor wrapFileDescriptor(int fileDescriptor, TerminalSessionClient client) {
-        FileDescriptor result = new FileDescriptor();
-        try {
-            Field descriptorField;
-            try {
-                descriptorField = FileDescriptor.class.getDeclaredField("descriptor");
-            } catch (NoSuchFieldException e) {
-                // For desktop java:
-                descriptorField = FileDescriptor.class.getDeclaredField("fd");
-            }
-            descriptorField.setAccessible(true);
-            descriptorField.set(result, fileDescriptor);
-        } catch (NoSuchFieldException | IllegalAccessException | IllegalArgumentException e) {
-            client.logStackTraceWithMessage(LOG_TAG, "Error accessing FileDescriptor#descriptor private field", e);
-            System.exit(1);
-        }
-        return result;
-    }
-
     @SuppressLint("HandlerLeak")
     class MainThreadHandler extends Handler {
 
@@ -339,11 +393,15 @@ public final class TerminalSession extends TerminalOutput {
 
         @Override
         public void handleMessage(Message msg) {
-            int bytesRead = mProcessToTerminalIOQueue.read(mReceiveBuffer, false);
-            if (bytesRead > 0) {
-                mEmulator.append(mReceiveBuffer, bytesRead);
-                notifyScreenUpdate();
-            }
+            int bytesRead;
+            do {
+                bytesRead = mProcessToTerminalIOQueue.read(mReceiveBuffer, false);
+                if (bytesRead > 0) {
+                    mEmulator.append(mReceiveBuffer, bytesRead);
+                    diagnosticBytesParsed += bytesRead;
+                }
+            } while (msg.what == MSG_PROCESS_EXITED && bytesRead > 0);
+            notifyScreenUpdate();
 
             if (msg.what == MSG_PROCESS_EXITED) {
                 int exitCode = (Integer) msg.obj;

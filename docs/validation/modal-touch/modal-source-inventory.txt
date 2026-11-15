@@ -1,0 +1,41 @@
+app/src/main/java/com/oryn/terminal/MainActivity.kt:638:                    AlertDialog(
+app/src/main/java/com/oryn/terminal/MainActivity.kt:1656:        AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroCommandPalette.kt:137:        KlyroSheet(onDismissRequest = onDismiss,
+app/src/main/java/com/oryn/terminal/ui/KlyroCommandPalette.kt:411:            AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroCommandPalette.kt:456:            AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/FreezeReportsPane.kt:87:        AlertDialog(onDismissRequest = { deleteTarget = null }, title = { Text("Delete this diagnostic?") },
+app/src/main/java/com/oryn/terminal/ui/FreezeReportsPane.kt:109:            KlyroSheet(onDismissRequest = { FreezeRecorder.openReports.value = false }) {
+app/src/main/java/com/oryn/terminal/ui/FreezeReportsPane.kt:118:        AlertDialog(onDismissRequest = { FreezeRecorder.acknowledgeNotice(id) },
+app/src/main/java/com/oryn/terminal/ui/FreezeReportsPane.kt:152:    if (blockSeconds != 0) AlertDialog(onDismissRequest = { blockSeconds = 0 },
+app/src/main/java/com/oryn/terminal/ui/KlyroColorPickerDialog.kt:74:internal fun KlyroColorPickerDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroColorPickerDialog.kt:125:        if (!showAdvanced && pendingFavoriteDeletion == null) AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroColorPickerDialog.kt:380:            AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroColorPickerDialog.kt:481:            AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroWorkspaceSheet.kt:84:            AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroWorkspaceSheet.kt:118:        KlyroSheet(onDismissRequest = onDismiss,
+app/src/main/java/com/oryn/terminal/ui/KlyroWorkspaceSheet.kt:234:                                    DropdownMenu(
+app/src/main/java/com/oryn/terminal/ui/KlyroWorkspaceSheet.kt:396:            AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt:539:                DropdownMenu(
+app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt:1006:        AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt:1165:        AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt:1245:            KlyroRenameSessionDialog(
+app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt:1290:        AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt:1556:        AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt:1746:        Popup(
+app/src/main/java/com/oryn/terminal/ui/KlyroSettingsSheet.kt:178:        KlyroSheet(onDismissRequest = onDismiss, dismissEnabled = canDismissSheet) {
+app/src/main/java/com/oryn/terminal/ui/KlyroSettingsSheet.kt:742:            KlyroColorPickerDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroSettingsSheet.kt:749:            KlyroLicenseDialog("Hugeicons · MIT", "licenses/hugeicons-MIT.txt") {
+app/src/main/java/com/oryn/terminal/ui/KlyroSettingsSheet.kt:754:            KlyroLicenseDialog("JetBrains Mono · OFL 1.1", "fonts/OFL.txt") {
+app/src/main/java/com/oryn/terminal/ui/KlyroSessionSheets.kt:72:        KlyroSheet(onDismissRequest = onDismiss, dismissEnabled = !confirmClose) {
+app/src/main/java/com/oryn/terminal/ui/KlyroSessionSheets.kt:124:            AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroSessionSheets.kt:149:internal fun KlyroRenameSessionDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroSessionSheets.kt:161:        AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroSessionSheets.kt:214:        KlyroSheet(onDismissRequest = onBack) {
+app/src/main/java/com/oryn/terminal/ui/KlyroPluginsPage.kt:378:            AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroPluginsPage.kt:440:            AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroPluginsPage.kt:456:        AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroPluginsPage.kt:510:        AlertDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroUiComponents.kt:61:internal fun KlyroSheet(
+app/src/main/java/com/oryn/terminal/ui/KlyroUiComponents.kt:85:    ModalBottomSheet(
+app/src/main/java/com/oryn/terminal/ui/KlyroUiComponents.kt:211:internal fun KlyroLicenseDialog(
+app/src/main/java/com/oryn/terminal/ui/KlyroUiComponents.kt:223:    AlertDialog(

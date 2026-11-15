@@ -66,11 +66,16 @@ public class OrynPathsTest {
         assertTrue(paths.getTmp().getCanonicalPath().startsWith(base));
         assertTrue(paths.getProot().getParentFile().getCanonicalPath().startsWith(base));
         assertTrue(paths.getProotLibDir().getCanonicalPath().startsWith(base));
+        assertTrue(paths.getProotDependencyDir().getCanonicalPath().startsWith(base));
         assertTrue(paths.getProotLoader().getCanonicalPath().startsWith(base));
-        assertFalse(paths.getRoot().getAbsolutePath().contains("/data/data/com.termux/"));
+        // The JVM build itself may run in Termux; containment is relative to filesDir.
+        assertEquals(new File(files, "termux").getCanonicalFile(), paths.getRoot());
 
         assertTrue(new File(paths.getRoot(), "data/data/com.termux/files/usr").isDirectory());
         assertTrue(new File(paths.getRoot(), "data/data/com.termux/files/home").isDirectory());
+        File archives = new File(paths.getRoot(), "data/data/com.termux/cache/apt/archives/partial");
+        assertTrue(archives.isDirectory());
+        assertTrue(archives.getCanonicalPath().startsWith(base));
     }
 
 
@@ -85,10 +90,10 @@ public class OrynPathsTest {
         assertTrue(paths.getProot().createNewFile());
         paths.getProot().setExecutable(true, false);
         File loader = paths.getProotLoader();
-        assertTrue(loader.getParentFile().mkdirs());
+        assertTrue(loader.getParentFile().isDirectory() || loader.getParentFile().mkdirs());
         assertTrue(loader.createNewFile());
         loader.setExecutable(true, false);
-        assertTrue(new File(paths.getProotLibDir(), "libtalloc.so.2").createNewFile());
+        assertTrue(new File(paths.getProotDependencyDir(), "libtalloc.so.2").createNewFile());
         assertFalse(paths.isProotInstalled());
 
         assertTrue(new File(paths.getProotLibDir(), "libandroid-shmem.so").createNewFile());

@@ -4,6 +4,10 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Toast;
+import com.oryn.terminal.ui.ClipboardPastePolicy;
 import android.view.HapticFeedbackConstants;
 
 import androidx.annotation.NonNull;
@@ -14,86 +18,239 @@ import com.termux.terminal.TerminalSessionClient;
 import com.termux.view.TerminalView;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
+import com.oryn.terminal.OutputUpdateBatch;
 
 /** Bridges Termux's terminal engine callbacks to Oryn-owned UI and clipboard handling. */
 public final class OrynTerminalSessionClient implements TerminalSessionClient {
     public interface Listener {
         void onTitleChanged(String title);
-        void onSessionFinished(int exitStatus);
+        void onSessionFinished(com.termux.terminal.TerminalSession session, int exitStatus);
         void onShellPid(int pid);
+        void onNativePasteRequiresConfirmation(String text);
+        default void onOutputActivity() {}
     }
 
     private final Context context;
     private final Listener listener;
     private volatile TerminalView terminalView;
+    private volatile Runnable outputObserver;
+    private final AtomicBoolean pendingOutputRefresh = new AtomicBoolean(false);
+    // The PTY continues processing output while Android backgrounds the
+    // Activity. Only its UI work is paused to avoid an unbounded main queue.
+    private final AtomicBoolean uiActive = new AtomicBoolean(true);
+    private final AtomicBoolean outputReceivedWhilePaused = new AtomicBoolean(false);
+    private final AtomicBoolean disposed = new AtomicBoolean(false);
+    private volatile String latestTitle;
+    private final AtomicBoolean titleDirty = new AtomicBoolean(false);
+    private final OutputUpdateBatch titleUpdates;
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     public OrynTerminalSessionClient(Context context, Listener listener) {
         this.context = context.getApplicationContext();
         this.listener = listener;
+        titleUpdates = new OutputUpdateBatch(task -> uiHandler.postDelayed(task, 120L),
+                task -> uiHandler.removeCallbacks(task), ids -> {
+                    if (!disposed.get() && uiActive.get() && listener != null &&
+                            titleDirty.getAndSet(false)) {
+                        listener.onTitleChanged(latestTitle);
+                    }
+                });
     }
 
     public void attachView(@Nullable TerminalView view) {
-        terminalView = view;
+        if (!disposed.get()) terminalView = view;
+    }
+
+    /** Release only this pane's view, never a newer replacement view. */
+    public void detachViewIfCurrent(@NonNull TerminalView view) {
+        if (terminalView == view) terminalView = null;
+    }
+
+    /**
+     * Android pauses rendering, not the shell. Collapse background output
+     * into one screen update when the Activity resumes; never replay every
+     * output chunk to the UI thread. The emulator retains the actual bytes.
+     */
+    public void setUiActive(boolean active) {
+        if (disposed.get()) return;
+        uiActive.set(active);
+        if (active) {
+            if (titleDirty.get()) titleUpdates.mark(0L);
+            // Refresh only when output arrived during pause or a terminal
+            // view remains attached. Newly created views attach the current
+            // emulator buffer independently through TerminalView.
+            boolean deferred = outputReceivedWhilePaused.getAndSet(false);
+            if (deferred || terminalView != null) scheduleOutputRefresh();
+        }
+    }
+
+    private void scheduleOutputRefresh() {
+        if (disposed.get() || !uiActive.get()) return;
+        if (!pendingOutputRefresh.compareAndSet(false, true)) return;
+        // Cap native view refresh to ~30 fps under high-volume PTY output.
+        uiHandler.postDelayed(() -> {
+            pendingOutputRefresh.set(false);
+            if (disposed.get()) return;
+            if (!uiActive.get()) {
+                outputReceivedWhilePaused.set(true);
+                return;
+            }
+            if (listener != null) listener.onOutputActivity();
+            TerminalView view = terminalView;
+            if (view != null && view.isAttachedToWindow()) {
+                com.oryn.terminal.diagnostics.FreezeRecorder.INSTANCE.event(
+                    com.oryn.terminal.diagnostics.FreezeEvents.Code.VIEW_REFRESH, 0, 0);
+                com.termux.terminal.TerminalEmulator emulator = view.getCurrentSession() == null ? null : view.getCurrentSession().getEmulator();
+                if (emulator != null) com.oryn.terminal.diagnostics.FreezeRecorder.INSTANCE.event(
+                    com.oryn.terminal.diagnostics.FreezeEvents.Code.CURSOR, emulator.getCursorCol(), emulator.getCursorRow());
+                if (emulator != null) com.oryn.terminal.diagnostics.FreezeRecorder.INSTANCE.event(
+                    com.oryn.terminal.diagnostics.FreezeEvents.Code.SCROLLBACK, emulator.getScreen().getActiveTranscriptRows(), 0);
+                view.onScreenUpdated();
+            }
+            Runnable observer = outputObserver;
+            if (observer != null) observer.run();
+        }, 32L);
+    }
+
+    /** Drop stale UI work when the owning PTY tab is permanently closed. */
+    public void dispose() {
+        disposed.set(true);
+        titleUpdates.close();
+        terminalView = null;
+        outputObserver = null;
+        uiHandler.removeCallbacksAndMessages(null);
+        pendingOutputRefresh.set(false);
+        outputReceivedWhilePaused.set(false);
+    }
+
+    /** Observer belongs to the visible pane and is removed on disposal. */
+    public void setOutputObserver(@Nullable Runnable observer) {
+        if (!disposed.get()) outputObserver = observer;
     }
 
     @Override
     public void onTextChanged(@NonNull com.termux.terminal.TerminalSession session) {
-        TerminalView view = terminalView;
-        if (view != null) view.post(view::onScreenUpdated);
+        com.oryn.terminal.diagnostics.FreezeRecorder.INSTANCE.event(
+            com.oryn.terminal.diagnostics.FreezeEvents.Code.PTY_CALLBACK, session.getPid(), 0);
+        // No callbacks are queued while the Activity is paused. One update
+        // reads the latest emulator state upon resume, retaining every byte
+        // in the PTY's own buffer instead of replaying obsolete UI work.
+        if (disposed.get()) return;
+        if (!uiActive.get()) {
+            outputReceivedWhilePaused.set(true);
+            return;
+        }
+        scheduleOutputRefresh();
     }
 
     @Override
     public void onTitleChanged(@NonNull com.termux.terminal.TerminalSession session) {
-        if (listener != null) listener.onTitleChanged(session.getTitle());
+        if (disposed.get() || listener == null) return;
+        latestTitle = session.getTitle();
+        titleDirty.set(true);
+        if (uiActive.get()) titleUpdates.mark(0L);
     }
 
     @Override
     public void onSessionFinished(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
-        if (view != null) view.postInvalidate();
-        if (listener != null) listener.onSessionFinished(session.getExitStatus());
+        if (!disposed.get() && view != null) view.postInvalidate();
+        if (listener != null) {
+            int status = session.getExitStatus();
+            uiHandler.post(() -> {
+                if (!disposed.get()) listener.onSessionFinished(session, status);
+            });
+        }
+    }
+
+    /** A background tab is not the visible owner of its native terminal pane. */
+    private boolean isVisibleOwner(com.termux.terminal.TerminalSession session) {
+        TerminalView view = terminalView;
+        return view != null && view.isAttachedToWindow() && view.getCurrentSession() == session;
     }
 
     @Override
     public void onCopyTextToClipboard(@NonNull com.termux.terminal.TerminalSession session, String text) {
-        ClipboardManager clipboard = (ClipboardManager)
-                context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard != null) {
-            clipboard.setPrimaryClip(ClipData.newPlainText("Oryn Terminal", text));
-        }
+        if (disposed.get() || !ClipboardPastePolicy.canCopyFromTerminal(
+                text, uiActive.get(), session.isRunning())) return;
+        // OSC 52 can originate in an arbitrary shell program. Never let
+        // background output or stale callbacks write the system clipboard.
+        uiHandler.post(() -> {
+            if (disposed.get() || !ClipboardPastePolicy.canCopyFromTerminal(
+                    text, uiActive.get() && isVisibleOwner(session), session.isRunning())) return;
+            try {
+                ClipboardManager clipboard = (ClipboardManager)
+                        context.getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Klyro Shell", text));
+                }
+            } catch (SecurityException | IllegalStateException denied) {
+                Log.w("KlyroClipboard", "Clipboard write denied by Android");
+            }
+        });
     }
 
     @Override
     public void onPasteTextFromClipboard(@Nullable com.termux.terminal.TerminalSession session) {
-        if (session == null) return;
+        TerminalView source = terminalView;
+        if (session == null || disposed.get() || !uiActive.get() || source == null
+                || !source.isAttachedToWindow() || source.getCurrentSession() != session || !session.isRunning()) return;
         ClipboardManager clipboard = (ClipboardManager)
                 context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard == null || !clipboard.hasPrimaryClip()) return;
-        ClipData clip = clipboard.getPrimaryClip();
-        if (clip == null || clip.getItemCount() == 0) return;
-        CharSequence text = clip.getItemAt(0).coerceToText(context);
-        if (text == null) return;
-        byte[] bytes = text.toString().getBytes(StandardCharsets.UTF_8);
-        session.write(bytes, 0, bytes.length);
+        String pasted = com.oryn.terminal.ui.ClipboardTextReader.readPlainText(clipboard);
+        if (pasted == null) return;
+        if (!ClipboardPastePolicy.canPaste(pasted)) {
+            uiHandler.post(() ->
+                Toast.makeText(context, "Clipboard text is unsupported or too long.",
+                    Toast.LENGTH_SHORT).show());
+            return;
+        }
+        if (ClipboardPastePolicy.requiresConfirmation(pasted)) {
+            if (listener != null) {
+                uiHandler.post(() -> {
+                    if (!disposed.get() && session.isRunning()) {
+                        listener.onNativePasteRequiresConfirmation(pasted);
+                    }
+                });
+            }
+            return;
+        }
+        // Respect Bash DECSET 2004: native paste must not bypass bracketed mode.
+        if (!disposed.get() && session.isRunning() && session.getEmulator() != null) {
+            session.getEmulator().paste(pasted);
+        }
+    }
+
+    @Override
+    public void onInputRejected(@NonNull com.termux.terminal.TerminalSession session) {
+        uiHandler.post(() -> {
+            if (!disposed.get()) Toast.makeText(context,
+                    "Terminal input buffer full. Input was not sent; wait and retry.",
+                    Toast.LENGTH_LONG).show();
+        });
     }
 
     @Override
     public void onBell(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
-        if (view != null) view.post(() ->
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP));
+        if (!disposed.get() && view != null) view.post(() -> {
+            if (!disposed.get() && terminalView == view && view.isAttachedToWindow()) {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            }
+        });
     }
 
     @Override
     public void onColorsChanged(@NonNull com.termux.terminal.TerminalSession session) {
         TerminalView view = terminalView;
-        if (view != null) view.postInvalidate();
+        if (!disposed.get() && view != null) view.postInvalidate();
     }
 
     @Override
     public void onTerminalCursorStateChange(boolean state) {
         TerminalView view = terminalView;
-        if (view != null) view.postInvalidate();
+        if (!disposed.get() && view != null) view.postInvalidate();
     }
 
     @Override

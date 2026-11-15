@@ -1,0 +1,5 @@
+HUP_RESULT exited=14096 expected=14096 status=33024 signaled=0 signal=0 exit=129
+MEASURE native_stdout_lines=20000 bytes=128894 elapsed_s=0.058184 maxrss_kb=3848
+MEASURE fd_before=4 fd_after=4
+PASS: native PTY x20, tty stdin/out/err, exit status, EINTR wait and signal
+PASS: real JNI UTF-8 argv, env, emoji/spaced cwd and NUL rejection

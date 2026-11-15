@@ -4,17 +4,38 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// A semantic base changes only when the release scope changes. CI builds get
+// globally increasing numbers from this one workflow, including reruns.
+val baseKlyroVersionCode = 19
+val baseKlyroVersionName = "0.4.12-dev"
+val ciBuild = if (System.getenv("GITHUB_ACTIONS") == "true") {
+    val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+        ?: error("GitHub build missing a numeric GITHUB_RUN_NUMBER")
+    val attempt = System.getenv("GITHUB_RUN_ATTEMPT")?.toIntOrNull()
+        ?: error("GitHub build missing a numeric GITHUB_RUN_ATTEMPT")
+    require(run in 1..20_000_000 && attempt in 1..99) {
+        "GitHub build number out of Android versionCode range"
+    }
+    run to attempt
+} else null
+
+val finalVersionCode = baseKlyroVersionCode +
+    (ciBuild?.let { (run, attempt) -> run * 100 + attempt } ?: 0)
+val finalVersionName = baseKlyroVersionName +
+    (ciBuild?.let { (run, attempt) -> ".$run.$attempt" } ?: "")
+
 android {
     namespace = "com.oryn.terminal"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "com.oryn.terminal"
+        applicationId = "com.klyro.shell"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        targetSdk = 36
+        versionCode = finalVersionCode
+        versionName = finalVersionName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
             abiFilters += setOf("arm64-v8a")
@@ -28,6 +49,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Same information architecture and design system as release builds.
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -48,6 +72,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     externalNativeBuild {
@@ -58,16 +83,32 @@ android {
     }
 
     packaging {
+        jniLibs {
+            // Extract APK-native runtime files into the executable nativeLibraryDir.
+            useLegacyPackaging = true
+            // Preserve the ELF bytes verified by the generated runtime manifest.
+            keepDebugSymbols += "**/*.so"
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
 }
 
+
+// Read exactly the same values that Android Gradle Plugin packs into APKs.
+tasks.register("printKlyroVersion") {
+    doLast { println("$finalVersionCode|$finalVersionName") }
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.compose.ui:ui")
@@ -75,6 +116,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("com.termux.termux-app:terminal-view:0.118.0") {
         // JitPack publishes this transitive artifact under the repository group.
         exclude(group = "com.termux.termux-app", module = "terminal-emulator")
@@ -84,4 +126,15 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+}
+
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    testLogging {
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showCauses = true
+        showExceptions = true
+        showStackTraces = true
+    }
 }

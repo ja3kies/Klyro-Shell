@@ -1,0 +1,39 @@
+{
+  "source_commit": "7c730536d53991eb70d558babc0aa367cf244123",
+  "branch": "fix/modal-lifecycle-touch-freeze",
+  "ci_url": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43549053497",
+  "ci_status": "success",
+  "certificate_sha256": "01a7e05326237fdfa4cda54e75fb8164cbe12bbc964d36e2d9c2d1a8ef7e5c14",
+  "version": "0.4.11-dev",
+  "version_code": 18,
+  "permissions": [
+    "android.permission.INTERNET",
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+    "android.permission.POST_NOTIFICATIONS",
+    "com.klyro.shell.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+  ],
+  "permissions_changed": false,
+  "dependencies_changed": false,
+  "artifacts": {
+    "native-16kb-audit": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43549053497/artifacts/14095182857",
+    "klyro-shell-debug-key": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43549053497/artifacts/14094983242",
+    "p0-jvm-test-results": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43549053497/artifacts/14094897989",
+    "klyro-shell-tests": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43549053497/artifacts/14094743807",
+    "klyro-shell-debug": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43549053497/artifacts/14094693990",
+    "klyro-shell-tests-debug-key": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43549053497/artifacts/14094644090",
+    "android-ui-lint": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43549053497/artifacts/14094569115"
+  },
+  "apk": {
+    "app": {
+      "path": ".local/modal/final-ci-artifacts/klyro-shell-debug/klyro-shell-signed.apk",
+      "sha256": "7ec2b0ddda0b931a4cb6e78bb8360254be996d07f38dd20b25f4d1498d365bcf",
+      "bytes": 10614712
+    },
+    "instrumentation": {
+      "path": ".local/modal/final-ci-artifacts/klyro-shell-tests/klyro-shell-tests-signed.apk",
+      "sha256": "373e61c3904987125500ef2e9cc94335d7d21c80085c4cdb7b50e8b2442ad3f9",
+      "bytes": 1132955
+    }
+  }
+}

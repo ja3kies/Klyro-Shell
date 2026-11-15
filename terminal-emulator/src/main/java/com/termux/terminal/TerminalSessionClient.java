@@ -19,6 +19,11 @@ public interface TerminalSessionClient {
 
     void onBell(TerminalSession session);
 
+    default void onInputRejected(TerminalSession session) {
+        logWarn("TerminalSession", "Input queue full; input was not sent");
+        onBell(session);
+    }
+
     void onColorsChanged(TerminalSession session);
 
     void onTerminalCursorStateChange(boolean state);

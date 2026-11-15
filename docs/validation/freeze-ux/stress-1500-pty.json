@@ -1,0 +1,7 @@
+{
+  "scope": "exact StabilityScenario.COMMAND in disposable PRoot guest through real host PTY; NOT Android Activity/lifecycle",
+  "lines": 1500,
+  "end_marker": true,
+  "exit": 0,
+  "elapsed_seconds": 4.01207409799099
+}

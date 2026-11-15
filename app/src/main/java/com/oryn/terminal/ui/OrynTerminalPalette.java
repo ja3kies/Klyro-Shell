@@ -21,7 +21,7 @@ public final class OrynTerminalPalette {
         colors.setProperty("color5", "#8338EC");
         colors.setProperty("color6", "#00F0FF");
         colors.setProperty("color7", "#E2E8F0");
-        colors.setProperty("color8", "#64748B");
+        colors.setProperty("color8", "#94A3B8");
         colors.setProperty("color9", "#FF4D7D");
         colors.setProperty("color10", "#4DFF9A");
         colors.setProperty("color11", "#FEFFDF");

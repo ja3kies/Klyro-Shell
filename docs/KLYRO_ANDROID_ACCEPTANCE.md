@@ -1,0 +1,91 @@
+# Klyro Android acceptance — Hugeicons / UI / storage
+
+This is a manual acceptance checklist for the **APK built from the commit under test**.
+Passing Gradle, lint, and static checks is necessary but **not** sufficient.
+Do not label the delivery PASS until all required device checks are recorded.
+
+## Preparation
+
+- Install only the APK from the latest successful GitHub Actions run on the exact branch/commit.
+- Prefer updating with `adb install -r <apk>` so application data remains intact.
+- If Android reports `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, STOP. Do **not** uninstall;
+  that may destroy the current Klyro runtime and user files.
+- Record APK SHA-256, Android version, Klyro version, and commit SHA.
+- Use a throwaway workspace/session for destructive-action tests.
+
+## Mandatory device checklist (Pixel 9 / Android 17 where available)
+
+| ID | Steps | Expected result |
+| --- | --- | --- |
+| ICON-01 | Open Settings. Inspect Appearance, Keyboard, Storage, Privacy tiles. | Real consistent 24dp Hugeicons vectors (colors, keyboard, folder, shield), not Unicode glyphs, tinted with active Klyro accent. |
+| ICON-02 | Open Settings > Files & storage. Inspect Import a file / Export a file. | Distinct Hugeicons download/upload vectors; chevrons use vector assets. |
+| ICON-03 | Open Workspaces > menu of a test workspace. | Real vector three-dot overflow, pen for Rename, trash for Delete. Cancel delete; workspace remains intact. |
+| ICON-04 | Open a terminal > overflow menu. | All four actions (Command Palette, Workspaces, Settings, Home) have meaningful aligned Hugeicons leading icons. |
+| ICON-05 | Open session actions for a disposable session. | Rename, New terminal, Switch (when applicable), Close terminal and chevron use vectors. Cancelling Close preserves running shell. |
+| ICON-06 | Change light/dark and each monochrome theme. | Icons remain readable and follow accent/foreground/danger tokens; none are invisible or rendered as emoji. |
+| LIC-01 | Open Settings > About > Hugeicons licence. | The full MIT notice appears, scrolls and closes. |
+| SLIDER-01 | Open Appearance > Font size, drag slider to 9, 13.5 and 24 sp. | Thin rounded track, white circular handle, accurate half-sp steps, immediate text preview in the selected System/JetBrains Mono font, and terminal resize. |
+| SLIDER-02 | Close and reopen Settings after changing font size. | Chosen value persists and handle is correctly positioned; no oversized Material Expressive track. |
+| THEME-01 | Change Contrast / OLED / Paper modes; run `printf '\\033[31mANSI test\\033[0m\\n'` in a disposable Klyro shell. | Terminal text/background retain contrast; ANSI sample is grayscale in monochrome themes. |
+| SAF-01 | Authorize two distinct, permissible folders via Klyro setup-storage; restart the app; inspect Files & storage. | Both persisted SAF grants remain, and files can be imported to Klyro private storage. |
+| SAF-02 | Attempt choosing root Download with Android picker. | Android may block the root. App must explain its SAF limitation and never claim it mounted `~/storage/downloads`. |
+| ACCESS-01 | With TalkBack enabled, focus the tiles, menus, and slider. | Actions are announced by label, decorative icons are not read twice, interactive targets remain operable. |
+
+## Cross-page visual and content consistency checks
+
+| ID | Steps | Expected result |
+| --- | --- | --- |
+| VISUAL-01 | Launch home with a fresh or already verified environment. | No duplicate private-environment explanation. Runtime Status uses theme semantic error/warning colors and common spacing. |
+| VISUAL-02 | Open the terminal overflow and a workspace action overflow. | Both menus use identical sheet tokens, item heights, Hugeicons alignment, semantic colors and corners. |
+| VISUAL-03 | Open Settings, Command Palette, Workspaces, Sessions and Choose shell. | Bottom-sheet corners, drag handles, backgrounds and gutters match; back/dismiss controls work. |
+| VISUAL-04 | Open Settings > About > both licences. | Each licence uses the same modal appearance and scrollable content. Both close normally. |
+| VISUAL-05 | Open Workspaces with empty and populated projects. | The session count appears once. Current sessions have a status label; inactive sessions show a navigation chevron. |
+| VISUAL-06 | Open Command Palette and inspect an unavailable command. | A short purpose appears in its row; detailed requirements are shown only when tapped. Inserting any available command never auto-executes it. |
+| VISUAL-07 | In Appearance, open custom accent > Opacity & saved colors, save a throwaway color. | Exactly one Edit action and one Remove action per color; Edit returns to the picker and Remove requires confirmation. |
+| VISUAL-08 | Open Files & storage and Privacy; review visible copy. | No duplicate storage grant explanations. Download-root SAF limitation remains explicit; privacy warnings remain actionable. |
+| VISUAL-09 | Set Paper, Contrast, OLED and standard themes, then repeat menu and dialog checks. | Foreground, secondary, danger, backgrounds and icons use consistent accessible semantic palette roles. |
+| REG-01 | Rename a test session and workspace, switch tabs, open and dismiss all dialogs. | Existing session state and names persist; no unexpected process termination. |
+| REG-02 | Import a file from Android picker and export a harmless test file. | Both workflows remain functional after UI refactor. |
+
+## Adversarial screenshot acceptance — icon recognition and visual hierarchy
+
+For each screenshot, take both standard and monochrome theme captures.
+Compare semantic clarity, visual size, tappable targets and functional outcome.
+
+| ID | Steps | Required acceptance |
+| --- | --- | --- |
+| COMP-01 | Open Settings home from terminal. | Appearance uses a palette, Keyboard looks like actual keyboard keys (not robot), Storage a folder, Privacy a shield; all Bento tiles share identical surface/selection styling. |
+| COMP-02 | Inspect bottom Settings links. | Diagnostics uses an activity monitor, About uses information; never identical glyphs. |
+| COMP-03 | Enter Appearance after scrolling the Settings home page; go back and re-enter. | Settings back control and Appearance heading are visible at top each time; no inherited scroll offset. |
+| COMP-04 | Check monochrome theme options. | Contrast has contrast icon, OLED has moon, Paper has document; no Unicode placeholder characters. |
+| COMP-05 | Open terminal overflow. | Search icon for Command Palette, grid for Workspaces, gear for Settings, house for Home. Every label and icon match its destination. |
+| COMP-06 | Open workspace sheet with active and zero-session projects. | Project names align left, list scans naturally, 'Selected' text and repeated section count are removed; selected/current state remains clearly indicated. |
+| COMP-07 | Inspect terminal shortcut toolbar on idle and with output. | Paste and Clear keys display their **visible** labels under their icons; Select output is a separate menu action. Paste remains available after terminal output appears. Test that CLEAR clears output rather than shell input. |
+| COMP-08 | Open and dismiss all affected sheets (Settings, Appearance, Workspaces). | No clipping, white-on-white glyphs, giant unintentional whitespace or navigation regressions. Keyboard/taps and shell state remain functional. |
+| COMP-09 | Turn TalkBack on; focus each icon-only action and contrast option. | Each action announces a meaningful label exactly once; decorative icons are excluded; selections announced. |
+
+**PASS criteria:** Every check passes in the APK tied to the latest green CI commit.
+Screen recordings or screenshots must support visual observations; CI alone is insufficient.
+
+## Additional operational regression checks
+
+| ID | Steps | Expected result |
+| --- | --- | --- |
+| OPS-01 | In any terminal with output already visible, copy harmless text to Android clipboard, then press PASTE. | Clipboard text still pastes; output never hijacks PASTE into SELECT. Multiline clipboard prompts for confirmation. |
+| OPS-02 | Terminal menu > Select output after running `printf 'copy-me\\n'`. | Selection dialog opens without injecting commands. Copying selected text does not alter Bash state. |
+| OPS-03 | Configure two SAF folders; revoke access to one in Android settings; import from Settings. | Files from the remaining readable folder still import, skipped grants are counted, and no partial temporary file remains. Maximum 30 files total across folders. |
+| OPS-04 | In Appearance, select Contrast, OLED or Paper, then return to a colored theme. | Accent swatches are hidden when they cannot affect a monochrome palette; the previously chosen accent persists when the colored theme returns. |
+| OPS-05 | With TalkBack enabled, focus a workspace's folder/name row and its overflow. | Only one workspace-selection target is announced; overflow remains independently operable. |
+| OPS-06 | Open Files & storage > Export klyro-export.txt. | The app exports only the existing private `~/imports/klyro-export.txt`; an absent file returns a clear error and does not claim success. |
+
+## Results log
+
+Record each item as `PASS`, `FAIL`, or `NOT TESTED` with screenshot/log evidence.
+`NOT TESTED` blocks the overall release PASS. Preserve the last stable APK for rollback.
+
+### Known limitations
+
+- SAF does not provide Termux-equivalent POSIX access to `~/storage/downloads`.
+- CI validates vector resource references, code wiring, unit tests, lint, and APK
+  packaging; it cannot prove appearance, TalkBack behavior, or Android picker
+  behavior on a real device.

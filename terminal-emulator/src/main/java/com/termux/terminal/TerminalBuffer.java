@@ -37,6 +37,31 @@ public final class TerminalBuffer {
         blockSet(0, 0, columns, screenRows, ' ', TextStyle.NORMAL);
     }
 
+    public static final class TranscriptText {
+        public final String text;
+        public final boolean truncated;
+        TranscriptText(String text, boolean truncated) { this.text = text; this.truncated = truncated; }
+    }
+
+    /** Snapshot only a bounded suffix; never allocate the entire scrollback before trimming. */
+    public TranscriptText getTranscriptTail(int limit) {
+        if (limit <= 0) throw new IllegalArgumentException("Positive text limit required");
+        int first = mScreenRows - 1;
+        long units = 0;
+        while (first >= -mActiveTranscriptRows) {
+            units += mLines[externalToInternalRow(first)].getSpaceUsed() + 1L;
+            if (units >= limit) break;
+            first--;
+        }
+        first = Math.max(first, -mActiveTranscriptRows);
+        String text = getSelectedText(0, first, mColumns, mScreenRows - 1);
+        boolean truncated = first > -mActiveTranscriptRows || text.length() > limit;
+        int start = Math.max(0, text.length() - limit);
+        if (start > 0 && Character.isLowSurrogate(text.charAt(start)) &&
+                Character.isHighSurrogate(text.charAt(start - 1))) start++;
+        return new TranscriptText(text.substring(start), truncated);
+    }
+
     public String getTranscriptText() {
         return getSelectedText(0, -getActiveTranscriptRows(), mColumns, mScreenRows).trim();
     }

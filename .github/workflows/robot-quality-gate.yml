@@ -1,0 +1,66 @@
+name: Klyro robot quality gate
+
+on:
+  push:
+    branches: ['p1/**', 'integration/**']
+    paths:
+      - 'tools/**'
+      - 'scripts/klyro-qa*.sh'
+      - 'app/src/main/java/com/oryn/terminal/ui/**'
+      - 'app/src/main/java/com/oryn/terminal/MainActivity.kt'
+      - '.github/workflows/robot-quality-gate.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/**'
+      - 'scripts/klyro-qa*.sh'
+      - 'app/src/main/java/com/oryn/terminal/ui/**'
+      - '.github/workflows/robot-quality-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: klyro-robot-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-and-code-contracts:
+    name: Python robot and Kotlin-source contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Syntax and launchers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            tools/klyro_ui_robot.py \
+            tools/klyro_robot_report_audit.py \
+            tools/klyro_ux_report.py
+          bash -n scripts/klyro-qa.sh
+          bash -n scripts/klyro-qa-bootstrap.sh
+
+      - name: Run robot, UX and source contract regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tools -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/klyro-robot-unit-tests.log"
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: klyro-robot-unit-tests
+          path: ${{ runner.temp }}/klyro-robot-unit-tests.log
+          if-no-files-found: warn
+          retention-days: 14

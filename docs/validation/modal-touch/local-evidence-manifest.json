@@ -1,0 +1,122 @@
+{
+  "ModalBottomSheet.android.kt": {
+    "sha256": "e2b83a16e2323d8bec404bfa8fd3b3eb248aa5deda06f3d7ca5e91937486ef79",
+    "bytes": 24983
+  },
+  "ModalBottomSheet.kt": {
+    "sha256": "ec44be4e9c882b8c3545ac4ccd7828807d0a84e98f4283fd17365becd811ccf3",
+    "bytes": 19659
+  },
+  "adb-devices.txt": {
+    "sha256": "36f15c2fe32964a6fbe902e914a47739d4e6304b0d3e812bf08096ff0419b7ae",
+    "bytes": 26
+  },
+  "c1-build.log": {
+    "sha256": "dec612d7a1d2ca58fb3d42d0e4a541bbd18587c9494c9ce6929b440f5b4a9601",
+    "bytes": 4315
+  },
+  "c1-python-fixed.log": {
+    "sha256": "90fe8180f096b2da92d6eb66ca0b3b65a300045af4f7d0f4048a1923d328a633",
+    "bytes": 606
+  },
+  "c1-python.log": {
+    "sha256": "df96e6d8689a5a79fddf1c95172e4eb878e770141ec2d4b28725cf67fe8d127b",
+    "bytes": 427966
+  },
+  "c2-build.log": {
+    "sha256": "0bbe90246e3ed5b8ec1832121e785e34c23516662f1518c37a97fe5f7e901239",
+    "bytes": 4348
+  },
+  "c2-final-build.log": {
+    "sha256": "5005e3be705415e90d897aa4927b75dca1d7f5b5080aebf3a7e61b9b078409f5",
+    "bytes": 4389
+  },
+  "c3-build.log": {
+    "sha256": "085cfa22fab4414b43732590dc57e678909a50b880516a9acfa8dfe78ffdfab2",
+    "bytes": 6171
+  },
+  "c3-final-build.log": {
+    "sha256": "d933bc75c9bc2c53a470e8fdedf4472d9c15312f47274b3be949f058d8f452da",
+    "bytes": 4347
+  },
+  "c3-python-final.log": {
+    "sha256": "5420c24482c77da3bb1f4ed3bdbbaba3dc4518f52fd04ac94434952b3d5c2aeb",
+    "bytes": 606
+  },
+  "c3-python.log": {
+    "sha256": "5a838c518cccd458a9bd6b5a1ee86de26c19d1d9e30595bc160c920a0563c661",
+    "bytes": 97214
+  },
+  "final-build.log": {
+    "sha256": "370f46677b028fa4648191cd8fbed83661e92e782f7d8372a7003e934ceaa2c2",
+    "bytes": 4367
+  },
+  "final-ci-artifacts.json": {
+    "sha256": "24a932345e52d1b1e2e29ea0df860f9c9963aecb501b456ed565a131eb9c064e",
+    "bytes": 5029
+  },
+  "final-ci-run.json": {
+    "sha256": "f7057eb9ce80672e19c5e8d156039dee9f2471d9f8c32bae2083d2dbdbbed8f1",
+    "bytes": 4841
+  },
+  "final-ci.log": {
+    "sha256": "0f061ef577432e38dcc755c51b91298f7daf9afe396f321d626bc263020ade66",
+    "bytes": 377216
+  },
+  "final-python.log": {
+    "sha256": "49a251cee624a41c02c18f770de85ec6698a71173aad621345be3d71764e71f5",
+    "bytes": 607
+  },
+  "final-ui-compile.log": {
+    "sha256": "feeebc5b0145cdeaa433a7b7eacc4cc89d5ed0afeb837975f3517a9b1b760fce",
+    "bytes": 3381
+  },
+  "instrumentation-attempt.txt": {
+    "sha256": "edc4912a1aad745078e1f8e44cb6f421c0b66ee22cefd035a6a281f9016baeca",
+    "bytes": 32
+  },
+  "lint-fixture-compile.log": {
+    "sha256": "694fdd7a49a5482ce598825095190ed37bad47aa34f2439ebaba3a752dad2aad",
+    "bytes": 4077
+  },
+  "lint-fixture-final-compile.log": {
+    "sha256": "46c6a19b2fa5c29bd301c2191580ffba7cb04c84c1b30aa60edaa3e309ff67ce",
+    "bytes": 3381
+  },
+  "material3-1.3.1-sources.jar": {
+    "sha256": "f9271682793212c74ac38f98707814c3945d19d7939cb157e27e87b546367cc0",
+    "bytes": 508827
+  },
+  "modal-inventory.txt": {
+    "sha256": "cb409b618a2aba245008c93aed7452d92a49bc005f56796e45e332b6269465cc",
+    "bytes": 4292
+  },
+  "native-final.log": {
+    "sha256": "8e12c5fc4bca9659093422302f7f55344f91d69a46742f3cf4871262e8871a54",
+    "bytes": 336
+  },
+  "protected-files-changed.txt": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "protected-runtime-diff.txt": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "raw-app-badging.txt": {
+    "sha256": "90db68f9a05a35474af05981b9da3b4729a84f655c3e97c2ddb8a12de0ec9f8d",
+    "bytes": 5154
+  },
+  "robot-device-attempt.txt": {
+    "sha256": "8b71807e153ca151b7d77124817e8980ec6b4a3a396a1ae12f927a1e4c77cd67",
+    "bytes": 245
+  },
+  "signed-elf-audit.log": {
+    "sha256": "3dff728478483664662f3843bb3bf6a20ebd0ee767be40d2ffbf0d82ee111597",
+    "bytes": 886
+  },
+  "zipalign-check.txt": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  }
+}

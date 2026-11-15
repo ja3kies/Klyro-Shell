@@ -1,0 +1,2 @@
+HUP_RESULT exited=0 expected=15546 status=9 signaled=1 signal=9 exit=-1
+.local/p0/sighup-baseline/test.c:77: int main(void): assertion "exited == pid && ((WIFSIGNALED(status) && WTERMSIG(status) == SIGHUP) || (WIFEXITED(status) && WEXITSTATUS(status) == 128 + SIGHUP))" failed

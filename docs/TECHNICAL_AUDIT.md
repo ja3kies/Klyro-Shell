@@ -1,7 +1,7 @@
 # Technical audit — candidate terminal foundations
 
 **Date:** 2026-10-30  
-**Scope:** Oryn Terminal must install alongside stock Termux and own an independent app sandbox and userland.
+**Scope:** Klyro Shell must install alongside stock Termux and own an independent app sandbox and userland.
 
 ## Executive finding
 
@@ -55,7 +55,7 @@ Required:
 The Termux binaries expect `/data/data/com.termux/files/usr` and `/data/data/com.termux/files/home`. Chimera maps its own private app-local directories onto those paths inside proot. This is the mechanism that allows a different Android application ID to use the Termux-built userland without writing into the real Termux app's data.
 
 Required tests:
-- Confirm every bind source resolves inside Oryn's own private data directory.
+- Confirm every bind source resolves inside Klyro's own private data directory.
 - Confirm no operation creates, reads, or writes the actual Termux app's private data.
 - Validate absolute symlinks, relative symlinks, executable permissions, ELF interpreter paths, and shared-library loading.
 - Validate `pkg`/APT maintainer scripts and package upgrades under the mapped prefix.
@@ -95,14 +95,14 @@ The JNI symbol names must be updated together with Kotlin package/class renames 
 
 Repository: https://github.com/The412Banner/NewTermux
 
-Its README states that the main app installs as `com.termux` and asks users to uninstall an existing Termux before installing it. Its separate coexist demo uses `com.termux.demo`, but the README and installer explicitly state that this mode runs a harmless fake shell and does not execute real commands. That conflicts with Oryn's core coexistence and real-shell requirements.
+Its README states that the main app installs as `com.termux` and asks users to uninstall an existing Termux before installing it. Its separate coexist demo uses `com.termux.demo`, but the README and installer explicitly state that this mode runs a harmless fake shell and does not execute real commands. That conflicts with Klyro's core coexistence and real-shell requirements.
 
 ## Next verification gate
 
 Do not begin a broad UI rewrite yet. First validate Chimera's bootstrap and proot pipeline with a minimal ARM64 prototype:
 1. Rename the Android identity to `com.oryn.terminal` without touching the existing Termux installation.
 2. Build and install alongside Termux.
-3. Verify Oryn's private paths and confirm the real Termux directories remain untouched.
+3. Verify Klyro's private paths and confirm the real Termux directories remain untouched.
 4. Install a current, checksum-pinned Termux bootstrap.
 5. Run `bash`, `pkg update`, `pkg install git python openssh`, and a package upgrade.
 6. Reboot/background test multiple independent PTY sessions.
@@ -110,9 +110,9 @@ Do not begin a broad UI rewrite yet. First validate Chimera's bootstrap and proo
 Only after this gate passes should the UI be redesigned around the Neon Obsidian system.
 
 
-## Oryn implementation progress
+## Klyro implementation progress
 
-- Created a new Android app module using the Oryn namespace and application ID `com.oryn.terminal`.
+- Created a new Android app module using the Klyro namespace and application ID `com.oryn.terminal`.
 - Added a Jetpack Compose foundation screen using the Neon Obsidian palette.
 - Ported Chimera's JNI PTY process adapter into `com.oryn.terminal.core.PtyProcess` and renamed the native library/JNI symbols to `oryn_pty` / `com_oryn_terminal_core_PtyProcess`.
 - Added an ARM64-only NDK/CMake build configuration and a GitHub Actions debug-APK workflow.
@@ -122,10 +122,10 @@ Only after this gate passes should the UI be redesigned around the Neon Obsidian
 
 ## Step 4 implementation — bootstrap and private paths (2026-10-30)
 
-- Added `OrynPaths` as the single owner of the app-private Termux-compatible layout: `files/termux/usr`, `home`, `tmp`, and Oryn's private `bin/proot`.
-- The hardcoded Termux paths are represented only as **virtual destinations inside proot**. The bind sources are Oryn-owned directories; no code path intentionally accesses the installed Termux app's data.
+- Added `KlyroPaths` as the single owner of the app-private Termux-compatible layout: `files/termux/usr`, `home`, `tmp`, and Klyro's private `bin/proot`.
+- The hardcoded Termux paths are represented only as **virtual destinations inside proot**. The bind sources are Klyro-owned directories; no code path intentionally accesses the installed Termux app's data.
 - Added a bootstrap installer pinned to Termux `bootstrap-2026.10.25-r1+apt.android-7` ARM64, with the GitHub release asset SHA-256, HTTPS download limits, staging extraction, traversal checks, symlink validation, post-extraction checks, and interrupted-swap recovery.
-- The installer builds the future proot launch argv, including Android runtime mounts required by Termux binaries. It refuses to launch until Oryn's private proot binary exists.
+- The installer builds the future proot launch argv, including Android runtime mounts required by Termux binaries. It refuses to launch until Klyro's private proot binary exists.
 - Added JVM tests for the private path contract and virtual bind destinations; CI now runs `testDebugUnitTest` before assembling the APK.
 
 **Not yet verified on-device:** actual archive extraction/symlink behavior, ELF loading, proot execution, `bash`, `pkg update`, package installs, and coexistence with an installed Termux. The onboarding UI now invokes the bootstrap installer and then the proot runtime installer. Do not mark the environment operational until device checks pass.
@@ -134,8 +134,8 @@ Only after this gate passes should the UI be redesigned around the Neon Obsidian
 ## Step 5 implementation — PTY-backed Bash session engine (2026-10-30)
 
 - Added `TerminalSession`: owns one PTY process, streams UTF-8 output, writes terminal input, supports resize, and shuts down with SIGTERM followed by SIGKILL escalation.
-- Added `TerminalSessionManager`: creates Bash sessions only when the Oryn-owned bootstrap and Oryn-owned proot binary are present. It refuses to fall back to the installed Termux app or Android's system shell.
-- Host-side writable environment variables point only to Oryn's private `filesDir/termux` directories. Termux compatibility paths remain virtual destinations inside proot.
+- Added `TerminalSessionManager`: creates Bash sessions only when the Klyro-owned bootstrap and Klyro-owned proot binary are present. It refuses to fall back to the installed Termux app or Android's system shell.
+- Host-side writable environment variables point only to Klyro's private `filesDir/termux` directories. Termux compatibility paths remain virtual destinations inside proot.
 - Updated native signal delivery to target the PTY process group, so child jobs are included when a session is closed.
 - Ensured the extracted Termux prefix contains the `tmp` directory referenced by the login environment.
 - Added a JVM test for the host environment's path isolation.
@@ -149,8 +149,8 @@ Only after this gate passes should the UI be redesigned around the Neon Obsidian
 - Runtime package versions are pinned: `proot 5.1.107.101`, `libtalloc 2.5.0`, and `libandroid-shmem 0.7`.
 - CI extracts the ARM64 executable, both shared-library dependencies, and the unbundled proot loader. It includes the package copyright files when present and generates a SHA-256 manifest.
 - CI confirms the executable is AArch64 and reports its dynamic dependencies: `libtalloc.so.2` and `libandroid-shmem.so`.
-- Added `ProotRuntimeInstaller`: verifies each packaged asset, stages it under Oryn's private storage, applies executable permissions, and activates the runtime with rollback.
-- The loader is installed inside Oryn's private Termux-compatible prefix. The proot host process receives `LD_LIBRARY_PATH` pointing to Oryn's private library directory.
+- Added `ProotRuntimeInstaller`: verifies each packaged asset, stages it under Klyro's private storage, applies executable permissions, and activates the runtime with rollback.
+- The loader is installed inside Klyro's private Termux-compatible prefix. The proot host process receives `LD_LIBRARY_PATH` pointing to Klyro's private library directory.
 - Onboarding now installs the bootstrap first, then the proot runtime. Bash remains unavailable until both are present.
 - Added JVM tests for complete runtime readiness and private library-path isolation.
 
@@ -161,10 +161,10 @@ Only after this gate passes should the UI be redesigned around the Neon Obsidian
 
 ## Security patch — OSC 52 clipboard writes (2026-10-30)
 
-- Vendored the Termux `terminal-emulator` module from upstream tag `v0.118.0` into `terminal-emulator/` and switched Oryn to that local module while retaining the upstream `terminal-view` UI.
-- Disabled the parser's OSC 52 clipboard-write handler. Untrusted terminal output can no longer reach Oryn's Android clipboard callback through OSC 52.
+- Vendored the Termux `terminal-emulator` module from upstream tag `v0.118.0` into `terminal-emulator/` and switched Klyro to that local module while retaining the upstream `terminal-view` UI.
+- Disabled the parser's OSC 52 clipboard-write handler. Untrusted terminal output can no longer reach Klyro's Android clipboard callback through OSC 52.
 - Manual selection copy remains wired through `terminal-view`; the app callback was deliberately not disabled.
-- Added `testOrynBlocksOsc52ClipboardWrites` to the upstream OSC test suite with a harmless Base64 marker.
+- Added `testKlyroBlocksOsc52ClipboardWrites` to the upstream OSC test suite with a harmless Base64 marker.
 - Preserved the upstream license in `terminal-emulator/LICENSE.md` and recorded provenance in `terminal-emulator/UPSTREAM.md`.
 
 **Validation status:** source patch and regression test are committed. CI run must pass before considering the integration build-verified. Physical-device checks are still required to confirm both OSC 52 blocking and manual selection copy on Android. This patch does not change the installed Termux app or its data.

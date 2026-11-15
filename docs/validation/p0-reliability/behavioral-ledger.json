@@ -1,0 +1,758 @@
+{
+  "1": [
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "outputDuringPublicationIsNotLost",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "publicationFailureCannotWedgeNextBurst",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "closedTabCannotPublish",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "finalChunkAfterFlushGetsItsOwnTrailingUpdate",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "deadlineDoesNotPublishEarly",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "removalDoesNotScheduleAnExtraTimerForNewTab",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "tenThousandChunksAreOneUiPublication",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "tabsAreDeduplicatedAndIndependent",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "finalChunkBeforeDeadlineIsIncluded",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.OutputUpdateBatchTest",
+      "test": "disposeCancelsAndRejectsFutureUiWork",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.OutputUpdateBatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.OutputBoundsTest",
+      "test": "combiningFloodCannotGrowACellWithoutBound",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.OutputBoundsTest",
+      "test": "saturatedHistorySelectionIsBoundedAndKeepsNewestOutput",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.OutputBoundsTest",
+      "test": "normalGraphemeAndFollowingColumnsSurviveTheBound",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.OutputBoundsTest",
+      "test": "smallTranscriptMatchesExistingExtraction",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.OutputBoundsTest",
+      "test": "selectionBoundaryNeverSplitsUtf16Pair",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.OutputBoundsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    }
+  ],
+  "2": [
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "emptyPromptRetainsItsCursor",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "missingEmulatorIsUnavailable",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "clearIsIsolatedAndResizeStillWorks",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "pendingCsiRemainsTheProgramsSequence",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "programOutputThatImitatesPromptCannotTriggerReplay",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "partialCommandNeverDisappears",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "splitUtf8Survives",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "missingSessionIsUnavailable",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "pendingOscTitleSurvives",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "saturatedHistoryPurgesOnlyHistory",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "wrappedLongCommandKeepsAllRows",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "cursorInsideEditBufferIsRetained",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "alternateScreenIsRefused",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "multilineInputIsNotReconstructed",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.TerminalDisplayActionsTest",
+      "test": "bracketedPasteModeAndStdinAreUntouched",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.TerminalDisplayActionsTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    }
+  ],
+  "3": [
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "linkedPrefixCannotBeReplaced",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "parentTraversalArchivePath",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "interruptedArchiveFailsWithoutActivatingPrefix",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "nulArchiveName",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "windowsAbsoluteArchivePath",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "previousBackupIsNeverOverwritten",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "ordinaryDataDoesNotBecomeExecutable",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "absoluteArchivePath",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "unicodeExecutableRetainsNameAndMode",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "linkedStagingCannotBeActivated",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "stageFileIsRejectedBeforeMovingUserData",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "backslashTraversalArchivePath",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "missingStagingLeavesOriginalAndNoBackupRename",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "danglingBackupCannotBeUsedForRecovery",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.termux.BootstrapAdversarialTest",
+      "test": "existingSymlinkParentCannotEscapeExtraction",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.termux.BootstrapAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    }
+  ],
+  "4": [
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "foreignTemporaryFileCannotBeMoved",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "cancelledBeforeReadWritesNothing",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "revokedReadPropagatesFailure",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "inaccessibleExportNeverCreatesAnOutput",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "unicodeAndHiddenNamesRoundTripThroughCommit",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "emptyDocumentCopiesZeroBytes",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "diskFullPropagatesFailure",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "cancelledAfterReadCannotWriteChunk",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "preexistingUserFileSurvivesImport",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "symlinkTemporaryCannotBeCommitted",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "stalledProviderCannotSpinForever",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "shortReadsPreserveBinaryData",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "simultaneousImportsNeverOverwriteEachOther",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "interruptedWorkerRetainsInterruptStatus",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.FileTransferAdversarialTest",
+      "test": "missingTemporaryDoesNotCreateTarget",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.FileTransferAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    }
+  ],
+  "5": [
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "confirmedSnapshotDoesNotReadNewClipboard",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "lastTabClosedRejects",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "invisibleNewlineCannotReachConsumer",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "liveTargetReceivesExactPayload",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "switchedTabNeverReceivesOldPanePaste",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "byteLimitAppliesBeforeConsumer",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "closedTargetCannotInvokeDestructiveCallback",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "malformedUtf16CannotReachConsumer",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "ansiControlCannotReachConsumer",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "negativeIdRejects",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "endedSessionRejectsPaste",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "staleCloseCannotSelectCurrentTab",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "longIdsAreNotTruncated",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "absentExpectedIdRejects",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "invalidZeroIdRejects",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    }
+  ],
+  "6": [
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "renamedTargetKeepsItsIdentity",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "refusedInputIsNotReportedAsInserted",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.oryn.terminal.ui.SessionDispatchTest",
+      "test": "equalTitlesCannotAuthorizeDifferentSessionIds",
+      "status": "PASS",
+      "evidence": "app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/app/build/test-results/testDebugUnitTest/TEST-com.oryn.terminal.ui.SessionDispatchTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.PasteDeliveryTest",
+      "test": "testNormalModeDoesNotAddTerminalControls",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.PasteDeliveryTest",
+      "test": "testMultibyteInputIsOneExactTransaction",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.PasteDeliveryTest",
+      "test": "testUnsafeEscapesRemainFiltered",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.PasteDeliveryTest",
+      "test": "testBracketEnvelopeIsOneAcceptedWrite",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.PasteDeliveryTest",
+      "test": "testRejectedPasteDoesNotLeaveHalfEnvelope",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.PasteDeliveryTest",
+      "test": "testCrLfNormalizationIsUnchanged",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.PasteDeliveryTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.QueueAdversarialTest",
+      "test": "invalidRangeCannotModifyQueue",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.QueueAdversarialTest",
+      "test": "ringWrapKeepsUnreadInputInOrder",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.QueueAdversarialTest",
+      "test": "closeReleasesWaitingConsumer",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.QueueAdversarialTest",
+      "test": "oversizedOfferRejectsWithoutPartialPrefix",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.QueueAdversarialTest",
+      "test": "closeReleasesBlockedStdoutProducer",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.QueueAdversarialTest",
+      "test": "fourMegabyteOutputIsLosslessUnderBackpressure",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.QueueAdversarialTest",
+      "test": "closedQueueRejectsAllNewInputButDrainsFinalBytes",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.QueueAdversarialTest",
+      "test": "concurrentOffersAreWholeTransactions",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    },
+    {
+      "class": "com.termux.terminal.QueueAdversarialTest",
+      "test": "rejectionDoesNotDestroyPendingInput",
+      "status": "PASS",
+      "evidence": "terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_evidence": ".local/p0/ci-jvm/terminal-emulator/build/test-results/testDebugUnitTest/TEST-com.termux.terminal.QueueAdversarialTest.xml",
+      "ci_run": "https://github.com/ja3kies/Klyro-Shell/actions/runs/43409919352"
+    }
+  ]
+}
