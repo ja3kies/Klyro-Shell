@@ -84,7 +84,8 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn("KlyroSheet(onDismissRequest = onDismiss,", self.palette)
 
     def test_appearance_sections_can_scroll(self):
-        self.assertIn('rows = if (section == "home") 6 else 7', self.settings)
+        self.assertIn('.weight(1f, fill = false)', self.settings)
+        self.assertIn('.verticalScroll(remember(section) { ScrollState(0) })', self.settings)
 
     def test_appearance_font_reset_is_accessible(self):
         self.assertIn("onClick = onResetFont,", self.settings)
