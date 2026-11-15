@@ -1533,57 +1533,6 @@ private fun OrynTerminalApp(
                             Text("$progress%", color = ui.accent, fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace)
                         }
-                        // An existing PTY remains reachable while runtime checks fail or run.
-                        if (homeAction != KlyroHomeAction.NONE) {
-                            Button(
-                                onClick = onLaunch,
-                                enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = ui.accent,
-                                    contentColor = ui.onAccent
-                                ),
-                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                            ) {
-                                if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
-                                    androidx.compose.material3.CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
-                                        color = ui.onAccent)
-                                    Spacer(Modifier.width(10.dp))
-                                }
-                                Text(
-                                    if (homeAction == KlyroHomeAction.RESUME_SESSION)
-                                        "Return to terminal"
-                                    else if (launchingBash) "Starting Bash…"
-                                    else "Launch Bash",
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                        if (!runtimeVerified) {
-                            Button(
-                                onClick = onInstall,
-                                enabled = !installing && !verifyingRuntime &&
-                                    (!hasLiveSessions || runtimeInstalled),
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (hasRunningSessions) ui.tile else ui.accent,
-                                    contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
-                                    disabledContainerColor = ui.tile,
-                                    disabledContentColor = ui.muted
-                                ),
-                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                            ) {
-                                Text(
-                                    KlyroHomeSetupLabelPolicy.label(
-                                        installing, verifyingRuntime, runtimeInstalled,
-                                        bootstrapInstalled, technicalErrorDetails != null,
-                                        hasLiveSessions
-                                    ),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
                         if (KlyroRuntimeRepairPolicy.canOffer(
                                 runtimeInstalled, runtimeVerified,
                                 technicalErrorDetails != null, hasLiveSessions,
@@ -1605,6 +1554,66 @@ private fun OrynTerminalApp(
                         }
                     }
                 }
+
+                // Primary actions live outside diagnostics so they are discoverable
+                // without interpreting the runtime status card.
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                                    // An existing PTY remains reachable while runtime checks fail or run.
+                                    if (homeAction != KlyroHomeAction.NONE) {
+                                        Button(
+                                            onClick = onLaunch,
+                                            enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
+                                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = ui.accent,
+                                                contentColor = ui.onAccent
+                                            ),
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                        ) {
+                                            if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
+                                                androidx.compose.material3.CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                                                    color = ui.onAccent)
+                                                Spacer(Modifier.width(10.dp))
+                                            }
+                                            Text(
+                                                if (homeAction == KlyroHomeAction.RESUME_SESSION)
+                                                    "Return to terminal"
+                                                else if (launchingBash) "Starting Bash…"
+                                                else "Launch Bash",
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+                                    if (!runtimeVerified) {
+                                        Button(
+                                            onClick = onInstall,
+                                            enabled = !installing && !verifyingRuntime &&
+                                                (!hasLiveSessions || runtimeInstalled),
+                                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (hasRunningSessions) ui.tile else ui.accent,
+                                                contentColor = if (hasRunningSessions) ui.foreground else ui.onAccent,
+                                                disabledContainerColor = ui.tile,
+                                                disabledContentColor = ui.muted
+                                            ),
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                        ) {
+                                            Text(
+                                                KlyroHomeSetupLabelPolicy.label(
+                                                    installing, verifyingRuntime, runtimeInstalled,
+                                                    bootstrapInstalled, technicalErrorDetails != null,
+                                                    hasLiveSessions
+                                                ),
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxWidth()
                         .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
