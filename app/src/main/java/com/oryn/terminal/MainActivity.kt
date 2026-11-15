@@ -1642,23 +1642,24 @@ private fun OrynTerminalApp(
                     style = MaterialTheme.typography.labelSmall,
                     letterSpacing = .6.sp
                 )
-                Surface(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    color = ui.tile,
-                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth()
-                                .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
-                                .semantics { contentDescription = "Plugins" },
-                            color = Color.Transparent,
-                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    Surface(
+                        modifier = Modifier.weight(1f).heightIn(min = 142.dp)
+                            .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
+                            .semantics { contentDescription = "Plugins" },
+                        color = ui.tile,
+                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
                                     modifier = Modifier.size(40.dp).background(
@@ -1667,34 +1668,35 @@ private fun OrynTerminalApp(
                                 ) {
                                     Icon(painterResource(R.drawable.ic_klyro_plugins),
                                         contentDescription = null, tint = ui.accent,
-                                        modifier = Modifier.size(21.dp))
+                                        modifier = Modifier.size(22.dp))
                                 }
-                                Column(Modifier.weight(1f)) {
-                                    Text("Plugins", color = ui.foreground, fontWeight = FontWeight.SemiBold)
-                                    Text("Extend the command palette", color = ui.muted,
-                                        fontSize = 12.sp)
-                                }
+                                Spacer(Modifier.weight(1f))
                                 Icon(painterResource(R.drawable.hugeicons_chevron_right),
                                     contentDescription = null, tint = ui.muted,
-                                    modifier = Modifier.size(20.dp))
+                                    modifier = Modifier.size(18.dp))
                             }
+                            Text("Plugins", color = ui.foreground,
+                                fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                            Text("Extend your commands", color = ui.muted,
+                                fontSize = 12.sp, lineHeight = 17.sp)
                         }
-
-                        Spacer(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(ui.key))
-
-                        Surface(
-                            modifier = Modifier.fillMaxWidth()
-                                .clickable(role = Role.Button,
-                                    onClickLabel = "Open Klyro settings") {
-                                    showHomeSettings = true
-                                }.semantics { contentDescription = "Settings" },
-                            color = Color.Transparent,
-                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f).heightIn(min = 142.dp)
+                            .clickable(role = Role.Button,
+                                onClickLabel = "Open Klyro settings") {
+                                showHomeSettings = true
+                            }.semantics { contentDescription = "Settings" },
+                        color = ui.tile,
+                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
                                     modifier = Modifier.size(40.dp).background(
@@ -1703,19 +1705,18 @@ private fun OrynTerminalApp(
                                 ) {
                                     Icon(painterResource(R.drawable.hugeicons_settings_01),
                                         contentDescription = null, tint = ui.muted,
-                                        modifier = Modifier.size(21.dp))
+                                        modifier = Modifier.size(22.dp))
                                 }
-                                Column(Modifier.weight(1f)) {
-                                    Text("Settings", color = ui.foreground, fontWeight = FontWeight.SemiBold)
-                                    Text("Appearance, keyboard, storage & diagnostics",
-                                        color = ui.muted, fontSize = 12.sp)
-                                }
+                                Spacer(Modifier.weight(1f))
                                 Icon(painterResource(R.drawable.hugeicons_chevron_right),
                                     contentDescription = null, tint = ui.muted,
-                                    modifier = Modifier.size(20.dp))
+                                    modifier = Modifier.size(18.dp))
                             }
+                            Text("Settings", color = ui.foreground,
+                                fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                            Text("Look & behavior", color = ui.muted,
+                                fontSize = 12.sp, lineHeight = 17.sp)
                         }
-
                     }
                 }
 
