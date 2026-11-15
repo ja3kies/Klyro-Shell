@@ -41,8 +41,8 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private final AtomicBoolean uiActive = new AtomicBoolean(true);
     private final AtomicBoolean outputReceivedWhilePaused = new AtomicBoolean(false);
     private final AtomicBoolean disposed = new AtomicBoolean(false);
-    private String latestTitle;
-    private boolean titleDirty;
+    private volatile String latestTitle;
+    private final AtomicBoolean titleDirty = new AtomicBoolean(false);
     private final OutputUpdateBatch titleUpdates;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
@@ -51,8 +51,8 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         this.listener = listener;
         titleUpdates = new OutputUpdateBatch(task -> uiHandler.postDelayed(task, 120L),
                 task -> uiHandler.removeCallbacks(task), ids -> {
-                    if (!disposed.get() && uiActive.get() && listener != null) {
-                        titleDirty = false;
+                    if (!disposed.get() && uiActive.get() && listener != null &&
+                            titleDirty.getAndSet(false)) {
                         listener.onTitleChanged(latestTitle);
                     }
                 });
@@ -76,7 +76,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         if (disposed.get()) return;
         uiActive.set(active);
         if (active) {
-            if (titleDirty) titleUpdates.mark(0L);
+            if (titleDirty.get()) titleUpdates.mark(0L);
             // Refresh only when output arrived during pause or a terminal
             // view remains attached. Newly created views attach the current
             // emulator buffer independently through TerminalView.
@@ -88,7 +88,8 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     private void scheduleOutputRefresh() {
         if (disposed.get() || !uiActive.get()) return;
         if (!pendingOutputRefresh.compareAndSet(false, true)) return;
-        uiHandler.post(() -> {
+        // Cap native view refresh to ~30 fps under high-volume PTY output.
+        uiHandler.postDelayed(() -> {
             pendingOutputRefresh.set(false);
             if (disposed.get()) return;
             if (!uiActive.get()) {
@@ -109,7 +110,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
             }
             Runnable observer = outputObserver;
             if (observer != null) observer.run();
-        });
+        }, 32L);
     }
 
     /** Drop stale UI work when the owning PTY tab is permanently closed. */
@@ -147,7 +148,7 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
     public void onTitleChanged(@NonNull com.termux.terminal.TerminalSession session) {
         if (disposed.get() || listener == null) return;
         latestTitle = session.getTitle();
-        titleDirty = true;
+        titleDirty.set(true);
         if (uiActive.get()) titleUpdates.mark(0L);
     }
 
