@@ -45,6 +45,21 @@ class SettingsAnrContracts(unittest.TestCase):
         self.assertIn('withContext(Dispatchers.IO)', section)
         self.assertIn('KlyroBrandChoice.selected(context)', section)
 
+    def test_home_launcher_identity_binder_lookup_runs_on_io(self):
+        section = MAIN.split('var homeLauncherIcon by remember(context)', 1)[1].split(
+            '// Settings must remain available', 1)[0]
+        self.assertIn('LaunchedEffect(showHomeSettings)', section)
+        self.assertIn('withContext(Dispatchers.IO)', section)
+        self.assertIn('KlyroBrandChoice.selected(context)', section)
+
+    def test_launcher_switch_package_manager_calls_run_on_io(self):
+        section = SETTINGS.split('.clickable(enabled = brandSelectionReady', 1)[1].split(
+            '}.semantics {', 1)[0]
+        self.assertIn('scope.launch', section)
+        self.assertIn('withContext(Dispatchers.IO)', section)
+        self.assertIn('KlyroBrandChoice.isVerifiedSelection(context, choice)', section)
+        self.assertIn('KlyroBrandChoice.select(context, choice)', section)
+
     def test_storage_permission_binder_call_not_in_compose_files_case(self):
         prefix = SETTINGS.split('val context = LocalContext.current', 1)[1].split(
             'val version =', 1)[0]
