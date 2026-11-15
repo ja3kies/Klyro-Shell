@@ -19,7 +19,7 @@ public class KlyroWorkspaceCatalogTest {
         assertEquals(1, catalog.entries().size());
         assertEquals(KlyroWorkspaceCatalog.GENERAL, catalog.activeId());
 
-        String malformed = "12345678-1234-1234---------------------";
+        String malformed = "12345678-1234-1234-1234-123456789ab-";
         String name = java.util.Base64.getUrlEncoder().withoutPadding()
                 .encodeToString("Ghost".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         KlyroWorkspaceCatalog invalid = KlyroWorkspaceCatalog.decode(
