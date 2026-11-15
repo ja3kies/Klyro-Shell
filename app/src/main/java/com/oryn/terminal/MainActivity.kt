@@ -1524,7 +1524,8 @@ private fun OrynTerminalApp(
                                 TextButton(
                                     onClick = onRecheck,
                                     enabled = !verifyingRuntime && !installing,
-                                    modifier = Modifier.heightIn(min = 48.dp),
+                                    modifier = Modifier.heightIn(min = 48.dp)
+                                        .semantics { contentDescription = "Recheck environment" },
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                                 ) {
                                     Text(
@@ -1710,15 +1711,14 @@ private fun OrynTerminalApp(
                         }
                     }
                 }
-
-                }
                 Text(
                     "Private shell · Local workspace · No cloud account required",
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                     color = ui.muted,
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
+                }
             }
         }
     }
@@ -1820,7 +1820,7 @@ private fun KlyroHomeNavigationTile(
     val ui = LocalKlyroColors.current
     val iconColor = if (emphasized) ui.accent else ui.muted
     Surface(
-        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 142.dp),
+        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 124.dp),
         color = ui.tile,
         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
     ) {
