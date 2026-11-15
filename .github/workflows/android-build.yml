@@ -121,6 +121,22 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Verify APK versions advance on a rerun and a new run
+        shell: bash
+        run: |
+          set -euo pipefail
+          first="$(GITHUB_RUN_NUMBER=100 GITHUB_RUN_ATTEMPT=1 gradle -q :app:printKlyroVersion)"
+          retry="$(GITHUB_RUN_NUMBER=100 GITHUB_RUN_ATTEMPT=2 gradle -q :app:printKlyroVersion)"
+          next="$(GITHUB_RUN_NUMBER=101 GITHUB_RUN_ATTEMPT=1 gradle -q :app:printKlyroVersion)"
+          first_code="${first%%|*}"
+          retry_code="${retry%%|*}"
+          next_code="${next%%|*}"
+          [[ "$first_code" =~ ^[0-9]+$ && "$retry_code" =~ ^[0-9]+$ && "$next_code" =~ ^[0-9]+$ ]]
+          (( first_code < retry_code && retry_code < next_code ))
+          [[ "$first" == "10020|0.4.12-dev.100.1" ]]
+          [[ "$retry" == "10021|0.4.12-dev.100.2" ]]
+          [[ "$next" == "10120|0.4.12-dev.101.1" ]]
+
       - name: Android lint and UI accessibility checks
         run: gradle :app:lintDebug
 
@@ -143,8 +159,13 @@ jobs:
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
           PACKAGE_INFO="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
+          EXPECTED_VERSION="$(gradle -q :app:printKlyroVersion)"
+          IFS='|' read -r EXPECTED_CODE EXPECTED_NAME <<< "$EXPECTED_VERSION"
+          [[ "$EXPECTED_CODE" =~ ^[0-9]+$ && -n "$EXPECTED_NAME" ]]
           printf '%s\n' "$PACKAGE_INFO" | grep -E "^package:|^sdkVersion:|^targetSdkVersion:"
           grep -Fq "name='com.klyro.shell'" <<< "$PACKAGE_INFO"
+          grep -Fq "versionCode='$EXPECTED_CODE'" <<< "$PACKAGE_INFO"
+          grep -Fq "versionName='$EXPECTED_NAME'" <<< "$PACKAGE_INFO"
           grep -Fq "targetSdkVersion:'36'" <<< "$PACKAGE_INFO"
           APK_ENTRIES="$(unzip -Z1 "$APK")"
           for entry in \
