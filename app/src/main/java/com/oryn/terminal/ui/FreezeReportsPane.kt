@@ -150,6 +150,8 @@ private fun Context.klyroActivityOrNull(): com.oryn.terminal.MainActivity? {
 @Composable
 private fun FreezeStabilityControls(onStabilityTestStarted: () -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var launching by remember { mutableStateOf(false) }
     var blockSeconds by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf("") }
     var strictIo by remember { mutableStateOf(false) }
@@ -161,11 +163,25 @@ private fun FreezeStabilityControls(onStabilityTestStarted: () -> Unit) {
     Text("Stability test (diagnostic build)", style = MaterialTheme.typography.titleMedium)
     Text("Creates a separate Bash tab, waits 3 seconds, then prints 1,500 lines. Go Home, open another app, then return. Keep the test tab until you inspect the END marker; close it explicitly when finished. Existing sessions receive no commands.")
     TextButton(onClick = {
-        val result = context.klyroActivityOrNull()?.startDiagnosticStress()
-        feedback = result?.message ?: "Activity unavailable; test not started."
-        if (result?.started == true) onStabilityTestStarted()
-    }) { Text("Start isolated 1,500-line test") }
-    Text(feedback)
+        // Guard at touch dispatch too: recomposition can lag behind rapid taps.
+        if (launching) return@TextButton
+        launching = true
+        feedback = "Preparing isolated test…"
+        scope.launch {
+            try {
+                val result = context.klyroActivityOrNull()?.startDiagnosticStress()
+                feedback = result?.message ?: "Activity unavailable; test not started."
+                if (result?.started == true) onStabilityTestStarted()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                feedback = "Test not started (${error.javaClass.simpleName}); try again."
+            } finally { launching = false }
+        }
+    }, enabled = !launching) {
+        Text(if (launching) "Preparing…" else "Start isolated 1,500-line test")
+    }
+    Text(feedback, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
     val hasSessions = com.oryn.terminal.KlyroSessionRuntime.sessions.hasLiveSessions()
     Text("Artificial UI stalls can trigger Android termination. Available only with no open sessions.")
     Row {
