@@ -4,6 +4,15 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ClipboardPastePolicyTest {
+    @Test public void remoteClipboardWriteRequiresVisibleSessionAndSafeText() {
+        assertTrue(ClipboardPastePolicy.canCopyFromTerminal("safe copy", true, true));
+        assertTrue(ClipboardPastePolicy.canCopyFromTerminal("line 1\nline 2", true, true));
+        assertFalse(ClipboardPastePolicy.canCopyFromTerminal("secret", false, true));
+        assertFalse(ClipboardPastePolicy.canCopyFromTerminal("secret", true, false));
+        assertFalse(ClipboardPastePolicy.canCopyFromTerminal("escape \u001B[31m", true, true));
+        assertFalse(ClipboardPastePolicy.canCopyFromTerminal("a".repeat(65537), true, true));
+    }
+
     @Test public void rejectsMissingOversizedAndNulText() {
         assertFalse(ClipboardPastePolicy.canPaste(null));
         assertFalse(ClipboardPastePolicy.canPaste(""));
