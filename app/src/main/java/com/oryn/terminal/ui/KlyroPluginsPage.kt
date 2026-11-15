@@ -50,6 +50,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.oryn.terminal.core.KlyroTextLimit
 import com.oryn.terminal.R
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginRecord
@@ -183,7 +184,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 confirmedBundledId = null
                 confirmedImportId = null
                 confirmedRemovalId = null
-                error = failure.message?.let(::truncatePluginError) ?: "Action failed"
+                error = failure.message?.let { KlyroTextLimit.takeCodePoints(it, 160) } ?: "Action failed"
             }
         }
     }
@@ -205,7 +206,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         if (pendingImportUri != selectedUri) return@LaunchedEffect
         result.onSuccess { pendingImport = it; error = null }
             .onFailure { failure ->
-                error = failure.message?.let(::truncatePluginError) ?: "Invalid plugin manifest"
+                error = failure.message?.let { KlyroTextLimit.takeCodePoints(it, 160) } ?: "Invalid plugin manifest"
                 pendingImportUri = null
             }
     }
@@ -571,7 +572,3 @@ private fun PluginHeading(plugin: KlyroPluginRecord, detail: String) {
         }
     }
 }
-
-/** Keep the last visible character intact when an error contains emoji. */
-private fun truncatePluginError(message: String): String =
-    message.substring(0, message.offsetByCodePoints(0, minOf(160, message.codePointCount(0, message.length))))
