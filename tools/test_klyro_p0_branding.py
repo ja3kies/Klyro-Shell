@@ -47,10 +47,13 @@ class LauncherAliasHardening(unittest.TestCase):
         self.assertLess(self.source.index("if (!switched)"), self.source.index(".edit().putString(KEY, choice).apply()"))
 
     def test_old_alias_is_not_repeatedly_switched(self):
-        self.assertIn("if (!KlyroBrandChoice.isVerifiedSelection(context, choice))", self.settings)
+        self.assertIn("KlyroBrandChoice.isVerifiedSelection(context, choice) ||", self.settings)
+        self.assertIn("enabled = brandReady && !brandUpdating", self.settings)
 
     def test_ui_reflects_actual_os_state_after_attempt(self):
-        self.assertIn("selectedBrand = KlyroBrandChoice.selected(context)", self.settings)
+        self.assertIn("succeeded to KlyroBrandChoice.selected(context)", self.settings)
+        self.assertIn("selectedBrand = actual", self.settings)
+        self.assertIn("withContext(Dispatchers.IO)", self.settings)
 
     def test_device_launcher_refresh_limitation_is_explained(self):
         self.assertIn("launchers refresh home-screen icons", self.settings)
