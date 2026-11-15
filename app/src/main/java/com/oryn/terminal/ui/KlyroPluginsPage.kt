@@ -98,7 +98,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     }
     LaunchedEffect(manager, registryRevision) {
         registryLoading = true
-        installed = withContext(Dispatchers.IO) { manager.installed() }
+        val result = withContext(Dispatchers.IO) { runCatching { manager.installed() } }
+        result.onSuccess { installed = it }
+            .onFailure { error = it.message?.let { message ->
+                KlyroTextLimit.takeCodePoints(message, 160)
+            } ?: "Unable to load local plugins" }
         registryLoading = false
     }
     // Recover after rotation if the old Activity's confirmed commit never
@@ -192,7 +196,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         }
     }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null && !previewBusy && !mutationBusy && !confirmedMutationPending) {
+        if (uri != null && !registryLoading && !previewBusy && !mutationBusy && !confirmedMutationPending) {
             pendingImport = null
             error = null
             pendingImportUri = uri.toString()
