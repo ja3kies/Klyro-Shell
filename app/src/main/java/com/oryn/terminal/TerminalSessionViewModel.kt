@@ -116,6 +116,17 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
 
     fun hasLiveSessions(): Boolean = tabs.isNotEmpty()
 
+    /** Process-service hook; no Activity is retained and no terminal text is exposed. */
+    private var runningPtyInventoryListener: (() -> Unit)? = null
+
+    fun setRunningPtyInventoryListener(listener: (() -> Unit)?) {
+        runningPtyInventoryListener = listener
+    }
+
+    private fun notifyRunningPtyInventoryChanged() {
+        runningPtyInventoryListener?.invoke()
+    }
+
     /** Include new tabs awaiting their first terminal size; PID is still 0 then. */
     fun runningPtyCount(): Int = tabs.count {
         it.exitStatus == null && (it.session.isRunning() || it.session.getPid() == 0)
@@ -170,6 +181,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         selectTab(tabId)
         sessionStatus = "Starting private Bash session…"
         sessionFailureMessage = null
+        notifyRunningPtyInventoryChanged()
     }
 
     fun selectTab(id: Long) {
@@ -221,6 +233,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             tabs.getOrNull(index.coerceAtMost(tabs.lastIndex))?.let { selectTab(it.id) }
         }
         updateDiagnosticSession()
+        notifyRunningPtyInventoryChanged()
     }
 
     fun closeSession() {
@@ -264,6 +277,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
             sessionFailureMessage = exitMessage(exitStatus)
             sessionStatus = "Shell finished; output retained for inspection."
         }
+        notifyRunningPtyInventoryChanged()
     }
 
     // Legacy interface compatibility; normal sessions use listenerFor(tabId)
@@ -290,6 +304,7 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
     }
 
     override fun onCleared() {
+        setRunningPtyInventoryListener(null)
         publishPendingOutput.close()
         super.onCleared()
     }
