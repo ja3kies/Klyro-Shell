@@ -24,7 +24,8 @@ class HomePixelBannerContract(unittest.TestCase):
 
     def test_animation_stops_when_system_reduces_motion(self):
         cover = HOME.split('private fun KlyroHomePixelCover(', 1)[1]
-        self.assertIn('LocalMotionDurationScale.current.scaleFactor > 0f', cover)
+        self.assertIn('Settings.Global.ANIMATOR_DURATION_SCALE', cover)
+        self.assertIn('if (motionEnabled)', cover)
         self.assertIn('rememberInfiniteTransition(label = "Klyro night stars")', cover)
         self.assertIn('Canvas(Modifier.fillMaxSize())', cover)
         self.assertIn('Image(', cover)
