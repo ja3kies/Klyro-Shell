@@ -1926,10 +1926,11 @@ private fun KlyroHomePixelCover(height: androidx.compose.ui.unit.Dp, screenChrom
                 ),
                 label = "Star shimmer"
             )
+            val starColor = LocalKlyroColors.current.accent
             Canvas(Modifier.fillMaxSize()) {
                 val unitX = size.width / 320f
                 val unitY = size.height / 153f
-                val lit = LocalKlyroColors.current.accent.copy(alpha = shimmer * .55f)
+                val lit = starColor.copy(alpha = shimmer * .55f)
                 for ((x, y) in listOf(44f to 30f, 124f to 17f, 217f to 38f, 287f to 22f)) {
                     drawRect(
                         color = lit,
