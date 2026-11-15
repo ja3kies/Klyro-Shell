@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -1480,7 +1481,12 @@ private fun OrynTerminalApp(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    if (badge.severity == KlyroRuntimeBadgeSeverity.READY) "✓" else "!",
+                                    when (badge.severity) {
+                                        KlyroRuntimeBadgeSeverity.READY -> "✓"
+                                        KlyroRuntimeBadgeSeverity.NEUTRAL -> "·"
+                                        else -> "!"
+                                    },
+                                    modifier = Modifier.clearAndSetSemantics { },
                                     color = stateColor, fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -1630,7 +1636,11 @@ private fun OrynTerminalApp(
                                 modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                             ) {
-                                Text("Recheck environment", color = ui.accent, fontSize = 12.sp)
+                                Text(
+                                    "Recheck environment",
+                                    color = if (verifyingRuntime || installing) ui.muted else ui.accent,
+                                    fontSize = 12.sp
+                                )
                             }
                         }
                     }
