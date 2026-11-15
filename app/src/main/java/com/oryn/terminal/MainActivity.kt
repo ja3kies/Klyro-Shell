@@ -52,6 +52,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
@@ -1519,7 +1520,7 @@ private fun OrynTerminalApp(
                         if (homeAction != KlyroHomeAction.NONE) {
                             Button(
                                 onClick = onLaunch,
-                                enabled = homeAction != KlyroHomeAction.LAUNCH_BASH || !launchingBash,
+                                enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = ui.accent,
@@ -1527,7 +1528,7 @@ private fun OrynTerminalApp(
                                 ),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
-                                if (launchingBash && homeAction == KlyroHomeAction.LAUNCH_BASH) {
+                                if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
                                     androidx.compose.material3.CircularProgressIndicator(
                                         modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
                                         color = ui.onAccent)

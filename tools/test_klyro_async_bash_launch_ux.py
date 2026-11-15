@@ -58,7 +58,7 @@ class AsyncBashLaunchUX(unittest.TestCase):
     def test_home_button_shows_progress_without_disabling_resume(self):
         self.assertIn("launchingBash = bashLaunchInProgress", MAIN)
         self.assertIn("launchingBash: Boolean", MAIN)
-        self.assertIn("homeAction != KlyroHomeAction.LAUNCH_BASH || !launchingBash", MAIN)
+        self.assertIn("homeAction != KlyroHomeAction.START_BASH || !launchingBash", MAIN)
         self.assertIn('"Starting Bash…"', MAIN)
         self.assertIn("homeAction == KlyroHomeAction.RESUME_SESSION", MAIN)
 
