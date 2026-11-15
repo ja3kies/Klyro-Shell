@@ -41,6 +41,10 @@ class HomePixelBannerContract(unittest.TestCase):
         self.assertLess(home.index('stateLabel,'),
                         home.index('title = "Plugins"'))
 
+    def test_status_bar_icons_remain_visible_in_light_theme(self):
+        self.assertIn('LaunchedEffect(homeVisible, darkChrome, screenChrome)', HOME)
+        self.assertIn('isAppearanceLightStatusBars = !homeVisible && !darkChrome', HOME)
+
     def test_small_height_loses_art_before_it_loses_actions(self):
         self.assertIn('screenHeightDp < 660', HOME)
         self.assertIn('80.dp else 194.dp', HOME)
