@@ -8,7 +8,8 @@ P=(ROOT/"KlyroPluginsPage.kt").read_text()
 class WorkspaceUXClosure(unittest.TestCase):
  def test_workspace_switch_resets_scroll_and_stale_menu(self):
   self.assertIn('LaunchedEffect(selectedId) { workspaceScroll.scrollTo(0) }',W)
-  self.assertIn('Modifier.verticalScroll(workspaceScroll)',W)
+  self.assertIn('.verticalScroll(workspaceScroll)',W)
+  self.assertIn('.weight(1f, fill = false)',W)
   self.assertIn('entries.none { it.id == menuId }',W)
  def test_editor_cannot_erase_draft_by_tapping_new(self):
   self.assertIn('enabled = editorId == null && entries.size',W)
