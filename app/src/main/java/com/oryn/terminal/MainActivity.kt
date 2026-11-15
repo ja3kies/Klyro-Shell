@@ -1305,6 +1305,14 @@ private fun OrynTerminalApp(
     val compactHomeHeight = LocalConfiguration.current.screenHeightDp < 660
     val bannerHeight = if (compactHomeHeight) 148.dp else 256.dp
     val bannerSpace = if (compactHomeHeight) 80.dp else 194.dp
+    // The cover is dark in every theme, so its status-bar icons must stay light.
+    // Restore normal light-theme icons when navigating away from Home.
+    LaunchedEffect(homeVisible, darkChrome, screenChrome) {
+        (context as? ComponentActivity)?.let { activity ->
+            WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+                .isAppearanceLightStatusBars = !homeVisible && !darkChrome
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(screenChrome)) {
         if (homeVisible) {
