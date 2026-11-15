@@ -164,15 +164,21 @@ public final class OrynTerminalSessionClient implements TerminalSessionClient {
         }
     }
 
+    /** A background tab is not the visible owner of its native terminal pane. */
+    private boolean isVisibleOwner(com.termux.terminal.TerminalSession session) {
+        TerminalView view = terminalView;
+        return view != null && view.isAttachedToWindow() && view.getCurrentSession() == session;
+    }
+
     @Override
     public void onCopyTextToClipboard(@NonNull com.termux.terminal.TerminalSession session, String text) {
         if (disposed.get() || !ClipboardPastePolicy.canCopyFromTerminal(
-                text, uiActive.get(), session.isRunning())) return;
+                text, uiActive.get() && isVisibleOwner(session), session.isRunning())) return;
         // OSC 52 can originate in an arbitrary shell program. Never let
         // background output or stale callbacks write the system clipboard.
         uiHandler.post(() -> {
             if (disposed.get() || !ClipboardPastePolicy.canCopyFromTerminal(
-                    text, uiActive.get(), session.isRunning())) return;
+                    text, uiActive.get() && isVisibleOwner(session), session.isRunning())) return;
             try {
                 ClipboardManager clipboard = (ClipboardManager)
                         context.getSystemService(Context.CLIPBOARD_SERVICE);
