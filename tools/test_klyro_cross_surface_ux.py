@@ -109,8 +109,9 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn(".weight(1f, fill = false)", settings)
         self.assertIn(".verticalScroll(remember(section) { ScrollState(0) })", settings)
         self.assertIn("heightIn(max = 260.dp)", settings)
-        self.assertIn("rows = entries.size + projectTabs.size", spaces)
-        self.assertIn("editing = editorId != null", spaces)
+        self.assertIn(".verticalScroll(workspaceScroll)", spaces)
+        self.assertIn(".weight(1f, fill = false)", spaces)
+        self.assertIn("dismissEnabled = editorId == null", spaces)
         self.assertIn("val bentoMinHeight = 86.dp", design)
         self.assertIn("val minTouch = 48.dp", design)
 
