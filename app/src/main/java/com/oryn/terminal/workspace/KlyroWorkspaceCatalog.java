@@ -1,6 +1,9 @@
 package com.oryn.terminal.workspace;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.CharacterCodingException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -47,7 +50,8 @@ public final class KlyroWorkspaceCatalog {
             int point = value.codePointAt(i);
             i += Character.charCount(point);
             int type = Character.getType(point);
-            if (Character.isISOControl(point) || type == Character.FORMAT ||
+            if ((point >= Character.MIN_SURROGATE && point <= Character.MAX_SURROGATE) ||
+                    Character.isISOControl(point) || type == Character.FORMAT ||
                     type == Character.LINE_SEPARATOR || type == Character.PARAGRAPH_SEPARATOR)
                 continue;
             if (result.length() + Character.charCount(point) > MAX_NAME_CHARS) break;
@@ -123,14 +127,18 @@ public final class KlyroWorkspaceCatalog {
                 int separator = lines[i].indexOf('\t');
                 if (separator < 1) continue;
                 String id = lines[i].substring(0, separator);
-                if (!id.matches("[0-9a-fA-F-]{36}") || catalog.contains(id)) continue;
+                if (!id.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+                        || catalog.contains(id)) continue;
                 try {
                     byte[] raw = Base64.getUrlDecoder().decode(lines[i].substring(separator + 1));
                     if (raw.length > 128) continue;
-                    String name = new String(raw, StandardCharsets.UTF_8);
+                    String name = StandardCharsets.UTF_8.newDecoder()
+                            .onMalformedInput(CodingErrorAction.REPORT)
+                            .onUnmappableCharacter(CodingErrorAction.REPORT)
+                            .decode(ByteBuffer.wrap(raw)).toString();
                     if (catalog.nameAvailable(name, null) && name.equals(cleanName(name)))
                         catalog.entries.add(new Entry(id, name));
-                } catch (IllegalArgumentException ignored) {
+                } catch (IllegalArgumentException | CharacterCodingException ignored) {
                     // Bad or partially written preferences must not break startup.
                 }
             }
