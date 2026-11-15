@@ -33,6 +33,7 @@ SOURCE_ANCHORS = {
     "Impl: SettingsRowLink": (SETTINGS, "fun SettingsRowLink("),
     "Impl: KlyroSheet": (ROOT + "ui/KlyroUiComponents.kt", "internal fun KlyroSheet("),
     "Impl: KlyroActionRow": (ROOT + "ui/KlyroUiComponents.kt", "internal fun KlyroActionRow("),
+    "Impl: KlyroHomeNavigationTile": (MAIN, "private fun KlyroHomeNavigationTile("),
     "Diagnostics: Recheck environment": (SETTINGS, "onClick = onRecheckEnvironment"),
     "Custom accent (+)": (SETTINGS, 'onClickLabel = "Choose custom accent"'),
 }
@@ -85,6 +86,8 @@ def related_code_for(action, source_root):
         names = ("Impl: SettingsBentoTile", "Impl: KlyroSheet")
     elif action in ("Navigate: Diagnostics", "Navigate: About"):
         names = ("Impl: SettingsRowLink", "Impl: KlyroActionRow", "Impl: KlyroSheet")
+    elif action == "Navigate: Plugins":
+        names = ("Impl: KlyroHomeNavigationTile",)
     elif action in ("Navigate: Settings", "Close settings"):
         names = ("Impl: KlyroSheet",)
     else:
