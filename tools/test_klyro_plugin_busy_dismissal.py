@@ -11,7 +11,7 @@ class PluginOperationUXContract(unittest.TestCase):
         self.assertIn("if (mutationBusy || confirmedMutationPending) return", CODE)
         self.assertIn("BackHandler { navigateBack() }", CODE)
         self.assertIn("onClick = ::navigateBack,\n                enabled = !mutationBusy && !confirmedMutationPending,", CODE)
-        self.assertIn("enabled = !mutationBusy && !confirmedMutationPending, role = Role.Tab,", CODE)
+        self.assertIn("enabled = !registryLoading && !mutationBusy && !confirmedMutationPending, role = Role.Tab,", CODE)
 
     def test_every_confirmation_cannot_dismiss_during_mutation(self):
         self.assertIn("if (!mutationBusy && !confirmedMutationPending) {", CODE)

@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oryn.terminal.R
+import com.oryn.terminal.core.KlyroTextLimit
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginRecord
 import kotlinx.coroutines.Dispatchers
@@ -68,8 +69,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var mutationBusy by remember { mutableStateOf(false) }
     var previewBusy by remember { mutableStateOf(false) }
-    var installed by remember { mutableStateOf(manager.installed()) }
-    var page by rememberSaveable { mutableStateOf(if (installed.isEmpty()) "explore" else "installed") }
+    var installed by remember { mutableStateOf(emptyList<KlyroPluginRecord>()) }
+    var registryLoading by remember { mutableStateOf(true) }
+    var pageInitialized by rememberSaveable { mutableStateOf(false) }
+    var page by rememberSaveable { mutableStateOf("installed") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var removeId by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingImport by remember { mutableStateOf<KlyroPluginRecord?>(null) }
@@ -95,7 +98,13 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         onDispose { stopObserving() }
     }
     LaunchedEffect(manager, registryRevision) {
+        registryLoading = true
         installed = withContext(Dispatchers.IO) { manager.installed() }
+        if (!pageInitialized) {
+            page = if (installed.isEmpty()) "explore" else "installed"
+            pageInitialized = true
+        }
+        registryLoading = false
     }
     // Recover after rotation if the old Activity's confirmed commit never
     // reports completion (e.g. its coroutine failed after destruction).
@@ -183,7 +192,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 confirmedBundledId = null
                 confirmedImportId = null
                 confirmedRemovalId = null
-                error = failure.message?.take(160) ?: "Action failed"
+                error = failure.message?.let { KlyroTextLimit.takeCodePoints(it, 160) } ?: "Action failed"
             }
         }
     }
@@ -205,7 +214,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         if (pendingImportUri != selectedUri) return@LaunchedEffect
         result.onSuccess { pendingImport = it; error = null }
             .onFailure { failure ->
-                error = failure.message?.take(160) ?: "Invalid plugin manifest"
+                error = failure.message?.let { KlyroTextLimit.takeCodePoints(it, 160) } ?: "Invalid plugin manifest"
                 pendingImportUri = null
             }
     }
@@ -249,8 +258,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 Surface(
                     modifier = Modifier.weight(1f)
                         .heightIn(min = KlyroUiMetrics.minTouch)
-                        .clickable(
-                            enabled = !mutationBusy && !confirmedMutationPending, role = Role.Tab,
+                            .clickable(
+                                enabled = !registryLoading && !mutationBusy && !confirmedMutationPending, role = Role.Tab,
                             onClickLabel = "Show $label"
                         ) {
                             page = id
@@ -268,12 +277,13 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             }
         }
+        if (registryLoading) KlyroInlineNotice("Loading local plugins…")
         if (mutationBusy || confirmedMutationPending) {
             KlyroInlineNotice("Updating local plugins…")
         }
         error?.let { KlyroInlineNotice(it, isError = true) }
         if (page == "installed") {
-            if (installed.isEmpty()) {
+            if (installed.isEmpty() && !registryLoading) {
                 KlyroEmptyState(
                     title = "Nothing installed yet",
                     detail = "Explore curated packs or import a local JSON manifest.",
@@ -300,10 +310,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                                 onCheckedChange = { checked ->
                                     applyChange({ manager.setEnabled(plugin.id, checked) })
                                 },
-                                enabled = !mutationBusy && !confirmedMutationPending)
+                                enabled = !registryLoading && !mutationBusy && !confirmedMutationPending)
                             TextButton(
                                 onClick = { error = null; removeId = plugin.id },
-                                enabled = !mutationBusy && !confirmedMutationPending,
+                                enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                             ) {
                                 Text("Remove", color = colors.danger)
@@ -326,7 +336,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("Bundled · Offline", color = colors.muted, fontSize = 12.sp)
                             Button(
-                                enabled = !isInstalled && !mutationBusy && !confirmedMutationPending,
+                                enabled = !isInstalled && !registryLoading && !mutationBusy && !confirmedMutationPending,
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
                                     error = null
@@ -358,7 +368,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                                 "text/plain", "application/octet-stream"
                             ))
                         },
-                        enabled = !previewBusy && !mutationBusy && !confirmedMutationPending &&
+                        enabled = !registryLoading && !previewBusy && !mutationBusy && !confirmedMutationPending &&
                             pendingImportUri == null,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)

@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.core.KlyroTextLimit
+
 /**
  * Bounded, user-owned custom accent favourites.
  *
@@ -16,7 +18,7 @@ internal object KlyroFavoriteColors {
         input.uppercase().takeIf { hexPattern.matches(it) }
 
     fun normalizeLabel(input: String): String =
-        input.trim().replace(invalidNameChars, " ").take(22)
+        KlyroTextLimit.takeCodePoints(input.trim().replace(invalidNameChars, " "), 22)
             .ifBlank { "Custom" }
 
     fun decode(raw: String?): List<Favorite> = raw.orEmpty().lineSequence()
