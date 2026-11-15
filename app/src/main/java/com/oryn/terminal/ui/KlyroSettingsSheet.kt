@@ -46,6 +46,8 @@ import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,7 +66,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 
 /**
  * A settings sheet deliberately isolated from TerminalView: it never restarts
@@ -119,6 +120,9 @@ internal fun KlyroSettingsSheet(
     var cannotOpenPermissions by rememberSaveable { mutableStateOf(false) }
     var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
     var brandSwitchError by rememberSaveable { mutableStateOf(false) }
+    var brandReady by remember { mutableStateOf(false) }
+    var brandUpdating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     var authorizedFolderCount by remember { mutableStateOf(-1) }
@@ -146,6 +150,7 @@ internal fun KlyroSettingsSheet(
             runCatching { KlyroBrandChoice.selected(context) }
                 .getOrDefault(KlyroBrandChoice.DEFAULT)
         }
+        brandReady = true
     }
     fun navigateBack() {
         when {
@@ -161,19 +166,13 @@ internal fun KlyroSettingsSheet(
     // System Back is an external dismissal; the labelled Settings button navigates internally.
     val canDismissSheet = !showColorPicker && !showFontLicense && !showHugeiconsLicense
     BackHandler(enabled = canDismissSheet) { onDismiss() }
-    val density = LocalDensity.current
     val version = com.oryn.terminal.BuildConfig.VERSION_NAME
     LaunchedEffect(section) {
         com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.SETTINGS,
             listOf("home", "appearance", "keyboard", "files", "privacy", "diagnostics", "freeze", "about").indexOf(section).toLong())
     }
 
-    // Compact content stays fixed; long reports, large fonts and small screens retain scrolling.
-    val needsScroll = KlyroSheetLayoutPolicy.needsScroll(
-        rows = if (section == "home") 6 else 7,
-        screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp,
-        fontScale = density.fontScale
-    )
+    // Use actual measured overflow instead of guessing page height from row counts.
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onDismiss, dismissEnabled = canDismissSheet) {
             Column(
@@ -184,7 +183,6 @@ internal fun KlyroSettingsSheet(
                     // Keep bottom actions above gesture navigation. On Pixel 9
                     // the Diagnostics recheck button was partly cropped.
                     .navigationBarsPadding()
-                    .then(if (needsScroll) Modifier.verticalScroll(remember(section) { ScrollState(0) }) else Modifier)
                     .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)
@@ -212,6 +210,13 @@ internal fun KlyroSettingsSheet(
                         Text("Close")
                     }
                 }
+                // Keep Back and Close reachable while large Settings sections scroll.
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(remember(section) { ScrollState(0) }),
+                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)
+                ) {
                 when (section) {
                     "home" -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)) {
@@ -261,17 +266,33 @@ internal fun KlyroSettingsSheet(
                                     Surface(
                                         modifier = Modifier.weight(1f)
                                             .heightIn(min = 96.dp)
-                                            .clickable(role = Role.RadioButton,
-                                                onClickLabel = "Select launcher icon $title") {
-                                                if (!KlyroBrandChoice.isVerifiedSelection(context, choice)) {
-                                                    brandSwitchError = !KlyroBrandChoice.select(context, choice)
-                                                    selectedBrand = KlyroBrandChoice.selected(context)
-                                                } else {
-                                                    brandSwitchError = false
+                                            .clickable(
+                                                enabled = brandReady && !brandUpdating,
+                                                role = Role.RadioButton,
+                                                onClickLabel = "Select launcher icon $title"
+                                            ) {
+                                                brandUpdating = true
+                                                brandSwitchError = false
+                                                scope.launch {
+                                                    val (ok, actual) = withContext(Dispatchers.IO) {
+                                                        val succeeded = runCatching {
+                                                            KlyroBrandChoice.isVerifiedSelection(context, choice) ||
+                                                                KlyroBrandChoice.select(context, choice)
+                                                        }.getOrDefault(false)
+                                                        succeeded to KlyroBrandChoice.selected(context)
+                                                    }
+                                                    selectedBrand = actual
+                                                    brandSwitchError = !ok
+                                                    brandUpdating = false
                                                 }
                                             }.semantics {
                                                 contentDescription = "Launcher icon $title"
                                                 selected = selectedBrand == choice
+                                                stateDescription = when {
+                                                    brandUpdating || !brandReady -> "Updating launcher icon"
+                                                    selectedBrand == choice -> "Selected"
+                                                    else -> "Not selected"
+                                                }
                                             },
                                         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
                                         color = if (selectedBrand == choice)
@@ -299,6 +320,12 @@ internal fun KlyroSettingsSheet(
                                         }
                                     }
                                 }
+                            }
+                            if (brandUpdating) {
+                                Text("Updating launcher icon…",
+                                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                                    color = colors.muted,
+                                    style = MaterialTheme.typography.bodySmall)
                             }
                             if (brandSwitchError) {
                                 Text("Icon switch failed. Both launcher entries were restored where possible; retry from Settings.",
@@ -730,6 +757,7 @@ internal fun KlyroSettingsSheet(
                             R.drawable.hugeicons_information_square
                         ) { showHugeiconsLicense = true }
                     }
+                }
                 }
             }
         }
