@@ -19,7 +19,7 @@ class StressLaunchUxContracts(unittest.TestCase):
 
     def test_launcher_prepares_terminal_without_blocking_main_thread(self):
         block = self.main_launch()
-        preparation = block.split("withContext(Dispatchers.IO) {", 1)[1].split("\n        }", 1)[0]
+        preparation = block.split("withContext(Dispatchers.IO) {", 1)[1].split("\n            }", 1)[0]
         self.assertIn("TerminalSessionManager(applicationContext)", preparation)
         self.assertIn("manager.startBash(\"Stability test\", client)", preparation)
         self.assertIn("session.updateSize(80, 24)", block)
