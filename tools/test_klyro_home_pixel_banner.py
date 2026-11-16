@@ -87,6 +87,8 @@ class HomeAnimatedGifContract(unittest.TestCase):
         self.assertIn("AnimatedImageDrawable.REPEAT_INFINITE", COVER)
         self.assertIn("setFilterBitmap(false)", COVER)
         self.assertIn("LifecycleEventObserver", COVER)
+        self.assertIn("ViewTreeLifecycleOwner.get(LocalView.current)?.lifecycle", COVER)
+        self.assertNotIn("(context as? LifecycleOwner)", COVER)
         self.assertIn("onDispose", COVER)
         self.assertIn(".stop()", COVER)
         self.assertIn("Build.VERSION.SDK_INT >= Build.VERSION_CODES.P", COVER)
