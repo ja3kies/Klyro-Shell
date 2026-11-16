@@ -19,13 +19,17 @@ class PluginCompactCatalogTest(unittest.TestCase):
         catalog = CODE.split('KlyroPluginManager.bundled.forEach { plugin ->', 1)[1].split(
             'Surface(color = colors.chrome,', 1
         )[0]
-        self.assertIn('PluginHeading(plugin, "")', catalog)
-        self.assertIn('Text("${plugin.commands.size} commands · Offline"', catalog)
+        self.assertIn('PluginHeading(', catalog)
+        self.assertIn('"${plugin.commands.size} commands · Offline"', catalog)
+        self.assertIn('modifier = Modifier.weight(1f)', catalog)
+        self.assertNotIn('Text("${plugin.commands.size} commands · Offline"', catalog)
         self.assertIn('OutlinedButton(', catalog)
         self.assertIn('contentDescription = if (isInstalled)', catalog)
         self.assertIn('"Review and add ${plugin.name}"', catalog)
         self.assertIn('pendingBundledId = plugin.id', catalog)
         self.assertNotIn('ButtonDefaults.buttonColors(containerColor = colors.accent', catalog)
+        self.assertIn('horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)', catalog)
+        self.assertIn('modifier = modifier.fillMaxWidth()', CODE)
 
     def test_confirmation_is_required_for_local_bundled_add(self):
         self.assertIn('pendingBundledId?.let { id ->', CODE)
