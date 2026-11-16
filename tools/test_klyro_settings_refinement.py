@@ -12,16 +12,17 @@ B = (UI / 'KlyroBrandChoice.kt').read_text()
 class SettingsRefinement(unittest.TestCase):
     def test_frequent_appearance_controls_precede_launcher_identity(self):
         appearance = S.split('"appearance" -> {', 1)[1].split('"keyboard" -> {', 1)[0]
-        self.assertLess(appearance.index('Text("App theme"'), appearance.index('Text("Terminal font"'))
-        self.assertLess(appearance.index('Text("Terminal font"'), appearance.index('Text("Launcher icon"'))
+        self.assertLess(appearance.index('KlyroAppearanceGroup("App theme"'), appearance.index('Text("Terminal font"'))
+        self.assertLess(appearance.index('Text("Terminal font"'), appearance.index('KlyroAppearanceGroup("Launcher icon"'))
 
     def test_same_responsive_layout_serves_all_choice_groups(self):
         self.assertGreaterEqual(S.count('KlyroSettingsChoiceGrid('), 5)
         grid = UI / 'KlyroSettingsChoiceGrid.kt'
         self.assertTrue(grid.exists())
         source = grid.read_text()
-        self.assertIn('maxWidth < 340.dp || LocalDensity.current.fontScale >= 1.3f', source)
+        self.assertIn('maxWidth < minimumInlineWidth || LocalDensity.current.fontScale >= 1.3f', source)
         self.assertIn('maxItemsInEachRow = if (stacked) 1 else columns', source)
+        self.assertIn('minimumInlineWidth: Dp = 340.dp', source)
         self.assertNotIn('maxLines = 1', P)
 
     def test_unknown_launcher_state_is_not_selected_as_default(self):

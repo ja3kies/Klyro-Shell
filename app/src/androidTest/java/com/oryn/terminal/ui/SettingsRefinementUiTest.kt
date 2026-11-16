@@ -1,6 +1,8 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -11,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -32,11 +36,13 @@ class SettingsRefinementUiTest {
     @Composable private fun Fixture(
         initialSection: String,
         fontSize: Float = 13.5f,
+        themeMode: String = "light",
+        onThemeModeChange: (String) -> Unit = {},
         onFontChange: (Float) -> Unit = {},
         onDismiss: () -> Unit = {}
     ) {
         KlyroSettingsSheet(
-            initialSection = initialSection, themeMode = "light", onThemeModeChange = {},
+            initialSection = initialSection, themeMode = themeMode, onThemeModeChange = onThemeModeChange,
             accentId = "cyan", onAccentIdChange = {}, fontSizeSp = fontSize,
             fontFamilyId = "system", onFontFamilyChange = {}, onFontChange = onFontChange,
             onResetFont = {}, onResetModifiers = {}, activeModifiers = emptySet(),
@@ -93,6 +99,54 @@ class SettingsRefinementUiTest {
         ui.onNodeWithContentDescription("Font size 16 sp").performScrollTo().performClick()
         ui.onNodeWithContentDescription("Font size 16 sp").assertIsSelected()
         ui.runOnIdle { assertEquals(16f, size.value) }
+    }
+
+    @Test fun foldedMonochromeChoicesKeepExistingThemesAndCurrentValue() {
+        val mode = mutableStateOf("light")
+        ui.setContent {
+            MaterialTheme {
+                Fixture("appearance", themeMode = mode.value, onThemeModeChange = { mode.value = it })
+            }
+        }
+        ui.onNodeWithTag("theme-preview-mono-black").assertDoesNotExist()
+        ui.onNodeWithContentDescription("Monochrome themes").performScrollTo().performClick()
+        ui.onNodeWithTag("theme-preview-mono-black").performScrollTo().performClick()
+        ui.onNodeWithTag("theme-preview-mono-black").assertIsSelected()
+        ui.runOnIdle { assertEquals("mono-black", mode.value) }
+        ui.onNodeWithContentDescription("Monochrome themes").performScrollTo().performClick()
+        ui.onNodeWithTag("theme-preview-mono-black").assertDoesNotExist()
+        ui.onNodeWithText("Monochrome · OLED").assertIsDisplayed()
+        ui.onNodeWithContentDescription("Choose custom accent").assertDoesNotExist()
+    }
+
+    @Test fun accentTargetsKeepTheirSizeInNarrowAppearance() {
+        ui.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density * 2f, 1f)) {
+                MaterialTheme { Fixture("appearance") }
+            }
+        }
+        for (label in listOf("Lime accent", "Cyan accent", "Coral accent", "Orchid accent", "Choose custom accent")) {
+            ui.onNodeWithContentDescription(label).performScrollTo()
+                .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
+        }
+    }
+
+    @Test fun primaryThemesRemainInlineAtNormalPhoneWidth() {
+        ui.setContent {
+            val density = LocalDensity.current
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                CompositionLocalProvider(LocalDensity provides Density(density.density * maxWidth.value / 393f, 1f)) {
+                    MaterialTheme { Fixture("appearance") }
+                }
+            }
+        }
+        val system = ui.onNodeWithTag("theme-preview-system").fetchSemanticsNode().boundsInRoot
+        val light = ui.onNodeWithTag("theme-preview-light").fetchSemanticsNode().boundsInRoot
+        val dark = ui.onNodeWithTag("theme-preview-dark").fetchSemanticsNode().boundsInRoot
+        assertEquals(system.top, light.top, .5f)
+        assertEquals(system.top, dark.top, .5f)
+        assertTrue(system.right <= light.left)
     }
 
     @Test fun labelledBackReturnsToRootAndCloseDismissesExactlyOnce() {
