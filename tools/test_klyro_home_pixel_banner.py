@@ -36,6 +36,15 @@ class HomePixelBannerContract(unittest.TestCase):
         self.assertIn("rememberInfiniteTransition", source)
         self.assertNotIn("ImageDecoder", source)
 
+    def test_pixel_geometry_is_snapped_and_work_is_bounded(self):
+        source = COVER.read_text()
+        self.assertIn("roundToInt()", source)
+        self.assertIn("for (x in 0 until 160 step 2)", source)
+        self.assertIn("private fun DrawScope.drawKlyroMascot(", source)
+        self.assertIn("private fun DrawScope.drawCrescent(", source)
+        self.assertNotIn("Math.random", source)
+        self.assertNotIn("BitmapFactory", source)
+
     def test_profile_and_primary_action_follow_banner(self):
         home = HOME.split("// The primary action, runtime and tools", 1)[1]
         self.assertLess(home.index("Spacer(Modifier.fillMaxWidth().height(bannerSpace))"),
