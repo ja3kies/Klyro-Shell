@@ -229,20 +229,17 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
             TextButton(
                 onClick = ::navigateBack,
-                enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
+                enabled = !mutationBusy && !confirmedMutationPending,
                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
             ) {
                 Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
                     contentDescription = null, modifier = Modifier.size(20.dp))
                 Text("Home")
             }
-            Spacer(Modifier.weight(1f))
-            Text("LOCAL EXTENSIONS", color = colors.muted, fontSize = 11.sp,
-                fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
         Text("Plugins", fontSize = 28.sp, fontWeight = FontWeight.Bold,
             color = colors.foreground)
-        Text("Add command packs to your terminal palette. Suggestions are inserted, never run automatically.",
+        Text("Command packs insert suggestions into Bash; nothing runs automatically.",
             color = colors.muted, fontSize = 13.sp, lineHeight = 18.sp)
 
         Row(
@@ -325,26 +322,38 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             KlyroPluginManager.bundled.forEach { plugin ->
                 val isInstalled = installed.any { it.id == plugin.id }
                 Surface(
-                    color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    color = colors.tile,
+                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
-                    Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        PluginHeading(plugin, "${plugin.commands.size} read-only commands")
-                        Row(modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Text("Bundled · Offline", color = colors.muted, fontSize = 12.sp)
-                            Button(
-                                enabled = !isInstalled && !registryLoading && !mutationBusy && !confirmedMutationPending,
-                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
-                                onClick = {
-                                    error = null
-                                    pendingBundledId = plugin.id
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        PluginHeading(
+                            plugin,
+                            "${plugin.commands.size} commands · Offline",
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedButton(
+                            enabled = !isInstalled && !registryLoading && !mutationBusy && !confirmedMutationPending,
+                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                .semantics {
+                                    contentDescription = if (isInstalled)
+                                        "${plugin.name} installed"
+                                    else "Review and add ${plugin.name}"
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.accent,
-                                    contentColor = colors.onAccent),
-                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                            ) { Text(if (isInstalled) "Installed" else "Add") }
+                            onClick = {
+                                error = null
+                                pendingBundledId = plugin.id
+                            },
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                            border = BorderStroke(1.dp, colors.muted.copy(alpha = .35f))
+                        ) {
+                            Text(
+                                if (isInstalled) "Installed" else "Add",
+                                color = if (isInstalled) colors.muted else colors.foreground
+                            )
                         }
                     }
                 }
@@ -557,9 +566,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
 }
 
 @Composable
-private fun PluginHeading(plugin: KlyroPluginRecord, detail: String) {
+private fun PluginHeading(plugin: KlyroPluginRecord, detail: String, modifier: Modifier = Modifier) {
     val colors = LocalKlyroColors.current
-    Row(modifier = Modifier.fillMaxWidth(),
+    Row(modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
         verticalAlignment = Alignment.CenterVertically) {
         Surface(color = colors.key,
@@ -576,7 +585,9 @@ private fun PluginHeading(plugin: KlyroPluginRecord, detail: String) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(plugin.name, fontWeight = FontWeight.SemiBold, color = colors.foreground)
             Text(plugin.description, color = colors.muted, fontSize = 12.sp)
-            Text(detail, color = colors.muted, fontSize = 11.sp)
+            if (detail.isNotBlank()) {
+                Text(detail, color = colors.muted, fontSize = 11.sp)
+            }
         }
     }
 }
