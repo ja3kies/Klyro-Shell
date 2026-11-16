@@ -11,11 +11,13 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -119,6 +121,7 @@ internal fun KlyroSettingsSheet(
     var showFontLicense by rememberSaveable { mutableStateOf(false) }
     var showHugeiconsLicense by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
+    var showMonochromeThemes by rememberSaveable { mutableStateOf(themeMode.startsWith("mono-")) }
     var cannotOpenPermissions by rememberSaveable { mutableStateOf(false) }
     var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
     var brandSwitchError by rememberSaveable { mutableStateOf(false) }
@@ -261,269 +264,290 @@ internal fun KlyroSettingsSheet(
                     }
                     "appearance" -> {
                         KlyroSectionHeading("Appearance")
-                        Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)) {
-                            Text("App theme", fontWeight = FontWeight.SemiBold,
-                                color = colors.foreground)
-                            KlyroSettingsChoiceGrid(columns = 3) {
-                                listOf("system" to "System", "light" to "Light",
-                                    "dark" to "Dark").forEach { (mode, label) ->
-                                    KlyroThemePreviewCard(
-                                        mode = mode, label = label, active = themeMode == mode,
-                                        accentId = accentId,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = { onThemeModeChange(mode) }
-                                    )
+                        Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXl)) {
+                            KlyroAppearanceGroup("App theme") {
+                                KlyroSettingsChoiceGrid(columns = 3) {
+                                    listOf("system" to "System", "light" to "Light",
+                                        "dark" to "Dark").forEach { (mode, label) ->
+                                        KlyroThemePreviewCard(
+                                            mode = mode, label = label, active = themeMode == mode,
+                                            accentId = accentId,
+                                            modifier = Modifier.weight(1f),
+                                            onClick = { onThemeModeChange(mode) }
+                                        )
+                                    }
                                 }
-                            }
-                            Text("Monochrome", fontWeight = FontWeight.SemiBold,
-                                color = colors.foreground)
-                            KlyroSettingsChoiceGrid(columns = 3) {
-                                listOf("mono-contrast" to "Contrast", "mono-black" to "OLED",
-                                    "mono-paper" to "Paper").forEach { (mode, label) ->
-                                    KlyroThemePreviewCard(
-                                        mode = mode, label = label, active = themeMode == mode,
-                                        accentId = accentId,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = { onThemeModeChange(mode) }
-                                    )
+                                val selectedMonochrome = when (themeMode) {
+                                    "mono-contrast" -> "Contrast"
+                                    "mono-black" -> "OLED"
+                                    "mono-paper" -> "Paper"
+                                    else -> null
                                 }
-                            }
-                            if (!themeMode.startsWith("mono-")) {
-                                Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                    Text("Accent", color = colors.foreground,
-                                        fontWeight = FontWeight.SemiBold)
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        KlyroColors.primary.forEach { preset ->
-                                            val swatch = KlyroColors.create(colors.dark, preset.id)
-                                            val active = accentId == preset.id
+                                TextButton(
+                                    onClick = { showMonochromeThemes = !showMonochromeThemes },
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+                                        .semantics {
+                                            contentDescription = "Monochrome themes"
+                                            stateDescription = (if (showMonochromeThemes) "Expanded" else "Collapsed") +
+                                                (selectedMonochrome?.let { ", $it selected" } ?: "")
+                                        },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = colors.muted)
+                                ) {
+                                    Text(selectedMonochrome?.let { "Monochrome · $it" } ?: "Monochrome themes",
+                                        modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                                        style = MaterialTheme.typography.bodySmall)
+                                    Icon(painterResource(R.drawable.hugeicons_chevron_right), contentDescription = null,
+                                        modifier = Modifier.size(18.dp).rotate(if (showMonochromeThemes) 90f else 0f))
+                                }
+                                if (showMonochromeThemes) {
+                                    KlyroSettingsChoiceGrid(columns = 3) {
+                                        listOf("mono-contrast" to "Contrast", "mono-black" to "OLED",
+                                            "mono-paper" to "Paper").forEach { (mode, label) ->
+                                            KlyroThemePreviewCard(
+                                                mode = mode, label = label, active = themeMode == mode,
+                                                accentId = accentId,
+                                                modifier = Modifier.weight(1f),
+                                                onClick = { onThemeModeChange(mode) }
+                                            )
+                                        }
+                                    }
+                                }
+                                if (!themeMode.startsWith("mono-")) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                        Text("Accent", color = colors.foreground,
+                                            fontWeight = FontWeight.SemiBold)
+                                    FlowRow(
+                                            modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs),
+                                        verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
+                                        ) {
+                                            KlyroColors.primary.forEach { preset ->
+                                                val swatch = KlyroColors.create(colors.dark, preset.id)
+                                                val active = accentId == preset.id
+                                                Box(
+                                                    modifier = Modifier.size(KlyroUiMetrics.minTouch)
+                                                        .clickable(role = Role.RadioButton,
+                                                            onClickLabel = "Select " + preset.label + " accent") {
+                                                            onAccentIdChange(preset.id)
+                                                        }
+                                                        .semantics {
+                                                            selected = active
+                                                            contentDescription = preset.label + " accent"
+                                                        },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
+                                                            .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
+                                                            .then(if (active) Modifier.border(
+                                                                KlyroUiMetrics.selectedBorder,
+                                                                colors.foreground,
+                                                                androidx.compose.foundation.shape.CircleShape
+                                                            ) else Modifier),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        if (active) {
+                                                            Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
+                                                                contentDescription = null, tint = swatch.onAccent,
+                                                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                                        }
+                                                    }
+                                                }
+                                            }
                                             Box(
                                                 modifier = Modifier.size(KlyroUiMetrics.minTouch)
-                                                    .clickable(role = Role.RadioButton,
-                                                        onClickLabel = "Select " + preset.label + " accent") {
-                                                        onAccentIdChange(preset.id)
+                                                    .background(colors.key, androidx.compose.foundation.shape.CircleShape)
+                                                    .clickable(role = Role.Button,
+                                                        onClickLabel = "Choose custom accent") {
+                                                        showColorPicker = true
                                                     }
+                                                    // The click action label alone is not exposed
+                                                    // as content-desc by Android UIAutomator.
+                                                    // This icon-only + control needs its own name.
                                                     .semantics {
-                                                        selected = active
-                                                        contentDescription = preset.label + " accent"
+                                                        contentDescription = "Choose custom accent"
                                                     },
                                                 contentAlignment = Alignment.Center
                                             ) {
+                                                Icon(painterResource(R.drawable.hugeicons_plus_sign),
+                                                    contentDescription = null, tint = colors.accent,
+                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            KlyroAppearanceGroup("Text") {
+                                Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                    Text("Terminal font", color = colors.foreground,
+                                        fontWeight = FontWeight.SemiBold)
+                                    KlyroSettingsChoiceGrid(columns = 2) {
+                                        KlyroTerminalFonts.options.forEach { option ->
+                                            val active = fontFamilyId == option.id
+                                            Surface(
+                                                modifier = Modifier.weight(1f)
+                                                    .heightIn(min = KlyroUiMetrics.optionRow)
+                                                    .clickable(role = Role.RadioButton,
+                                                        onClickLabel = "Use " + option.label) {
+                                                        onFontFamilyChange(option.id)
+                                                    }.semantics { selected = active },
+                                                color = if (active) colors.sheet else Color.Transparent,
+                                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                                border = null
+                                            ) {
                                                 Box(
-                                                    modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
-                                                        .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
-                                                        .then(if (active) Modifier.border(
-                                                            KlyroUiMetrics.selectedBorder,
-                                                            colors.foreground,
-                                                            androidx.compose.foundation.shape.CircleShape
-                                                        ) else Modifier),
+                                                    modifier = Modifier.fillMaxWidth(),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    if (active) {
-                                                        Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
-                                                            contentDescription = null, tint = swatch.onAccent,
-                                                            modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                                                    }
+                                                    Text(option.label, modifier = Modifier.padding(
+                                                        horizontal = KlyroUiMetrics.spaceSm,
+                                                        vertical = KlyroUiMetrics.spaceMd
+                                                    ), color = colors.foreground,
+                                                        fontWeight = if (active) FontWeight.SemiBold
+                                                            else FontWeight.Normal,
+                                                        style = MaterialTheme.typography.labelMedium)
                                                 }
                                             }
                                         }
-                                        Box(
-                                            modifier = Modifier.size(KlyroUiMetrics.minTouch)
-                                                .background(colors.key, androidx.compose.foundation.shape.CircleShape)
-                                                .clickable(role = Role.Button,
-                                                    onClickLabel = "Choose custom accent") {
-                                                    showColorPicker = true
+                                    }
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
+                                    KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false) {
+                                        Text("Font size", color = colors.foreground,
+                                            modifier = Modifier.weight(1f),
+                                            fontWeight = FontWeight.SemiBold)
+                                        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End,
+                                            verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
+                                                color = colors.foreground, fontWeight = FontWeight.Medium
+                                            )
+                                            if (fontSizeSp != 13.5f) {
+                                                TextButton(
+                                                    onClick = onResetFont,
+                                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                                ) { Text("Reset") }
+                                            }
+                                        }
+                                    }
+                                    KlyroThinSlider(
+                                        value = fontSizeSp.coerceIn(9f, 24f),
+                                        onValueChange = onFontChange,
+                                        valueRange = 9f..24f,
+                                        steps = 29,
+                                        modifier = Modifier.fillMaxWidth().semantics {
+                                            contentDescription = "Terminal font size"
+                                        }
+                                    )
+                                    KlyroSettingsChoiceGrid(columns = 3) {
+                                        listOf(12f, 13.5f, 16f).forEach { preset ->
+                                            val active = fontSizeSp == preset
+                                            val label = if (preset % 1f == 0f) "${preset.toInt()} sp" else "$preset sp"
+                                            Surface(
+                                                modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch)
+                                                    .clickable(role = Role.RadioButton,
+                                                        onClickLabel = "Set terminal font to $label") { onFontChange(preset) }
+                                                    .semantics { selected = active; contentDescription = "Font size $label" },
+                                                color = if (active) colors.sheet else Color.Transparent,
+                                                border = null,
+                                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                            ) {
+                                                Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+                                                    Text(label, color = colors.foreground,
+                                                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                                                        style = MaterialTheme.typography.labelMedium)
                                                 }
-                                                // The click action label alone is not exposed
-                                                // as content-desc by Android UIAutomator.
-                                                // This icon-only + control needs its own name.
-                                                .semantics {
-                                                    contentDescription = "Choose custom accent"
-                                                },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(painterResource(R.drawable.hugeicons_plus_sign),
-                                                contentDescription = null, tint = colors.accent,
-                                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                            }
                                         }
                                     }
                                 }
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                Text("Terminal font", color = colors.foreground,
-                                    fontWeight = FontWeight.SemiBold)
+                            KlyroAppearanceGroup("Launcher icon") {
+                                if (brandChecking) {
+                                    KlyroInlineNotice("Checking current launcher icon…")
+                                } else if (brandUpdating) {
+                                    KlyroInlineNotice("Updating launcher icon…")
+                                }
                                 KlyroSettingsChoiceGrid(columns = 2) {
-                                    KlyroTerminalFonts.options.forEach { option ->
-                                        val active = fontFamilyId == option.id
+                                    listOf(
+                                        KlyroBrandChoice.DEFAULT to "B · Default",
+                                        KlyroBrandChoice.ALTERNATIVE to "A · Animal"
+                                    ).forEach { (choice, title) ->
                                         Surface(
                                             modifier = Modifier.weight(1f)
-                                                .heightIn(min = KlyroUiMetrics.optionRow)
-                                                .clickable(role = Role.RadioButton,
-                                                    onClickLabel = "Use " + option.label) {
-                                                    onFontFamilyChange(option.id)
-                                                }.semantics { selected = active },
-                                            color = if (active) colors.accent.copy(alpha = .14f)
-                                                else colors.key,
-                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                            border = if (active) BorderStroke(
-                                                KlyroUiMetrics.selectedBorder, colors.accent
-                                            ) else null
-                                        ) {
-                                            Box(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(option.label, modifier = Modifier.padding(
-                                                    horizontal = KlyroUiMetrics.spaceSm,
-                                                    vertical = KlyroUiMetrics.spaceMd
-                                                ), color = colors.foreground,
-                                                    fontWeight = if (active) FontWeight.SemiBold
-                                                        else FontWeight.Normal,
-                                                    style = MaterialTheme.typography.labelMedium)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
-                                KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false) {
-                                    Text("Font size", color = colors.foreground,
-                                        modifier = Modifier.weight(1f),
-                                        fontWeight = FontWeight.SemiBold)
-                                    Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End,
-                                        verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
-                                            color = colors.accent, fontWeight = FontWeight.Bold
-                                        )
-                                        if (fontSizeSp != 13.5f) {
-                                            TextButton(
-                                                onClick = onResetFont,
-                                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                            ) { Text("Reset") }
-                                        }
-                                    }
-                                }
-                                KlyroThinSlider(
-                                    value = fontSizeSp.coerceIn(9f, 24f),
-                                    onValueChange = onFontChange,
-                                    valueRange = 9f..24f,
-                                    steps = 29,
-                                    modifier = Modifier.fillMaxWidth().semantics {
-                                        contentDescription = "Terminal font size"
-                                    }
-                                )
-                                KlyroSettingsChoiceGrid(columns = 3) {
-                                    listOf(12f, 13.5f, 16f).forEach { preset ->
-                                        val active = fontSizeSp == preset
-                                        val label = if (preset % 1f == 0f) "${preset.toInt()} sp" else "$preset sp"
-                                        Surface(
-                                            modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch)
-                                                .clickable(role = Role.RadioButton,
-                                                    onClickLabel = "Set terminal font to $label") { onFontChange(preset) }
-                                                .semantics { selected = active; contentDescription = "Font size $label" },
-                                            color = if (active) colors.sheet else colors.key,
-                                            border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder, colors.accent) else null,
-                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                                        ) {
-                                            Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-                                                Text(label, color = colors.foreground,
-                                                    style = MaterialTheme.typography.labelMedium)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Text("Launcher icon", fontWeight = FontWeight.SemiBold,
-                                color = colors.foreground)
-                            if (brandChecking) {
-                                KlyroInlineNotice("Checking current launcher icon…")
-                            } else if (brandUpdating) {
-                                KlyroInlineNotice("Updating launcher icon…")
-                            }
-                            KlyroSettingsChoiceGrid(columns = 2) {
-                                listOf(
-                                    KlyroBrandChoice.DEFAULT to "B · Default",
-                                    KlyroBrandChoice.ALTERNATIVE to "A · Animal"
-                                ).forEach { (choice, title) ->
-                                    Surface(
-                                        modifier = Modifier.weight(1f)
-                                            .heightIn(min = 96.dp)
-                                            .clickable(
-                                                enabled = !brandUpdating && !brandChecking,
-                                                role = Role.RadioButton,
-                                                onClickLabel = "Select launcher icon $title"
-                                            ) {
-                                                brandUpdating = true
-                                                brandSwitchError = false
-                                                scope.launch {
-                                                    val (ok, actual) = withContext(Dispatchers.IO) {
-                                                        val succeeded = runCatching {
-                                                            KlyroBrandChoice.isVerifiedSelection(context, choice) ||
-                                                                KlyroBrandChoice.select(context, choice)
-                                                        }.getOrDefault(false)
-                                                        succeeded to KlyroBrandChoice.confirmedSelection(context)
+                                                .heightIn(min = 80.dp)
+                                                .clickable(
+                                                    enabled = !brandUpdating && !brandChecking,
+                                                    role = Role.RadioButton,
+                                                    onClickLabel = "Select launcher icon $title"
+                                                ) {
+                                                    brandUpdating = true
+                                                    brandSwitchError = false
+                                                    scope.launch {
+                                                        val (ok, actual) = withContext(Dispatchers.IO) {
+                                                            val succeeded = runCatching {
+                                                                KlyroBrandChoice.isVerifiedSelection(context, choice) ||
+                                                                    KlyroBrandChoice.select(context, choice)
+                                                            }.getOrDefault(false)
+                                                            succeeded to KlyroBrandChoice.confirmedSelection(context)
+                                                        }
+                                                        if (actual != null) selectedBrand = actual
+                                                        brandReady = actual != null
+                                                        brandSwitchError = !ok || actual == null
+                                                        brandUpdating = false
                                                     }
-                                                    if (actual != null) selectedBrand = actual
-                                                    brandReady = actual != null
-                                                    brandSwitchError = !ok || actual == null
-                                                    brandUpdating = false
-                                                }
-                                            }.semantics {
-                                                contentDescription = "Launcher icon $title"
-                                                selected = brandReady && selectedBrand == choice
-                                                stateDescription = when {
-                                                    brandChecking -> "Checking launcher icon"
-                                                    brandUpdating -> "Updating launcher icon"
-                                                    !brandReady -> "Current icon unconfirmed"
-                                                    selectedBrand == choice -> "Selected"
-                                                    else -> "Not selected"
-                                                }
-                                            },
-                                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-                                        color = if (brandReady && selectedBrand == choice)
-                                            colors.accent.copy(alpha = .14f) else colors.tile,
-                                        border = BorderStroke(1.dp,
-                                            if (brandReady && selectedBrand == choice) colors.accent else colors.muted.copy(alpha = .35f))
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.padding(8.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                }.semantics {
+                                                    contentDescription = "Launcher icon $title"
+                                                    selected = brandReady && selectedBrand == choice
+                                                    stateDescription = when {
+                                                        brandChecking -> "Checking launcher icon"
+                                                        brandUpdating -> "Updating launcher icon"
+                                                        !brandReady -> "Current icon unconfirmed"
+                                                        selectedBrand == choice -> "Selected"
+                                                        else -> "Not selected"
+                                                    }
+                                                },
+                                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+                                            color = if (brandReady && selectedBrand == choice)
+                                                colors.sheet else Color.Transparent,
+                                            border = if (brandReady && selectedBrand == choice) BorderStroke(1.dp, colors.accent) else null
                                         ) {
-                                            Icon(
-                                                painterResource(
-                                                    if (choice == KlyroBrandChoice.DEFAULT)
-                                                        R.drawable.ic_klyro_brand_b
-                                                    else R.drawable.ic_klyro_brand_a
-                                                ),
-                                                contentDescription = null,
-                                                tint = Color.Unspecified,
-                                                modifier = Modifier.size(58.dp)
-                                            )
-                                            Text(title, color = colors.foreground,
-                                                style = MaterialTheme.typography.labelMedium)
+                                            Column(
+                                                modifier = Modifier.padding(8.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    painterResource(
+                                                        if (choice == KlyroBrandChoice.DEFAULT)
+                                                            R.drawable.ic_klyro_brand_b
+                                                        else R.drawable.ic_klyro_brand_a
+                                                    ),
+                                                    contentDescription = null,
+                                                    tint = Color.Unspecified,
+                                                    modifier = Modifier.size(48.dp)
+                                                )
+                                                Text(title, color = colors.foreground,
+                                                    style = MaterialTheme.typography.labelMedium)
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            if (brandSwitchError && !brandChecking && !brandUpdating) {
-                                KlyroInlineNotice(if (brandReady)
-                                    "The icon change could not be completed. The confirmed selection is shown. Choose an icon to try again."
-                                    else "The current launcher icon could not be confirmed. Choose an icon or retry the check.",
-                                    isError = true)
-                                if (!brandReady) {
-                                    TextButton(onClick = { brandRevision += 1 },
-                                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
-                                        Text("Retry icon check")
+                                if (brandSwitchError && !brandChecking && !brandUpdating) {
+                                    KlyroInlineNotice(if (brandReady)
+                                        "The icon change could not be completed. The confirmed selection is shown. Choose an icon to try again."
+                                        else "The current launcher icon could not be confirmed. Choose an icon or retry the check.",
+                                        isError = true)
+                                    if (!brandReady) {
+                                        TextButton(onClick = { brandRevision += 1 },
+                                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                                            Text("Retry icon check")
+                                        }
                                     }
                                 }
+                                Text("Reopen your launcher if the icon has not refreshed.",
+                                    color = colors.muted, style = MaterialTheme.typography.labelSmall)
                             }
-                            Text("Some launchers refresh home-screen icons after reopening the launcher.",
-                                color = colors.muted, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     "keyboard" -> {

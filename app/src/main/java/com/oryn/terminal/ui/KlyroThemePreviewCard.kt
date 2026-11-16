@@ -67,7 +67,7 @@ internal fun KlyroThemePreviewCard(
             .semantics { selected = active }
             .testTag("theme-preview-$mode"),
         shape = shape,
-        color = current.tile,
+        color = androidx.compose.ui.graphics.Color.Transparent,
         border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder, current.accent) else null
     ) {
         Column(
