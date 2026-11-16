@@ -22,20 +22,56 @@ for(const [j,x,len,y] of [[0,5,25,80],[1,45,19,86],[2,76,23,83],[3,108,28,89],[4
 rect('cab',17,62,18,11);rect('roof',15,61,22,2);rect('roof',19,58,15,3);rect('cab',20,57,3,5);
 rect('window',22,65,4,5);rect('window',29,65,3,5);rect('sky2',21+frame%4,54-frame%3,2,2);
 rect('front',106,71,54,7);for(const x of [108,117,139,153])rect('hills',x,68,7,2);
-const x=115,g=71,tail=[0,0,1,1,2,2,2,1,0,0,-1,-1][frame];
-rect('black',x-13,g-16+tail,5,5);rect('fur',x-12,g-17+tail,7,6);rect('fur2',x-9,g-14+tail,8,4);
-rect('cream',x-13,g-15+tail,4,3);rect('fur',x-5,g-10,8,5);
-rect('shadow',x+3,g-4,5,5);rect('shadow',x+14,g-4,5,5);rect('black',x+2,g,7,2);rect('black',x+13,g,7,2);
-rect('fur',x+1,g-18,19,15);rect('fur2',x+3,g-17,10,9);rect('shadow',x+9,g-8,9,5);
+// Horned-fox silhouette: bushy tail, low back, distinct ears, short horns.
+// Pixel blocks stay on the 160×100 grid; the pose, not the colors, defines it.
+const x=111,g=73,tail=[0,-1,-1,0,1,2,2,1,0,-1,-1,0][frame];
+// Tail: broad pointed tip and cream edge, flexing vertically.
+rect('black',x-13,g-18+tail,8,5);
+rect('fur',x-12,g-20+tail,8,7);
+rect('furhi',x-14,g-19+tail,4,4);
+rect('cream',x-14,g-19+tail,3,4);
+rect('fur2',x-7,g-17+tail,10,8);
+rect('fur',x-5,g-13+tail,11,6);
+// Body: continuous back, neck and belly, not a hollow square.
+rect('black',x+1,g-18,22,16);
+rect('fur',x+1,g-20,19,17);
+rect('fur',x+5,g-22,12,4);
+rect('fur2',x+5,g-16,13,8);
+rect('furhi',x+2,g-19,5,7);
+rect('cream',x+15,g-9,9,5);
+// Two grounded legs with differentiated front/back silhouettes.
+rect('fur2',x+4,g-6,6,7);
+rect('black',x+3,g-1,8,2);
+rect('fur',x+17,g-8,6,9);
+rect('black',x+17,g-1,8,2);
+// Neck joins head; no detached rectangular muzzle.
 const bob=(frame===6||frame===7)?1:0;
-rect('shadow',x+13,g-24+bob,14,13);rect('fur2',x+14,g-25+bob,14,12);
-rect('fur',x+21,g-32+bob,4,10);rect('fur2',x+23,g-34+bob,3,9);rect('orange',x+23,g-30+bob,2,5);
-rect('cream',x+11,g-25+bob,3,5);rect('cream',x+10,g-30+bob,2,6);rect('cream',x+8,g-32+bob,3,3);
-rect('cream',x+17,g-26+bob,2,6);rect('cream',x+17,g-32+bob,2,7);rect('cream',x+18,g-34+bob,3,3);
-rect('furhi',x+22,g-18+bob,7,5);rect('cream',x+24,g-14+bob,8,4);rect('cream',x+29,g-16+bob,5,3);
-rect('black',x+33,g-14+bob,2,2);rect('shadow',x+29,g-11+bob,4,1);
-if(frame!==5&&frame!==6)rect('eye',x+25,g-22+bob,2,2);else rect('black',x+25,g-21+bob,3,1);
-rect('lime',x+6,g-14,4,2);rect('accent',x+8,g-12,6,2);rect('accent',x+9+Math.floor(frame/3)%2,g-10,2,4);
+rect('fur',x+18,g-24+bob,9,14);
+rect('furhi',x+19,g-21+bob,6,8);
+// Head and cheek are angled, with a pointed fox muzzle.
+rect('black',x+23,g-26+bob,17,17);
+rect('fur',x+24,g-27+bob,14,16);
+rect('furhi',x+28,g-25+bob,9,10);
+rect('fur2',x+24,g-15+bob,13,5);
+rect('cream',x+36,g-16+bob,7,5);
+rect('cream',x+38,g-13+bob,8,3);
+rect('cream',x+43,g-12+bob,4,2);
+rect('black',x+46,g-12+bob,2,2);
+// Pointed ear behind a pair of short, swept-back antelope horns.
+rect('fur',x+33,g-34+bob,3,8);
+rect('fur',x+36,g-37+bob,3,12);
+rect('orange',x+36,g-32+bob,2,5);
+rect('cream',x+25,g-32+bob,3,7);
+rect('cream',x+23,g-35+bob,3,6);
+rect('cream',x+21,g-35+bob,3,2);
+rect('cream',x+31,g-34+bob,2,7);
+rect('cream',x+31,g-37+bob,4,3);
+// Subtle expression; the eye closes for two frames.
+if(frame!==5&&frame!==6) rect('eye',x+36,g-22+bob,2,2);
+else rect('shadow',x+35,g-21+bob,3,1);
+rect('lime',x+20,g-13,4,2);
+rect('accent',x+23,g-11,4,2);
+
 return b;
 }
 const out=[];const push=(...v)=>{for(const x of v)out.push(x&255)};const str=t=>{for(let i=0;i<t.length;i++)push(t.charCodeAt(i))};const u16=x=>push(x&255,(x>>8)&255);
