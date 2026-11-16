@@ -1,5 +1,6 @@
 package com.oryn.terminal
 
+import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.graphics.drawable.AnimatedImageDrawable
 import android.os.Build
@@ -7,6 +8,7 @@ import android.provider.Settings
 import android.view.View
 import android.widget.ImageView
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,11 +17,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
@@ -27,23 +29,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
-import com.oryn.terminal.ui.LocalKlyroColors
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.roundToInt
 
-// These palette colors are used by the static fallback (Android 8 and reduced motion).
-private val night = Color(0xFF081F2A)
-private val distantRidge = Color(0xFF1B4C57)
-private val middleRidge = Color(0xFF123D48)
-private val foreground = Color(0xFF0D303A)
-private val outline = Color(0xFF09222D)
-private val fur = Color(0xFF66878A)
-private val muzzle = Color(0xFFDFE6DE)
-private val windowLight = Color(0xFFE2B66A)
 @Composable
 internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color) {
-    val accent = LocalKlyroColors.current.accent
     val context = LocalContext.current
     val motionEnabled = remember(context) {
         runCatching {
@@ -102,7 +90,26 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color) {
                 }
             }
         } else {
-            Canvas(Modifier.fillMaxSize()) { drawLandscape(accent) }
+            // Decode one frame without scheduling an animation on older Android
+            // or when the system has requested reduced motion.
+            val still = remember(context) {
+                runCatching {
+                    BitmapFactory.decodeResource(
+                        context.resources, R.drawable.klyro_home_landscape_loop
+                    )
+                }.getOrNull()
+            }
+            if (still != null) {
+                Image(
+                    bitmap = still.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = ContentScale.FillBounds,
+                    filterQuality = FilterQuality.None,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Canvas(Modifier.fillMaxSize()) { drawRect(screenChrome) }
+            }
         }
 
         // Tumblr-like banner fade is identical in animated and static modes.
