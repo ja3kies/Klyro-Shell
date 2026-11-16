@@ -92,7 +92,7 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn("modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)", self.settings)
 
     def test_launcher_selected_state_has_visual_check(self):
-        self.assertIn("if (selectedBrand == choice)", self.settings)
+        self.assertIn("if (brandReady && selectedBrand == choice)", self.settings)
         self.assertIn("R.drawable.hugeicons_checkmark_circle_01", self.settings)
 
     def test_launcher_error_can_recover_on_verified_choice(self):

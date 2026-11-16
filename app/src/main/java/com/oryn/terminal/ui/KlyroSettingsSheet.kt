@@ -15,7 +15,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
@@ -50,7 +53,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
@@ -63,7 +65,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
@@ -72,7 +73,7 @@ import androidx.compose.ui.platform.LocalContext
  * A settings sheet deliberately isolated from TerminalView: it never restarts
  * the shell and all file actions remain delegated to Android's SAF handlers.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun KlyroSettingsSheet(
     initialSection: String,
@@ -122,12 +123,15 @@ internal fun KlyroSettingsSheet(
     var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
     var brandSwitchError by rememberSaveable { mutableStateOf(false) }
     var brandReady by remember { mutableStateOf(false) }
+    var brandChecking by remember { mutableStateOf(true) }
+    var brandRevision by remember { mutableStateOf(0) }
     var brandUpdating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     var authorizedFolderCount by remember { mutableStateOf(-1) }
-    LaunchedEffect(context, section) {
+    var folderRevision by remember { mutableStateOf(0) }
+    LaunchedEffect(context, section, folderRevision) {
         if (section == "files") {
             authorizedFolderCount = -1
             authorizedFolderCount = withContext(Dispatchers.IO) {
@@ -140,18 +144,23 @@ internal fun KlyroSettingsSheet(
                     context.contentResolver.persistedUriPermissions.count {
                         it.isReadPermission && it.uri.toString() in savedTrees
                     }
-                }.getOrDefault(0)
+                }.getOrDefault(-2)
             }
         }
     }
-    LaunchedEffect(context) {
+    LaunchedEffect(context, section, brandRevision) {
+        if (section != "appearance") return@LaunchedEffect
         // Launcher alias verification calls PackageManager across Binder.
         // Never block the Settings opening frame on this query.
-        selectedBrand = withContext(Dispatchers.IO) {
-            runCatching { KlyroBrandChoice.selected(context) }
-                .getOrDefault(KlyroBrandChoice.DEFAULT)
+        brandChecking = true
+        brandReady = false
+        val actual = withContext(Dispatchers.IO) {
+            KlyroBrandChoice.confirmedSelection(context)
         }
-        brandReady = true
+        if (actual != null) selectedBrand = actual
+        brandReady = actual != null
+        brandSwitchError = actual == null
+        brandChecking = false
     }
     fun navigateBack() {
         when {
@@ -195,11 +204,11 @@ internal fun KlyroSettingsSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     if (section == "home") {
-                        KlyroSheetTitle("Settings")
+                        KlyroSheetTitle("Settings", modifier = Modifier.weight(1f))
                     } else {
                         TextButton(
                             onClick = ::navigateBack,
-                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                            modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch)
                         ) {
                             Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
                                 contentDescription = null, tint = colors.muted,
@@ -221,7 +230,7 @@ internal fun KlyroSettingsSheet(
                 ) {
                 when (section) {
                     "home" -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)) {
+                        KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false) {
                             Box(Modifier.weight(1f)) {
                                 SettingsBentoTile("Appearance", "Themes & type", R.drawable.hugeicons_palette) { section = "appearance" }
                             }
@@ -230,8 +239,6 @@ internal fun KlyroSettingsSheet(
                                     section = "keyboard"
                                 }
                             }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.bentoGridGap)) {
                             Box(Modifier.weight(1f)) {
                                 SettingsBentoTile("Storage", "Files & folders", R.drawable.hugeicons_folder_01) {
                                     section = "files"
@@ -255,99 +262,9 @@ internal fun KlyroSettingsSheet(
                     "appearance" -> {
                         KlyroSectionHeading("Appearance")
                         Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)) {
-                            Text("Launcher icon", fontWeight = FontWeight.SemiBold,
-                                color = colors.foreground)
-                            if (!brandReady) {
-                                KlyroInlineNotice("Checking current launcher icon…")
-                            } else if (brandUpdating) {
-                                KlyroInlineNotice("Updating launcher icon…")
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
-                            ) {
-                                listOf(
-                                    KlyroBrandChoice.DEFAULT to "B · Default",
-                                    KlyroBrandChoice.ALTERNATIVE to "A · Animal"
-                                ).forEach { (choice, title) ->
-                                    Surface(
-                                        modifier = Modifier.weight(1f)
-                                            .heightIn(min = 96.dp)
-                                            .clickable(
-                                                enabled = brandReady && !brandUpdating,
-                                                role = Role.RadioButton,
-                                                onClickLabel = "Select launcher icon $title"
-                                            ) {
-                                                brandUpdating = true
-                                                brandSwitchError = false
-                                                scope.launch {
-                                                    val (ok, actual) = withContext(Dispatchers.IO) {
-                                                        val succeeded = runCatching {
-                                                            KlyroBrandChoice.isVerifiedSelection(context, choice) ||
-                                                                KlyroBrandChoice.select(context, choice)
-                                                        }.getOrDefault(false)
-                                                        succeeded to KlyroBrandChoice.selected(context)
-                                                    }
-                                                    selectedBrand = actual
-                                                    brandSwitchError = !ok
-                                                    brandUpdating = false
-                                                }
-                                            }.semantics {
-                                                contentDescription = "Launcher icon $title"
-                                                selected = selectedBrand == choice
-                                                stateDescription = when {
-                                                    brandUpdating || !brandReady -> "Updating launcher icon"
-                                                    selectedBrand == choice -> "Selected"
-                                                    else -> "Not selected"
-                                                }
-                                            },
-                                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-                                        color = if (selectedBrand == choice)
-                                            colors.accent.copy(alpha = .14f) else colors.tile,
-                                        border = BorderStroke(1.dp,
-                                            if (selectedBrand == choice) colors.accent else colors.muted.copy(alpha = .35f))
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.padding(8.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                painterResource(
-                                                    if (choice == KlyroBrandChoice.DEFAULT)
-                                                        R.drawable.ic_klyro_brand_b
-                                                    else R.drawable.ic_klyro_brand_a
-                                                ),
-                                                contentDescription = null,
-                                                tint = Color.Unspecified,
-                                                modifier = Modifier.size(58.dp)
-                                            )
-                                            Text(title, color = colors.foreground,
-                                                style = MaterialTheme.typography.labelMedium)
-                                        }
-                                    }
-                                }
-                            }
-                            if (brandUpdating) {
-                                Text("Updating launcher icon…",
-                                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                                    color = colors.muted,
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
-                            if (brandSwitchError) {
-                                Text("Icon switch failed. Both launcher entries were restored where possible; retry from Settings.",
-                                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                                    color = colors.danger,
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
-                            Text("Some launchers refresh home-screen icons after reopening the launcher.",
-                                color = colors.muted, style = MaterialTheme.typography.labelSmall)
                             Text("App theme", fontWeight = FontWeight.SemiBold,
                                 color = colors.foreground)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
-                            ) {
+                            KlyroSettingsChoiceGrid(columns = 3) {
                                 listOf("system" to "System", "light" to "Light",
                                     "dark" to "Dark").forEach { (mode, label) ->
                                     KlyroThemePreviewCard(
@@ -360,10 +277,7 @@ internal fun KlyroSettingsSheet(
                             }
                             Text("Monochrome", fontWeight = FontWeight.SemiBold,
                                 color = colors.foreground)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
-                            ) {
+                            KlyroSettingsChoiceGrid(columns = 3) {
                                 listOf("mono-contrast" to "Contrast", "mono-black" to "OLED",
                                     "mono-paper" to "Paper").forEach { (mode, label) ->
                                     KlyroThemePreviewCard(
@@ -441,10 +355,7 @@ internal fun KlyroSettingsSheet(
                             Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                                 Text("Terminal font", color = colors.foreground,
                                     fontWeight = FontWeight.SemiBold)
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
-                                ) {
+                                KlyroSettingsChoiceGrid(columns = 2) {
                                     KlyroTerminalFonts.options.forEach { option ->
                                         val active = fontFamilyId == option.id
                                         Surface(
@@ -471,7 +382,6 @@ internal fun KlyroSettingsSheet(
                                                 ), color = colors.foreground,
                                                     fontWeight = if (active) FontWeight.SemiBold
                                                         else FontWeight.Normal,
-                                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
                                                     style = MaterialTheme.typography.labelMedium)
                                             }
                                         }
@@ -479,14 +389,12 @@ internal fun KlyroSettingsSheet(
                                 }
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false) {
                                     Text("Font size", color = colors.foreground,
+                                        modifier = Modifier.weight(1f),
                                         fontWeight = FontWeight.SemiBold)
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End,
+                                        verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
                                             color = colors.accent, fontWeight = FontWeight.Bold
@@ -508,7 +416,114 @@ internal fun KlyroSettingsSheet(
                                         contentDescription = "Terminal font size"
                                     }
                                 )
+                                KlyroSettingsChoiceGrid(columns = 3) {
+                                    listOf(12f, 13.5f, 16f).forEach { preset ->
+                                        val active = fontSizeSp == preset
+                                        val label = if (preset % 1f == 0f) "${preset.toInt()} sp" else "$preset sp"
+                                        Surface(
+                                            modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch)
+                                                .clickable(role = Role.RadioButton,
+                                                    onClickLabel = "Set terminal font to $label") { onFontChange(preset) }
+                                                .semantics { selected = active; contentDescription = "Font size $label" },
+                                            color = if (active) colors.sheet else colors.key,
+                                            border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder, colors.accent) else null,
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                        ) {
+                                            Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+                                                Text(label, color = colors.foreground,
+                                                    style = MaterialTheme.typography.labelMedium)
+                                            }
+                                        }
+                                    }
+                                }
                             }
+                            Text("Launcher icon", fontWeight = FontWeight.SemiBold,
+                                color = colors.foreground)
+                            if (brandChecking) {
+                                KlyroInlineNotice("Checking current launcher icon…")
+                            } else if (brandUpdating) {
+                                KlyroInlineNotice("Updating launcher icon…")
+                            }
+                            KlyroSettingsChoiceGrid(columns = 2) {
+                                listOf(
+                                    KlyroBrandChoice.DEFAULT to "B · Default",
+                                    KlyroBrandChoice.ALTERNATIVE to "A · Animal"
+                                ).forEach { (choice, title) ->
+                                    Surface(
+                                        modifier = Modifier.weight(1f)
+                                            .heightIn(min = 96.dp)
+                                            .clickable(
+                                                enabled = !brandUpdating && !brandChecking,
+                                                role = Role.RadioButton,
+                                                onClickLabel = "Select launcher icon $title"
+                                            ) {
+                                                brandUpdating = true
+                                                brandSwitchError = false
+                                                scope.launch {
+                                                    val (ok, actual) = withContext(Dispatchers.IO) {
+                                                        val succeeded = runCatching {
+                                                            KlyroBrandChoice.isVerifiedSelection(context, choice) ||
+                                                                KlyroBrandChoice.select(context, choice)
+                                                        }.getOrDefault(false)
+                                                        succeeded to KlyroBrandChoice.confirmedSelection(context)
+                                                    }
+                                                    if (actual != null) selectedBrand = actual
+                                                    brandReady = actual != null
+                                                    brandSwitchError = !ok || actual == null
+                                                    brandUpdating = false
+                                                }
+                                            }.semantics {
+                                                contentDescription = "Launcher icon $title"
+                                                selected = brandReady && selectedBrand == choice
+                                                stateDescription = when {
+                                                    brandChecking -> "Checking launcher icon"
+                                                    brandUpdating -> "Updating launcher icon"
+                                                    !brandReady -> "Current icon unconfirmed"
+                                                    selectedBrand == choice -> "Selected"
+                                                    else -> "Not selected"
+                                                }
+                                            },
+                                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+                                        color = if (brandReady && selectedBrand == choice)
+                                            colors.accent.copy(alpha = .14f) else colors.tile,
+                                        border = BorderStroke(1.dp,
+                                            if (brandReady && selectedBrand == choice) colors.accent else colors.muted.copy(alpha = .35f))
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(8.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                painterResource(
+                                                    if (choice == KlyroBrandChoice.DEFAULT)
+                                                        R.drawable.ic_klyro_brand_b
+                                                    else R.drawable.ic_klyro_brand_a
+                                                ),
+                                                contentDescription = null,
+                                                tint = Color.Unspecified,
+                                                modifier = Modifier.size(58.dp)
+                                            )
+                                            Text(title, color = colors.foreground,
+                                                style = MaterialTheme.typography.labelMedium)
+                                        }
+                                    }
+                                }
+                            }
+                            if (brandSwitchError && !brandChecking && !brandUpdating) {
+                                KlyroInlineNotice(if (brandReady)
+                                    "The icon change could not be completed. The confirmed selection is shown. Choose an icon to try again."
+                                    else "The current launcher icon could not be confirmed. Choose an icon or retry the check.",
+                                    isError = true)
+                                if (!brandReady) {
+                                    TextButton(onClick = { brandRevision += 1 },
+                                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                                        Text("Retry icon check")
+                                    }
+                                }
+                            }
+                            Text("Some launchers refresh home-screen icons after reopening the launcher.",
+                                color = colors.muted, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     "keyboard" -> {
@@ -563,31 +578,13 @@ internal fun KlyroSettingsSheet(
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "files" -> {
-                        val authorizedCount = authorizedFolderCount.coerceAtLeast(0)
                         val authorized = authorizedFolderCount > 0
                         KlyroSectionHeading("Files & storage")
-                        Surface(
-                            color = if (authorized) colors.readyInk.copy(alpha = .10f) else colors.tile,
-                            shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth()
-                                    .padding(KlyroUiMetrics.spaceMd),
-                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.hugeicons_folder_01),
-                                    contentDescription = null,
-                                    tint = if (authorized) colors.readyInk else colors.muted,
-                                    modifier = Modifier.size(KlyroUiMetrics.glyphMedium)
-                                )
-                                Column(Modifier.weight(1f)) {
-                                    Text(if (authorized) "$authorizedCount folders connected" else "No folder connected",
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = colors.foreground)
-
-                                }
+                        KlyroFolderAccessSummary(authorizedFolderCount)
+                        if (authorizedFolderCount == -2) {
+                            TextButton(onClick = { folderRevision += 1 },
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                                Text("Retry folder check")
                             }
                         }
                         Button(
@@ -664,7 +661,6 @@ internal fun KlyroSettingsSheet(
                     }
                     "freeze" -> FreezeReportsPane(onStabilityTestStarted = onDismiss)
                     "diagnostics" -> {
-                        TextButton(onClick = { section = "freeze" }) { Text("Freeze reports") }
                         KlyroSectionHeading("Diagnostics", "Local checks; no commands run automatically.")
                         Surface(
                             color = colors.tile,
@@ -699,37 +695,38 @@ internal fun KlyroSettingsSheet(
                         ) {
                             Text(if (verifyingRuntime) "Checking environment…" else "Recheck environment")
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
-                        ) {
+                        KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false) {
                             OutlinedButton(
                                 onClick = onCopyDiagnostic,
                                 modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
-                                border = BorderStroke(1.dp, colors.accent.copy(alpha = .35f))
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foreground),
+                                border = BorderStroke(1.dp, colors.muted.copy(alpha = .35f))
                             ) {
                                 Icon(painterResource(R.drawable.hugeicons_clipboard_list),
                                     contentDescription = null,
                                     modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                Spacer(Modifier.width(KlyroUiMetrics.spaceSm))
                                 Text("Copy")
                             }
                             OutlinedButton(
                                 onClick = onShareDiagnostic,
                                 modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
-                                border = BorderStroke(1.dp, colors.accent.copy(alpha = .35f))
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foreground),
+                                border = BorderStroke(1.dp, colors.muted.copy(alpha = .35f))
                             ) {
                                 Icon(painterResource(R.drawable.hugeicons_upload_01),
                                     contentDescription = null,
                                     modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                Spacer(Modifier.width(KlyroUiMetrics.spaceSm))
                                 Text("Share")
                             }
                         }
                         Text("Review before sharing. Raw errors and terminal transcripts are excluded.",
                             color = colors.muted, style = MaterialTheme.typography.labelSmall)
+                        SettingsRowLink("Freeze reports", "Inspect saved reports and stability checks",
+                            R.drawable.hugeicons_pulse_rectangle_01) { section = "freeze" }
                     }
                     "about" -> {
                         KlyroSectionHeading("About Klyro Shell")
@@ -789,6 +786,37 @@ internal fun KlyroSettingsSheet(
             KlyroLicenseDialog("JetBrains Mono · OFL 1.1", "fonts/OFL.txt") {
                 showFontLicense = false
             }
+        }
+    }
+}
+
+@Composable
+internal fun KlyroFolderAccessSummary(count: Int) {
+    val colors = LocalKlyroColors.current
+    val connected = count > 0
+    val failed = count < -1
+    val label = when {
+        count == -1 -> "Checking connected folders…"
+        failed -> "Folder status unavailable"
+        count == 0 -> "No folder connected"
+        count == 1 -> "1 folder connected"
+        else -> "$count folders connected"
+    }
+    Surface(
+        color = if (failed) colors.dangerContainer else if (connected)
+            colors.readyInk.copy(alpha = .10f) else colors.tile,
+        shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd),
+            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(painterResource(R.drawable.hugeicons_folder_01), contentDescription = null,
+                tint = if (failed) colors.danger else if (connected) colors.readyInk else colors.muted,
+                modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
+            Text(label, modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
+                fontWeight = FontWeight.SemiBold, color = colors.foreground)
         }
     }
 }

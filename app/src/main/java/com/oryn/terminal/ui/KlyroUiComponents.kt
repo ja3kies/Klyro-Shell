@@ -48,6 +48,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.oryn.terminal.R
@@ -102,7 +103,7 @@ internal fun KlyroSheet(
 @Composable
 internal fun KlyroSheetTitle(title: String, modifier: Modifier = Modifier) {
     val colors = LocalKlyroColors.current
-    Text(title, modifier = modifier, style = MaterialTheme.typography.titleLarge,
+    Text(title, modifier = modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold, color = colors.foreground,
         maxLines = 2, overflow = TextOverflow.Ellipsis)
 }
@@ -113,6 +114,7 @@ internal fun KlyroSectionHeading(title: String, subtitle: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
         Text(
             title,
+            modifier = Modifier.semantics { heading() },
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = colors.foreground
