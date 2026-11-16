@@ -1,6 +1,8 @@
 """Home cover contract: a real, looping local GIF with lifecycle-aware Android playback."""
 from pathlib import Path
 import struct
+import shutil
+import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,6 +70,15 @@ class HomeAnimatedGifContract(unittest.TestCase):
         self.assertIn(b"NETSCAPE2.0", data)
         self.assertIn(b"\x03\x01\x00\x00", data)
         self.assertLess(len(data), 150_000)
+
+    @unittest.skipUnless(shutil.which("node"), "Node is required to reproduce GIF asset")
+    def test_bundled_animation_matches_source_generator(self):
+        generated = subprocess.check_output(
+            ["node", "-e",
+             "process.stdout.write(Buffer.from(require('./tools/generate_klyro_home_gif.cjs').generateKlyroGif()))"],
+            cwd=ROOT
+        )
+        self.assertEqual(generated, GIF.read_bytes(), "Regenerate the GIF after sprite edits")
 
     def test_android_decoder_plays_and_releases_gif(self):
         self.assertIn("R.drawable.klyro_home_landscape_loop", COVER)
