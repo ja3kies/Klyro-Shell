@@ -361,10 +361,13 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             TextButton(
                                 onClick = { error = null; removeId = plugin.id },
                                 enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = colors.danger, disabledContentColor = colors.muted
+                                ),
                                 modifier = Modifier.align(Alignment.End).heightIn(min = KlyroUiMetrics.minTouch)
                                     .semantics { contentDescription = "Remove ${plugin.name}" }
                             ) {
-                                Text("Remove", color = colors.danger)
+                                Text("Remove")
                             }
                         }
                     }
@@ -565,14 +568,17 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                TextButton(enabled = item != null && !mutationBusy && !confirmedMutationPending && !registryReadFailed, onClick = {
+                TextButton(enabled = item != null && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = colors.danger, disabledContentColor = colors.muted
+                    ), onClick = {
                     if (item == null) return@TextButton
                     confirmedRemovalId = id
                     applyChange({ manager.uninstall(id) }) {
                         removeId = null
                         confirmedRemovalId = null
                     }
-                }) { Text("Remove", color = colors.danger) }
+                }) { Text("Remove") }
             },
             dismissButton = {
                 TextButton(
@@ -607,10 +613,14 @@ internal fun KlyroExplorePluginCard(
                     },
                     onClick = onAdd,
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                    border = BorderStroke(1.dp, colors.muted.copy(alpha = .55f))
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = colors.foreground, disabledContentColor = colors.muted
+                    ),
+                    border = BorderStroke(1.dp, colors.muted.copy(
+                        alpha = if (enabled && !isInstalled) .55f else .2f
+                    ))
                 ) {
-                    Text(if (isInstalled) "Installed" else "Add",
-                        color = if (isInstalled) colors.muted else colors.foreground)
+                    Text(if (isInstalled) "Installed" else "Add")
                 }
             }
             if (stacked) {

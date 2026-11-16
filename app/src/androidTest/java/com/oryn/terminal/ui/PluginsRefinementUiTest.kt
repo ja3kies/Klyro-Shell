@@ -81,6 +81,14 @@ class PluginsRefinementUiTest {
         ui.onNodeWithContentDescription("${plugin.name} installed").assertIsNotEnabled()
     }
 
+    @Test fun unavailableRegistryPreventsReviewEvenForAnUninstalledPack() {
+        val plugin = KlyroPluginManager.bundled.first()
+        ui.setContent {
+            MaterialTheme { KlyroExplorePluginCard(plugin, false, false, onAdd = { error("Registry unavailable") }) }
+        }
+        ui.onNodeWithContentDescription("Review and add ${plugin.name}").assertIsNotEnabled()
+    }
+
     @Test fun unreadableRegistryIsNotEmptyAndRecoversAfterRetryAndValidRefresh() {
         preferences.edit().putString("manifest", "{broken").commit()
         ui.setContent {
