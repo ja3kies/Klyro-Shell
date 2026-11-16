@@ -264,9 +264,10 @@ internal fun KlyroSettingsSheet(
                     }
                     "appearance" -> {
                         KlyroSectionHeading("Appearance")
+                        val appearanceInlineWidth = 240.dp
                         Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXl)) {
                             KlyroAppearanceGroup("App theme") {
-                                KlyroSettingsChoiceGrid(columns = 3) {
+                                KlyroSettingsChoiceGrid(columns = 3, minimumInlineWidth = appearanceInlineWidth) {
                                     listOf("system" to "System", "light" to "Light",
                                         "dark" to "Dark").forEach { (mode, label) ->
                                         KlyroThemePreviewCard(
@@ -300,7 +301,7 @@ internal fun KlyroSettingsSheet(
                                         modifier = Modifier.size(18.dp).rotate(if (showMonochromeThemes) 90f else 0f))
                                 }
                                 if (showMonochromeThemes) {
-                                    KlyroSettingsChoiceGrid(columns = 3) {
+                                    KlyroSettingsChoiceGrid(columns = 3, minimumInlineWidth = appearanceInlineWidth) {
                                         listOf("mono-contrast" to "Contrast", "mono-black" to "OLED",
                                             "mono-paper" to "Paper").forEach { (mode, label) ->
                                             KlyroThemePreviewCard(
@@ -381,7 +382,7 @@ internal fun KlyroSettingsSheet(
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                                     Text("Terminal font", color = colors.foreground,
                                         fontWeight = FontWeight.SemiBold)
-                                    KlyroSettingsChoiceGrid(columns = 2) {
+                                    KlyroSettingsChoiceGrid(columns = 2, minimumInlineWidth = appearanceInlineWidth) {
                                         KlyroTerminalFonts.options.forEach { option ->
                                             val active = fontFamilyId == option.id
                                             Surface(
@@ -412,7 +413,7 @@ internal fun KlyroSettingsSheet(
                                     }
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
-                                    KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false) {
+                                    KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false, minimumInlineWidth = appearanceInlineWidth) {
                                         Text("Font size", color = colors.foreground,
                                             modifier = Modifier.weight(1f),
                                             fontWeight = FontWeight.SemiBold)
@@ -439,7 +440,7 @@ internal fun KlyroSettingsSheet(
                                             contentDescription = "Terminal font size"
                                         }
                                     )
-                                    KlyroSettingsChoiceGrid(columns = 3) {
+                                    KlyroSettingsChoiceGrid(columns = 3, minimumInlineWidth = appearanceInlineWidth) {
                                         listOf(12f, 13.5f, 16f).forEach { preset ->
                                             val active = fontSizeSp == preset
                                             val label = if (preset % 1f == 0f) "${preset.toInt()} sp" else "$preset sp"
@@ -468,7 +469,7 @@ internal fun KlyroSettingsSheet(
                                 } else if (brandUpdating) {
                                     KlyroInlineNotice("Updating launcher icon…")
                                 }
-                                KlyroSettingsChoiceGrid(columns = 2) {
+                                KlyroSettingsChoiceGrid(columns = 2, minimumInlineWidth = appearanceInlineWidth) {
                                     listOf(
                                         KlyroBrandChoice.DEFAULT to "B · Default",
                                         KlyroBrandChoice.ALTERNATIVE to "A · Animal"

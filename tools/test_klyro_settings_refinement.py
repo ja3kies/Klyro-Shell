@@ -20,8 +20,9 @@ class SettingsRefinement(unittest.TestCase):
         grid = UI / 'KlyroSettingsChoiceGrid.kt'
         self.assertTrue(grid.exists())
         source = grid.read_text()
-        self.assertIn('maxWidth < 340.dp || LocalDensity.current.fontScale >= 1.3f', source)
+        self.assertIn('maxWidth < minimumInlineWidth || LocalDensity.current.fontScale >= 1.3f', source)
         self.assertIn('maxItemsInEachRow = if (stacked) 1 else columns', source)
+        self.assertIn('minimumInlineWidth: Dp = 340.dp', source)
         self.assertNotIn('maxLines = 1', P)
 
     def test_unknown_launcher_state_is_not_selected_as_default(self):

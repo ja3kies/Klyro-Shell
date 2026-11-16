@@ -32,6 +32,11 @@ five accent controls retain 48dp targets after grouping; the accent flow wraps
 instead of squeezing them. Tests must execute on Android before
 claiming device acceptance.
 
+Appearance uses a 240dp inline threshold inside its padded groups, keeping the
+three primary themes inline at a normal phone width. The shared Settings layout
+retains its 340dp default for other pages and stacks at large font scales. An
+Android test exercises the actual Appearance fixture at 393dp logical width.
+
 ## Visual review gate
 
 Simulated Rams/Ive/Kare/Wroblewski/Norman lenses: less competing decoration,

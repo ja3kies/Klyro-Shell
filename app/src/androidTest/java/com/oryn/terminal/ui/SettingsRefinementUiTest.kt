@@ -1,6 +1,8 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -128,6 +130,23 @@ class SettingsRefinementUiTest {
             ui.onNodeWithContentDescription(label).performScrollTo()
                 .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
         }
+    }
+
+    @Test fun primaryThemesRemainInlineAtNormalPhoneWidth() {
+        ui.setContent {
+            val density = LocalDensity.current
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                CompositionLocalProvider(LocalDensity provides Density(density.density * maxWidth.value / 393f, 1f)) {
+                    MaterialTheme { Fixture("appearance") }
+                }
+            }
+        }
+        val system = ui.onNodeWithTag("theme-preview-system").fetchSemanticsNode().boundsInRoot
+        val light = ui.onNodeWithTag("theme-preview-light").fetchSemanticsNode().boundsInRoot
+        val dark = ui.onNodeWithTag("theme-preview-dark").fetchSemanticsNode().boundsInRoot
+        assertEquals(system.top, light.top, .5f)
+        assertEquals(system.top, dark.top, .5f)
+        assertTrue(system.right <= light.left)
     }
 
     @Test fun labelledBackReturnsToRootAndCloseDismissesExactlyOnce() {
