@@ -10,4 +10,8 @@ class RegistryRefreshRace(unittest.TestCase):
   self.assertIn('val stopObserving = manager.observeRegistry',S)
   self.assertIn('onDispose { stopObserving() }',S)
   self.assertNotIn('scope.launch {\n                installed = withContext',S)
+ def test_rotation_recovery_cancels_stale_reads_and_accepts_a_valid_snapshot(self):
+  self.assertIn('LaunchedEffect(confirmedBundledId, confirmedImportId, confirmedRemovalId, mutationBusy, registryRevision)',S)
+  recovery=S.split('delay(10_000L)',1)[1].split('LaunchedEffect(installed,',1)[0]
+  self.assertIn('installed = refreshed\n        registryReadFailed = false',recovery)
 if __name__=="__main__": unittest.main()

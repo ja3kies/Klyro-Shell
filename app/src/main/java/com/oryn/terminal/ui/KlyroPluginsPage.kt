@@ -120,7 +120,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     // Recover after rotation if the old Activity's confirmed commit never
     // reports completion (e.g. its coroutine failed after destruction).
     // Do not retain an unresponsive disabled dialog indefinitely.
-    LaunchedEffect(confirmedBundledId, confirmedImportId, confirmedRemovalId, mutationBusy) {
+    LaunchedEffect(confirmedBundledId, confirmedImportId, confirmedRemovalId, mutationBusy, registryRevision) {
         if (confirmedMutationPending.not()) return@LaunchedEffect
         if (mutationBusy) return@LaunchedEffect
         delay(10_000L)
@@ -135,6 +135,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 return@LaunchedEffect
             }
         installed = refreshed
+        registryReadFailed = false
         val ids = refreshed.map { it.id }.toSet()
         val stuck = (confirmedBundledId?.let { it !in ids } == true) ||
             (confirmedImportId?.let { it !in ids } == true) ||
