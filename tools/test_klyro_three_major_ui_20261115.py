@@ -25,7 +25,7 @@ class ThreeMajorUiRegressions(unittest.TestCase):
 
     def test_launcher_change_is_async_and_disables_reentry(self):
         appearance = SETTINGS.split('"appearance" -> {', 1)[1].split('"keyboard" -> {', 1)[0]
-        self.assertIn("enabled = brandReady && !brandUpdating", appearance)
+        self.assertIn("enabled = !brandUpdating && !brandChecking", appearance)
         self.assertIn("brandUpdating = true", appearance)
         self.assertIn("brandUpdating = false", appearance)
         self.assertIn("scope.launch {", appearance)

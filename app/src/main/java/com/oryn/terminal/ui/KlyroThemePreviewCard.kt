@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -74,7 +75,7 @@ internal fun KlyroThemePreviewCard(
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(40.dp)
+                modifier = Modifier.fillMaxWidth().height(40.dp).clearAndSetSemantics { }
                     .background(preview.background, RoundedCornerShape(9.dp))
                     .padding(5.dp),
                 contentAlignment = Alignment.Center
@@ -112,7 +113,7 @@ internal fun KlyroThemePreviewCard(
             Text(label, modifier = Modifier.fillMaxWidth(),
                 color = if (active) current.accent else current.foreground,
                 fontSize = 11.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
 }

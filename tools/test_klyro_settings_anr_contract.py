@@ -40,10 +40,10 @@ class SettingsAnrContracts(unittest.TestCase):
         self.assertIn('getTranscriptTail(TerminalActionPolicy.MAX_SELECTION_UTF16_UNITS)', PANE)
 
     def test_launcher_identity_binder_lookup_is_not_on_settings_opening_frame(self):
-        section = SETTINGS.split('LaunchedEffect(context) {', 1)[1].split(
+        section = SETTINGS.split('LaunchedEffect(context, section, brandRevision) {', 1)[1].split(
             'fun navigateBack()', 1)[0]
         self.assertIn('withContext(Dispatchers.IO)', section)
-        self.assertIn('KlyroBrandChoice.selected(context)', section)
+        self.assertIn('KlyroBrandChoice.confirmedSelection(context)', section)
 
     def test_home_launcher_identity_binder_lookup_runs_on_io(self):
         section = MAIN.split('var homeLauncherIcon by remember(context)', 1)[1].split(
@@ -53,7 +53,7 @@ class SettingsAnrContracts(unittest.TestCase):
         self.assertIn('KlyroBrandChoice.selected(context)', section)
 
     def test_launcher_switch_package_manager_calls_run_on_io(self):
-        section = SETTINGS.split('enabled = brandReady && !brandUpdating', 1)[1].split(
+        section = SETTINGS.split('enabled = !brandUpdating && !brandChecking', 1)[1].split(
             '}.semantics {', 1)[0]
         self.assertIn('scope.launch', section)
         self.assertIn('withContext(Dispatchers.IO)', section)
@@ -63,12 +63,12 @@ class SettingsAnrContracts(unittest.TestCase):
     def test_storage_permission_binder_call_not_in_compose_files_case(self):
         prefix = SETTINGS.split('val context = LocalContext.current', 1)[1].split(
             'val version =', 1)[0]
-        self.assertIn('LaunchedEffect(context, section)', prefix)
+        self.assertIn('LaunchedEffect(context, section, folderRevision)', prefix)
         self.assertIn('withContext(Dispatchers.IO)', prefix)
         self.assertIn('persistedUriPermissions.count {', prefix)
         block = SETTINGS.split('"files" -> {', 1)[1].split('"privacy" -> {', 1)[0]
         self.assertNotIn('persistedUriPermissions', block)
-        self.assertIn('val authorizedCount = authorizedFolderCount.coerceAtLeast(0)', block)
+        self.assertIn('KlyroFolderAccessSummary(authorizedFolderCount)', block)
 
     def test_storage_completion_does_not_write_on_activity_result_thread(self):
         block = MAIN.split('private fun completeStorageRequest(status: String)', 1)[1].split(

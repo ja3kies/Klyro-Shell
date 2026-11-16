@@ -45,7 +45,11 @@ object KlyroBrandChoice {
 
     /** Prefer the OS state to stale preferences; fall back only for display. */
     fun selected(context: Context): String =
-        runCatching { verifiedChoice(context) }.getOrNull() ?: DEFAULT
+        confirmedSelection(context) ?: DEFAULT
+
+    /** Selection controls must distinguish an unknown OS state from the display fallback. */
+    fun confirmedSelection(context: Context): String? =
+        runCatching { verifiedChoice(context) }.getOrNull()
 
     /** A visual fallback is not proof of the current Android launcher component state. */
     fun isVerifiedSelection(context: Context, choice: String): Boolean =
