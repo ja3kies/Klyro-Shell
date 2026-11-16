@@ -9,10 +9,10 @@ SHARED = (APP / "ui/KlyroUiComponents.kt").read_text(encoding="utf-8")
 PLUGINS = (APP / "ui/KlyroPluginsPage.kt").read_text(encoding="utf-8")
 
 class AccentHierarchyContract(unittest.TestCase):
-    def test_architecture_badge_is_neutral(self):
-        # Architecture is quiet metadata beside the brand, not an accent CTA.
-        metadata = HOME.split('Text("ARM64"', 1)[1][:160]
-        self.assertIn('Text("ARM64", color = ui.muted', HOME)
+    def test_workspace_context_is_neutral(self):
+        # Workspace context stays quiet beside the brand.
+        metadata = HOME.split('Text("SHELL · $homeWorkspaceName"', 1)[1][:160]
+        self.assertIn('Text("SHELL · $homeWorkspaceName", color = ui.muted', HOME)
         self.assertNotIn('ui.accent', metadata)
 
     def test_menu_and_repeated_icons_do_not_mimic_primary_ctas(self):

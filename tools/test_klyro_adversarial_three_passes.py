@@ -87,7 +87,7 @@ class KlyroThreePassAdversarialAudit(unittest.TestCase):
         self.assertNotIn('Text("24 sp"', settings)
         self.assertIn("KlyroPluginsPage(onBack =", home)
         self.assertIn("ic_klyro_brand_b", home)
-        self.assertIn('Text("ARM64"', home)
+        self.assertIn('Text("SHELL · $homeWorkspaceName"', home)
         fg = ROOT / "app/src/main/res/drawable/ic_klyro_launcher_foreground.xml"
         root = ET.parse(fg).getroot()
         android = "{http://schemas.android.com/apk/res/android}"

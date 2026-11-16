@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -1244,7 +1245,11 @@ private fun OrynTerminalApp(
         bashStarted, runtimeInstalled, bootstrapInstalled,
         technicalErrorDetails != null
     )
-    val stateLabel = badge.label
+    val stateLabel = badge.label.lowercase(java.util.Locale.ROOT)
+        .replaceFirstChar { it.titlecase() }
+    val calmHomeReady = badge.severity == KlyroRuntimeBadgeSeverity.READY &&
+        technicalErrorDetails == null && homeStatus.terminalFailure == null
+    val homeWorkspaceName = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
     val stateColor = when (badge.severity) {
         KlyroRuntimeBadgeSeverity.READY -> ui.readyInk
         KlyroRuntimeBadgeSeverity.WARNING -> ui.warningInk
@@ -1397,27 +1402,13 @@ private fun OrynTerminalApp(
                             modifier = Modifier.size(56.dp)
                         )
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("KLYRO", color = ui.foreground, fontSize = 23.sp,
-                            fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text("SHELL", color = ui.muted, fontSize = 11.sp,
-                                letterSpacing = 2.sp)
-                            Surface(
-                                color = ui.key.copy(alpha = .55f),
-                                shape = RoundedCornerShape(6.dp)
-                            ) {
-                                Text("ARM64", color = ui.muted,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    fontFamily = FontFamily.Monospace, fontSize = 10.sp,
-                                    fontWeight = FontWeight.Medium)
-                            }
-                        }
+                            fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp,
+                            modifier = Modifier.semantics { heading() })
+                        Text("SHELL · $homeWorkspaceName", color = ui.muted,
+                            fontSize = 12.sp, lineHeight = 18.sp)
                     }
-                    Spacer(Modifier.weight(1f))
                 }
 
                 // Keep the terminal action with the content it serves, not
@@ -1489,12 +1480,12 @@ private fun OrynTerminalApp(
 
                 Surface(
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
-                    color = ui.sheet,
+                    color = if (calmHomeReady) screenChrome else ui.sheet,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-                    border = BorderStroke(1.dp, ui.key.copy(alpha = .5f))
+                    border = if (calmHomeReady) null else BorderStroke(1.dp, ui.key.copy(alpha = .5f))
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(if (calmHomeReady) 8.dp else 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Row(
@@ -1503,7 +1494,7 @@ private fun OrynTerminalApp(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Box(
-                                modifier = Modifier.size(44.dp).background(
+                                modifier = Modifier.size(if (calmHomeReady) 32.dp else 44.dp).background(
                                     stateColor.copy(alpha = .12f), RoundedCornerShape(14.dp)
                                 ),
                                 contentAlignment = Alignment.Center
@@ -1513,7 +1504,7 @@ private fun OrynTerminalApp(
                                         painterResource(R.drawable.hugeicons_checkmark_circle_01),
                                         contentDescription = null,
                                         tint = stateColor,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(if (calmHomeReady) 20.dp else 24.dp)
                                     )
                                 } else {
                                     Text(

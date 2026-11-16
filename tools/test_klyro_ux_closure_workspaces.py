@@ -24,5 +24,5 @@ class WorkspaceUXClosure(unittest.TestCase):
   self.assertIn('delay(10_000L)',P)
   self.assertIn('if (stuck) {',P)
   self.assertIn('Review the list before retrying.',P)
-  self.assertIn('withContext(Dispatchers.IO) { manager.installed() }',P)
+  self.assertIn('withContext(Dispatchers.IO) { runCatching { manager.installed() } }',P)
 if __name__=="__main__":unittest.main()
