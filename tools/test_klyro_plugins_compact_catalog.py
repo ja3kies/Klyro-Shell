@@ -11,7 +11,7 @@ class PluginCompactCatalogTest(unittest.TestCase):
         self.assertIn('Text("Plugins", fontSize = 28.sp', CODE)
         self.assertNotIn('"LOCAL EXTENSIONS"', CODE)
         self.assertIn(
-            'Command packs insert suggestions into Bash; nothing runs automatically.',
+            'Offline command packs. Nothing runs automatically.',
             CODE,
         )
 
@@ -19,16 +19,20 @@ class PluginCompactCatalogTest(unittest.TestCase):
         catalog = CODE.split('KlyroPluginManager.bundled.forEach { plugin ->', 1)[1].split(
             'Surface(color = colors.chrome,', 1
         )[0]
-        self.assertIn('PluginHeading(', catalog)
-        self.assertIn('"${plugin.commands.size} commands · Offline"', catalog)
-        self.assertIn('modifier = Modifier.weight(1f)', catalog)
-        self.assertNotIn('Text("${plugin.commands.size} commands · Offline"', catalog)
-        self.assertIn('OutlinedButton(', catalog)
-        self.assertIn('contentDescription = if (isInstalled)', catalog)
-        self.assertIn('"Review and add ${plugin.name}"', catalog)
+        self.assertIn('KlyroExplorePluginCard(', catalog)
+        card = CODE.split('internal fun KlyroExplorePluginCard(', 1)[1].split(
+            'private fun PluginHeading(', 1
+        )[0]
+        self.assertIn('PluginHeading(', card)
+        self.assertIn('"${plugin.commands.size} commands"', card)
+        self.assertIn('Modifier.weight(1f)', card)
+        self.assertNotIn('commands · Offline', card)
+        self.assertIn('OutlinedButton(', card)
+        self.assertIn('contentDescription = if (isInstalled)', card)
+        self.assertIn('"Review and add ${plugin.name}"', card)
         self.assertIn('pendingBundledId = plugin.id', catalog)
         self.assertNotIn('ButtonDefaults.buttonColors(containerColor = colors.accent', catalog)
-        self.assertIn('horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)', catalog)
+        self.assertIn('horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)', card)
         self.assertIn('modifier = modifier.fillMaxWidth()', CODE)
 
     def test_confirmation_is_required_for_local_bundled_add(self):

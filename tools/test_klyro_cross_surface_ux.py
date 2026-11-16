@@ -14,7 +14,7 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         home = READ(APP / "MainActivity.kt")
         plugins = READ(UI / "KlyroPluginsPage.kt")
         self.assertIn('ic_klyro_brand_b', home)
-        self.assertIn('Text("ARM64"', home)
+        self.assertIn('Text("SHELL · $homeWorkspaceName"', home)
         self.assertIn('ic_klyro_plugins', home)
         self.assertIn('rememberSaveable { mutableStateOf(false) }', home)
         self.assertIn("KlyroPluginsPage(onBack =", home)

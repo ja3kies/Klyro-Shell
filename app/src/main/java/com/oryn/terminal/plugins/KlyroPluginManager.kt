@@ -105,12 +105,23 @@ class KlyroPluginManager(context: Context) {
         )
     }
 
-    fun installed(): List<KlyroPluginRecord> = runCatching {
-        val array = JSONArray(prefs.getString("manifest", "[]") ?: "[]")
-        (0 until minOf(array.length(), MAX_PLUGINS)).mapNotNull { index ->
-            parse(array.optJSONObject(index))
-        }.distinctBy { it.id }
-    }.getOrDefault(emptyList())
+    fun installed(): List<KlyroPluginRecord> {
+        // A failed read is not an empty registry: mutations must never overwrite
+        // unreadable or partially valid data with a newly constructed list.
+        return try {
+            val array = JSONArray(prefs.getString("manifest", "[]") ?: "[]")
+            check(array.length() <= MAX_PLUGINS)
+            val records = (0 until array.length()).map { index ->
+                checkNotNull(parse(array.optJSONObject(index)))
+            }
+            check(records.map { it.id }.distinct().size == records.size)
+            records
+        } catch (failure: Exception) {
+            throw IllegalStateException(
+                "Saved plugin registry is unreadable. Reload before making changes.", failure
+            )
+        }
+    }
 
     /** Listen to registry commits, including ones started by an Activity being rotated. */
     fun observeRegistry(onChange: () -> Unit): () -> Unit {
@@ -122,7 +133,8 @@ class KlyroPluginManager(context: Context) {
     }
 
     // A LazyColumn key must be unique even if different packs reuse a label.
-    fun activeCommands(): List<KlyroPluginCommand> = installed()
+    fun activeCommands(): List<KlyroPluginCommand> = runCatching { installed() }
+        .getOrDefault(emptyList())
         .filter { it.enabled }.flatMap { it.commands }
         .distinctBy { it.label to it.insert }
 
