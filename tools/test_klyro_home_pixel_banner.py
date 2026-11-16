@@ -1,56 +1,58 @@
-"""Home banner stays offline, decorative, and grouped with functional content."""
+"""Klyro Home cover: pixel-perfect native rendering, no scaled AI artwork."""
 from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 HOME = (ROOT / "app/src/main/java/com/oryn/terminal/MainActivity.kt").read_text()
-ART = ROOT / "app/src/main/res/drawable-nodpi/klyro_home_pixel_landscape.webp"
+COVER = ROOT / "app/src/main/java/com/oryn/terminal/KlyroHomePixelCover.kt"
+OLD_ART = ROOT / "app/src/main/res/drawable-nodpi/klyro_home_pixel_landscape.webp"
+
 
 class HomePixelBannerContract(unittest.TestCase):
-    def test_image_is_valid_small_local_webp(self):
-        data = ART.read_bytes()
-        self.assertEqual(data[:4], b"RIFF")
-        self.assertEqual(data[8:12], b"WEBP")
-        self.assertEqual(int.from_bytes(data[4:8], "little") + 8, len(data))
-        self.assertLess(len(data), 16_000)
+    def test_cover_is_hand_authored_and_resolution_independent(self):
+        source = COVER.read_text()
+        self.assertIn("internal fun KlyroHomePixelCover(", source)
+        self.assertIn("Canvas(Modifier.fillMaxSize()", source)
+        self.assertIn("drawKlyroMascot(", source)
+        self.assertIn("drawRect(", source)
+        self.assertNotIn("Image(", source)
+        self.assertNotIn("ContentScale.FillBounds", source)
+        self.assertNotIn("R.drawable.klyro_home_pixel_landscape", source)
+        self.assertFalse(OLD_ART.exists(), "Remove obsolete blurred source asset")
 
     def test_art_only_renders_on_home_and_fades(self):
-        self.assertIn('val homeVisible = !showPlugins &&', HOME)
-        self.assertIn('if (homeVisible) {', HOME)
-        self.assertIn('R.drawable.klyro_home_pixel_landscape', HOME)
-        self.assertIn('contentDescription = null,', HOME)
-        self.assertIn('.66f to Color.Transparent', HOME)
-        self.assertIn('1f to screenChrome', HOME)
+        self.assertIn("val homeVisible = !showPlugins &&", HOME)
+        self.assertIn("if (homeVisible) {", HOME)
+        self.assertIn("KlyroHomePixelCover(bannerHeight, screenChrome)", HOME)
+        source = COVER.read_text()
+        self.assertIn(".66f to Color.Transparent", source)
+        self.assertIn("1f to screenChrome", source)
+        self.assertIn("clearAndSetSemantics", source)
 
-    def test_animation_stops_when_system_reduces_motion(self):
-        cover = HOME.split('private fun KlyroHomePixelCover(', 1)[1]
-        self.assertIn('Settings.Global.ANIMATOR_DURATION_SCALE', cover)
-        self.assertIn('if (motionEnabled)', cover)
-        self.assertIn('rememberInfiniteTransition(label = "Klyro night stars")', cover)
-        self.assertIn('Canvas(Modifier.fillMaxSize())', cover)
-        self.assertIn('Image(', cover)
-        self.assertIn('contentDescription = null', cover)
+    def test_motion_is_optional_and_lightweight(self):
+        source = COVER.read_text()
+        self.assertIn("Settings.Global.ANIMATOR_DURATION_SCALE", source)
+        self.assertIn("if (motionEnabled)", source)
+        self.assertIn("rememberInfiniteTransition", source)
+        self.assertNotIn("ImageDecoder", source)
 
-    def test_profile_header_and_primary_action_follow_banner(self):
-        home = HOME.split('// The primary action, runtime and tools', 1)[1]
-        self.assertLess(home.index('Spacer(Modifier.fillMaxWidth().height(bannerSpace))'),
+    def test_profile_and_primary_action_follow_banner(self):
+        home = HOME.split("// The primary action, runtime and tools", 1)[1]
+        self.assertLess(home.index("Spacer(Modifier.fillMaxWidth().height(bannerSpace))"),
                         home.index('Text("KLYRO"'))
         self.assertLess(home.index('Text("KLYRO"'),
-                        home.index('if (homeAction != KlyroHomeAction.NONE)'))
-        self.assertLess(home.index('if (homeAction != KlyroHomeAction.NONE)'),
-                        home.index('stateLabel,'))
-        self.assertLess(home.index('stateLabel,'),
-                        home.index('title = "Plugins"'))
+                        home.index("if (homeAction != KlyroHomeAction.NONE)"))
+        self.assertLess(home.index("if (homeAction != KlyroHomeAction.NONE)"),
+                        home.index("stateLabel,"))
+        self.assertLess(home.index("stateLabel,"), home.index('title = "Plugins"'))
 
-    def test_status_bar_icons_remain_visible_in_light_theme(self):
-        self.assertIn('LaunchedEffect(homeVisible, darkChrome, screenChrome)', HOME)
-        self.assertIn('isAppearanceLightStatusBars = !homeVisible && !darkChrome', HOME)
+    def test_safe_areas_and_compact_height(self):
+        self.assertIn("screenHeightDp < 660", HOME)
+        self.assertIn("80.dp else 194.dp", HOME)
+        self.assertIn("148.dp else 256.dp", HOME)
+        self.assertIn(".verticalScroll(rememberScrollState())", HOME)
+        self.assertIn("isAppearanceLightStatusBars = !homeVisible && !darkChrome", HOME)
 
-    def test_small_height_loses_art_before_it_loses_actions(self):
-        self.assertIn('screenHeightDp < 660', HOME)
-        self.assertIn('80.dp else 194.dp', HOME)
-        self.assertIn('148.dp else 256.dp', HOME)
-        self.assertIn('.verticalScroll(rememberScrollState())', HOME)
 
 if __name__ == "__main__":
     unittest.main()
