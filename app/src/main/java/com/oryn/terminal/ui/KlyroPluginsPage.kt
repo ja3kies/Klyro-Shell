@@ -346,7 +346,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                                 },
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                                 border = BorderStroke(1.dp, colors.muted.copy(alpha = .35f))
-                            ) { Text(if (isInstalled) "Installed" else "Add", color = if (isInstalled) colors.muted else colors.accent) }
+                            ) { Text(if (isInstalled) "Installed" else "Add", color = if (isInstalled) colors.muted else colors.foreground) }
                         }
                     }
                 }
