@@ -322,31 +322,38 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             KlyroPluginManager.bundled.forEach { plugin ->
                 val isInstalled = installed.any { it.id == plugin.id }
                 Surface(
-                    color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    color = colors.tile,
+                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
-                    Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        PluginHeading(plugin, "")
-                        Row(modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Text("${plugin.commands.size} commands · Offline", color = colors.muted,
-                                fontSize = 12.sp)
-                            OutlinedButton(
-                                enabled = !isInstalled && !registryLoading && !mutationBusy && !confirmedMutationPending,
-                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                    .semantics {
-                                        contentDescription = if (isInstalled)
-                                            "${plugin.name} installed"
-                                        else "Review and add ${plugin.name}"
-                                    },
-                                onClick = {
-                                    error = null
-                                    pendingBundledId = plugin.id
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        PluginHeading(
+                            plugin,
+                            "${plugin.commands.size} commands · Offline",
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedButton(
+                            enabled = !isInstalled && !registryLoading && !mutationBusy && !confirmedMutationPending,
+                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                .semantics {
+                                    contentDescription = if (isInstalled)
+                                        "${plugin.name} installed"
+                                    else "Review and add ${plugin.name}"
                                 },
-                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                border = BorderStroke(1.dp, colors.muted.copy(alpha = .35f))
-                            ) { Text(if (isInstalled) "Installed" else "Add", color = if (isInstalled) colors.muted else colors.foreground) }
+                            onClick = {
+                                error = null
+                                pendingBundledId = plugin.id
+                            },
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                            border = BorderStroke(1.dp, colors.muted.copy(alpha = .35f))
+                        ) {
+                            Text(
+                                if (isInstalled) "Installed" else "Add",
+                                color = if (isInstalled) colors.muted else colors.foreground
+                            )
                         }
                     }
                 }
@@ -559,9 +566,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
 }
 
 @Composable
-private fun PluginHeading(plugin: KlyroPluginRecord, detail: String) {
+private fun PluginHeading(plugin: KlyroPluginRecord, detail: String, modifier: Modifier = Modifier) {
     val colors = LocalKlyroColors.current
-    Row(modifier = Modifier.fillMaxWidth(),
+    Row(modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
         verticalAlignment = Alignment.CenterVertically) {
         Surface(color = colors.key,
