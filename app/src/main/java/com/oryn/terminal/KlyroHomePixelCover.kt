@@ -24,13 +24,12 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.LifecycleOwner
 
 @Composable
 internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color) {
@@ -98,7 +97,7 @@ private fun KlyroAnimatedGifCover() {
     )
 
     // A hidden screen or stopped Activity must not keep decoding GIF frames.
-    val lifecycle = ViewTreeLifecycleOwner.get(LocalView.current)?.lifecycle
+    val lifecycle = (context as? LifecycleOwner)?.lifecycle
     DisposableEffect(animated, lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
