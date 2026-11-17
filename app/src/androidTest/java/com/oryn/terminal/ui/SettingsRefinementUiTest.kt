@@ -127,6 +127,7 @@ class SettingsRefinementUiTest {
                 MaterialTheme { Fixture("appearance") }
             }
         }
+        ui.onNodeWithText("Custom").performScrollTo().assertIsDisplayed()
         for (label in listOf("Lime accent", "Cyan accent", "Coral accent", "Orchid accent", "Choose custom accent")) {
             ui.onNodeWithContentDescription(label).performScrollTo()
                 .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
