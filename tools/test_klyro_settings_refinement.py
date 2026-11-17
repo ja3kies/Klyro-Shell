@@ -25,6 +25,13 @@ class SettingsRefinement(unittest.TestCase):
         self.assertIn('minimumInlineWidth: Dp = 340.dp', source)
         self.assertNotIn('maxLines = 1', P)
 
+    def test_accent_presets_are_exposed_as_one_radio_group(self):
+        appearance = S.split('"appearance" -> {', 1)[1].split('"keyboard" -> {', 1)[0]
+        swatches = appearance.split('KlyroColors.primary.forEach { preset ->', 1)[0]
+        self.assertIn('Modifier.selectableGroup()', swatches[-500:])
+        self.assertIn('clickable(role = Role.RadioButton', appearance)
+        self.assertIn('selected = active', appearance)
+
     def test_unknown_launcher_state_is_not_selected_as_default(self):
         self.assertIn('fun confirmedSelection(context: Context): String?', B)
         self.assertIn('brandReady = actual != null', S)

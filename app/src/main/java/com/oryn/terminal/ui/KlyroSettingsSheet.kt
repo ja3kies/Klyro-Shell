@@ -11,6 +11,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
@@ -346,35 +347,41 @@ internal fun KlyroSettingsSheet(
                                         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs),
                                         verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
                                         ) {
-                                            KlyroColors.primary.forEach { preset ->
-                                                val swatch = KlyroColors.create(colors.dark, preset.id)
-                                                val active = accentId == preset.id
-                                                Box(
-                                                    modifier = Modifier.size(KlyroUiMetrics.minTouch)
-                                                        .clickable(role = Role.RadioButton,
-                                                            onClickLabel = "Select " + preset.label + " accent") {
-                                                            onAccentIdChange(preset.id)
-                                                        }
-                                                        .semantics {
-                                                            selected = active
-                                                            contentDescription = preset.label + " accent"
-                                                        },
-                                                    contentAlignment = Alignment.Center
-                                                ) {
+                                            Row(
+                                                modifier = Modifier.selectableGroup(),
+                                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                KlyroColors.primary.forEach { preset ->
+                                                    val swatch = KlyroColors.create(colors.dark, preset.id)
+                                                    val active = accentId == preset.id
                                                     Box(
-                                                        modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
-                                                            .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
-                                                            .then(if (active) Modifier.border(
-                                                                KlyroUiMetrics.selectedBorder,
-                                                                colors.foreground,
-                                                                androidx.compose.foundation.shape.CircleShape
-                                                            ) else Modifier),
+                                                        modifier = Modifier.size(KlyroUiMetrics.minTouch)
+                                                            .clickable(role = Role.RadioButton,
+                                                                onClickLabel = "Select " + preset.label + " accent") {
+                                                                onAccentIdChange(preset.id)
+                                                            }
+                                                            .semantics {
+                                                                selected = active
+                                                                contentDescription = preset.label + " accent"
+                                                            },
                                                         contentAlignment = Alignment.Center
                                                     ) {
-                                                        if (active) {
-                                                            Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
-                                                                contentDescription = null, tint = swatch.onAccent,
-                                                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                                        Box(
+                                                            modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
+                                                                .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
+                                                                .then(if (active) Modifier.border(
+                                                                    KlyroUiMetrics.selectedBorder,
+                                                                    colors.foreground,
+                                                                    androidx.compose.foundation.shape.CircleShape
+                                                                ) else Modifier),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            if (active) {
+                                                                Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
+                                                                    contentDescription = null, tint = swatch.onAccent,
+                                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                                            }
                                                         }
                                                     }
                                                 }
