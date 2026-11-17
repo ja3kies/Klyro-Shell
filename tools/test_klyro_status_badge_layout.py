@@ -12,13 +12,11 @@ class RuntimeBadgeResponsiveTest(unittest.TestCase):
         self.assertNotIn('maxLines =', status)
         self.assertIn('modifier = Modifier.weight(1f)', MAIN)
     def test_recheck_is_in_compact_status_row_and_accessible(self):
-        status = MAIN.split('stateLabel,', 1)[1].split(
-            'homeStatus.terminalFailure?.let', 1
-        )[0]
-        self.assertIn('if (verifyingRuntime) "Checking…" else "Recheck"', status)
-        self.assertIn('contentDescription = "Recheck environment"', status)
-        self.assertIn('heightIn(min = 48.dp)', status)
-        self.assertIn('enabled = !verifyingRuntime && !installing', status)
+        action = MAIN.split('val recheckAction:', 1)[1].split('Row(', 1)[0]
+        self.assertIn('if (verifyingRuntime) "Checking…" else "Recheck"', action)
+        self.assertIn('contentDescription = "Recheck environment"', action)
+        self.assertIn('heightIn(min = 48.dp)', action)
+        self.assertIn('enabled = !verifyingRuntime && !installing', action)
 
     def test_bento_adapts_to_width_and_font_scale(self):
         home = MAIN.split('BoxWithConstraints(modifier = Modifier.fillMaxWidth())', 1)[1]
