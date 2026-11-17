@@ -159,6 +159,22 @@ class SettingsRefinementUiTest {
         assertTrue("The value must follow the label", value.left >= label.right)
     }
 
+    @Test fun enlargedTextFontSizeHeaderStacksWithoutLosingControls() {
+        ui.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density * 2f, 2f)) {
+                MaterialTheme { Fixture("appearance", fontSize = 14f) }
+            }
+        }
+        ui.onNodeWithText("Font size").performScrollTo().assertIsDisplayed()
+        val label = ui.onNodeWithText("Font size").fetchSemanticsNode().boundsInRoot
+        ui.onNodeWithText("14 sp").performScrollTo().assertIsDisplayed()
+        ui.onNodeWithText("Reset").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        val value = ui.onNodeWithText("14 sp").fetchSemanticsNode().boundsInRoot
+        assertTrue("The label must retain measurable width", label.width > 0f)
+        assertTrue("Large text must stack the value below its label", value.top >= label.bottom)
+    }
+
     @Test fun appearanceTitleRemainsVisibleWhenScrollingToLauncher() {
         ui.setContent { MaterialTheme { Fixture("appearance") } }
         ui.onNodeWithContentDescription("Launcher icon B · Default").performScrollTo()

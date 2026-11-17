@@ -415,14 +415,16 @@ internal fun KlyroSettingsSheet(
                                     }
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text("Font size", color = colors.muted,
-                                            modifier = Modifier.weight(1f),
-                                            style = MaterialTheme.typography.bodyMedium)
-                                        Row(horizontalArrangement = Arrangement.End,
+                                    KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false, minimumInlineWidth = appearanceInlineWidth) {
+                                        Box(
+                                            modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
+                                            contentAlignment = Alignment.CenterStart
+                                        ) {
+                                            Text("Font size", color = colors.muted,
+                                                style = MaterialTheme.typography.bodyMedium)
+                                        }
+                                        Row(Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
+                                            horizontalArrangement = Arrangement.End,
                                             verticalAlignment = Alignment.CenterVertically) {
                                             Text(
                                                 if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
@@ -532,7 +534,7 @@ internal fun KlyroSettingsSheet(
                                                     ),
                                                     contentDescription = null,
                                                     tint = Color.Unspecified,
-                                                    modifier = Modifier.size(KlyroUiMetrics.iconWell)
+                                                    modifier = Modifier.size(48.dp)
                                                 )
                                                 Text(title, color = colors.foreground,
                                                     style = MaterialTheme.typography.labelMedium)
