@@ -19,12 +19,12 @@ import androidx.compose.ui.semantics.semantics
 internal fun KlyroAppearanceGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     val colors = LocalKlyroColors.current
     Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-        Text(title, color = colors.muted, style = MaterialTheme.typography.labelLarge,
+        Text(title, color = colors.muted, style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(horizontal = KlyroUiMetrics.spaceXs).semantics { heading() })
-        Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
+        Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
-                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
+                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
                 content = content
             )
         }

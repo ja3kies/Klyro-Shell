@@ -76,14 +76,13 @@ internal fun KlyroThemePreviewCard(
         ) {
             Box(
                 modifier = Modifier.fillMaxWidth().height(40.dp).clearAndSetSemantics { }
-                    .background(preview.background, RoundedCornerShape(9.dp))
-                    .padding(5.dp),
+,
                 contentAlignment = Alignment.Center
             ) {
                 if (mode == "system") {
                     // One preview for BOTH device appearances, never inherit a stale mono preview.
                     Row(
-                        modifier = Modifier.fillMaxWidth().height(29.dp)
+                        modifier = Modifier.fillMaxWidth().height(40.dp)
                             .clip(RoundedCornerShape(6.dp))
                     ) {
                         listOf(lightPreview, darkPreview).forEach { palette ->
@@ -100,7 +99,7 @@ internal fun KlyroThemePreviewCard(
                     }
                 } else {
                     Row(
-                        modifier = Modifier.fillMaxWidth().height(29.dp)
+                        modifier = Modifier.fillMaxWidth().height(40.dp)
                             .background(preview.terminal, RoundedCornerShape(6.dp))
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically

@@ -149,6 +149,24 @@ class SettingsRefinementUiTest {
         assertTrue(system.right <= light.left)
     }
 
+    @Test fun fontSizeLabelAndValueShareTheSameRow() {
+        ui.setContent { MaterialTheme { Fixture("appearance", fontSize = 14f) } }
+        ui.onNodeWithText("Font size").performScrollTo()
+        val label = ui.onNodeWithText("Font size").fetchSemanticsNode().boundsInRoot
+        val value = ui.onNodeWithText("14 sp").fetchSemanticsNode().boundsInRoot
+        assertTrue("Font size and value must align vertically",
+            kotlin.math.abs(label.center.y - value.center.y) < 2f)
+        assertTrue("The value must follow the label", value.left >= label.right)
+    }
+
+    @Test fun appearanceTitleRemainsVisibleWhenScrollingToLauncher() {
+        ui.setContent { MaterialTheme { Fixture("appearance") } }
+        ui.onNodeWithContentDescription("Launcher icon B · Default").performScrollTo()
+        ui.onNodeWithText("Appearance").assertIsDisplayed()
+        ui.onNodeWithText("Settings").assertIsDisplayed()
+        ui.onNodeWithText("Close").assertIsDisplayed()
+    }
+
     @Test fun labelledBackReturnsToRootAndCloseDismissesExactlyOnce() {
         var closes = 0
         val visible = mutableStateOf(true)
