@@ -166,8 +166,8 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         self.assertIn("Use the ALL shortcut", settings)
         self.assertNotIn("Select output in the terminal menu", settings)
         self.assertIn('R.drawable.ic_klyro_brand_b', settings)
-        self.assertIn('Text("Copy")', settings)
-        self.assertIn('Text("Share")', settings)
+        self.assertIn('Text("Copy report")', settings)
+        self.assertIn('Text("Share report")', settings)
         self.assertIn("if (copied) \"Report copied\" else \"Clipboard unavailable\"", pane)
         self.assertIn('Toast.makeText(context, "No sharing app available"', pane)
 

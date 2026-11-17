@@ -71,6 +71,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -1497,7 +1498,7 @@ private fun OrynTerminalApp(
                         val stackRuntimeAction = LocalDensity.current.fontScale >= 1.3f ||
                             LocalConfiguration.current.screenWidthDp < 360
                         val recheckAction: @Composable () -> Unit = {
-                            TextButton(
+                            OutlinedButton(
                                 onClick = onRecheck,
                                 enabled = !verifyingRuntime && !installing,
                                 modifier = Modifier.heightIn(min = 48.dp)
@@ -1506,12 +1507,18 @@ private fun OrynTerminalApp(
                                         if (verifyingRuntime) stateDescription = "Checking environment"
                                         else if (installing) stateDescription = "Unavailable during installation"
                                     },
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = if (verifyingRuntime || installing) ui.muted else ui.accent,
+                                    disabledContentColor = ui.muted
+                                ),
+                                border = BorderStroke(1.dp, ui.muted.copy(alpha = .45f)),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Text(
                                     if (verifyingRuntime) "Checking…" else "Recheck",
-                                    color = if (verifyingRuntime || installing) ui.muted else ui.accent,
-                                    fontSize = 12.sp
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }

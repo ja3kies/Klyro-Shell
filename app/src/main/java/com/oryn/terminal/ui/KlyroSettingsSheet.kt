@@ -7,6 +7,7 @@ import android.provider.Settings
 import android.graphics.Color as AndroidColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -59,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.liveRegion
@@ -583,8 +585,10 @@ internal fun KlyroSettingsSheet(
                                         else "The current launcher icon could not be confirmed. Choose an icon or retry the check.",
                                         isError = true)
                                     if (!brandReady) {
-                                        TextButton(onClick = { brandRevision += 1 },
-                                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                                        OutlinedButton(onClick = { brandRevision += 1 },
+                                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foreground)) {
                                             Text("Retry icon check")
                                         }
                                     }
@@ -598,30 +602,34 @@ internal fun KlyroSettingsSheet(
                         KlyroSectionHeading("Keyboard")
                         Text("Modifier status", color = colors.muted,
                             style = MaterialTheme.typography.labelMedium)
-                        Row(
+                        FlowRow(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
+                            verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
                         ) {
                             listOf("Ctrl", "Alt", "Shift", "Fn").forEach { label ->
                                 val active = label in activeModifiers
                                 Surface(
-                                    modifier = Modifier.weight(1f).heightIn(
-                                        min = KlyroUiMetrics.minTouch
-                                    ).semantics {
-                                        contentDescription = "$label modifier"
-                                        stateDescription = if (active) "Active" else "Inactive"
-                                    },
+                                    modifier = Modifier.widthIn(min = 64.dp)
+                                        .heightIn(min = KlyroUiMetrics.minTouch)
+                                        .clearAndSetSemantics {
+                                            contentDescription = "$label modifier"
+                                            stateDescription = if (active) "Active" else "Inactive"
+                                        },
                                     color = if (active) colors.accent.copy(alpha = .17f) else colors.key,
-                                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                    border = if (active) BorderStroke(
-                                        KlyroUiMetrics.selectedBorder, colors.accent
-                                    ) else null
+                                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(label,
-                                            color = if (active) colors.accent else colors.muted,
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(label, color = colors.foreground,
                                             fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                                            style = MaterialTheme.typography.labelMedium)
+                                            style = MaterialTheme.typography.labelLarge)
+                                        Text(if (active) "Active" else "Inactive",
+                                            color = if (active) colors.accent else colors.muted,
+                                            style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
                             }
@@ -650,8 +658,10 @@ internal fun KlyroSettingsSheet(
                         KlyroSectionHeading("Files & storage")
                         KlyroFolderAccessSummary(authorizedFolderCount)
                         if (authorizedFolderCount == -2) {
-                            TextButton(onClick = { folderRevision += 1 },
-                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                            OutlinedButton(onClick = { folderRevision += 1 },
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foreground)) {
                                 Text("Retry folder check")
                             }
                         }
@@ -682,7 +692,7 @@ internal fun KlyroSettingsSheet(
                             onDismiss()
                             onExportFile()
                         }
-                        Text("Android restricts the Download root. Use Import a file for downloads; SAF does not mount ~/storage/downloads.",
+                        Text("To import a download, choose Import a file. Android may prevent granting access to the entire Downloads folder.",
                             style = MaterialTheme.typography.bodySmall, color = colors.muted)
                     }
                     "privacy" -> {
@@ -736,13 +746,15 @@ internal fun KlyroSettingsSheet(
                         ) {
                             Column(Modifier.fillMaxWidth().heightIn(max = 260.dp)
                                 .verticalScroll(rememberScrollState())) {
-                                Text(
-                                    diagnosticReport,
-                                    modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
-                                    color = colors.foreground,
-                                    fontFamily = FontFamily.Monospace,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                SelectionContainer {
+                                    Text(
+                                        diagnosticReport,
+                                        modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                                        color = colors.foreground,
+                                        fontFamily = FontFamily.Monospace,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
                         }
                         if (verifyingRuntime) {
@@ -775,7 +787,7 @@ internal fun KlyroSettingsSheet(
                                     contentDescription = null,
                                     modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                 Spacer(Modifier.width(KlyroUiMetrics.spaceSm))
-                                Text("Copy")
+                                Text("Copy report")
                             }
                             OutlinedButton(
                                 onClick = onShareDiagnostic,
@@ -788,7 +800,7 @@ internal fun KlyroSettingsSheet(
                                     contentDescription = null,
                                     modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                 Spacer(Modifier.width(KlyroUiMetrics.spaceSm))
-                                Text("Share")
+                                Text("Share report")
                             }
                         }
                         Text("Review before sharing. Raw errors and terminal transcripts are excluded.",
