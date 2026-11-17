@@ -379,31 +379,36 @@ internal fun KlyroSettingsSheet(
                                                     }
                                                 }
                                             }
-                                            OutlinedButton(
-                                                onClick = { showColorPicker = true },
+                                            Surface(
                                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                                    .clickable(
+                                                        role = Role.Button,
+                                                        onClickLabel = "Choose custom accent"
+                                                    ) { showColorPicker = true }
                                                     .semantics {
                                                         contentDescription = "Choose custom accent"
                                                     },
+                                                color = Color.Transparent,
                                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                                colors = ButtonDefaults.outlinedButtonColors(
-                                                    contentColor = colors.foreground
-                                                ),
                                                 border = BorderStroke(
                                                     1.dp, colors.muted.copy(alpha = .35f)
-                                                ),
-                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                                    horizontal = KlyroUiMetrics.spaceMd
                                                 )
                                             ) {
-                                                Icon(
-                                                    painterResource(R.drawable.hugeicons_plus_sign),
-                                                    contentDescription = null,
-                                                    tint = colors.accent,
-                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
-                                                )
-                                                Spacer(Modifier.width(KlyroUiMetrics.spaceXs))
-                                                Text("Custom", style = MaterialTheme.typography.labelMedium)
+                                                Row(
+                                                    modifier = Modifier.padding(
+                                                        horizontal = KlyroUiMetrics.spaceMd
+                                                    ),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        painterResource(R.drawable.hugeicons_plus_sign),
+                                                        contentDescription = null,
+                                                        tint = colors.accent,
+                                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
+                                                    )
+                                                    Spacer(Modifier.width(KlyroUiMetrics.spaceXs))
+                                                    Text("Custom", style = MaterialTheme.typography.labelMedium)
+                                                }
                                             }
                                         }
                                     }
@@ -920,7 +925,7 @@ private fun SettingsBentoTile(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(painterResource(icon), contentDescription = null,
-                    tint = colors.accent, modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
+                    tint = colors.muted, modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
             }
             Column {
                 Text(title, color = colors.foreground,
