@@ -51,6 +51,8 @@ class KlyroCrossSurfaceUxAudit(unittest.TestCase):
         workspaces = READ(UI / "KlyroWorkspaceSheet.kt")
         self.assertIn("this.selected = selected", plugins)
         self.assertIn('if (plugin.enabled) "Disable " else "Enable "', plugins)
+        self.assertIn('role = Role.Switch', plugins)
+        self.assertIn('modifier = Modifier.clearAndSetSemantics { })', plugins)
         self.assertIn("maxLines = 2, overflow = TextOverflow.Ellipsis", components)
         self.assertIn("modifier = Modifier.weight(1f)", palette)
         self.assertIn('KlyroSheetTitle("Workspaces", modifier = Modifier.weight(1f))', workspaces)
