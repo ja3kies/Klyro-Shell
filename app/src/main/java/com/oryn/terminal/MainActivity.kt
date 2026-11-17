@@ -47,6 +47,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -1129,6 +1132,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun OrynTerminalApp(
     darkChrome: Boolean,
     themeMode: String,
@@ -1197,6 +1201,8 @@ private fun OrynTerminalApp(
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
     var showHomeSettings by rememberSaveable { mutableStateOf(false) }
+    // Keep the saveable position alive when Plugins or Terminal replaces Home.
+    val homeScrollState = rememberScrollState()
     var homeLauncherIcon by remember(context) {
         mutableStateOf(KlyroBrandChoice.DEFAULT)
     }
@@ -1309,7 +1315,7 @@ private fun OrynTerminalApp(
 
     Box(Modifier.fillMaxSize().background(screenChrome)) {
         if (homeVisible) {
-            KlyroHomePixelCover(bannerHeight, screenChrome)
+            KlyroHomePixelCover(bannerHeight, screenChrome, animate = !showHomeSettings && !showRepairConfirmation)
         }
         Surface(
             modifier = Modifier.fillMaxSize()
@@ -1376,7 +1382,7 @@ private fun OrynTerminalApp(
             ) {
                 Column(
                     modifier = Modifier.weight(1f).fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(homeScrollState),
                     verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceLg)
                 ) {
                 // The identity sits just beneath the faded cover art.
@@ -1488,6 +1494,27 @@ private fun OrynTerminalApp(
                         modifier = Modifier.padding(if (calmHomeReady) 8.dp else 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        val stackRuntimeAction = LocalDensity.current.fontScale >= 1.3f ||
+                            LocalConfiguration.current.screenWidthDp < 360
+                        val recheckAction: @Composable () -> Unit = {
+                            TextButton(
+                                onClick = onRecheck,
+                                enabled = !verifyingRuntime && !installing,
+                                modifier = Modifier.heightIn(min = 48.dp)
+                                    .semantics {
+                                        contentDescription = "Recheck environment"
+                                        if (verifyingRuntime) stateDescription = "Checking environment"
+                                        else if (installing) stateDescription = "Unavailable during installation"
+                                    },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    if (verifyingRuntime) "Checking…" else "Recheck",
+                                    color = if (verifyingRuntime || installing) ui.muted else ui.accent,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -1541,26 +1568,10 @@ private fun OrynTerminalApp(
                                     lineHeight = 18.sp
                                 )
                             }
-                            if (runtimeVerified) {
-                                TextButton(
-                                    onClick = onRecheck,
-                                    enabled = !verifyingRuntime && !installing,
-                                    modifier = Modifier.heightIn(min = 48.dp)
-                                        .semantics {
-                                            contentDescription = "Recheck environment"
-                                            if (verifyingRuntime) stateDescription = "Checking environment"
-                                            else if (installing) stateDescription = "Unavailable during installation"
-                                        },
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                                ) {
-                                    Text(
-                                        if (verifyingRuntime) "Checking…" else "Recheck",
-                                        color = if (verifyingRuntime || installing) ui.muted else ui.accent,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
+                            if (runtimeVerified && !stackRuntimeAction) recheckAction()
                         }
+                        if (runtimeVerified && stackRuntimeAction) recheckAction()
+
                         homeStatus.terminalFailure?.let { failure ->
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1601,13 +1612,18 @@ private fun OrynTerminalApp(
                                         warningLines.first(),
                                         color = ui.muted, fontSize = 12.sp, lineHeight = 17.sp,
                                         fontFamily = FontFamily.Monospace,
-                                        maxLines = 3
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
                         }
                         if (technicalErrorDetails != null) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
                                 TextButton(
                                     onClick = onToggleTechnicalDetails,
                                     modifier = Modifier.heightIn(min = 48.dp),
@@ -1623,7 +1639,8 @@ private fun OrynTerminalApp(
                                 if (showTechnicalDetails) {
                                     TextButton(
                                         onClick = onCopyTechnicalDetails,
-                                        modifier = Modifier.heightIn(min = 48.dp),
+                                        modifier = Modifier.heightIn(min = 48.dp)
+                                            .semantics { contentDescription = "Copy technical details" },
                                         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
                                     ) {
                                         Text("Copy", color = ui.accent, fontSize = 13.sp)

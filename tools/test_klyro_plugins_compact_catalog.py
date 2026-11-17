@@ -8,10 +8,10 @@ CODE = (ROOT / "app/src/main/java/com/oryn/terminal/ui/KlyroPluginsPage.kt").rea
 
 class PluginCompactCatalogTest(unittest.TestCase):
     def test_header_does_not_repeat_screen_type(self):
-        self.assertIn('Text("Plugins", fontSize = 28.sp', CODE)
+        self.assertIn('Text("Plugins", fontSize = 24.sp', CODE)
         self.assertNotIn('"LOCAL EXTENSIONS"', CODE)
         self.assertIn(
-            'Offline command packs. Nothing runs automatically.',
+            'Offline packs · commands run only when you choose.',
             CODE,
         )
 

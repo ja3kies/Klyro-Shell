@@ -1,5 +1,17 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -292,15 +304,26 @@ internal fun KlyroThinSlider(
     valueRange: ClosedFloatingPointRange<Float>,
     modifier: Modifier = Modifier,
     steps: Int = 0,
-    showTrack: Boolean = true
+    showTrack: Boolean = true,
+    valueLabel: String? = null
 ) {
     val colors = LocalKlyroColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val dragging by interactionSource.collectIsDraggedAsState()
+    val pressed by interactionSource.collectIsPressedAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
+    val labelOffset = with(LocalDensity.current) {
+        -(KlyroUiMetrics.iosSliderThumb + 8.dp).roundToPx()
+    }
     Slider(
+        interactionSource = interactionSource,
         value = value.coerceIn(valueRange.start, valueRange.endInclusive),
         onValueChange = onValueChange,
         valueRange = valueRange,
         steps = steps,
-        modifier = modifier,
+        modifier = modifier.heightIn(min = KlyroUiMetrics.minTouch).semantics {
+            if (valueLabel != null) stateDescription = valueLabel
+        },
         colors = SliderDefaults.colors(
             thumbColor = colors.foreground,
             activeTrackColor = colors.accent,
@@ -309,10 +332,36 @@ internal fun KlyroThinSlider(
         thumb = {
             Box(
                 Modifier.size(KlyroUiMetrics.iosSliderThumb)
+                    .shadow(if (dragging || pressed) 4.dp else 2.dp, CircleShape)
                     .background(colors.foreground, CircleShape)
                     .border(KlyroUiMetrics.iosSliderBorder,
-                        colors.muted.copy(alpha = .35f), CircleShape)
-            )
+                        colors.muted.copy(alpha = .35f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(Modifier.size(8.dp).background(colors.chrome, CircleShape))
+                if (valueLabel != null && (dragging || pressed || focused)) {
+                    Popup(
+                        alignment = Alignment.BottomCenter,
+                        offset = IntOffset(0, labelOffset),
+                        properties = PopupProperties(
+                            focusable = false,
+                            dismissOnBackPress = false,
+                            dismissOnClickOutside = false
+                        )
+                    ) {
+                        Surface(
+                            modifier = Modifier.clearAndSetSemantics { },
+                            color = colors.foreground,
+                            contentColor = colors.chrome,
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text(valueLabel, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
         },
         track = { state ->
             if (showTrack) {

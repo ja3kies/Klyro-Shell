@@ -477,6 +477,7 @@ internal fun KlyroSettingsSheet(
                                         value = fontSizeSp.coerceIn(9f, 24f),
                                         onValueChange = onFontChange,
                                         valueRange = 9f..24f,
+                                        valueLabel = "$fontSizeSp sp",
                                         steps = 29,
                                         modifier = Modifier.fillMaxWidth().semantics {
                                             contentDescription = "Terminal font size"

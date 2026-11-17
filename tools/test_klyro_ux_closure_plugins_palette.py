@@ -5,8 +5,11 @@ BASE=Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal/ui
 P=(BASE/"KlyroPluginsPage.kt").read_text()
 C=(BASE/"KlyroCommandPalette.kt").read_text()
 class PluginPaletteClosure(unittest.TestCase):
- def test_installed_and_explore_reset_scroll_on_switch(self):
-  self.assertIn('LaunchedEffect(page, scrollWholePage) { pageScroll.scrollTo(0) }',P)
+ def test_installed_and_explore_preserve_independent_scroll(self):
+  self.assertIn('val exploreScroll = rememberScrollState()',P)
+  self.assertIn('val installedScroll = rememberScrollState()',P)
+  self.assertIn('val pageScroll = if (page == "installed") installedScroll else exploreScroll',P)
+  self.assertNotIn('LaunchedEffect(page, scrollWholePage) { pageScroll.scrollTo(0) }',P)
   self.assertIn('.verticalScroll(pageScroll)',P)
  def test_errors_survive_rotation_and_share_accessible_component(self):
   self.assertIn('var error by rememberSaveable',P)

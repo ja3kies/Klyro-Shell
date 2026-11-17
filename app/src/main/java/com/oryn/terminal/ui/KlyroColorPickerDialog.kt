@@ -324,6 +324,7 @@ internal fun KlyroColorPickerDialog(
                                 hexInput = "#%06X".format(rgb() and 0xFFFFFF)
                             },
                             valueRange = 0f..360f,
+                            valueLabel = "${hue.roundToInt()}°",
                             showTrack = false,
                             modifier = Modifier.semantics { contentDescription = "Hue in degrees" }
                         )
@@ -401,6 +402,7 @@ internal fun KlyroColorPickerDialog(
                             value = alpha,
                             onValueChange = { alpha = it; pendingPreset = null },
                             valueRange = 0f..1f,
+                            valueLabel = "${(alpha * 100f).roundToInt()}%",
                             modifier = Modifier.fillMaxWidth().semantics {
                                 contentDescription = "Opacity"
                             }

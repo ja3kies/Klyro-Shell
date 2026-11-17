@@ -103,7 +103,7 @@ class HomeAnimatedGifContract(unittest.TestCase):
     def test_cover_still_fades_into_profile_and_actions(self):
         self.assertIn("val homeVisible = !showPlugins &&", HOME)
         self.assertIn("if (homeVisible) {", HOME)
-        self.assertIn("KlyroHomePixelCover(bannerHeight, screenChrome)", HOME)
+        self.assertIn("KlyroHomePixelCover(bannerHeight, screenChrome, animate = !showHomeSettings && !showRepairConfirmation)", HOME)
         self.assertIn(".66f to Color.Transparent", COVER)
         self.assertIn("1f to screenChrome", COVER)
         home = HOME.split("// The primary action, runtime and tools", 1)[1]

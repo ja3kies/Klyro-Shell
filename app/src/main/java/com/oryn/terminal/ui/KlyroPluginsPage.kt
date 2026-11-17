@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -228,7 +229,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     }
     // A rotation re-parses the same bounded local document, but never installs it.
     LaunchedEffect(pendingImportUri) {
-        val selectedUri = pendingImportUri ?: return@LaunchedEffect
+        val selectedUri = pendingImportUri ?: run {
+            previewBusy = false
+            return@LaunchedEffect
+        }
         previewBusy = true
         val result = withContext(Dispatchers.IO) {
             runCatching { manager.previewManifest(Uri.parse(selectedUri)) }
@@ -242,20 +246,24 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             }
     }
 
-    val pageScroll = rememberScrollState()
+    val exploreScroll = rememberScrollState()
+    val installedScroll = rememberScrollState()
+    val pageScroll = if (page == "installed") installedScroll else exploreScroll
     // Keep navigation in view normally, but retain a full-page scroll escape
     // when a short viewport or large text would leave no room for the list.
     val scrollWholePage = LocalConfiguration.current.screenHeightDp < 600 ||
         LocalDensity.current.fontScale >= 1.3f
-    LaunchedEffect(page, scrollWholePage) { pageScroll.scrollTo(0) }
     Column(
         modifier = Modifier.fillMaxSize()
             .then(if (scrollWholePage) Modifier.verticalScroll(pageScroll) else Modifier)
             .padding(horizontal = KlyroUiMetrics.sheetGutter, vertical = KlyroUiMetrics.spaceLg),
         verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+        ) {
             TextButton(
                 onClick = ::navigateBack,
                 enabled = !mutationBusy && !confirmedMutationPending,
@@ -265,10 +273,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     contentDescription = null, modifier = Modifier.size(20.dp))
                 Text("Home")
             }
+            Text("Plugins", fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                color = colors.foreground,
+                modifier = Modifier.weight(1f).semantics { heading() })
         }
-        Text("Plugins", fontSize = 28.sp, fontWeight = FontWeight.Bold,
-            color = colors.foreground, modifier = Modifier.semantics { heading() })
-        Text("Offline command packs. Nothing runs automatically.",
+        Text("Offline packs · commands run only when you choose.",
             color = colors.muted, fontSize = 13.sp, lineHeight = 18.sp)
 
         Row(
@@ -295,10 +304,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         .semantics { this.selected = selected },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                     color = if (selected) colors.sheet else colors.key,
-                    border = if (selected) BorderStroke(KlyroUiMetrics.selectedBorder, colors.accent) else null,
+                    border = if (selected) BorderStroke(1.dp, colors.muted.copy(alpha = .45f)) else null,
                     contentColor = colors.foreground
                 ) {
-                    Text(label, modifier = Modifier.padding(vertical = 13.dp),
+                    Text(label, modifier = Modifier.padding(horizontal = 8.dp, vertical = 11.dp),
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                         fontSize = 13.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -345,17 +354,20 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             PluginHeading(plugin, "v${plugin.version} · ${plugin.commands.size} commands")
                             Row(verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()) {
+                                modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+                                    .toggleable(
+                                        value = plugin.enabled,
+                                        enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
+                                        role = Role.Switch,
+                                        onValueChange = { checked ->
+                                            applyChange({ manager.setEnabled(plugin.id, checked) })
+                                        }
+                                    ).semantics { contentDescription = plugin.name }) {
                                 Text(if (plugin.enabled) "Enabled" else "Disabled",
                                     modifier = Modifier.weight(1f),
                                     color = colors.muted, fontSize = 12.sp)
                                 Switch(checked = plugin.enabled,
-                                    modifier = Modifier.semantics {
-                                        contentDescription = (if (plugin.enabled) "Disable " else "Enable ") + plugin.name
-                                    },
-                                    onCheckedChange = { checked ->
-                                        applyChange({ manager.setEnabled(plugin.id, checked) })
-                                    },
+                                    onCheckedChange = null,
                                     enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed)
                             }
                             TextButton(
@@ -602,7 +614,7 @@ internal fun KlyroExplorePluginCard(
 ) {
     val colors = LocalKlyroColors.current
     Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
             val stacked = maxWidth < 320.dp || LocalDensity.current.fontScale >= 1.3f
             val addAction: @Composable () -> Unit = {
                 OutlinedButton(
@@ -620,6 +632,11 @@ internal fun KlyroExplorePluginCard(
                         alpha = if (enabled && !isInstalled) .55f else .2f
                     ))
                 ) {
+                    if (isInstalled) {
+                        Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
+                            contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.size(6.dp))
+                    }
                     Text(if (isInstalled) "Installed" else "Add")
                 }
             }
