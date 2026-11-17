@@ -304,7 +304,7 @@ internal fun KlyroThinSlider(
         colors = SliderDefaults.colors(
             thumbColor = colors.foreground,
             activeTrackColor = colors.accent,
-            inactiveTrackColor = colors.key
+            inactiveTrackColor = colors.muted
         ),
         thumb = {
             Box(
@@ -318,7 +318,7 @@ internal fun KlyroThinSlider(
             if (showTrack) {
                 Box(
                     Modifier.fillMaxWidth().height(KlyroUiMetrics.iosSliderTrack)
-                        .background(colors.key, CircleShape)
+                        .background(colors.muted, CircleShape)
                 ) {
                     val range = valueRange.endInclusive - valueRange.start
                     val progress = if (range > 0f) {

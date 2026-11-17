@@ -213,10 +213,12 @@ internal fun KlyroSettingsSheet(
                             onClick = ::navigateBack,
                             modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch)
                         ) {
-                            Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
-                                contentDescription = null, tint = colors.muted,
-                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                            Text(if (section == "freeze") "Diagnostics" else "Settings")
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
+                                    contentDescription = null, tint = colors.muted,
+                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                Text(if (section == "freeze") "Diagnostics" else "Settings")
+                            }
                         }
                     }
                     TextButton(onClick = onDismiss, enabled = canDismissSheet,
@@ -224,6 +226,7 @@ internal fun KlyroSettingsSheet(
                         Text("Close")
                     }
                 }
+                if (section == "appearance") KlyroSectionHeading("Appearance")
                 // Keep Back and Close reachable while large Settings sections scroll.
                 Column(
                     modifier = Modifier.fillMaxWidth()
@@ -263,9 +266,8 @@ internal fun KlyroSettingsSheet(
                         }
                     }
                     "appearance" -> {
-                        KlyroSectionHeading("Appearance")
                         val appearanceInlineWidth = 240.dp
-                        Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXl)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceLg)) {
                             KlyroAppearanceGroup("App theme") {
                                 KlyroSettingsChoiceGrid(columns = 3, minimumInlineWidth = appearanceInlineWidth) {
                                     listOf("system" to "System", "light" to "Light",
@@ -315,8 +317,8 @@ internal fun KlyroSettingsSheet(
                                 }
                                 if (!themeMode.startsWith("mono-")) {
                                     Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                        Text("Accent", color = colors.foreground,
-                                            fontWeight = FontWeight.SemiBold)
+                                        Text("Accent", color = colors.muted,
+                                            style = MaterialTheme.typography.bodyMedium)
                                     FlowRow(
                                             modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs),
@@ -380,8 +382,8 @@ internal fun KlyroSettingsSheet(
                             }
                             KlyroAppearanceGroup("Text") {
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                    Text("Terminal font", color = colors.foreground,
-                                        fontWeight = FontWeight.SemiBold)
+                                    Text("Terminal font", color = colors.muted,
+                                        style = MaterialTheme.typography.bodyMedium)
                                     KlyroSettingsChoiceGrid(columns = 2, minimumInlineWidth = appearanceInlineWidth) {
                                         KlyroTerminalFonts.options.forEach { option ->
                                             val active = fontFamilyId == option.id
@@ -414,20 +416,26 @@ internal fun KlyroSettingsSheet(
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
                                     KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false, minimumInlineWidth = appearanceInlineWidth) {
-                                        Text("Font size", color = colors.foreground,
-                                            modifier = Modifier.weight(1f),
-                                            fontWeight = FontWeight.SemiBold)
-                                        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End,
+                                        Box(
+                                            modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
+                                            contentAlignment = Alignment.CenterStart
+                                        ) {
+                                            Text("Font size", color = colors.muted,
+                                                style = MaterialTheme.typography.bodyMedium)
+                                        }
+                                        Row(Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
+                                            horizontalArrangement = Arrangement.End,
                                             verticalAlignment = Alignment.CenterVertically) {
                                             Text(
                                                 if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
-                                                color = colors.foreground, fontWeight = FontWeight.Medium
+                                                color = colors.foreground, fontWeight = FontWeight.Medium,
+                                                style = MaterialTheme.typography.bodyMedium
                                             )
                                             if (fontSizeSp != 13.5f) {
                                                 TextButton(
                                                     onClick = onResetFont,
                                                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                                ) { Text("Reset") }
+                                                ) { Text("Reset", style = MaterialTheme.typography.bodyMedium) }
                                             }
                                         }
                                     }
@@ -476,7 +484,7 @@ internal fun KlyroSettingsSheet(
                                     ).forEach { (choice, title) ->
                                         Surface(
                                             modifier = Modifier.weight(1f)
-                                                .heightIn(min = 80.dp)
+                                                .heightIn(min = KlyroUiMetrics.minTouch)
                                                 .clickable(
                                                     enabled = !brandUpdating && !brandChecking,
                                                     role = Role.RadioButton,
@@ -508,7 +516,7 @@ internal fun KlyroSettingsSheet(
                                                         else -> "Not selected"
                                                     }
                                                 },
-                                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                                             color = if (brandReady && selectedBrand == choice)
                                                 colors.sheet else Color.Transparent,
                                             border = if (brandReady && selectedBrand == choice) BorderStroke(1.dp, colors.accent) else null

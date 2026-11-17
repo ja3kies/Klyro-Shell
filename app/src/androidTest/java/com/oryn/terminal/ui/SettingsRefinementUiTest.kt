@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -147,6 +148,40 @@ class SettingsRefinementUiTest {
         assertEquals(system.top, light.top, .5f)
         assertEquals(system.top, dark.top, .5f)
         assertTrue(system.right <= light.left)
+    }
+
+    @Test fun fontSizeLabelAndValueShareTheSameRow() {
+        ui.setContent { MaterialTheme { Fixture("appearance", fontSize = 14f) } }
+        ui.onNodeWithText("Font size").performScrollTo()
+        val label = ui.onNodeWithText("Font size").fetchSemanticsNode().boundsInRoot
+        val value = ui.onNodeWithText("14 sp").fetchSemanticsNode().boundsInRoot
+        assertTrue("Font size and value must align vertically",
+            kotlin.math.abs(label.center.y - value.center.y) < 2f)
+        assertTrue("The value must follow the label", value.left >= label.right)
+    }
+
+    @Test fun enlargedTextFontSizeHeaderStacksWithoutLosingControls() {
+        ui.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density * 2f, 2f)) {
+                MaterialTheme { Fixture("appearance", fontSize = 14f) }
+            }
+        }
+        ui.onNodeWithText("Font size").performScrollTo().assertIsDisplayed()
+        ui.onNodeWithText("14 sp").performScrollTo().assertIsDisplayed()
+        ui.onNodeWithText("Reset").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        val label = ui.onNodeWithText("Font size").getUnclippedBoundsInRoot()
+        val value = ui.onNodeWithText("14 sp").getUnclippedBoundsInRoot()
+        assertTrue("The label must retain measurable width", label.right > label.left)
+        assertTrue("Large text must stack the value below its label", value.top >= label.bottom)
+    }
+
+    @Test fun appearanceTitleRemainsVisibleWhenScrollingToLauncher() {
+        ui.setContent { MaterialTheme { Fixture("appearance") } }
+        ui.onNodeWithContentDescription("Launcher icon B · Default").performScrollTo()
+        ui.onNodeWithText("Appearance").assertIsDisplayed()
+        ui.onNodeWithText("Settings").assertIsDisplayed()
+        ui.onNodeWithText("Close").assertIsDisplayed()
     }
 
     @Test fun labelledBackReturnsToRootAndCloseDismissesExactlyOnce() {
