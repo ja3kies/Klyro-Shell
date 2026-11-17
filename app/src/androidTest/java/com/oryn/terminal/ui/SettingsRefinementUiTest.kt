@@ -102,6 +102,21 @@ class SettingsRefinementUiTest {
         ui.runOnIdle { assertEquals(16f, size.value) }
     }
 
+    @Test fun fontSizePresetsStackAtLargeTextScale() {
+        ui.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
+                MaterialTheme { Fixture("appearance", fontSize = 13.5f) }
+            }
+        }
+        val bounds = listOf("12 sp", "13.5 sp", "16 sp").map { label ->
+            ui.onNodeWithContentDescription("Font size $label")
+                .performScrollTo().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        }
+        assertTrue(bounds[1].top >= bounds[0].bottom)
+        assertTrue(bounds[2].top >= bounds[1].bottom)
+    }
+
     @Test fun foldedMonochromeChoicesKeepExistingThemesAndCurrentValue() {
         val mode = mutableStateOf("light")
         ui.setContent {

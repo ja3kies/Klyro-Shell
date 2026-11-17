@@ -32,6 +32,16 @@ class SettingsRefinement(unittest.TestCase):
         self.assertIn('clickable(role = Role.RadioButton', appearance)
         self.assertIn('selected = active', appearance)
 
+    def test_font_size_presets_use_an_adaptive_single_choice_control(self):
+        appearance = S.split('"appearance" -> {', 1)[1].split('"keyboard" -> {', 1)[0]
+        presets = appearance.split('val fontPresets = listOf(12f, 13.5f, 16f)', 1)[1].split(
+            'KlyroAppearanceGroup("Launcher icon")', 1
+        )[0]
+        self.assertIn('SingleChoiceSegmentedButtonRow', presets)
+        self.assertIn('SegmentedButton(', presets)
+        self.assertIn('fontScale >= 1.3f', presets)
+        self.assertIn('Role.RadioButton', presets)
+
     def test_unknown_launcher_state_is_not_selected_as_default(self):
         self.assertIn('fun confirmedSelection(context: Context): String?', B)
         self.assertIn('brandReady = actual != null', S)

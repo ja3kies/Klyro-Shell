@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -41,6 +42,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.res.painterResource
 import com.oryn.terminal.R
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.DisposableEffect
@@ -71,6 +75,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 
 /**
  * A settings sheet deliberately isolated from TerminalView: it never restarts
@@ -490,23 +495,66 @@ internal fun KlyroSettingsSheet(
                                             contentDescription = "Terminal font size"
                                         }
                                     )
-                                    KlyroSettingsChoiceGrid(columns = 3, minimumInlineWidth = appearanceInlineWidth) {
-                                        listOf(12f, 13.5f, 16f).forEach { preset ->
-                                            val active = fontSizeSp == preset
-                                            val label = if (preset % 1f == 0f) "${preset.toInt()} sp" else "$preset sp"
-                                            Surface(
-                                                modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch)
-                                                    .clickable(role = Role.RadioButton,
-                                                        onClickLabel = "Set terminal font to $label") { onFontChange(preset) }
-                                                    .semantics { selected = active; contentDescription = "Font size $label" },
-                                                color = if (active) colors.sheet else Color.Transparent,
-                                                border = null,
-                                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                    val fontPresets = listOf(12f, 13.5f, 16f)
+                                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                                        val stacked = maxWidth < appearanceInlineWidth ||
+                                            LocalDensity.current.fontScale >= 1.3f
+                                        if (!stacked) {
+                                            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                                                fontPresets.forEachIndexed { index, preset ->
+                                                    val active = fontSizeSp == preset
+                                                    val label = if (preset % 1f == 0f) "${preset.toInt()} sp" else "$preset sp"
+                                                    SegmentedButton(
+                                                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                                            .semantics {
+                                                                contentDescription = "Font size $label"
+                                                            },
+                                                        shape = SegmentedButtonDefaults.itemShape(
+                                                            index = index, count = fontPresets.size
+                                                        ),
+                                                        selected = active,
+                                                        onClick = { onFontChange(preset) },
+                                                        colors = SegmentedButtonDefaults.colors(
+                                                            activeContainerColor = colors.sheet,
+                                                            activeContentColor = colors.foreground,
+                                                            activeBorderColor = colors.accent,
+                                                            inactiveContainerColor = Color.Transparent,
+                                                            inactiveContentColor = colors.muted,
+                                                            inactiveBorderColor = colors.muted.copy(alpha = .35f)
+                                                        ),
+                                                        label = { Text(label, maxLines = 1) }
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            Column(
+                                                modifier = Modifier.fillMaxWidth().selectableGroup(),
+                                                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
                                             ) {
-                                                Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-                                                    Text(label, color = colors.foreground,
-                                                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                                                        style = MaterialTheme.typography.labelMedium)
+                                                fontPresets.forEach { preset ->
+                                                    val active = fontSizeSp == preset
+                                                    val label = if (preset % 1f == 0f) "${preset.toInt()} sp" else "$preset sp"
+                                                    Surface(
+                                                        modifier = Modifier.fillMaxWidth()
+                                                            .heightIn(min = KlyroUiMetrics.minTouch)
+                                                            .clickable(
+                                                                role = Role.RadioButton,
+                                                                onClickLabel = "Set terminal font to $label"
+                                                            ) { onFontChange(preset) }
+                                                            .semantics {
+                                                                selected = active
+                                                                contentDescription = "Font size $label"
+                                                            },
+                                                        color = if (active) colors.sheet else Color.Transparent,
+                                                        border = null,
+                                                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                                    ) {
+                                                        Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+                                                            Text(label, color = colors.foreground,
+                                                                fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                                                                style = MaterialTheme.typography.labelMedium)
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
