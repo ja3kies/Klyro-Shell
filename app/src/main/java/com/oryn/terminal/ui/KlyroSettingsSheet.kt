@@ -286,21 +286,43 @@ internal fun KlyroSettingsSheet(
                                     "mono-paper" -> "Paper"
                                     else -> null
                                 }
-                                TextButton(
-                                    onClick = { showMonochromeThemes = !showMonochromeThemes },
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .heightIn(min = KlyroUiMetrics.minTouch)
+                                        .clickable(
+                                            role = Role.Button,
+                                            onClickLabel = if (showMonochromeThemes)
+                                                "Hide monochrome themes" else "Show monochrome themes"
+                                        ) { showMonochromeThemes = !showMonochromeThemes }
                                         .semantics {
                                             contentDescription = "Monochrome themes"
                                             stateDescription = (if (showMonochromeThemes) "Expanded" else "Collapsed") +
                                                 (selectedMonochrome?.let { ", $it selected" } ?: "")
                                         },
-                                    colors = ButtonDefaults.textButtonColors(contentColor = colors.muted)
+                                    color = colors.sheet,
+                                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                                 ) {
-                                    Text(selectedMonochrome?.let { "Monochrome · $it" } ?: "Monochrome themes",
-                                        modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Start,
-                                        style = MaterialTheme.typography.bodySmall)
-                                    Icon(painterResource(R.drawable.hugeicons_chevron_right), contentDescription = null,
-                                        modifier = Modifier.size(18.dp).rotate(if (showMonochromeThemes) 90f else 0f))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(
+                                            horizontal = KlyroUiMetrics.spaceMd
+                                        ),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            selectedMonochrome?.let { "Monochrome · $it" }
+                                                ?: "Monochrome themes",
+                                            modifier = Modifier.weight(1f),
+                                            color = colors.foreground,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Icon(
+                                            painterResource(R.drawable.hugeicons_chevron_right),
+                                            contentDescription = null,
+                                            tint = colors.muted,
+                                            modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
+                                                .rotate(if (showMonochromeThemes) 90f else 0f)
+                                        )
+                                    }
                                 }
                                 if (showMonochromeThemes) {
                                     KlyroSettingsChoiceGrid(columns = 3, minimumInlineWidth = appearanceInlineWidth) {
@@ -357,24 +379,31 @@ internal fun KlyroSettingsSheet(
                                                     }
                                                 }
                                             }
-                                            Box(
-                                                modifier = Modifier.size(KlyroUiMetrics.minTouch)
-                                                    .background(colors.key, androidx.compose.foundation.shape.CircleShape)
-                                                    .clickable(role = Role.Button,
-                                                        onClickLabel = "Choose custom accent") {
-                                                        showColorPicker = true
-                                                    }
-                                                    // The click action label alone is not exposed
-                                                    // as content-desc by Android UIAutomator.
-                                                    // This icon-only + control needs its own name.
+                                            OutlinedButton(
+                                                onClick = { showColorPicker = true },
+                                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                                                     .semantics {
                                                         contentDescription = "Choose custom accent"
                                                     },
-                                                contentAlignment = Alignment.Center
+                                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                                colors = ButtonDefaults.outlinedButtonColors(
+                                                    contentColor = colors.foreground
+                                                ),
+                                                border = BorderStroke(
+                                                    1.dp, colors.muted.copy(alpha = .35f)
+                                                ),
+                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                                    horizontal = KlyroUiMetrics.spaceMd
+                                                )
                                             ) {
-                                                Icon(painterResource(R.drawable.hugeicons_plus_sign),
-                                                    contentDescription = null, tint = colors.accent,
-                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                                Icon(
+                                                    painterResource(R.drawable.hugeicons_plus_sign),
+                                                    contentDescription = null,
+                                                    tint = colors.accent,
+                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
+                                                )
+                                                Spacer(Modifier.width(KlyroUiMetrics.spaceXs))
+                                                Text("Custom", style = MaterialTheme.typography.labelMedium)
                                             }
                                         }
                                     }
@@ -880,19 +909,25 @@ private fun SettingsBentoTile(
         modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.bentoMinHeight)
             .clickable(role = Role.Button, onClickLabel = "Open " + title, onClick = onClick)
             .semantics { contentDescription = title },
-        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+        shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner),
         color = colors.tile
     ) {
         Column(Modifier.padding(KlyroUiMetrics.bentoInnerPadding),
             verticalArrangement = Arrangement.SpaceBetween) {
-            Icon(painterResource(icon), contentDescription = null,
-                tint = colors.muted, modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
+            Box(
+                modifier = Modifier.size(KlyroUiMetrics.iconWell)
+                    .background(colors.sheet, RoundedCornerShape(KlyroUiMetrics.controlCorner)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(painterResource(icon), contentDescription = null,
+                    tint = colors.accent, modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
+            }
             Column {
                 Text(title, color = colors.foreground,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.titleSmall)
                 Text(subtitle, color = colors.muted,
-                    style = MaterialTheme.typography.labelSmall)
+                    style = MaterialTheme.typography.bodySmall)
             }
         }
     }
