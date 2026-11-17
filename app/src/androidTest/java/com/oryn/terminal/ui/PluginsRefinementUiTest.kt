@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -78,7 +79,7 @@ class PluginsRefinementUiTest {
         ui.setContent {
             MaterialTheme { KlyroExplorePluginCard(plugin, true, true, onAdd = { error("Already installed") }) }
         }
-        ui.onNodeWithContentDescription("${plugin.name} installed").assertIsNotEnabled()
+        ui.onNodeWithContentDescription("${plugin.name} installed").assertHasNoClickAction()
     }
 
     @Test fun unavailableRegistryPreventsReviewEvenForAnUninstalledPack() {

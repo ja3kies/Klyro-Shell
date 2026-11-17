@@ -331,7 +331,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 error?.let { KlyroInlineNotice(it, isError = true) }
             }
             if (registryReadFailed) {
-                TextButton(
+                OutlinedButton(
                     onClick = { registryRevision += 1 },
                     enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
@@ -404,9 +404,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     border = BorderStroke(1.dp, colors.muted.copy(alpha = .2f))) {
                     Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
                         verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Local manifest", color = colors.foreground,
+                        Text("Import a command pack", color = colors.foreground,
                             fontWeight = FontWeight.SemiBold)
-                        Text("Review and confirm a local JSON command pack (up to 16 KiB). Extensions cannot run JavaScript or execute shell commands.",
+                        Text("Choose a JSON file up to 16 KiB, then review its commands before adding. Importing never runs commands.",
                             color = colors.muted, fontSize = 12.sp)
                         OutlinedButton(
                             onClick = {
@@ -424,7 +424,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         ) {
                             Icon(painterResource(R.drawable.hugeicons_file_01),
                                 contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text(if (previewBusy) "Reading manifest…" else "Import JSON")
+                            Spacer(Modifier.size(8.dp))
+                            Text(if (previewBusy) "Reading manifest…" else "Choose JSON file")
                         }
                     }
                 }
@@ -483,7 +484,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             containerColor = colors.accent,
                             contentColor = colors.onAccent
                         )
-                    ) { Text("Add pack") }
+                    ) {
+                        if (confirmedBundledId == id) {
+                            Text("Adding…", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                        } else Text("Add pack")
+                    }
                 },
                 dismissButton = {
                     TextButton(
@@ -550,7 +555,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }, shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.accent, contentColor = colors.onAccent
-                    )) { Text("Install") }
+                    )) {
+                        if (confirmedImportId == record.id) {
+                            Text("Installing…", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                        } else Text("Install")
+                    }
             },
             dismissButton = {
                 TextButton(
@@ -595,7 +604,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         removeId = null
                         confirmedRemovalId = null
                     }
-                }) { Text("Remove") }
+                }) {
+                    if (confirmedRemovalId == id) {
+                        Text("Removing…", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    } else Text("Remove")
+                }
             },
             dismissButton = {
                 TextButton(
@@ -622,29 +635,44 @@ internal fun KlyroExplorePluginCard(
         BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
             val stacked = maxWidth < 320.dp || LocalDensity.current.fontScale >= 1.3f
             val addAction: @Composable () -> Unit = {
-                OutlinedButton(
-                    enabled = enabled && !isInstalled,
-                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch).semantics {
-                        contentDescription = if (isInstalled) "${plugin.name} installed"
-                        else "Review and add ${plugin.name}"
-                    },
-                    onClick = onAdd,
-                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = colors.foreground, disabledContentColor = colors.muted
-                    ),
-                    border = BorderStroke(1.dp, colors.muted.copy(
-                        alpha = if (enabled && !isInstalled) .55f else .2f
-                    ))
-                ) {
-                    if (isInstalled) {
-                        Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
-                            contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.size(6.dp))
+                if (isInstalled) {
+                    // This reports a state; it is not an unavailable action.
+                    Surface(
+                        color = colors.key,
+                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                        modifier = Modifier.clearAndSetSemantics {
+                            contentDescription = "${plugin.name} installed"
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
+                                contentDescription = null, tint = colors.foreground,
+                                modifier = Modifier.size(16.dp))
+                            Text("Installed", color = colors.foreground, fontSize = 12.sp)
+                        }
                     }
-                    Text(if (isInstalled) "Installed" else "Add")
+                } else {
+                    OutlinedButton(
+                        enabled = enabled,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch).semantics {
+                            contentDescription = "Review and add ${plugin.name}"
+                        },
+                        onClick = onAdd,
+                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = colors.foreground, disabledContentColor = colors.muted
+                        ),
+                        border = BorderStroke(1.dp, colors.muted.copy(
+                            alpha = if (enabled) .55f else .2f
+                        ))
+                    ) { Text("Add") }
                 }
             }
+
             if (stacked) {
                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                     PluginHeading(plugin, "${plugin.commands.size} commands")

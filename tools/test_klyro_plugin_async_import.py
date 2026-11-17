@@ -9,6 +9,6 @@ class PluginSlowProviderContract(unittest.TestCase):
         self.assertIn("withContext(Dispatchers.IO)",fragment)
         self.assertIn("manager.previewManifest(Uri.parse(selectedUri))",fragment)
         self.assertIn("previewBusy = false",fragment)
-        self.assertIn('Text(if (previewBusy) "Reading manifest…" else "Import JSON")',FILE)
+        self.assertIn('Text(if (previewBusy) "Reading manifest…" else "Choose JSON file")',FILE)
 if __name__ == "__main__":
     unittest.main()

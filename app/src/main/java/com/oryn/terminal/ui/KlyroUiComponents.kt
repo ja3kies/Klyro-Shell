@@ -41,6 +41,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.ui.semantics.liveRegion
@@ -285,11 +287,22 @@ internal fun KlyroEmptyState(
             modifier = Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
             verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
         ) {
-            Text(title, color = colors.foreground, fontWeight = FontWeight.SemiBold)
+            Text(title, color = colors.foreground, fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() })
             Text(detail, color = colors.muted, style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = onAction,
-                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
-                Text(actionLabel)
+            Button(
+                onClick = onAction,
+                modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch),
+                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.accent, contentColor = colors.onAccent
+                )
+            ) {
+                Text(actionLabel, modifier = Modifier.weight(1f))
+                Spacer(Modifier.size(8.dp))
+                Icon(painterResource(R.drawable.hugeicons_chevron_right),
+                    contentDescription = null, modifier = Modifier.size(18.dp))
             }
         }
     }
