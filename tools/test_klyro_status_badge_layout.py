@@ -13,10 +13,13 @@ class RuntimeBadgeResponsiveTest(unittest.TestCase):
         self.assertIn('modifier = Modifier.weight(1f)', MAIN)
     def test_recheck_is_in_compact_status_row_and_accessible(self):
         action = MAIN.split('val recheckAction:', 1)[1].split('Row(', 1)[0]
+        self.assertIn('OutlinedButton(', action)
         self.assertIn('if (verifyingRuntime) "Checking…" else "Recheck"', action)
         self.assertIn('contentDescription = "Recheck environment"', action)
         self.assertIn('heightIn(min = 48.dp)', action)
         self.assertIn('enabled = !verifyingRuntime && !installing', action)
+        self.assertIn('ButtonDefaults.outlinedButtonColors(', action)
+        self.assertIn('RoundedCornerShape(KlyroUiMetrics.controlCorner)', action)
 
     def test_bento_adapts_to_width_and_font_scale(self):
         home = MAIN.split('BoxWithConstraints(modifier = Modifier.fillMaxWidth())', 1)[1]

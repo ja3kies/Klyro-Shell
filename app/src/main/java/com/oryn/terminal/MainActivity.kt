@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 24229)
+Total output lines: 1916
+
 package com.oryn.terminal
 
 import android.content.ClipData
@@ -71,6 +74,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -846,196 +850,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
-                    TermuxBootstrapInstaller(applicationContext).migrateShellProfile()
-                    TerminalSessionManager(applicationContext).verifyBash()
-                }
-            }
-            isVerifyingRuntime = false
-            result.onSuccess { verification ->
-                bashStarted = verification.bashStarted
-                runtimeVerified = verification.isEnvironmentReady()
-                // Only the known mandoc line can be ignored; every other stderr
-                // line remains a warning, even without a "WARNING" prefix.
-                runtimeHasWarnings = verification.hasWarnings &&
-                    !KlyroVerificationWarnings.suppressHarmlessWarning(
-                        verification.diagnostics, verification.hasWarnings, runtimeVerified
-                    )
-                val cleanStderr = !runtimeHasWarnings
-                technicalErrorDetails = if (runtimeVerified && cleanStderr) null else verification.diagnostics
-                showTechnicalDetails = false
-                statusMessage = when {
-                    runtimeVerified && cleanStderr -> "Environment ready · Bash, UID, APT and pkg verified."
-                    runtimeVerified -> "Ready with warnings · Bash, UID, APT and pkg passed. Open the technical details to see the warnings."
-                    bashStarted -> "Bash starts, but the environment is incomplete. Review diagnostics."
-                    else -> "Bash startup failed. Review diagnostics."
-                }
-            }.onFailure { error ->
-                runtimeVerified = false
-                runtimeHasWarnings = false
-                bashStarted = false
-                technicalErrorDetails = KlyroDiagnostics.summarize(error)
-                showTechnicalDetails = false
-                statusMessage = "Klyro couldn't complete the environment check. Review diagnostics."
-            }
-        }
-    }
-
-    private fun installEnvironment(forceBootstrapRepair: Boolean = false) {
-        if (isInstalling || isVerifyingRuntime) return
-        if (forceBootstrapRepair && terminalState.hasLiveSessions()) {
-            Toast.makeText(this, "Close running sessions before repairing the bootstrap", Toast.LENGTH_LONG).show()
-            return
-        }
-        if (TermuxBootstrapInstaller.isBusy() || ProotRuntimeInstaller.isBusy()) {
-            observePreviousInstall()
-            return
-        }
-        if (bootstrapInstalled && !forceBootstrapRepair) {
-            installProotRuntime()
-            return
-        }
-
-        val activeInstaller = installer ?: run {
-            statusMessage = "Installer is unavailable. Restart Klyro and try again."
-            return
-        }
-        technicalErrorDetails = null
-        showTechnicalDetails = false
-        bashStarted = false
-        runtimeVerified = false
-        runtimeHasWarnings = false
-        isInstalling = true
-        installProgress = 0
-        statusMessage = "Preparing Klyro's private environment…"
-        KlyroSetupLedger.begin("bootstrap", statusMessage)
-
-        activeInstaller.install(object : TermuxBootstrapInstaller.Listener {
-            override fun onProgress(stage: String, percent: Int) {
-                KlyroSetupLedger.progress("bootstrap", stage, percent)
-                runOnUiThread {
-                    if (isDestroyed) return@runOnUiThread
-                    installProgress = percent.coerceIn(0, 100)
-                    statusMessage = stage
-                }
-            }
-
-            override fun onComplete(success: Boolean, message: String) {
-                KlyroSetupLedger.finish("bootstrap", success, message, activeInstaller.getLastErrorDetails())
-                runOnUiThread {
-                    if (isDestroyed) return@runOnUiThread
-                    bootstrapInstalled = success
-                    statusMessage = message
-                    if (success) {
-                        installProotRuntime()
-                    } else {
-                        isInstalling = false
-                        technicalErrorDetails = activeInstaller.getLastErrorDetails()
-                        showTechnicalDetails = false
-                        refreshReadiness()
-                        statusMessage = message
-                    }
-                }
-            }
-        })
-    }
-
-    private fun installProotRuntime() {
-        if (isVerifyingRuntime) return
-        if (ProotRuntimeInstaller.isBusy()) {
-            observePreviousInstall()
-            return
-        }
-        val activeInstaller = runtimeInstaller ?: run {
-            isInstalling = false
-            statusMessage = "Proot installer is unavailable. Restart Klyro and try again."
-            return
-        }
-        technicalErrorDetails = null
-        showTechnicalDetails = false
-        bashStarted = false
-        runtimeVerified = false
-        runtimeHasWarnings = false
-        isInstalling = true
-        installProgress = 0
-        statusMessage = "Installing Klyro's verified ARM64 PRoot runtime…"
-        KlyroSetupLedger.begin("proot", statusMessage)
-
-        activeInstaller.install(object : ProotRuntimeInstaller.Listener {
-            override fun onProgress(stage: String, percent: Int) {
-                KlyroSetupLedger.progress("proot", stage, percent)
-                runOnUiThread {
-                    if (isDestroyed) return@runOnUiThread
-                    installProgress = percent.coerceIn(0, 100)
-                    statusMessage = stage
-                }
-            }
-
-            override fun onComplete(success: Boolean, message: String) {
-                KlyroSetupLedger.finish("proot", success, message, activeInstaller.getLastErrorDetails())
-                runOnUiThread {
-                    if (isDestroyed) return@runOnUiThread
-                    isInstalling = false
-                    refreshReadiness()
-                    if (!success) {
-                        runtimeInstalled = false
-                        runtimeVerified = false
-                        technicalErrorDetails = activeInstaller.getLastErrorDetails()
-                        showTechnicalDetails = false
-                        statusMessage = message
-                    } else if (runtimeInstalled) {
-                        verifyRuntime()
-                    }
-                }
-            }
-        })
-    }
-
-    data class DiagnosticStressResult(val started: Boolean, val message: String)
-
-    /** Prepares a disposable diagnostic on IO; PTY initialization stays on the main thread. */
-    suspend fun startDiagnosticStress(): DiagnosticStressResult {
-        if (!BuildConfig.DEBUG) return DiagnosticStressResult(false, "Diagnostic build required.")
-        if (terminalState.sessions.size >= 8)
-            return DiagnosticStressResult(false, "Maximum 8 sessions; test not started.")
-
-        val id = terminalState.reserveTabId()
-        var attached = false
-        return try {
-            val client = OrynTerminalSessionClient(applicationContext, terminalState.listenerFor(id))
-            // TerminalSessionManager creates private directory layout and resolves
-            // PRoot/command paths. Never do this work inside a UI button callback.
-            val session = withContext(Dispatchers.IO) {
-                val manager = TerminalSessionManager(applicationContext)
-                manager.startBash("Stability test", client)
-            }
-            // Another button/Activity may have added a session while IO was busy.
-            if (terminalState.sessions.size >= 8) {
-                DiagnosticStressResult(false, "Maximum 8 sessions; test not started.")
-            } else {
-                terminalState.attachSession(session, client, OrynTerminalViewClient(applicationContext), id)
-                attached = true
-                terminalState.renameTab(id, "Stability test")
-                // Termux requires emulator initialization and callbacks on main.
-                session.updateSize(80, 24)
-                KlyroSessionService.ensureRunning(this)
-                showWelcomeScreen = false
-                val bytes = com.oryn.terminal.diagnostics.StabilityScenario.COMMAND.toByteArray(Charsets.UTF_8)
-                if (!session.tryWrite(bytes, 0, bytes.size)) {
-                    DiagnosticStressResult(false, "Test input rejected; diagnostic tab retained.")
-                } else {
-                    com.oryn.terminal.diagnostics.FreezeRecorder.recordStabilityRun(id)
-                    DiagnosticStressResult(true,
-                        "Command queued in separate tab. Go Home → another app → return. Check for the END marker.")
-                }
-            }
-        } catch (cancelled: kotlinx.coroutines.CancellationException) {
-            if (attached) {
-                terminalState.closeTab(id)
-                KlyroSessionService.stopIfEmpty(this)
-            }
-            throw cancelled
-        } catch (e: Exception) {
-            if (attached) {
+                    Te…2229 tokens truncated…ttached) {
                 terminalState.closeTab(id)
                 KlyroSessionService.stopIfEmpty(this)
             }
@@ -1497,7 +1312,7 @@ private fun OrynTerminalApp(
                         val stackRuntimeAction = LocalDensity.current.fontScale >= 1.3f ||
                             LocalConfiguration.current.screenWidthDp < 360
                         val recheckAction: @Composable () -> Unit = {
-                            TextButton(
+                            OutlinedButton(
                                 onClick = onRecheck,
                                 enabled = !verifyingRuntime && !installing,
                                 modifier = Modifier.heightIn(min = 48.dp)
@@ -1506,12 +1321,18 @@ private fun OrynTerminalApp(
                                         if (verifyingRuntime) stateDescription = "Checking environment"
                                         else if (installing) stateDescription = "Unavailable during installation"
                                     },
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = if (verifyingRuntime || installing) ui.muted else ui.accent,
+                                    disabledContentColor = ui.muted
+                                ),
+                                border = BorderStroke(1.dp, ui.muted.copy(alpha = .45f)),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Text(
                                     if (verifyingRuntime) "Checking…" else "Recheck",
-                                    color = if (verifyingRuntime || installing) ui.muted else ui.accent,
-                                    fontSize = 12.sp
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
