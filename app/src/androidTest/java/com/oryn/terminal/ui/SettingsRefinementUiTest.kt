@@ -172,7 +172,7 @@ class SettingsRefinementUiTest {
         ui.onNodeWithText("Reset").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         val label = ui.onNodeWithText("Font size").getUnclippedBoundsInRoot()
         val value = ui.onNodeWithText("14 sp").getUnclippedBoundsInRoot()
-        assertTrue("The label must retain measurable width", label.width > 0.dp)
+        assertTrue("The label must retain measurable width", label.right > label.left)
         assertTrue("Large text must stack the value below its label", value.top >= label.bottom)
     }
 
