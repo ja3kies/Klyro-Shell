@@ -128,6 +128,8 @@ class UXFivePriorities(unittest.TestCase):
 
     def test_plugins_have_state_specific_accessibility(self):
         self.assertIn('if (plugin.enabled) "Disable " else "Enable "', self.plugins)
+        self.assertIn('role = Role.Switch', self.plugins)
+        self.assertIn('modifier = Modifier.clearAndSetSemantics { })', self.plugins)
 
     def test_plugins_announce_errors(self):
         self.assertIn('KlyroInlineNotice(', self.plugins)

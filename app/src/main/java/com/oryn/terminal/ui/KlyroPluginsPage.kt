@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -362,13 +363,17 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                                         onValueChange = { checked ->
                                             applyChange({ manager.setEnabled(plugin.id, checked) })
                                         }
-                                    ).semantics { contentDescription = plugin.name }) {
+                                    ).semantics {
+                                        contentDescription =
+                                            (if (plugin.enabled) "Disable " else "Enable ") + plugin.name
+                                    }) {
                                 Text(if (plugin.enabled) "Enabled" else "Disabled",
                                     modifier = Modifier.weight(1f),
                                     color = colors.muted, fontSize = 12.sp)
                                 Switch(checked = plugin.enabled,
                                     onCheckedChange = null,
-                                    enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed)
+                                    enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
+                                    modifier = Modifier.clearAndSetSemantics { })
                             }
                             TextButton(
                                 onClick = { error = null; removeId = plugin.id },
