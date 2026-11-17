@@ -213,12 +213,12 @@ internal fun KlyroSettingsSheet(
                             onClick = ::navigateBack,
                             modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch)
                         ) {
-                            Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
-                                contentDescription = null, tint = colors.muted,
-                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                            Text(if (section == "freeze") "Diagnostics" else "Settings",
-                                modifier = Modifier.weight(1f),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
+                                    contentDescription = null, tint = colors.muted,
+                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                Text(if (section == "freeze") "Diagnostics" else "Settings")
+                            }
                         }
                     }
                     TextButton(onClick = onDismiss, enabled = canDismissSheet,

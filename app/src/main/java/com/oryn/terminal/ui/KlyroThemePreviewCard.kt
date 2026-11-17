@@ -75,8 +75,7 @@ internal fun KlyroThemePreviewCard(
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(40.dp).clearAndSetSemantics { }
-,
+                modifier = Modifier.fillMaxWidth().height(40.dp).clearAndSetSemantics { },
                 contentAlignment = Alignment.Center
             ) {
                 if (mode == "system") {
