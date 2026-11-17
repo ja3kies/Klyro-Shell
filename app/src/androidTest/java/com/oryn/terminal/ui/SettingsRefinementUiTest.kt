@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -167,11 +168,11 @@ class SettingsRefinementUiTest {
             }
         }
         ui.onNodeWithText("Font size").performScrollTo().assertIsDisplayed()
-        val label = ui.onNodeWithText("Font size").fetchSemanticsNode().boundsInRoot
         ui.onNodeWithText("14 sp").performScrollTo().assertIsDisplayed()
         ui.onNodeWithText("Reset").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
-        val value = ui.onNodeWithText("14 sp").fetchSemanticsNode().boundsInRoot
-        assertTrue("The label must retain measurable width", label.width > 0f)
+        val label = ui.onNodeWithText("Font size").getUnclippedBoundsInRoot()
+        val value = ui.onNodeWithText("14 sp").getUnclippedBoundsInRoot()
+        assertTrue("The label must retain measurable width", label.width > 0.dp)
         assertTrue("Large text must stack the value below its label", value.top >= label.bottom)
     }
 
