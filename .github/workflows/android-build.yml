@@ -2,7 +2,8 @@ name: Android build
 
 on:
   push:
-    branches: [fix/modal-lifecycle-touch-freeze, fix/klyro-three-core-hardening-20261115, fix/klyro-three-major-ui-20261115, fix/klyro-six-ui-ux-20261115, fix/klyro-monotonic-apk-versioning-20261115, feat/klyro-progressive-ci-robot-20261115, fix/freeze-forensics-ux-completion, fix/p0-reliability-closure, feat/production-ready-terminal, main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108, feat/p0-cycle1-25-actions-20261108, 'p0/**', 'p1/**', 'integration/**', 'feat/ux-five-priorities-cycle-02', 'fix/ux-t4-confirm-bundled-install', 'p1/ux-modal-keyboard-cycle-03', 'p0/select-paste-adversarial-audit-20261109']
+    branches: [fix/modal-lifecycle-touch-freeze, fix/klyro-three-core-hardening-20261115, fix/klyro-three-major-ui-20261115, fix/klyro-six-ui-ux-20261115, fix/klyro-monotonic-apk-versioning-20261115, feat/klyro-progressive-ci-robot-20261115, fix/freeze-forensics-ux-completion, fix/p0-reliability-closure, feat/production-ready-terminal, main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108, feat/p0-cycle1-25-actions-20261108, feat/in-app-updates-20261118, 'p0/**', 'p1/**', 'integration/**', 'feat/ux-five-priorities-cycle-02', 'fix/ux-t4-confirm-bundled-install', 'p1/ux-modal-keyboard-cycle-03', 'p0/select-paste-adversarial-audit-20261109']
+    tags: ['v*']
     paths-ignore:
       # The fast robot-quality-gate workflow validates these changes
       # independently. Don't consume a full Android/Termux SDK build for
@@ -35,7 +36,7 @@ on:
       - 'docs/validation/production-20261112/**'
       - '.github/workflows/robot-quality-gate.yml'
   pull_request:
-    branches: [main, feat/klyro-0110, 'integration/**']
+    branches: [main, feat/klyro-0110, fix/terminal-session-tab-actions-20261118, 'integration/**']
   workflow_dispatch:
 
 concurrency:
@@ -89,6 +90,14 @@ jobs:
         with:
           gradle-version: "8.11.1"
           cache-read-only: ${{ github.ref_name != 'main' }}
+
+      - name: Set release version name for semantic tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]
+          echo "KLYRO_RELEASE_VERSION_NAME=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
 
       - name: Prepare signed ARM64 PRoot runtime assets
         shell: bash
@@ -280,16 +289,38 @@ jobs:
           "$SDK_TOOLS/zipalign" -f 4 app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/aligned.apk"
           "$SDK_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/klyro.p12" --ks-type PKCS12 --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out app/build/outputs/apk/debug/klyro-shell-signed.apk "$RUNNER_TEMP/aligned.apk"
           "$SDK_TOOLS/apksigner" verify --verbose app/build/outputs/apk/debug/klyro-shell-signed.apk
+          cp app/build/outputs/apk/debug/klyro-shell-signed.apk app/build/outputs/apk/debug/klyro-shell.apk
           "$SDK_TOOLS/zipalign" -f 4 app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk "$RUNNER_TEMP/aligned-tests.apk"
           "$SDK_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/klyro.p12" --ks-type PKCS12 --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out app/build/outputs/apk/androidTest/debug/klyro-shell-tests-signed.apk "$RUNNER_TEMP/aligned-tests.apk"
           "$SDK_TOOLS/apksigner" verify --verbose app/build/outputs/apk/androidTest/debug/klyro-shell-tests-signed.apk
           rm app/build/outputs/apk/debug/app-debug.apk
+      - name: Write signed update metadata
+        if: ${{ env.KLYRO_SIGNING_AVAILABLE == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(gradle -q :app:printKlyroVersion)"
+          VERSION_CODE="${VERSION%%|*}"
+          VERSION_NAME="${VERSION#*|}"
+          UPDATE_BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          APK="app/build/outputs/apk/debug/klyro-shell.apk"
+          APK_SHA256="$(sha256sum "$APK" | cut -d ' ' -f1)"
+          python3 - "$VERSION_CODE" "$VERSION_NAME" "$APK_SHA256" "$UPDATE_BRANCH" <<'PY'
+          import json, pathlib, sys
+          code, name, digest, branch = sys.argv[1:]
+          data = {"packageName": "com.klyro.shell", "versionCode": int(code),
+                  "versionName": name, "apkSha256": digest, "branch": branch}
+          pathlib.Path("app/build/outputs/apk/debug/klyro-update.json").write_text(
+              json.dumps(data, separators=(",", ":")) + "\n", encoding="utf-8")
+          PY
       - name: Upload signed debug APK
         if: ${{ env.KLYRO_SIGNING_AVAILABLE == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: klyro-shell-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/klyro-shell.apk
+            app/build/outputs/apk/debug/klyro-update.json
           if-no-files-found: error
           retention-days: 14
 
@@ -318,3 +349,49 @@ jobs:
           path: klyro-build-summary.md
           if-no-files-found: error
           retention-days: 14
+
+  publish-stable-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: debug-apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require semantic version tag on main history
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Download Klyro-signed APK and metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: klyro-shell-debug
+          path: release-assets
+      - name: Verify asset and publish stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s release-assets/klyro-shell.apk
+          test -s release-assets/klyro-update.json
+          python3 - "$GITHUB_REF_NAME" release-assets/klyro-update.json <<'PY'
+          import json, re, sys
+          tag = sys.argv[1]
+          data = json.load(open(sys.argv[2], encoding="utf-8"))
+          if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag): raise SystemExit("Invalid release tag")
+          if data.get("packageName") != "com.klyro.shell" or data.get("versionName") != tag[1:]:
+              raise SystemExit("Release metadata does not match the tag")
+          PY
+          ACTUAL_SHA256="$(sha256sum release-assets/klyro-shell.apk | cut -d ' ' -f1)"
+          EXPECTED_SHA256="$(python3 -c 'import json; print(json.load(open("release-assets/klyro-update.json"))["apkSha256"])')"
+          test "$ACTUAL_SHA256" = "$EXPECTED_SHA256"
+          gh release create "$GITHUB_REF_NAME" \
+            release-assets/klyro-shell.apk release-assets/klyro-update.json \
+            --title "$GITHUB_REF_NAME" --generate-notes

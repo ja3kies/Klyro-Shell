@@ -47,6 +47,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
@@ -58,8 +59,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
@@ -110,7 +114,7 @@ internal fun KlyroSettingsSheet(
     var section by rememberSaveable(initialSection) {
         mutableStateOf(initialSection.takeIf {
             it in setOf("home", "appearance", "keyboard", "files",
-                "privacy", "diagnostics", "freeze", "about")
+                "privacy", "diagnostics", "freeze", "about", "updates")
         } ?: "home")
     }
     DisposableEffect(Unit) {
@@ -129,6 +133,22 @@ internal fun KlyroSettingsSheet(
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var showMonochromeThemes by rememberSaveable { mutableStateOf(themeMode.startsWith("mono-")) }
     var cannotOpenPermissions by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val updatePreferences = remember(context) {
+        context.getSharedPreferences("klyro_updates", Context.MODE_PRIVATE)
+    }
+    var updateChannel by rememberSaveable {
+        mutableStateOf(com.oryn.terminal.updates.UpdateChannel.fromStorage(
+            updatePreferences.getString("channel", "stable")))
+    }
+    var updateChecking by remember { mutableStateOf(false) }
+    var updateError by remember { mutableStateOf<String?>(null) }
+    var updateStalePreview by remember { mutableStateOf(false) }
+    var updateResult by remember { mutableStateOf<com.oryn.terminal.updates.UpdateLookup?>(null) }
+    var updateDownloading by remember { mutableStateOf(false) }
+    var updateProgress by remember { mutableFloatStateOf(0f) }
+    var updateDownloadJob by remember { mutableStateOf<Job?>(null) }
+    var downloadedUpdate by remember { mutableStateOf<java.io.File?>(null) }
     var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
     var brandSwitchError by rememberSaveable { mutableStateOf(false) }
     var brandReady by remember { mutableStateOf(false) }
@@ -137,7 +157,6 @@ internal fun KlyroSettingsSheet(
     var brandUpdating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val colors = LocalKlyroColors.current
-    val context = LocalContext.current
     var authorizedFolderCount by remember { mutableStateOf(-1) }
     var folderRevision by remember { mutableStateOf(0) }
     LaunchedEffect(context, section, folderRevision) {
@@ -187,9 +206,39 @@ internal fun KlyroSettingsSheet(
         !showHugeiconsLicense && !brandUpdating
     BackHandler(enabled = canDismissSheet) { onDismiss() }
     val version = com.oryn.terminal.BuildConfig.VERSION_NAME
+    val installedUpdateVersion = remember {
+        com.oryn.terminal.updates.KlyroVersion(
+            com.oryn.terminal.BuildConfig.VERSION_CODE.toLong(), version)
+    }
+    fun checkForUpdates() {
+        if (updateChecking || updateDownloading) return
+        updateChecking = true
+        updateError = null
+        updateStalePreview = false
+        updateResult = null
+        downloadedUpdate?.delete()
+        downloadedUpdate = null
+        scope.launch {
+            try {
+                updateResult = withContext(Dispatchers.IO) {
+                    com.oryn.terminal.updates.KlyroUpdateRepository(context).check(
+                        updateChannel,
+                        com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(
+                            com.oryn.terminal.BuildConfig.UPDATE_BRANCH),
+                        installedUpdateVersion
+                    )
+                }
+            } catch (failure: Exception) {
+                updateError = failure.message ?: "Could not check for updates. Try again."
+            } finally { updateChecking = false }
+        }
+    }
     LaunchedEffect(section) {
         com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.SETTINGS,
-            listOf("home", "appearance", "keyboard", "files", "privacy", "diagnostics", "freeze", "about").indexOf(section).toLong())
+            listOf("home", "appearance", "keyboard", "files", "privacy", "diagnostics", "freeze", "about", "updates").indexOf(section).toLong())
+    }
+    LaunchedEffect(section, updateChannel) {
+        if (section == "updates") checkForUpdates()
     }
 
     // Use actual measured overflow instead of guessing page height from row counts.
@@ -266,6 +315,8 @@ internal fun KlyroSettingsSheet(
                             R.drawable.hugeicons_pulse_rectangle_01) {
                             section = "diagnostics"
                         }
+                        SettingsRowLink("App updates", "Check and install Klyro updates",
+                            R.drawable.hugeicons_download_01) { section = "updates" }
                         SettingsRowLink("About", "Build information and licences",
                             R.drawable.hugeicons_information_square) {
                             section = "about"
@@ -883,6 +934,169 @@ internal fun KlyroSettingsSheet(
                             "Hugeicons licence", "MIT · vector icon set",
                             R.drawable.hugeicons_information_square
                         ) { showHugeiconsLicense = true }
+                    }
+                    "updates" -> {
+                        KlyroSectionHeading("App updates", "Updates are checked inside Klyro.")
+                        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().semantics {
+                            contentDescription = "Update channel"
+                        }) {
+                            com.oryn.terminal.updates.UpdateChannel.entries.forEachIndexed { index, channel ->
+                                SegmentedButton(
+                                    selected = updateChannel == channel,
+                                    enabled = !updateDownloading && !updateChecking,
+                                    onClick = {
+                                        if (updateChannel != channel) {
+                                            updateChannel = channel
+                                            updatePreferences.edit().putString("channel", channel.storageValue).apply()
+                                            updateResult = null
+                                            downloadedUpdate?.delete()
+                                            downloadedUpdate = null
+                                        }
+                                    },
+                                    shape = SegmentedButtonDefaults.itemShape(index,
+                                        com.oryn.terminal.updates.UpdateChannel.entries.size),
+                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                ) { Text(channel.label) }
+                            }
+                        }
+                        Surface(color = colors.tile,
+                            shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
+                            Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                Text("Installed version", color = colors.muted,
+                                    style = MaterialTheme.typography.labelMedium)
+                                Text("$version · ARM64", color = colors.foreground,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold)
+                                Text(if (updateChannel == com.oryn.terminal.updates.UpdateChannel.STABLE)
+                                    "Stable releases · signed APK" else "Preview builds · ${com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(com.oryn.terminal.BuildConfig.UPDATE_BRANCH)}",
+                                    color = colors.muted, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        when (val result = updateResult) {
+                            is com.oryn.terminal.updates.UpdateLookup.Available -> Surface(
+                                color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                            ) {
+                                Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
+                                    Text("Update available", color = colors.readyInk,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold)
+                                    Text(result.candidate.version.name, color = colors.foreground,
+                                        style = MaterialTheme.typography.bodyLarge)
+                                    if (result.candidate.notes.isNotBlank()) Text(
+                                        result.candidate.notes.take(2_000), color = colors.muted,
+                                        style = MaterialTheme.typography.bodySmall)
+                                    if (updateDownloading) {
+                                        LinearProgressIndicator(progress = { updateProgress },
+                                            modifier = Modifier.fillMaxWidth(), color = colors.accent)
+                                        Text(if (updateProgress > 0f)
+                                            "Downloading ${(updateProgress * 100).toInt()}%" else "Preparing secure download…",
+                                            color = colors.muted,
+                                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                                        TextButton(onClick = { updateDownloadJob?.cancel() },
+                                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
+                                            Text("Cancel download", color = colors.muted)
+                                        }
+                                    }
+                                    Button(
+                                        onClick = {
+                                            val readyFile = downloadedUpdate
+                                            if (readyFile != null) {
+                                                try {
+                                                    val action = com.oryn.terminal.updates.KlyroUpdateInstaller.install(
+                                                        context, readyFile, result.candidate)
+                                                    if (action == com.oryn.terminal.updates.InstallAction.PermissionRequired)
+                                                        updateError = "Allow Klyro to install updates in Android settings, then tap Install again."
+                                                } catch (failure: Exception) {
+                                                    if (failure is com.oryn.terminal.updates.UpdateException) {
+                                                        downloadedUpdate?.delete()
+                                                        downloadedUpdate = null
+                                                    }
+                                                    updateStalePreview = (failure as? com.oryn.terminal.updates.UpdateException)
+                                                        ?.stalePreview == true
+                                                    updateError = failure.message ?: "The APK could not be verified."
+                                                }
+                                            } else if (!updateDownloading) {
+                                                updateDownloading = true
+                                                updateProgress = 0f
+                                                updateError = null
+                                                updateStalePreview = false
+                                                updateDownloadJob = scope.launch {
+                                                    var unverifiedDownload: java.io.File? = null
+                                                    try {
+                                                        val file = withContext(Dispatchers.IO) {
+                                                            com.oryn.terminal.updates.KlyroUpdateRepository(context)
+                                                                .download(result.candidate) { received, total ->
+                                                                    if (updateDownloadJob?.isActive == false)
+                                                                        throw CancellationException("Download cancelled")
+                                                                    if (total > 0) updateProgress = (received.toFloat() / total).coerceIn(0f, 1f)
+                                                                }
+                                                        }
+                                                        unverifiedDownload = file
+                                                        withContext(Dispatchers.IO) {
+                                                            com.oryn.terminal.updates.KlyroUpdateInstaller.validate(
+                                                                context, file, result.candidate)
+                                                        }
+                                                        downloadedUpdate = file
+                                                        unverifiedDownload = null
+                                                    } catch (failure: CancellationException) {
+                                                        unverifiedDownload?.delete()
+                                                        updateError = "Download cancelled. You can try again."
+                                                    } catch (failure: Exception) {
+                                                        unverifiedDownload?.delete()
+                                                        updateStalePreview = (failure as? com.oryn.terminal.updates.UpdateException)
+                                                            ?.stalePreview == true
+                                                        updateError = failure.message ?: "Download or verification failed."
+                                                    } finally {
+                                                        updateDownloading = false
+                                                        updateDownloadJob = null
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        enabled = !updateDownloading && !updateStalePreview,
+                                        modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch),
+                                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                        colors = ButtonDefaults.buttonColors(containerColor = colors.accent,
+                                            contentColor = colors.onAccent)
+                                    ) {
+                                        Text(when {
+                                            updateDownloading -> "Downloading…"
+                                            downloadedUpdate != null -> "Install update"
+                                            else -> "Download update"
+                                        })
+                                    }
+                                }
+                            }
+                            com.oryn.terminal.updates.UpdateLookup.Current -> KlyroInlineNotice(
+                                "Klyro is up to date on the ${updateChannel.label} channel.")
+                            com.oryn.terminal.updates.UpdateLookup.NonePublished -> KlyroInlineNotice(
+                                if (updateChannel == com.oryn.terminal.updates.UpdateChannel.STABLE)
+                                    "No Stable release is published yet. Preview builds may be available on the Preview channel."
+                                else "No valid Preview build was found for this branch. Builds can expire after 14 days.")
+                            null -> if (updateChecking) KlyroInlineNotice("Checking ${updateChannel.label} updates…")
+                        }
+                        updateError?.let { error ->
+                            KlyroInlineNotice(error, isError = true)
+                            if (!updateChecking && !updateDownloading) {
+                                TextButton(
+                                    onClick = ::checkForUpdates,
+                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                ) {
+                                    Text(if (updateStalePreview) "Find a newer Preview" else "Try again",
+                                        color = colors.accent)
+                                }
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = ::checkForUpdates,
+                            enabled = !updateChecking && !updateDownloading,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch),
+                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foreground),
+                            border = BorderStroke(1.dp, colors.muted.copy(alpha = .35f))
+                        ) { Text(if (updateChecking) "Checking…" else "Check for updates") }
                     }
                 }
                 }
