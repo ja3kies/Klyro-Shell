@@ -4,6 +4,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CODE = (ROOT / "app/src/main/java/com/oryn/terminal/ui/KlyroPluginsPage.kt").read_text()
+COMPONENTS = (ROOT / "app/src/main/java/com/oryn/terminal/ui/KlyroUiComponents.kt").read_text()
 
 
 class PluginCompactCatalogTest(unittest.TestCase):
@@ -41,6 +42,16 @@ class PluginCompactCatalogTest(unittest.TestCase):
         self.assertIn('title = { Text("Add ${record.name}?") }', CODE)
         self.assertIn('manager.installBundled(id)', CODE)
         self.assertIn('Text("Cancel")', CODE)
+
+    def test_empty_installed_state_uses_a_primary_discovery_action(self):
+        empty_state = COMPONENTS.split('internal fun KlyroEmptyState(', 1)[1].split(
+            '/** iOS-inspired restrained slider', 1
+        )[0]
+        self.assertIn('Button(', empty_state)
+        self.assertIn('containerColor = colors.accent', empty_state)
+        self.assertIn('Text(actionLabel, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))', empty_state)
+        self.assertIn('heightIn(min = KlyroUiMetrics.minTouch)', empty_state)
+        self.assertNotIn('TextButton(', empty_state)
 
     def test_reading_registry_does_not_disable_home_navigation(self):
         self.assertIn(

@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
@@ -31,6 +32,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -299,7 +302,7 @@ internal fun KlyroEmptyState(
                     containerColor = colors.accent, contentColor = colors.onAccent
                 )
             ) {
-                Text(actionLabel, modifier = Modifier.weight(1f))
+                Text(actionLabel, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Spacer(Modifier.size(8.dp))
                 Icon(painterResource(R.drawable.hugeicons_chevron_right),
                     contentDescription = null, modifier = Modifier.size(18.dp))

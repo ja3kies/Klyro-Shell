@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -17,12 +19,15 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -58,7 +63,7 @@ import com.oryn.terminal.R
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 
 /** A workspace groups live PTYs but does not claim to restore dead processes. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun KlyroWorkspaceSheet(
     entries: List<KlyroWorkspaceCatalog.Entry>,
@@ -118,6 +123,7 @@ internal fun KlyroWorkspaceSheet(
         }
     }
     fun editProject(id: String, title: String) {
+        if (editorId != null) return
         editorId = id
         editorText = title
         editorError = false
@@ -142,8 +148,11 @@ internal fun KlyroWorkspaceSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     KlyroSheetTitle("Workspaces", modifier = Modifier.weight(1f))
-                    TextButton(
+                    OutlinedButton(
                         onClick = { editProject("", "") },
+                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                            .semantics { contentDescription = "New workspace" },
                         enabled = editorId == null && entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically,
@@ -173,6 +182,10 @@ internal fun KlyroWorkspaceSheet(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                Column(
+                    modifier = Modifier.fillMaxWidth().selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                ) {
                 entries.forEach { entry ->
                     val count = tabs.count {
                         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == entry.id
@@ -193,7 +206,7 @@ internal fun KlyroWorkspaceSheet(
                             Row(
                                 modifier = Modifier.weight(1f)
                                     .heightIn(min = KlyroUiMetrics.workspaceRow)
-                                    .clickable(role = Role.RadioButton,
+                                    .clickable(enabled = editorId == null, role = Role.RadioButton,
                                         onClickLabel = "Select workspace " + entry.name) {
                                         onSelectProject(entry.id)
                                     }.semantics { this.selected = active },
@@ -204,7 +217,8 @@ internal fun KlyroWorkspaceSheet(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        painterResource(R.drawable.hugeicons_folder_01),
+                                        painterResource(if (active) R.drawable.hugeicons_checkmark_circle_01
+                                            else R.drawable.hugeicons_folder_01),
                                         contentDescription = null,
                                         tint = if (active) c.accent else c.muted,
                                         modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
@@ -221,7 +235,7 @@ internal fun KlyroWorkspaceSheet(
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.titleSmall,
                                         color = c.foreground,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                                        maxLines = 2, overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         if (count == 1) "1 session" else count.toString() + " sessions",
@@ -237,12 +251,12 @@ internal fun KlyroWorkspaceSheet(
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (entry.id != KlyroWorkspaceCatalog.GENERAL) {
-                                    TextButton(onClick = { menuId = entry.id },
+                                    IconButton(onClick = { menuId = entry.id },
+                                        enabled = editorId == null,
                                         modifier = Modifier.size(KlyroUiMetrics.minTouch)
                                             .semantics {
                                                 contentDescription = "Options for " + entry.name
-                                            },
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                                            }
                                     ) {
                                         Icon(painterResource(R.drawable.hugeicons_more_vertical),
                                             contentDescription = null, tint = c.foreground,
@@ -267,6 +281,8 @@ internal fun KlyroWorkspaceSheet(
                             }
                         }
                     }
+                }
+
                 }
 
                 if (editorId != null) {
@@ -319,9 +335,10 @@ internal fun KlyroWorkspaceSheet(
                             }
                             if (editorError) Text("Choose a unique, non-empty name.",
                                 color = c.danger, style = MaterialTheme.typography.bodySmall)
-                            Row(
+                            FlowRow(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
+                                horizontalArrangement = Arrangement.End,
+                                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
                             ) {
                                 TextButton(onClick = {
                                     keyboard?.hide()
@@ -334,7 +351,7 @@ internal fun KlyroWorkspaceSheet(
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = c.accent, contentColor = c.onAccent
                                     ), shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                                ) { Text("Save") }
+                                ) { Text(if (editing) "Save name" else "Create workspace") }
                             }
                         }
                     }
@@ -356,7 +373,7 @@ internal fun KlyroWorkspaceSheet(
                         Surface(
                             modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
                                 .clickable(
-                                    enabled = !current,
+                                    enabled = !current && editorId == null,
                                     role = Role.Button,
                                     onClickLabel = "Switch to " + name
                                 ) {
@@ -399,7 +416,10 @@ internal fun KlyroWorkspaceSheet(
                 if (activeTabId != null &&
                     (tabWorkspaces[activeTabId] ?: KlyroWorkspaceCatalog.GENERAL) != selected.id
                 ) {
-                    TextButton(
+                    OutlinedButton(
+                        enabled = editorId == null,
+                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = c.foreground),
                         onClick = {
                             onAssignCurrentTab(selected.id)
                             lastAssignedWorkspaceId = selected.id
