@@ -71,7 +71,7 @@ Make each session pill behave like the `Role.Tab` it advertises: tapping any tab
 - [x] 41. Add Compose UI coverage for invoking the custom accessibility action.
 - [x] 42. Add Compose UI coverage for selected, workspace, activity, and unread state labels.
 - [x] 43. Run the full Python source regression suite.
-- [ ] 44. Run the exact-commit Android CI and inspect the built APK artifacts.
+- [x] 44. Run the exact-commit Android CI and inspect the built APK artifacts.
 - [ ] 45. Inspect an installed Pixel capture before assigning a visual score or calling runtime accessibility verified.
 
 ## Test-first implementation sequence
