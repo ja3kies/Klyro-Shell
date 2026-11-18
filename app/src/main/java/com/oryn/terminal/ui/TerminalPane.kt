@@ -570,7 +570,7 @@ fun TerminalPane(
                     containerColor = ui.sheet
                 ) {
                     if (activeSession != null) {
-                        KlyroMenuItem("Manage active session", R.drawable.hugeicons_more_vertical) {
+                        KlyroMenuItem("Manage active session", R.drawable.hugeicons_terminal) {
                             showToolsMenu = false
                             openSessionSheet(activeSession.first)
                         }

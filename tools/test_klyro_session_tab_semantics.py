@@ -33,6 +33,7 @@ class SessionTabActionContract(unittest.TestCase):
     def test_more_menu_routes_to_the_actual_active_session(self):
         menu = PANE.split("val toolsMenu:", 1)[1].split("val tabStripScroll", 1)[0]
         self.assertIn('KlyroMenuItem("Manage active session"', menu)
+        self.assertIn('R.drawable.hugeicons_terminal', menu)
         self.assertIn("tabs.firstOrNull { it.first == activeTabId }", PANE)
         self.assertIn("activeSession != null", menu)
         self.assertIn("showToolsMenu = false", menu)
