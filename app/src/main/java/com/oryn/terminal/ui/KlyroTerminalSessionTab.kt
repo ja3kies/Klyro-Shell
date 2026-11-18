@@ -52,7 +52,7 @@ internal fun KlyroTerminalSessionTab(
             .height(48.dp)
             .widthIn(min = KlyroUiMetrics.minTouch)
             .combinedClickable(
-                onClickLabel = "Switch session",
+                onClickLabel = "Select session",
                 onLongClickLabel = "Manage session",
                 onClick = onSelect,
                 onLongClick = onManage

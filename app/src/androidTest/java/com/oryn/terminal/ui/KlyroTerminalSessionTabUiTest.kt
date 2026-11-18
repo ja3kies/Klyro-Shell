@@ -78,7 +78,7 @@ class KlyroTerminalSessionTabUiTest {
         assertEquals("Open terminal, Running, New terminal output",
             semantics[SemanticsProperties.StateDescription])
         assertTrue(semantics[SemanticsProperties.CustomActions].any { it.label == "Manage session" })
-        assertEquals("Switch session", semantics[SemanticsActions.OnClick].label)
+        assertEquals("Select session", semantics[SemanticsActions.OnClick].label)
         assertEquals("Manage session", semantics[SemanticsActions.OnLongClick].label)
     }
 

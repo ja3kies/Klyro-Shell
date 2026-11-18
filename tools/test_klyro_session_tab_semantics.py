@@ -19,7 +19,7 @@ class SessionTabActionContract(unittest.TestCase):
 
     def test_every_tab_tap_selects_even_when_it_is_already_selected(self):
         tab = TAB_PATH.read_text()
-        self.assertIn('onClickLabel = "Switch session"', tab)
+        self.assertIn('onClickLabel = "Select session"', tab)
         self.assertIn("onClick = onSelect", tab)
         self.assertNotIn("if (active)", tab.split(".combinedClickable(", 1)[1].split(".semantics", 1)[0])
 
