@@ -27,6 +27,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -619,16 +620,45 @@ fun TerminalPane(
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 1.sp
                 )
-                Text(
-                    currentProject,
-                    modifier = Modifier.align(Alignment.Center).widthIn(max = 136.dp),
-                    color = TerminalText,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
+                Surface(
+                    modifier = Modifier.align(Alignment.Center)
+                        .widthIn(max = 160.dp)
+                        .heightIn(min = KlyroUiMetrics.minTouch)
+                        .clickable(
+                            onClickLabel = "Choose workspace",
+                            role = Role.Button,
+                            onClick = { showWorkspaceSheet = true }
+                        )
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = "Workspace: $currentProject"
+                        },
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        KlyroUiMetrics.controlCorner
+                    ),
+                    color = inactiveTabSurface
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            currentProject,
+                            modifier = Modifier.weight(1f, fill = false).widthIn(max = 118.dp),
+                            color = TerminalText,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.hugeicons_chevron_right),
+                            contentDescription = null,
+                            modifier = Modifier.rotate(90f).size(16.dp),
+                            tint = TerminalMuted
+                        )
+                    }
+                }
                 Box(modifier = Modifier.align(Alignment.CenterEnd)) {
                     toolsMenu()
                 }

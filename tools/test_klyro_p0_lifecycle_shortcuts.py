@@ -172,7 +172,9 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("Character.isHighSurrogate(text.charAt(start - 1))", (APP / "ui/TerminalActionPolicy.java").read_text())
 
     def test_terminal_header_prioritizes_centered_workspace_without_duplicate_logo(self):
-        self.assertIn("modifier = Modifier.align(Alignment.Center).widthIn(max = 136.dp)", self.pane)
+        self.assertIn("modifier = Modifier.align(Alignment.Center)", self.pane)
+        self.assertIn(".widthIn(max = 160.dp)", self.pane)
+        self.assertIn('onClickLabel = "Choose workspace"', self.pane)
         self.assertIn('"TERMINAL"', self.pane)
         self.assertNotIn("KlyroBrandChoice.selected(context)", self.pane)
         self.assertNotIn("R.drawable.ic_klyro_brand_b", self.pane)
