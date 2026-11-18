@@ -545,6 +545,9 @@ class MainActivity : ComponentActivity() {
                         onSurface = palette.foreground
                     )
                 ) {
+                // Material3 and foundation controls share the same transparent
+                // touch feedback. Accessibility focus and real haptics remain active.
+                com.oryn.terminal.ui.KlyroTransparentTouchFeedback {
                 com.oryn.terminal.ui.FreezeRecoveryNotice()
                 LaunchedEffect(Unit) {
                     androidx.compose.runtime.withFrameNanos { }
@@ -677,6 +680,7 @@ class MainActivity : ComponentActivity() {
                             TextButton(onClick = { showExportPathDialog = false }) { Text("Cancel") }
                         }
                     )
+                }
                 }
                 }
             }
