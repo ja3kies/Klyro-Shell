@@ -1220,7 +1220,7 @@ private fun OrynTerminalApp(
         context.getSharedPreferences("klyro_terminal_preferences", android.content.Context.MODE_PRIVATE)
     }
     var homeFontSize by remember(context) {
-        mutableStateOf(homeFontPrefs.getFloat("font_size_sp", 13.5f).coerceIn(9f, 24f))
+        mutableStateOf(KlyroTerminalFonts.normalizeSize(homeFontPrefs.getFloat("font_size_sp", KlyroTerminalFonts.DEFAULT_SIZE)))
     }
     var homeFontFamily by remember(context) {
         mutableStateOf(KlyroTerminalFonts.normalize(
@@ -1230,7 +1230,7 @@ private fun OrynTerminalApp(
     var homeModifierRevision by remember { mutableIntStateOf(0) }
     LaunchedEffect(showHomeSettings) {
         if (showHomeSettings) {
-            homeFontSize = homeFontPrefs.getFloat("font_size_sp", 13.5f).coerceIn(9f, 24f)
+            homeFontSize = KlyroTerminalFonts.normalizeSize(homeFontPrefs.getFloat("font_size_sp", KlyroTerminalFonts.DEFAULT_SIZE))
             homeFontFamily = KlyroTerminalFonts.normalize(
                 homeFontPrefs.getString("font_family", "system"))
         }
@@ -1774,11 +1774,11 @@ private fun OrynTerminalApp(
                 homeFontPrefs.edit().putString("font_family", homeFontFamily).apply()
             },
             onFontChange = { size ->
-                homeFontSize = size.coerceIn(9f, 24f)
+                homeFontSize = KlyroTerminalFonts.normalizeSize(size)
                 homeFontPrefs.edit().putFloat("font_size_sp", homeFontSize).apply()
             },
             onResetFont = {
-                homeFontSize = 13.5f
+                homeFontSize = KlyroTerminalFonts.DEFAULT_SIZE
                 homeFontPrefs.edit().remove("font_size_sp").apply()
             },
             onResetModifiers = {

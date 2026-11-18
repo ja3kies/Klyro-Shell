@@ -356,7 +356,7 @@ fun TerminalPane(
         context.getSharedPreferences("klyro_terminal_preferences", Context.MODE_PRIVATE)
     }
     var terminalFontSp by remember {
-        mutableStateOf(fontPreferences.getFloat("font_size_sp", 13.5f).coerceIn(9f, 24f))
+        mutableStateOf(KlyroTerminalFonts.normalizeSize(fontPreferences.getFloat("font_size_sp", KlyroTerminalFonts.DEFAULT_SIZE)))
     }
     var terminalFontId by remember {
         mutableStateOf(KlyroTerminalFonts.normalize(fontPreferences.getString("font_family", "system")))
@@ -378,7 +378,7 @@ fun TerminalPane(
         activeTerminalView?.invalidate()
     }
     fun changeTerminalFont(size: Float) {
-        terminalFontSp = size.coerceIn(9f, 24f)
+        terminalFontSp = KlyroTerminalFonts.normalizeSize(size)
         fontPreferences.edit().putFloat("font_size_sp", terminalFontSp).apply()
     }
     var showTranscriptSearch by rememberSaveable(session) { mutableStateOf(false) }
@@ -1115,7 +1115,7 @@ fun TerminalPane(
             },
             onFontChange = ::changeTerminalFont,
             onResetFont = {
-                terminalFontSp = 13.5f
+                terminalFontSp = KlyroTerminalFonts.DEFAULT_SIZE
                 fontPreferences.edit().remove("font_size_sp").apply()
             },
             onResetModifiers = {

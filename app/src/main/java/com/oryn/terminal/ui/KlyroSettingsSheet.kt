@@ -512,8 +512,8 @@ internal fun KlyroSettingsSheet(
                                     }
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
-                                    val displayedFontSize = kotlin.math.round(fontSizeSp * 2f) / 2f
-                                    val fontSizeLabel = if (displayedFontSize % 1f == 0f) displayedFontSize.toInt().toString() else displayedFontSize.toString()
+                                    val displayedFontSize = KlyroTerminalFonts.normalizeSize(fontSizeSp)
+                                    val fontSizeLabel = displayedFontSize.toInt().toString()
                                     KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false, minimumInlineWidth = appearanceInlineWidth) {
                                         Box(
                                             modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
@@ -530,7 +530,7 @@ internal fun KlyroSettingsSheet(
                                                 color = colors.foreground, fontWeight = FontWeight.Medium,
                                                 style = MaterialTheme.typography.bodyMedium
                                             )
-                                            if (displayedFontSize != 13.5f) {
+                                            if (displayedFontSize != KlyroTerminalFonts.DEFAULT_SIZE) {
                                                 TextButton(
                                                     onClick = onResetFont,
                                                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
@@ -539,11 +539,11 @@ internal fun KlyroSettingsSheet(
                                         }
                                     }
                                     KlyroThinSlider(
-                                        value = fontSizeSp.coerceIn(9f, 24f),
-                                        onValueChange = { onFontChange(kotlin.math.round(it * 2f) / 2f) },
-                                        valueRange = 9f..24f,
+                                        value = displayedFontSize,
+                                        onValueChange = { onFontChange(KlyroTerminalFonts.normalizeSize(it)) },
+                                        valueRange = KlyroTerminalFonts.MIN_SIZE.toFloat()..KlyroTerminalFonts.MAX_SIZE.toFloat(),
                                         valueLabel = fontSizeLabel,
-                                        steps = 29,
+                                        steps = KlyroTerminalFonts.MAX_SIZE - KlyroTerminalFonts.MIN_SIZE - 1,
                                         modifier = Modifier.fillMaxWidth().semantics {
                                             contentDescription = "Terminal font size"
                                         }

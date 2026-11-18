@@ -95,16 +95,6 @@ internal fun KlyroWorkspaceSheet(
     var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
     var menuId by rememberSaveable { mutableStateOf<String?>(null) }
     var lastAssignedWorkspaceId by rememberSaveable { mutableStateOf<String?>(null) }
-    val motionEnabled = rememberHomeMotionEnabled()
-    val editPhase = if (editingSessions && motionEnabled && renameSessionId == null &&
-        closeSessionId == null && editorId == null && deletingId == null && menuId == null
-    ) {
-        rememberInfiniteTransition(label = "Session editing").animateFloat(
-            initialValue = 0f, targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(2400, easing = LinearEasing)),
-            label = "Edit phase"
-        )
-    } else null
     LaunchedEffect(tabs) {
         if (renameSessionId != null && tabs.none { it.first == renameSessionId }) renameSessionId = null
         if (closeSessionId != null && tabs.none { it.first == closeSessionId }) closeSessionId = null
@@ -133,6 +123,16 @@ internal fun KlyroWorkspaceSheet(
     val projectTabs = tabs.filter {
         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == selected.id
     }
+    val motionEnabled = rememberHomeMotionEnabled()
+    val editPhase = if (projectTabs.isNotEmpty() && editingSessions && motionEnabled && renameSessionId == null &&
+        closeSessionId == null && editorId == null && deletingId == null && menuId == null
+    ) {
+        rememberInfiniteTransition(label = "Session editing").animateFloat(
+            initialValue = 0f, targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(2400, easing = LinearEasing)),
+            label = "Edit phase"
+        )
+    } else null
     // Measured overflow, not row count, controls scrolling.
     val workspaceScroll = rememberScrollState()
     val editorFocus = remember { FocusRequester() }

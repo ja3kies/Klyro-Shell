@@ -34,7 +34,7 @@ class SettingsRefinement(unittest.TestCase):
 
     def test_font_size_is_rounded_and_slider_remains_accessible(self):
         appearance = S.split('"appearance" -> {', 1)[1].split('"keyboard" -> {', 1)[0]
-        self.assertIn('kotlin.math.round(fontSizeSp * 2f) / 2f', appearance)
+        self.assertIn('KlyroTerminalFonts.normalizeSize(fontSizeSp)', appearance)
         self.assertIn('valueLabel = fontSizeLabel', appearance)
         self.assertIn('contentDescription = "Terminal font size"', appearance)
         self.assertNotIn('val fontPresets', appearance)
