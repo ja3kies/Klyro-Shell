@@ -1,6 +1,8 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.LocalRippleConfiguration
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -156,7 +158,8 @@ internal fun KlyroActionRow(
     Row(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)
-            .clickable(enabled = enabled, role = Role.Button,
+            .clickable(enabled = enabled, indication = null,
+                interactionSource = null, role = Role.Button,
                 onClickLabel = label, onClick = onClick)
             .semantics {
                 contentDescription = if (subtitle.isNullOrBlank()) label else "$label. $subtitle"
@@ -209,6 +212,7 @@ internal fun KlyroMenuItem(
 ) {
     val colors = LocalKlyroColors.current
     val ink = if (!enabled) colors.muted else if (destructive) colors.danger else colors.foreground
+    CompositionLocalProvider(LocalRippleConfiguration provides null) {
     DropdownMenuItem(
         text = { Text(label, color = ink) },
         leadingIcon = { Icon(painterResource(icon), contentDescription = null, tint = ink,
@@ -222,6 +226,7 @@ internal fun KlyroMenuItem(
         enabled = enabled,
         onClick = onClick
     )
+    }
 }
 
 @Composable
