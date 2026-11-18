@@ -730,13 +730,13 @@ internal fun KlyroSettingsSheet(
                             )
                         ) { Text(if (authorized) "Add another folder" else "Choose a folder") }
                         SettingsRowLink("Import from folder",
-                            "Copy up to 30 files into ~/storage-imports.",
+                            "Copy up to 30 root-level files into ~/storage-imports.",
                             R.drawable.hugeicons_folder_01) {
                             onDismiss()
                             onImportStorageFolder()
                         }
                         SettingsRowLink("Import a file",
-                            "Choose a document through Android's file picker.",
+                            "Copy one file, up to 32 MiB, into ~/imports.",
                             R.drawable.hugeicons_download_01) {
                             onDismiss()
                             onImportFile()

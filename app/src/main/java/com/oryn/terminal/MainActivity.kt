@@ -5,12 +5,9 @@ import android.content.ClipboardManager
 import android.os.Bundle
 import android.content.Intent
 import android.net.Uri
-import android.provider.OpenableColumns
-import android.provider.DocumentsContract
 import androidx.activity.result.contract.ActivityResultContracts
 import com.oryn.terminal.core.OrynPaths
 import java.io.File
-import java.io.FileOutputStream
 import java.io.FileInputStream
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -162,7 +159,8 @@ class MainActivity : ComponentActivity() {
     private val storageBridgeHandler = Handler(Looper.getMainLooper())
     private fun launchPendingStoragePicker() {
         if (pendingStorageRequestToken == null || isFinishing || isDestroyed) return
-        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+        if (storageBusy || storagePicker != null || showExportPathDialog || storageTransferVisible ||
+            !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
             deferredStorageFolderPicker = true
             return
         }
@@ -178,8 +176,10 @@ class MainActivity : ComponentActivity() {
 
     private val storageBridgePoller = object : Runnable {
         override fun run() {
+            if (deferredStorageFolderPicker && pendingStorageRequestToken != null &&
+                !storageBusy && storagePicker == null && !showExportPathDialog && !storageTransferVisible) launchPendingStoragePicker()
             if (!isFinishing && !isDestroyed && pendingStorageRequestToken == null &&
-                !storageBridgePollInFlight
+                !storageBridgePollInFlight && !storageBusy && storagePicker == null && !showExportPathDialog && !storageTransferVisible
             ) {
                 storageBridgePollInFlight = true
                 // Canonical paths and Files.readAllBytes can block on slow
@@ -221,7 +221,10 @@ class MainActivity : ComponentActivity() {
     }
     private val storageFolderLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            storagePicker = null
             if (uri == null) {
+                importAfterAuthorization = false
+                Toast.makeText(this, "Folder selection cancelled", Toast.LENGTH_SHORT).show()
                 completeStorageRequest("CANCELLED")
                 return@registerForActivityResult
             }
@@ -239,191 +242,145 @@ class MainActivity : ComponentActivity() {
                     ).toSet()).apply()
                 completeStorageRequest("OK")
                 Toast.makeText(this, "Storage folder authorized for Klyro", Toast.LENGTH_LONG).show()
+                if (importAfterAuthorization) {
+                    importAfterAuthorization = false
+                    importFromAuthorizedFolder()
+                }
             } catch (error: Exception) {
+                importAfterAuthorization = false
                 completeStorageRequest("DENIED")
                 Toast.makeText(this, "Folder authorization was not granted", Toast.LENGTH_LONG).show()
             }
         }
 
+    private var storageBusy by mutableStateOf(false)
+    private var storageCancelling by mutableStateOf(false)
+    private var storagePicker: String? = null
+    private var importAfterAuthorization = false
+    private var storageTransferJob: kotlinx.coroutines.Job? = null
+    private var storageTransferVisible by mutableStateOf(false)
+    private var storageTransferMessage by mutableStateOf("")
+    private var storageTransferError by mutableStateOf(false)
+    private var exportPathError by mutableStateOf<String?>(null)
+    private val storageTransfers by lazy { KlyroStorageTransfers(applicationContext) }
+
+    private fun storageReady(): Boolean {
+        if (!storageBusy && storagePicker == null && !showExportPathDialog) return true
+        Toast.makeText(this, "Finish the current file operation first", Toast.LENGTH_SHORT).show()
+        return false
+    }
+
+    private fun runStorageTransfer(label: String, export: Boolean = false, work: (()->Unit) -> String) {
+        if (storageBusy) return
+        storageBusy = true
+        storageCancelling = false
+        storageTransferVisible = true
+        storageTransferError = false
+        storageTransferMessage = label
+        storageTransferJob = lifecycleScope.launch {
+            try {
+                storageTransferMessage = withContext(Dispatchers.IO) {
+                    val transferContext = currentCoroutineContext()
+                    work { transferContext.ensureActive() }
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                storageTransferError = true
+                storageTransferMessage = if (export) "Export interrupted. The destination may be incomplete; check it before retrying."
+                    else "Import interrupted. Files already copied are kept; the original files are unchanged."
+                throw cancelled
+            } catch (error: Exception) {
+                storageTransferError = true
+                storageTransferMessage = KlyroDiagnostics.storageFailure(error) +
+                    if (export) " The destination may be incomplete." else " Files already copied are kept."
+            } finally {
+                storageBusy = false
+                storageCancelling = false
+                storageTransferJob = null
+            }
+        }
+    }
+
     private fun importFromAuthorizedFolder() {
+        if (!storageReady()) return
         val preferences = getSharedPreferences("klyro_storage", MODE_PRIVATE)
         val folders = (preferences.getStringSet("tree_uris", emptySet()).orEmpty() +
             listOfNotNull(preferences.getString("tree_uri", null))).distinct()
-        if (folders.isEmpty()) {
-            Toast.makeText(this, "Choose a storage folder first", Toast.LENGTH_LONG).show()
+        val grants = contentResolver.persistedUriPermissions.filter { it.isReadPermission }.map { it.uri.toString() }.toSet()
+        if (folders.none { it in grants }) {
+            importAfterAuthorization = true
             chooseStorageFolder()
             return
         }
-        lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                val transferContext = currentCoroutineContext()
-                runCatching {
-                    val paths = OrynPaths(applicationContext.filesDir,
-                        File(applicationContext.applicationInfo.nativeLibraryDir))
-                    val destination = File(paths.home, "storage-imports")
-                    KlyroFileSafety.verifyDestination(destination)
-                    val grants = contentResolver.persistedUriPermissions
-                        .filter { it.isReadPermission }.map { it.uri }.toSet()
-                    var imported = 0
-                    var skippedFolders = 0
-                    var readableFolders = 0
-                    for (raw in folders) {
-                        transferContext.ensureActive()
-                        // The limit applies across ALL granted folders, not per folder.
-                        if (imported >= 30) break
-                        val tree = Uri.parse(raw)
-                        if (tree !in grants) {
-                            skippedFolders++
-                            continue
-                        }
-                        try {
-                            val documentId = DocumentsContract.getTreeDocumentId(tree)
-                            val children = DocumentsContract.buildChildDocumentsUriUsingTree(
-                                tree, documentId)
-                            val projection = arrayOf(
-                                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                                DocumentsContract.Document.COLUMN_MIME_TYPE,
-                                DocumentsContract.Document.COLUMN_SIZE
-                            )
-                            contentResolver.query(children, projection, null, null, null)?.use { cursor ->
-                                readableFolders++
-                                while (imported < 30 && cursor.moveToNext()) {
-                                    transferContext.ensureActive()
-                                    val mime = cursor.getString(2) ?: continue
-                                    if (mime == DocumentsContract.Document.MIME_TYPE_DIR) continue
-                                    val size = if (cursor.isNull(3)) -1L else cursor.getLong(3)
-                                    if (size > KlyroFileSafety.MAX_FILE_BYTES) continue
-                                    val name = KlyroFileSafety.safeName(cursor.getString(1), "file")
-                                    val item = DocumentsContract.buildDocumentUriUsingTree(
-                                        tree, cursor.getString(0))
-                                    val temporary = File.createTempFile(".klyro-", ".tmp", destination)
-                                    try {
-                                        contentResolver.openInputStream(item)?.use { input ->
-                                            FileOutputStream(temporary).use { output ->
-                                                KlyroFileSafety.copyLimited(input, output) { transferContext.ensureActive() }
-                                            }
-                                        } ?: continue
-                                        transferContext.ensureActive()
-                                        KlyroFileSafety.commitImport(temporary, destination, name)
-                                        imported++
-                                    } finally {
-                                        if (temporary.exists()) temporary.delete()
-                                    }
-                                }
-                            } ?: throw IOException("Cannot read authorized folder")
-                        } catch (_: Exception) {
-                            transferContext.ensureActive()
-                            // A revoked or broken provider must not block other grants.
-                            skippedFolders++
-                        }
-                    }
-                    if (readableFolders == 0) {
-                        throw IOException("No readable authorized folders; reconnect a folder")
-                    }
-                    Pair(imported, skippedFolders)
-                }
-            }
-            val message = result.fold(
-                onSuccess = { (count, skipped) ->
-                    "Imported $count files to ~/storage-imports" +
-                        if (skipped > 0) " ($skipped folders unavailable; reconnect and retry)" else ""
-                },
-                onFailure = { "Storage import failed: " + KlyroDiagnostics.storageFailure(it) }
-            )
-            Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
-        }
+        runStorageTransfer("Importing files…") { check -> storageTransfers.importFolders(folders, check) }
     }
 
     private fun chooseStorageFolder() {
-        storageFolderLauncher.launch(null)
+        if (!storageReady()) return
+        storagePicker = "folder"
+        try { storageFolderLauncher.launch(null) }
+        catch (_: Exception) {
+            storagePicker = null
+            importAfterAuthorization = false
+            completeStorageRequest("DENIED")
+            Toast.makeText(this, "Android folder picker unavailable", Toast.LENGTH_LONG).show()
+        }
     }
 
-    private val importFileLauncher =
-        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri == null) return@registerForActivityResult
-            lifecycleScope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    val transferContext = currentCoroutineContext()
-                    runCatching {
-                        val paths = OrynPaths(
-                            applicationContext.filesDir,
-                            File(applicationContext.applicationInfo.nativeLibraryDir)
-                        )
-                        val destinationDir = File(paths.home, "imports")
-                        KlyroFileSafety.verifyDestination(destinationDir)
-                        var sourceName = "imported-file"
-                        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                            if (cursor.moveToFirst()) {
-                                sourceName = cursor.getString(0) ?: sourceName
-                            }
-                        }
-                        val safeName = KlyroFileSafety.safeName(sourceName)
-                        var importedName = safeName
-                        val temporary = File.createTempFile(".klyro-import-", ".tmp", destinationDir)
-                        try {
-                            contentResolver.openInputStream(uri)?.use { input ->
-                                FileOutputStream(temporary).use { output ->
-                                    KlyroFileSafety.copyLimited(input, output) { transferContext.ensureActive() }
-                                }
-                            } ?: throw IOException("Cannot open selected file")
-                            transferContext.ensureActive()
-                            importedName = KlyroFileSafety.commitImport(temporary, destinationDir, safeName).name
-                        } finally {
-                            if (temporary.exists()) temporary.delete()
-                        }
-                        importedName
-                    }
-                }
-                result.onSuccess {
-                    Toast.makeText(this@MainActivity, "Imported: ~/imports/" + it, Toast.LENGTH_LONG).show()
-                }.onFailure {
-                    Toast.makeText(this@MainActivity, "Import failed: " + KlyroDiagnostics.storageFailure(it), Toast.LENGTH_LONG).show()
-                }
-            }
-        }
+    private val importFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        storagePicker = null
+        if (uri == null) {
+            Toast.makeText(this, "File import cancelled", Toast.LENGTH_SHORT).show()
+        } else runStorageTransfer("Importing file…") { check -> storageTransfers.importFile(uri, check) }
+    }
 
-    private val exportFileLauncher =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
-            if (uri == null) {
-                pendingExportPath = null
-                return@registerForActivityResult
-            }
-            val relativePath = pendingExportPath ?: return@registerForActivityResult
-            pendingExportPath = null
-            lifecycleScope.launch {
-                val outcome = withContext(Dispatchers.IO) {
-                    val transferContext = currentCoroutineContext()
-                    runCatching {
-                        val root = OrynPaths(
-                            applicationContext.filesDir,
-                            File(applicationContext.applicationInfo.nativeLibraryDir)
-                        )
-                        KlyroFileSafety.openExport(root.home, relativePath).use { input ->
-                            val stream = contentResolver.openOutputStream(uri, "w")
-                                ?: throw IOException("Unable to open destination")
-                            stream.use { output -> KlyroFileSafety.copyLimited(input, output) { transferContext.ensureActive() } }
-                        }
-                    }
-                }
-                val message = outcome.fold(
-                    onSuccess = { "Export completed" },
-                    onFailure = { "Export failed: " + KlyroDiagnostics.storageFailure(it) }
-                )
-                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
-            }
-        }
+    private val exportFileLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        storagePicker = null
+        val path = pendingExportPath
+        pendingExportPath = null
+        if (uri == null) {
+            Toast.makeText(this, "File export cancelled. Source unchanged.", Toast.LENGTH_SHORT).show()
+        } else if (path == null) {
+            storageTransferMessage = "Export request expired. Choose the private file again; the destination is empty."
+            storageTransferError = true
+            storageTransferVisible = true
+        } else runStorageTransfer("Exporting file…", export = true) { check -> storageTransfers.exportFile(uri, path, check) }
+    }
 
     private fun chooseFileToExport() {
-        if (pendingExportPath != null) {
-            Toast.makeText(this, "Finish the current export first", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (!storageReady()) return
+        exportPathError = null
         showExportPathDialog = true
     }
 
     private fun chooseFileToImport() {
-        importFileLauncher.launch(arrayOf("*/*"))
+        if (!storageReady()) return
+        storagePicker = "import"
+        try { importFileLauncher.launch(arrayOf("*/*")) }
+        catch (_: Exception) {
+            storagePicker = null
+            Toast.makeText(this, "Android file picker unavailable", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun confirmExportPath() {
+        if (storageBusy || storagePicker != null) return
+        val path = exportRelativePath
+        storageBusy = true
+        exportPathError = null
+        storageTransferJob = lifecycleScope.launch {
+            try {
+                val name = withContext(Dispatchers.IO) { storageTransfers.validateExport(path) }
+                pendingExportPath = path
+                storagePicker = "export"
+                exportFileLauncher.launch(name)
+                showExportPathDialog = false
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                pendingExportPath = null
+                storagePicker = null
+                exportPathError = KlyroDiagnostics.storageFailure(error)
+            } finally { storageBusy = false; storageTransferJob = null }
+        }
     }
 
     private var installer: TermuxBootstrapInstaller? = null
@@ -438,6 +395,19 @@ class MainActivity : ComponentActivity() {
         exportRelativePath = savedInstanceState?.getString("klyro_export_path") ?: "imports/klyro-export.txt"
         showExportPathDialog = savedInstanceState?.getBoolean("klyro_export_dialog") ?: false
         pendingExportPath = savedInstanceState?.getString("klyro_pending_export_path")
+        storagePicker = savedInstanceState?.getString("klyro_storage_picker")
+        importAfterAuthorization = savedInstanceState?.getBoolean("klyro_import_after_folder") ?: false
+        storageTransferVisible = savedInstanceState?.getBoolean("klyro_transfer_visible") ?: false
+        storageTransferMessage = savedInstanceState?.getString("klyro_transfer_message").orEmpty()
+        storageTransferError = savedInstanceState?.getBoolean("klyro_transfer_error") ?: false
+        if (savedInstanceState?.getBoolean("klyro_transfer_busy") == true) {
+            if (showExportPathDialog) exportPathError = "File check interrupted. Choose destination to retry."
+            else {
+                storageTransferVisible = true
+                storageTransferError = true
+                storageTransferMessage = "Transfer outcome unavailable after screen recreation. Check imported files or the export destination before retrying."
+            }
+        }
         if (terminalState.hasLiveSessions()) KlyroSessionService.ensureRunning(this)
         // Navigation is Activity UI state, independent of live PTY ownership.
         showWelcomeScreen = savedInstanceState?.getBoolean("klyro_show_welcome", false) ?: false
@@ -647,36 +617,60 @@ class MainActivity : ComponentActivity() {
                     onClose = ::closeBash,
                     onRecheck = ::verifyRuntime
                 )
+                if (storageTransferVisible) {
+                    com.oryn.terminal.ui.KlyroStorageTransferDialog(
+                        busy = storageBusy, cancelling = storageCancelling,
+                        message = storageTransferMessage, isError = storageTransferError,
+                        onCancel = {
+                            if (storageBusy && !storageCancelling) {
+                                storageCancelling = true
+                                storageTransferJob?.cancel()
+                            }
+                        },
+                        onClose = { storageTransferVisible = false }
+                    )
+                }
                 if (showExportPathDialog) {
+                    com.oryn.terminal.ui.KlyroModalTheme {
                     AlertDialog(
-                        onDismissRequest = { showExportPathDialog = false },
+                        onDismissRequest = { storageTransferJob?.cancel(); showExportPathDialog = false },
+                        shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+                        containerColor = LocalKlyroColors.current.sheet,
                         title = { Text("Export a private file") },
                         text = {
-                            OutlinedTextField(
-                                value = exportRelativePath,
-                                onValueChange = { exportRelativePath = it },
-                                label = { Text("Path relative to HOME") },
-                                singleLine = true
-                            )
+                            Column(Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.paletteListMax)
+                                .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = exportRelativePath,
+                                    onValueChange = {
+                                        exportRelativePath = com.oryn.terminal.core.KlyroTextLimit.takeCodePoints(it, 1024)
+                                        exportPathError = null
+                                    },
+                                    enabled = !storageBusy,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isError = exportPathError != null,
+                                    supportingText = { Text(exportPathError ?: "Inside HOME · maximum 32 MiB") },
+                                    label = { Text("File path") },
+                                    placeholder = { Text("imports/example.txt") },
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        autoCorrectEnabled = false, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { confirmExportPath() }),
+                                    singleLine = true
+                                )
+                                if (storageBusy) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                            }
                         },
                         confirmButton = {
-                            TextButton(onClick = {
-                                try {
-                                    val home = OrynPaths(filesDir, File(applicationInfo.nativeLibraryDir)).home
-                                    val source = KlyroFileSafety.exportFile(home, exportRelativePath)
-                                    showExportPathDialog = false
-                                    pendingExportPath = exportRelativePath
-                                    exportFileLauncher.launch(source.name)
-                                } catch (error: Exception) {
-                                    pendingExportPath = null
-                                    Toast.makeText(this@MainActivity, error.message ?: "Cannot export file", Toast.LENGTH_LONG).show()
-                                }
-                            }, enabled = exportRelativePath.isNotBlank()) { Text("Choose destination") }
+                            TextButton(onClick = { confirmExportPath() },
+                                enabled = !storageBusy && exportRelativePath.isNotBlank()) {
+                                Text(if (storageBusy) "Checking file…" else "Choose destination")
+                            }
                         },
                         dismissButton = {
-                            TextButton(onClick = { showExportPathDialog = false }) { Text("Cancel") }
+                            TextButton(onClick = { storageTransferJob?.cancel(); showExportPathDialog = false }) { Text("Cancel") }
                         }
                     )
+                    }
                 }
                 }
             }
@@ -775,6 +769,12 @@ class MainActivity : ComponentActivity() {
         outState.putString("klyro_export_path", exportRelativePath)
         outState.putBoolean("klyro_export_dialog", showExportPathDialog)
         outState.putString("klyro_pending_export_path", pendingExportPath)
+        outState.putString("klyro_storage_picker", storagePicker)
+        outState.putBoolean("klyro_import_after_folder", importAfterAuthorization)
+        outState.putBoolean("klyro_transfer_visible", storageTransferVisible)
+        outState.putString("klyro_transfer_message", storageTransferMessage)
+        outState.putBoolean("klyro_transfer_error", storageTransferError)
+        outState.putBoolean("klyro_transfer_busy", storageBusy)
         super.onSaveInstanceState(outState)
     }
 

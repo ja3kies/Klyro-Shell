@@ -34,6 +34,16 @@ public final class KlyroDiagnostics {
         String message = problem == null ? "" : problem.getMessage();
         if (message != null && (message.contains("ENOSPC") || message.contains("No space left")))
             return "Not enough storage space. Free space and retry.";
+        if ("Choose a relative path inside HOME".equals(message))
+            return "Use a path relative to HOME, for example imports/example.txt.";
+        if ("Export must be a regular Klyro-private file".equals(message) || "Export must be inside HOME".equals(message))
+            return "Choose a regular file inside HOME; links and outside paths cannot be exported.";
+        if ("Choose an existing regular file inside HOME".equals(message))
+            return "File not found. Check its path; folders cannot be exported.";
+        if ("No readable authorized folders; reconnect a folder".equals(message))
+            return "Folder access is unavailable. Reconnect a folder and retry.";
+        if ("Too many files with this name; rename the source file".equals(message))
+            return "Too many imports share this name. Rename the original file before retrying.";
         if ("File exceeds 32 MiB limit".equals(message) || "Export limited to 32 MiB".equals(message))
             return "File exceeds the 32 MiB transfer limit. Choose a smaller file.";
         if (problem instanceof java.io.IOException)
