@@ -207,7 +207,8 @@ fun TerminalPane(
         }
     }
     var showToolsMenu by remember(session) { mutableStateOf(false) }
-    var showWorkspaceSheet by remember(session) { mutableStateOf(false) }
+    // Workspaces owns metadata actions across session changes and configuration recreation.
+    var showWorkspaceSheet by rememberSaveable { mutableStateOf(false) }
     var showCommandPalette by remember(session) { mutableStateOf(false) }
     val currentProject = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
     val activeSession = tabs.firstOrNull { it.first == activeTabId }
@@ -1629,10 +1630,15 @@ fun TerminalPane(
             onDeleteProject = onDeleteWorkspace,
             onAssignCurrentTab = { workspaceId ->
                 val expected = activeTabId
-                TerminalActionPolicy.runIfCurrent(expected, currentSessionId(), session.isRunning()) {
-                    expected?.let { onAssignWorkspace(it, workspaceId) }
-                }
+                if (expected != null && expected == currentSessionId() &&
+                    tabs.any { it.first == expected } && workspaces.any { it.id == workspaceId }) {
+                    onAssignWorkspace(expected, workspaceId)
+                    true
+                } else false
             },
+            finishedTabIds = finishedTabIds,
+            onRenameTab = onRenameTab,
+            onCloseTab = onCloseTab,
             onSwitchTab = onSelectTab,
             onDismiss = { showWorkspaceSheet = false }
         )

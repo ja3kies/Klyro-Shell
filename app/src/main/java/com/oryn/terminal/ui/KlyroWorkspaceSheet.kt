@@ -1,17 +1,12 @@
 package com.oryn.terminal.ui
 
-import androidx.activity.compose.BackHandler
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -24,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.IconButton
@@ -32,23 +26,22 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.key
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -57,13 +50,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.R
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 
 /** A workspace groups live PTYs but does not claim to restore dead processes. */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun KlyroWorkspaceSheet(
     entries: List<KlyroWorkspaceCatalog.Entry>,
@@ -75,14 +67,20 @@ internal fun KlyroWorkspaceSheet(
     onCreateProject: (String) -> Boolean,
     onRenameProject: (String, String) -> Boolean,
     onDeleteProject: (String) -> Unit,
-    onAssignCurrentTab: (String) -> Unit,
+    onAssignCurrentTab: (String) -> Boolean,
+    finishedTabIds: Set<Long>,
+    onRenameTab: (Long, String) -> Unit,
+    onCloseTab: (Long) -> Unit,
     onSwitchTab: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
     val c = LocalKlyroColors.current
     var editorId by rememberSaveable { mutableStateOf<String?>(null) }
     var editorText by rememberSaveable { mutableStateOf("") }
-    var editorError by rememberSaveable { mutableStateOf(false) }
+    var editingSessions by rememberSaveable(selectedId) { mutableStateOf(false) }
+    var renamingSessionId by rememberSaveable(selectedId) { mutableStateOf<Long?>(null) }
+    var closingSessionId by rememberSaveable(selectedId) { mutableStateOf<Long?>(null) }
+    var feedback by rememberSaveable(selectedId) { mutableStateOf<String?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
     var menuId by rememberSaveable { mutableStateOf<String?>(null) }
     var lastAssignedWorkspaceId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -90,7 +88,7 @@ internal fun KlyroWorkspaceSheet(
     LaunchedEffect(entries, menuId) {
         if (menuId != null && entries.none { it.id == menuId }) menuId = null
     }
-    // An explicit Save/Cancel ends editing; external dismissal cannot discard the draft.
+    // A form owns dismissal while a draft is open; changed names require discard confirmation.
     val selected = entries.firstOrNull { it.id == selectedId } ?: entries.firstOrNull()
     if (selected == null) {
         KlyroModalTheme {
@@ -111,28 +109,30 @@ internal fun KlyroWorkspaceSheet(
         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == selected.id
     }
     // Measured overflow, not row count, controls scrolling.
-    val workspaceScroll = rememberScrollState()
-    val editorFocus = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(selectedId) { workspaceScroll.scrollTo(0) }
-    LaunchedEffect(editorId) {
-        if (editorId != null) {
-            withFrameNanos { }
-            editorFocus.requestFocus()
-            keyboard?.show()
+    val workspaceScroll = key(selectedId) { rememberScrollState() }
+    LaunchedEffect(tabs, tabWorkspaces, selectedId, renamingSessionId, closingSessionId) {
+        if (renamingSessionId != null && tabs.none { it.first == renamingSessionId }) {
+            renamingSessionId = null
+            feedback = "Session no longer available."
         }
+        if (closingSessionId != null && tabs.none { it.first == closingSessionId }) {
+            closingSessionId = null
+            feedback = "Session already closed."
+        }
+        if (projectTabs.isEmpty()) editingSessions = false
     }
+    val childOpen = editorId != null || deletingId != null || menuId != null ||
+        renamingSessionId != null || closingSessionId != null
     fun editProject(id: String, title: String) {
         if (editorId != null) return
         editorId = id
         editorText = title
-        editorError = false
         menuId = null
     }
 
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onDismiss,
-            dismissEnabled = editorId == null && deletingId == null && menuId == null) {
+            dismissEnabled = !childOpen) {
             Column(
                 Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
@@ -148,16 +148,19 @@ internal fun KlyroWorkspaceSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     KlyroSheetTitle("Workspaces", modifier = Modifier.weight(1f))
+                    TextButton(onClick = {
+                        if (editingSessions) editingSessions = false else onDismiss()
+                    }, enabled = !childOpen) { Text(if (editingSessions) "Done" else "Close") }
                     OutlinedButton(
                         onClick = { editProject("", "") },
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                             .semantics { contentDescription = "New workspace" },
-                        enabled = editorId == null && entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS
+                        enabled = !childOpen && !editingSessions && entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
-                            val tint = if (editorId == null &&
+                            val tint = if (!childOpen && !editingSessions &&
                                 entries.size < KlyroWorkspaceCatalog.MAX_PROJECTS)
                                 c.accent else c.muted
                             Icon(painterResource(R.drawable.hugeicons_plus_sign),
@@ -206,7 +209,8 @@ internal fun KlyroWorkspaceSheet(
                             Row(
                                 modifier = Modifier.weight(1f)
                                     .heightIn(min = KlyroUiMetrics.workspaceRow)
-                                    .clickable(enabled = editorId == null, role = Role.RadioButton,
+                                    .clip(RoundedCornerShape(KlyroUiMetrics.selectedCorner))
+                                    .clickable(enabled = !childOpen && !editingSessions, role = Role.RadioButton,
                                         onClickLabel = "Select workspace " + entry.name) {
                                         onSelectProject(entry.id)
                                     }.semantics { this.selected = active },
@@ -252,7 +256,7 @@ internal fun KlyroWorkspaceSheet(
                             ) {
                                 if (entry.id != KlyroWorkspaceCatalog.GENERAL) {
                                     IconButton(onClick = { menuId = entry.id },
-                                        enabled = editorId == null,
+                                        enabled = !childOpen && !editingSessions,
                                         modifier = Modifier.size(KlyroUiMetrics.minTouch)
                                             .semantics {
                                                 contentDescription = "Options for " + entry.name
@@ -285,127 +289,46 @@ internal fun KlyroWorkspaceSheet(
 
                 }
 
-                if (editorId != null) {
-                    val editing = !editorId.isNullOrEmpty()
-                    val editTarget = entries.firstOrNull { it.id == editorId }
-                    val canSave = editorText.trim().isNotEmpty() &&
-                        (!editing || (editTarget != null &&
-                            editorText.trim() != editTarget.name))
-                    fun saveWorkspaceEdit() {
-                        if (!canSave || editorId == null) return
-                        val saved = if (editing) {
-                            editTarget != null && onRenameProject(editTarget.id, editorText)
-                        } else onCreateProject(editorText)
-                        if (saved) {
-                            keyboard?.hide()
-                            editorId = null
-                            editorError = false
-                        } else editorError = true
-                    }
-                    Surface(color = c.tile,
-                        shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(KlyroUiMetrics.spaceMd),
-                            verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
-                        ) {
-                            KlyroInlineNotice("Save or Cancel this edit before closing Workspaces.")
-                            Text(if (editing) "Rename workspace" else "New workspace",
-                                fontWeight = FontWeight.SemiBold, color = c.foreground)
-                            OutlinedTextField(
-                                value = editorText,
-                                onValueChange = {
-                                    editorText = it.take(KlyroWorkspaceCatalog.MAX_NAME_CHARS)
-                                    editorError = false
-                                },
-                                label = { Text("Workspace name") },
-                                singleLine = true,
-                                isError = editorError,
-                                supportingText = {
-                                    Text("${KlyroWorkspaceCatalog.MAX_NAME_CHARS - editorText.length} characters remaining")
-                                },
-                                modifier = Modifier.fillMaxWidth().focusRequester(editorFocus),
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { if (canSave) saveWorkspaceEdit() }),
-                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                            )
-                            if (editing && editTarget == null) {
-                                Text("Workspace no longer exists. Cancel this edit.",
-                                    color = c.danger,
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
-                            if (editorError) Text("Choose a unique, non-empty name.",
-                                color = c.danger, style = MaterialTheme.typography.bodySmall)
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End,
-                                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
-                            ) {
-                                TextButton(onClick = {
-                                    keyboard?.hide()
-                                    editorId = null
-                                    editorError = false
-                                }) { Text("Cancel") }
-                                Button(
-                                    enabled = canSave,
-                                    onClick = { saveWorkspaceEdit() },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = c.accent, contentColor = c.onAccent
-                                    ), shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                                ) { Text(if (editing) "Save name" else "Create workspace") }
-                            }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Sessions", modifier = Modifier.weight(1f),
+                        fontWeight = FontWeight.SemiBold, color = c.foreground,
+                        style = MaterialTheme.typography.titleSmall)
+                    if (projectTabs.isNotEmpty() && !editingSessions) {
+                        IconButton(onClick = { editingSessions = true }, enabled = !childOpen) {
+                            Icon(painterResource(R.drawable.hugeicons_pen_01),
+                                contentDescription = "Edit sessions in ${selected.name}", tint = c.accent,
+                                modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                         }
                     }
                 }
-
-                Text(
-                    "Sessions",
-                    fontWeight = FontWeight.SemiBold,
-                    color = c.foreground,
-                    style = MaterialTheme.typography.titleSmall
-                )
+                feedback?.let {
+                    Text(it, color = c.muted, style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                }
                 if (projectTabs.isEmpty()) {
-                    Text("No sessions yet.",
+                    Text("No sessions in ${selected.name}.",
                         modifier = Modifier.padding(vertical = KlyroUiMetrics.spaceSm),
                         color = c.muted, style = MaterialTheme.typography.bodySmall)
                 } else {
                     projectTabs.forEach { (id, name) ->
-                        val current = id == activeTabId
-                        Surface(
-                            modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
-                                .clickable(
-                                    enabled = !current && editorId == null,
-                                    role = Role.Button,
-                                    onClickLabel = "Switch to " + name
-                                ) {
-                                    onSwitchTab(id)
-                                    onDismiss()
+                        key(id) {
+                            KlyroWorkspaceSessionRow(
+                                name = name,
+                                current = id == activeTabId,
+                                finished = id in finishedTabIds,
+                                editing = editingSessions,
+                                enabled = !childOpen,
+                                animateEdit = !childOpen,
+                                onSelect = {
+                                    if (tabs.any { it.first == id }) {
+                                        onSwitchTab(id)
+                                        onDismiss()
+                                    }
                                 },
-                            color = c.tile,
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = KlyroUiMetrics.spaceMd),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.hugeicons_terminal),
-                                    contentDescription = null,
-                                    tint = if (current) c.accent else c.muted,
-                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
-                                )
-                                Text(name.ifBlank { "Terminal" },
-                                    modifier = Modifier.weight(1f), maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis, color = c.foreground)
-                                if (current) {
-                                    Text("Current", color = c.accent,
-                                        style = MaterialTheme.typography.labelMedium)
-                                } else {
-                                    Icon(painterResource(R.drawable.hugeicons_chevron_right),
-                                        contentDescription = null, tint = c.muted,
-                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                                }
-                            }
+                                onEdit = { editingSessions = true },
+                                onRename = { renamingSessionId = id },
+                                onClose = { closingSessionId = id }
+                            )
                         }
                     }
                 }
@@ -417,17 +340,83 @@ internal fun KlyroWorkspaceSheet(
                     (tabWorkspaces[activeTabId] ?: KlyroWorkspaceCatalog.GENERAL) != selected.id
                 ) {
                     OutlinedButton(
-                        enabled = editorId == null,
+                        enabled = !childOpen && !editingSessions,
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = c.foreground),
                         onClick = {
-                            onAssignCurrentTab(selected.id)
-                            lastAssignedWorkspaceId = selected.id
+                            if (onAssignCurrentTab(selected.id)) {
+                                lastAssignedWorkspaceId = selected.id
+                            } else feedback = "Session changed. Try moving the current session again."
                         },
                         modifier = Modifier.fillMaxWidth()
                             .heightIn(min = KlyroUiMetrics.minTouch)
                     ) { Text("Move current session here") }
                 }
+                }
+            }
+        }
+
+        editorId?.let { id ->
+            val creating = id.isEmpty()
+            val target = entries.firstOrNull { it.id == id }
+            key("workspace", id) {
+                KlyroNameDialog(
+                    name = editorText,
+                    title = if (creating) "New workspace" else "Rename workspace",
+                    label = "Workspace name",
+                    saveLabel = if (creating) "Create workspace" else "Save name",
+                    discardMessage = if (creating) "This workspace will not be created."
+                        else "The workspace keeps its current name.",
+                    available = creating || target != null,
+                    validateName = { value ->
+                        when {
+                            creating && entries.size >= KlyroWorkspaceCatalog.MAX_PROJECTS ->
+                                "Workspace limit reached. Remove an unused workspace first."
+                            entries.any { it.id != id &&
+                                it.name.lowercase(Locale.ROOT) == value.lowercase(Locale.ROOT) } ->
+                                "A workspace already uses this name."
+                            else -> null
+                        }
+                    },
+                    onSave = { value ->
+                        val saved = if (creating) onCreateProject(value)
+                            else target != null && onRenameProject(id, value)
+                        if (saved) { editorId = null; feedback = "Workspace name saved." }
+                        saved
+                    },
+                    onDismiss = { editorId = null }
+                )
+            }
+        }
+        renamingSessionId?.let { id ->
+            tabs.firstOrNull { it.first == id }?.let { (_, name) ->
+                key("session", id) {
+                    KlyroNameDialog(name = name,
+                        onSave = { value ->
+                            if (tabs.any { it.first == id }) {
+                                onRenameTab(id, value)
+                                renamingSessionId = null
+                                feedback = "Session renamed to $value."
+                                true
+                            } else false
+                        },
+                        onDismiss = { renamingSessionId = null })
+                }
+            }
+        }
+        closingSessionId?.let { id ->
+            tabs.firstOrNull { it.first == id }?.let { (_, name) ->
+                key(id) {
+                    KlyroCloseSessionDialog(sessionId = id, name = name,
+                        running = id !in finishedTabIds,
+                        onDismiss = { closingSessionId = null },
+                        onConfirm = {
+                            closingSessionId = null
+                            if (tabs.any { it.first == id }) {
+                                onCloseTab(id)
+                                feedback = "$name closed."
+                            }
+                        })
                 }
             }
         }
@@ -444,7 +433,9 @@ internal fun KlyroWorkspaceSheet(
                 title = { Text("Delete " + name + "?") },
                 text = {
                     Text(if (target == null) "Workspace no longer available. Cancel this action."
-                        else "Its sessions return to General. No shell or files are deleted.")
+                        else "Its sessions return to General. No shell or files are deleted.",
+                        modifier = Modifier.heightIn(max = KlyroUiMetrics.paletteListMax)
+                            .verticalScroll(rememberScrollState()))
                 },
                 confirmButton = {
                     TextButton(

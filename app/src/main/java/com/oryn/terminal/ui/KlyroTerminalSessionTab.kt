@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -51,6 +52,7 @@ internal fun KlyroTerminalSessionTab(
         modifier = modifier
             .heightIn(min = KlyroUiMetrics.minTouch)
             .widthIn(min = KlyroUiMetrics.minTouch)
+            .clip(RoundedCornerShape(24.dp))
             .combinedClickable(
                 onClickLabel = "Select session",
                 onLongClickLabel = "Manage session",

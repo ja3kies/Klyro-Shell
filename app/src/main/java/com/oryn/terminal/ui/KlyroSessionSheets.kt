@@ -146,56 +146,99 @@ internal fun KlyroSessionSheet(
             }
         }
         if (confirmClose) {
-            AlertDialog(
-                onDismissRequest = { closeTargetId = null },
-                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
-                containerColor = colors.sheet,
-                title = { Text("Close ${sessionName.ifBlank { "session" }}?") },
-                text = {
-                    Text(if (sessionRunning)
-                        "This stops its Bash process and running child commands. Other sessions remain open."
-                        else "This removes the retained output. Its process has already exited. Other sessions remain open.",
-                        modifier = Modifier.heightIn(max = KlyroUiMetrics.paletteListMax)
-                            .verticalScroll(rememberScrollState()))
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val expected = closeTargetId
-                        closeTargetId = null
-                        TerminalActionPolicy.runIfCurrent(expected, sessionId, true, onCloseSession)
-                    }) { Text(if (sessionRunning) "Close session" else "Remove output", color = colors.danger, fontWeight = FontWeight.SemiBold) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { closeTargetId = null }) { Text("Keep session") }
+            KlyroCloseSessionDialog(
+                sessionId = sessionId,
+                name = sessionName,
+                running = sessionRunning,
+                onDismiss = { closeTargetId = null },
+                onConfirm = {
+                    closeTargetId = null
+                    onCloseSession()
                 }
             )
         }
     }
 }
 
-/** Separate rename modal: the keyboard opens with the current name selected. */
+/** Shared destructive action; the caller must keep the target identity current. */
+@Composable
+internal fun KlyroCloseSessionDialog(
+    sessionId: Long,
+    name: String,
+    running: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val colors = LocalKlyroColors.current
+    var submitted by remember(sessionId) { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+        containerColor = colors.sheet,
+        title = { Text(if (running) "Close ${name.ifBlank { "session" }}?"
+            else "Remove ${name.ifBlank { "session" }} output?") },
+        text = {
+            Text(if (running)
+                "This stops its Bash process and running child commands. Other sessions remain open."
+                else "This removes the retained output. Its process has already exited. Other sessions remain open.",
+                modifier = Modifier.heightIn(max = KlyroUiMetrics.paletteListMax)
+                    .verticalScroll(rememberScrollState()))
+        },
+        confirmButton = {
+            TextButton(enabled = !submitted, onClick = {
+                if (!submitted) { submitted = true; onConfirm() }
+            }) {
+                Text(if (running) "Close session" else "Remove output",
+                    color = colors.danger, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Keep session") } }
+    )
+}
+
+/** Keep the session entry point stable; workspace forms share the validation underneath. */
 @Composable
 internal fun KlyroRenameSessionDialog(
     name: String,
     onSave: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var value by rememberSaveable(name, stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(name, selection = TextRange(0, name.length)))
+    KlyroNameDialog(name = name, onSave = { onSave(it); true }, onDismiss = onDismiss)
+}
+
+/** Separate rename modal: the keyboard opens with the current name selected. */
+@Composable
+internal fun KlyroNameDialog(
+    name: String,
+    onSave: (String) -> Boolean,
+    onDismiss: () -> Unit,
+    title: String = "Rename terminal",
+    label: String = "Session name",
+    saveLabel: String = "Save",
+    discardMessage: String = "The session keeps its current name.",
+    available: Boolean = true,
+    validateName: (String) -> String? = { null }
+) {
+    // Caller keys the form by target ID. Live ordinal labels may change when another tab exits.
+    val initialName = rememberSaveable { name }
+    var value by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(initialName, selection = TextRange(0, initialName.length)))
     }
     val requester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    var confirmDiscard by rememberSaveable(name) { mutableStateOf(false) }
-    var submitted by remember(name) { mutableStateOf(false) }
+    var confirmDiscard by rememberSaveable { mutableStateOf(false) }
+    var submitted by remember { mutableStateOf(false) }
+    var saveError by rememberSaveable { mutableStateOf<String?>(null) }
     val normalized = KlyroWorkspaceCatalog.cleanName(value.text)
     val error = when {
+        !available -> "This item no longer exists. Cancel this edit."
         value.text.length > KlyroWorkspaceCatalog.MAX_NAME_CHARS -> "Name is too long. Maximum 32 characters."
-        value.text.isNotEmpty() && normalized.isBlank() -> "Enter a visible session name."
+        value.text.isNotEmpty() && normalized.isBlank() -> "Enter a visible name."
         normalized != value.text.trim() -> "Remove unsupported control characters."
-        else -> null
+        else -> validateName(normalized) ?: saveError
     }
-    val changed = value.text.trim() != name
-    val canSave = !submitted && normalized.isNotBlank() && normalized != name && error == null
+    val changed = value.text.trim() != initialName
+    val canSave = !submitted && normalized.isNotBlank() && normalized != initialName && error == null
     fun dismissRename() {
         keyboard?.hide()
         if (changed) confirmDiscard = true else onDismiss()
@@ -204,7 +247,11 @@ internal fun KlyroRenameSessionDialog(
         if (!canSave) return
         submitted = true
         keyboard?.hide()
-        onSave(normalized)
+        if (!onSave(normalized)) {
+            submitted = false
+            saveError = "Could not save this name. Edit it and try again."
+            keyboard?.show()
+        }
     }
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
@@ -212,11 +259,12 @@ internal fun KlyroRenameSessionDialog(
             onDismissRequest = { dismissRename() },
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = colors.sheet,
-            title = { Text("Rename terminal", fontWeight = FontWeight.Bold) },
+            title = { Text(title, fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
                     value = value,
                     onValueChange = {
+                        saveError = null
                         val bounded = KlyroTextLimit.takeCodePoints(it.text, 128)
                         value = if (bounded == it.text) it else it.copy(
                             text = bounded,
@@ -234,7 +282,7 @@ internal fun KlyroRenameSessionDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { saveRename() }),
-                    label = { Text("Session name") },
+                    label = { Text(label) },
                 )
             },
             confirmButton = {
@@ -242,7 +290,7 @@ internal fun KlyroRenameSessionDialog(
                     enabled = canSave,
                     onClick = { saveRename() },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                ) { Text("Save") }
+                ) { Text(saveLabel) }
             },
             dismissButton = {
                 TextButton(onClick = { dismissRename() }) { Text("Cancel") }
@@ -256,7 +304,7 @@ internal fun KlyroRenameSessionDialog(
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 containerColor = colors.sheet,
                 title = { Text("Discard name changes?") },
-                text = { Text("The session keeps its current name.") },
+                text = { Text(discardMessage) },
                 confirmButton = {
                     TextButton(onClick = { confirmDiscard = false; onDismiss() }) {
                         Text("Discard changes", color = colors.danger)

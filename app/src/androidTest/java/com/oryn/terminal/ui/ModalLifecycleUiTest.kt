@@ -154,20 +154,25 @@ class ModalLifecycleUiTest {
         host { close -> KlyroWorkspaceSheet(entries = listOf(KlyroWorkspaceCatalog.Entry("general","General")),
             selectedId = "general", tabs = emptyList(), tabWorkspaces = emptyMap(), activeTabId = null,
             onSelectProject = {}, onCreateProject = { true }, onRenameProject = { _,_ -> true },
-            onDeleteProject = {}, onAssignCurrentTab = {}, onSwitchTab = {}, onDismiss = close) }
+            onDeleteProject = {}, onAssignCurrentTab = { true }, finishedTabIds = emptySet(), onRenameTab = { _, _ -> },
+            onCloseTab = {}, onSwitchTab = {}, onDismiss = close) }
         swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun workspaceDraftRejectsSwipeUntilExplicitCancel() {
         host { close -> KlyroWorkspaceSheet(entries = listOf(KlyroWorkspaceCatalog.Entry("general","General")),
             selectedId = "general", tabs = emptyList(), tabWorkspaces = emptyMap(), activeTabId = null,
             onSelectProject = {}, onCreateProject = { true }, onRenameProject = { _,_ -> true },
-            onDeleteProject = {}, onAssignCurrentTab = {}, onSwitchTab = {}, onDismiss = close) }
+            onDeleteProject = {}, onAssignCurrentTab = { true }, finishedTabIds = emptySet(), onRenameTab = { _, _ -> },
+            onCloseTab = {}, onSwitchTab = {}, onDismiss = close) }
         ui.onNodeWithText("New").performClick()
         ui.onNodeWithText("Workspace name").performTextInput("Unsaved draft")
         swipeAway()
         ui.onNodeWithText("Unsaved draft").assertExists()
         ui.runOnIdle { assertTrue(visible.value); assertEquals(0,closes) }
-        ui.onNodeWithText("Cancel").performClick(); swipeAway(); assertRemovedAndTapUnderlying()
+        ui.onNodeWithText("Cancel").performClick()
+        ui.onNodeWithText("Discard name changes?").assertExists()
+        ui.onNodeWithText("Discard changes").performClick()
+        swipeAway(); assertRemovedAndTapUnderlying()
     }
     @Test fun sessionActionsSwipeDoesNotCloseSession() {
         var terminated=0
@@ -342,7 +347,8 @@ class ModalLifecycleUiTest {
         host { close -> KlyroWorkspaceSheet(entries=listOf(KlyroWorkspaceCatalog.Entry("general","General")),
             selectedId="general",tabs=emptyList(),tabWorkspaces=emptyMap(),activeTabId=null,
             onSelectProject={},onCreateProject={true},onRenameProject={_,_->true},onDeleteProject={},
-            onAssignCurrentTab={},onSwitchTab={},onDismiss=close) }
+            onAssignCurrentTab={true},finishedTabIds=emptySet(),onRenameTab={_,_->},
+            onCloseTab={},onSwitchTab={},onDismiss=close) }
         ui.onNodeWithText("New").performClick()
         ui.onNodeWithText("Workspace name").performClick()
         try {
@@ -357,7 +363,10 @@ class ModalLifecycleUiTest {
         InstrumentationRegistry.getInstrumentation().uiAutomation.performGlobalAction(
             android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
         ui.waitForIdle(); ui.onNodeWithText("IME draft").assertExists()
-        ui.onNodeWithText("Cancel").performClick(); swipeAway(); assertRemovedAndTapUnderlying()
+        ui.onNodeWithText("Cancel").performClick()
+        ui.onNodeWithText("Discard name changes?").assertExists()
+        ui.onNodeWithText("Discard changes").performClick()
+        swipeAway(); assertRemovedAndTapUnderlying()
     }
 
 }
