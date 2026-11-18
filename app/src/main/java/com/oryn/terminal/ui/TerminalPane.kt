@@ -193,6 +193,7 @@ fun TerminalPane(
     var showWorkspaceSheet by remember(session) { mutableStateOf(false) }
     var showCommandPalette by remember(session) { mutableStateOf(false) }
     val currentProject = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
+    val activeSession = tabs.firstOrNull { it.first == activeTabId }
     var showTerminalSettings by remember(session) { mutableStateOf(false) }
     var initialSettingsSection by remember(session) { mutableStateOf("home") }
     var sessionSheetId by remember(session) { mutableStateOf<Long?>(null) }
@@ -475,7 +476,7 @@ fun TerminalPane(
         // steal focus from a new dialog opened while the IME was resizing.
         pendingSearch = null
     }
-    fun openSessionSheet(id: Long, name: String) {
+    fun openSessionSheet(id: Long) {
         if (tabs.any { it.first == id }) {
             sessionSheetId = id
         }
@@ -568,6 +569,12 @@ fun TerminalPane(
                     ),
                     containerColor = ui.sheet
                 ) {
+                    if (activeSession != null) {
+                        KlyroMenuItem("Manage active session", R.drawable.hugeicons_more_vertical) {
+                            showToolsMenu = false
+                            openSessionSheet(activeSession.first)
+                        }
+                    }
                     KlyroMenuItem("Command Palette", R.drawable.hugeicons_search_01) {
                         showToolsMenu = false
                         showCommandPalette = true
@@ -682,80 +689,20 @@ fun TerminalPane(
                 tabs.forEach { (id, tabTitle) ->
                 val active = id == activeTabId
                 val activityTag = compactActivity(id)
-                Box(
-                    modifier = Modifier
-                        .height(48.dp)
-                        .widthIn(min = KlyroUiMetrics.minTouch)
-                        .then(if (active) Modifier.bringIntoViewRequester(selectedTabRequester) else Modifier)
-                        .combinedClickable(
-                            onClickLabel = if (active) "Edit session" else "Switch session",
-                            onLongClickLabel = "Edit session",
-                            onClick = {
-                                if (active) openSessionSheet(id, tabTitle) else onSelectTab(id)
-                            },
-                            onLongClick = { openSessionSheet(id, tabTitle) }
-                        )
-                        .semantics {
-                            role = Role.Tab
-                            selected = active
-                            contentDescription = tabTitle.ifBlank { "Session" } +
-                                ", project " + (workspaces.firstOrNull {
-                                    it.id == (tabWorkspaces[id] ?: KlyroWorkspaceCatalog.GENERAL)
-                                }?.name ?: "General")
-                            stateDescription = buildString {
-                                append(if (active) "Selected terminal" else "Open terminal")
-                                append(", ")
-                                append(activitySpeech(id))
-                                if (id in tabsWithUnreadOutput && !active) {
-                                    append(", New terminal output")
-                                }
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(
-                        modifier = Modifier.height(36.dp).widthIn(max = 140.dp),
-                        color = if (active) TerminalAccent else inactiveTabSurface,
-                        contentColor = if (active) ui.onAccent else TerminalText,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(19.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (id in tabsWithUnreadOutput && !active) {
-                                Box(Modifier.size(7.dp).background(
-                                    TerminalAccent, androidx.compose.foundation.shape.CircleShape))
-                            }
-                            Text(
-                                tabTitle.ifBlank { "Session" },
-                                fontSize = 12.sp,
-                                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                            if (activityTag != null) {
-                                Box(
-                                    modifier = Modifier.background(
-                                        if (active) ui.onAccent.copy(alpha = 0.14f)
-                                        else TerminalAccent.copy(alpha = 0.12f),
-                                        androidx.compose.foundation.shape.RoundedCornerShape(6.dp)
-                                    ).padding(horizontal = 5.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        activityTag,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (active) ui.onAccent else if (activityTag == "JOB")
-                                            ui.readyInk else ui.muted,
-                                        maxLines = 1
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                KlyroTerminalSessionTab(
+                    title = tabTitle,
+                    workspaceName = workspaces.firstOrNull {
+                        it.id == (tabWorkspaces[id] ?: KlyroWorkspaceCatalog.GENERAL)
+                    }?.name ?: "General",
+                    active = active,
+                    activityTag = activityTag,
+                    activityAnnouncement = activitySpeech(id),
+                    showUnreadOutput = id in tabsWithUnreadOutput,
+                    modifier = if (active) Modifier.bringIntoViewRequester(selectedTabRequester)
+                        else Modifier,
+                    onSelect = { onSelectTab(id) },
+                    onManage = { openSessionSheet(id) }
+                )
             }
             }
             Box(

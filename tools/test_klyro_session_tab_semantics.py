@@ -1,14 +1,60 @@
-"""TalkBack should announce session pills as selected or unselected tabs."""
+"""Session tabs must keep selection and session management as distinct actions."""
 from pathlib import Path
 import unittest
-S=(Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt").read_text()
-class AccessibleSessionPills(unittest.TestCase):
- def test_tabs_have_structural_role_and_active_selection(self):
-  block=S.split('tabs.forEach { (id, tabTitle) ->',1)[1].split('Box(\n                modifier = Modifier\n                    .size(48.dp)',1)[0]
-  self.assertIn('role = Role.Tab',block)
-  self.assertIn('selected = active',block)
-  self.assertIn('stateDescription = buildString',block)
-  self.assertIn('append(activitySpeech(id))',block)
-  self.assertIn('append(", New terminal output")',block)
-  self.assertIn('onLongClickLabel = "Edit session"',block)
-if __name__=="__main__":unittest.main()
+
+ROOT = Path(__file__).resolve().parents[1]
+PANE = (ROOT / "app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt").read_text()
+TAB_PATH = ROOT / "app/src/main/java/com/oryn/terminal/ui/KlyroTerminalSessionTab.kt"
+
+
+class SessionTabActionContract(unittest.TestCase):
+    def test_tab_is_a_separate_component_with_a_stable_semantics_contract(self):
+        self.assertTrue(TAB_PATH.exists())
+        tab = TAB_PATH.read_text()
+        self.assertIn("role = Role.Tab", tab)
+        self.assertIn("selected = active", tab)
+        self.assertIn("contentDescription =", tab)
+        self.assertIn("stateDescription =", tab)
+        self.assertIn("CustomAccessibilityAction(\"Manage session\")", tab)
+
+    def test_every_tab_tap_selects_even_when_it_is_already_selected(self):
+        tab = TAB_PATH.read_text()
+        self.assertIn('onClickLabel = "Switch session"', tab)
+        self.assertIn("onClick = onSelect", tab)
+        self.assertNotIn("if (active)", tab.split(".combinedClickable(", 1)[1].split(".semantics", 1)[0])
+
+    def test_management_keeps_long_press_and_is_exposed_as_a_custom_action(self):
+        tab = TAB_PATH.read_text()
+        self.assertIn('onLongClickLabel = "Manage session"', tab)
+        self.assertIn("onLongClick = onManage", tab)
+        self.assertIn("customActions = listOf(", tab)
+        self.assertIn("onManage()", tab)
+
+    def test_more_menu_routes_to_the_actual_active_session(self):
+        menu = PANE.split("val toolsMenu:", 1)[1].split("val tabStripScroll", 1)[0]
+        self.assertIn('KlyroMenuItem("Manage active session"', menu)
+        self.assertIn("tabs.firstOrNull { it.first == activeTabId }", PANE)
+        self.assertIn("activeSession != null", menu)
+        self.assertIn("showToolsMenu = false", menu)
+        self.assertIn("openSessionSheet", menu)
+
+    def test_existing_visual_and_attention_indicators_remain_bound_to_the_tab(self):
+        tab = TAB_PATH.read_text()
+        for contract in (
+            "colors.accent", "colors.key", "KlyroUiMetrics.minTouch",
+            "height(48.dp)", "widthIn(max = 140.dp)", "activityTag",
+            "showUnreadOutput", "horizontalArrangement = Arrangement.spacedBy(6.dp)",
+            "TextOverflow.Ellipsis",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, tab)
+
+    def test_terminal_menu_and_keyboard_contract_are_not_replaced(self):
+        self.assertIn('KlyroMenuItem("Paste clipboard"', PANE)
+        self.assertIn('KlyroMenuItem("Home"', PANE)
+        self.assertIn("KlyroTerminalSessionTab(", PANE)
+        self.assertNotIn('KlyroMenuItem("Session shortcuts"', PANE)
+
+
+if __name__ == "__main__":
+    unittest.main()
