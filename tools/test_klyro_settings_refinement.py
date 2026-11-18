@@ -32,15 +32,12 @@ class SettingsRefinement(unittest.TestCase):
         self.assertIn('clickable(role = Role.RadioButton', appearance)
         self.assertIn('selected = active', appearance)
 
-    def test_font_size_presets_use_an_adaptive_single_choice_control(self):
+    def test_font_size_is_rounded_and_slider_remains_accessible(self):
         appearance = S.split('"appearance" -> {', 1)[1].split('"keyboard" -> {', 1)[0]
-        presets = appearance.split('val fontPresets = listOf(12f, 13.5f, 16f)', 1)[1].split(
-            'KlyroAppearanceGroup("Launcher icon")', 1
-        )[0]
-        self.assertIn('SingleChoiceSegmentedButtonRow', presets)
-        self.assertIn('SegmentedButton(', presets)
-        self.assertIn('fontScale >= 1.3f', presets)
-        self.assertIn('Role.RadioButton', presets)
+        self.assertIn('kotlin.math.round(fontSizeSp * 2f) / 2f', appearance)
+        self.assertIn('valueLabel = fontSizeLabel', appearance)
+        self.assertIn('contentDescription = "Terminal font size"', appearance)
+        self.assertNotIn('val fontPresets', appearance)
 
     def test_settings_category_destination_keeps_title_and_context_in_button_semantics(self):
         tile = S.split('private fun SettingsBentoTile', 1)[1]

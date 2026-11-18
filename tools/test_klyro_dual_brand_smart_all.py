@@ -13,9 +13,9 @@ class DualBrandSmartAllTest(unittest.TestCase):
     def test_launcher_aliases_have_exclusive_default(self):
         app = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot().find("application")
         aliases = {a.attrib[ANDROID + "name"]: a for a in app.findall("activity-alias")}
-        self.assertEqual(aliases[".LauncherB"].attrib[ANDROID + "enabled"], "true")
-        self.assertEqual(aliases[".LauncherA"].attrib[ANDROID + "enabled"], "false")
-        for name, icon in ((".LauncherB", "b"), (".LauncherA", "a")):
+        self.assertEqual(aliases["com.oryn.terminal.LauncherB"].attrib[ANDROID + "enabled"], "true")
+        self.assertEqual(aliases["com.oryn.terminal.LauncherA"].attrib[ANDROID + "enabled"], "false")
+        for name, icon in (("com.oryn.terminal.LauncherB", "b"), ("com.oryn.terminal.LauncherA", "a")):
             alias = aliases[name]
             self.assertEqual(alias.attrib[ANDROID + "targetActivity"], ".MainActivity")
             self.assertEqual(alias.attrib[ANDROID + "icon"], "@mipmap/ic_launcher_brand_" + icon)

@@ -2,6 +2,10 @@ package com.oryn.terminal.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,7 +55,10 @@ internal fun KlyroTerminalSessionTab(
         modifier = modifier
             .height(48.dp)
             .widthIn(min = KlyroUiMetrics.minTouch)
+            .clip(RoundedCornerShape(24.dp))
             .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(),
                 onClickLabel = "Select session",
                 onLongClickLabel = "Manage session",
                 onClick = onSelect,

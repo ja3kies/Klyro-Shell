@@ -2,6 +2,7 @@ package com.oryn.terminal.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,14 +69,16 @@ internal fun KlyroThemePreviewCard(
             .testTag("theme-preview-$mode"),
         shape = shape,
         color = androidx.compose.ui.graphics.Color.Transparent,
-        border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder, current.accent) else null
+        border = null
     ) {
         Column(
             modifier = Modifier.padding(6.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(40.dp).clearAndSetSemantics { },
+                modifier = Modifier.fillMaxWidth().height(40.dp)
+                    .then(if (active) Modifier.border(KlyroUiMetrics.selectedBorder, current.accent, RoundedCornerShape(8.dp)) else Modifier)
+                    .padding(2.dp).clearAndSetSemantics { },
                 contentAlignment = Alignment.Center
             ) {
                 if (mode == "system") {

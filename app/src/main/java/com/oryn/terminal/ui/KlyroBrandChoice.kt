@@ -17,9 +17,9 @@ object KlyroBrandChoice {
     private const val KEY = "launcher_logo"
 
     private fun primary(context: Context) =
-        ComponentName(context.packageName, context.packageName + ".LauncherB")
+        ComponentName(context.packageName, "com.oryn.terminal.LauncherB")
     private fun alternative(context: Context) =
-        ComponentName(context.packageName, context.packageName + ".LauncherA")
+        ComponentName(context.packageName, "com.oryn.terminal.LauncherA")
 
     private fun aliasEnabled(pm: PackageManager, component: ComponentName, manifestDefault: Boolean): Boolean {
         return when (pm.getComponentEnabledSetting(component)) {

@@ -2,7 +2,7 @@ name: Android build
 
 on:
   push:
-    branches: [fix/modal-lifecycle-touch-freeze, fix/klyro-three-core-hardening-20261115, fix/klyro-three-major-ui-20261115, fix/klyro-six-ui-ux-20261115, fix/klyro-monotonic-apk-versioning-20261115, feat/klyro-progressive-ci-robot-20261115, fix/freeze-forensics-ux-completion, fix/p0-reliability-closure, feat/production-ready-terminal, main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108, feat/p0-cycle1-25-actions-20261108, feat/in-app-updates-20261118, 'p0/**', 'p1/**', 'integration/**', 'feat/ux-five-priorities-cycle-02', 'fix/ux-t4-confirm-bundled-install', 'p1/ux-modal-keyboard-cycle-03', 'p0/select-paste-adversarial-audit-20261109']
+    branches: [fix/modal-lifecycle-touch-freeze, fix/klyro-three-core-hardening-20261115, fix/klyro-three-major-ui-20261115, fix/klyro-six-ui-ux-20261115, fix/klyro-monotonic-apk-versioning-20261115, feat/klyro-progressive-ci-robot-20261115, fix/freeze-forensics-ux-completion, fix/p0-reliability-closure, feat/production-ready-terminal, main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108, feat/p0-cycle1-25-actions-20261108, feat/in-app-updates-20261118, fix/screen-audit-20261118, 'p0/**', 'p1/**', 'integration/**', 'feat/ux-five-priorities-cycle-02', 'fix/ux-t4-confirm-bundled-install', 'p1/ux-modal-keyboard-cycle-03', 'p0/select-paste-adversarial-audit-20261109']
     tags: ['v*']
     paths-ignore:
       # The fast robot-quality-gate workflow validates these changes
@@ -395,3 +395,41 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             release-assets/klyro-shell.apk release-assets/klyro-update.json \
             --title "$GITHUB_REF_NAME" --generate-notes
+
+  publish-preview:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/screen-audit-20261118'
+    needs: debug-apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: klyro-shell-debug
+          path: release-assets
+      - name: Verify and publish signed Preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch_hash="$(printf '%s' "$GITHUB_REF_NAME" | sha256sum | cut -d ' ' -f 1)"
+          tag="preview-$branch_hash"
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          assets = Path("release-assets")
+          metadata = json.loads((assets / "klyro-update.json").read_text())
+          if (metadata["packageName"] != "com.klyro.shell"
+                  or metadata["branch"] != os.environ["GITHUB_REF_NAME"]
+                  or metadata["apkSha256"] != hashlib.sha256((assets / "klyro-shell.apk").read_bytes()).hexdigest()):
+              raise SystemExit("Preview metadata does not match the signed build")
+          PY
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = true
+            gh release upload "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title "Klyro Preview · $GITHUB_REF_NAME" --notes "Signed Android build for $GITHUB_REF_NAME."
+          fi

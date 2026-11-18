@@ -512,6 +512,8 @@ internal fun KlyroSettingsSheet(
                                     }
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
+                                    val displayedFontSize = kotlin.math.round(fontSizeSp * 2f) / 2f
+                                    val fontSizeLabel = if (displayedFontSize % 1f == 0f) "${displayedFontSize.toInt()} sp" else "$displayedFontSize sp"
                                     KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false, minimumInlineWidth = appearanceInlineWidth) {
                                         Box(
                                             modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
@@ -524,11 +526,11 @@ internal fun KlyroSettingsSheet(
                                             horizontalArrangement = Arrangement.End,
                                             verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                if (fontSizeSp % 1f == 0f) "${fontSizeSp.toInt()} sp" else "$fontSizeSp sp",
+                                                fontSizeLabel,
                                                 color = colors.foreground, fontWeight = FontWeight.Medium,
                                                 style = MaterialTheme.typography.bodyMedium
                                             )
-                                            if (fontSizeSp != 13.5f) {
+                                            if (displayedFontSize != 13.5f) {
                                                 TextButton(
                                                     onClick = onResetFont,
                                                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
@@ -538,78 +540,15 @@ internal fun KlyroSettingsSheet(
                                     }
                                     KlyroThinSlider(
                                         value = fontSizeSp.coerceIn(9f, 24f),
-                                        onValueChange = onFontChange,
+                                        onValueChange = { onFontChange(kotlin.math.round(it * 2f) / 2f) },
                                         valueRange = 9f..24f,
-                                        valueLabel = "$fontSizeSp sp",
+                                        valueLabel = fontSizeLabel,
                                         steps = 29,
                                         modifier = Modifier.fillMaxWidth().semantics {
                                             contentDescription = "Terminal font size"
                                         }
                                     )
-                                    val fontPresets = listOf(12f, 13.5f, 16f)
-                                    BoxWithConstraints(Modifier.fillMaxWidth()) {
-                                        val stacked = maxWidth < appearanceInlineWidth ||
-                                            LocalDensity.current.fontScale >= 1.3f
-                                        if (!stacked) {
-                                            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                                                fontPresets.forEachIndexed { index, preset ->
-                                                    val active = fontSizeSp == preset
-                                                    val label = if (preset % 1f == 0f) "${preset.toInt()} sp" else "$preset sp"
-                                                    SegmentedButton(
-                                                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                                            .semantics {
-                                                                contentDescription = "Font size $label"
-                                                            },
-                                                        shape = SegmentedButtonDefaults.itemShape(
-                                                            index = index, count = fontPresets.size
-                                                        ),
-                                                        selected = active,
-                                                        onClick = { onFontChange(preset) },
-                                                        colors = SegmentedButtonDefaults.colors(
-                                                            activeContainerColor = colors.sheet,
-                                                            activeContentColor = colors.foreground,
-                                                            activeBorderColor = colors.accent,
-                                                            inactiveContainerColor = Color.Transparent,
-                                                            inactiveContentColor = colors.muted,
-                                                            inactiveBorderColor = colors.muted.copy(alpha = .35f)
-                                                        ),
-                                                        label = { Text(label, maxLines = 1) }
-                                                    )
-                                                }
-                                            }
-                                        } else {
-                                            Column(
-                                                modifier = Modifier.fillMaxWidth().selectableGroup(),
-                                                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
-                                            ) {
-                                                fontPresets.forEach { preset ->
-                                                    val active = fontSizeSp == preset
-                                                    val label = if (preset % 1f == 0f) "${preset.toInt()} sp" else "$preset sp"
-                                                    Surface(
-                                                        modifier = Modifier.fillMaxWidth()
-                                                            .heightIn(min = KlyroUiMetrics.minTouch)
-                                                            .clickable(
-                                                                role = Role.RadioButton,
-                                                                onClickLabel = "Set terminal font to $label"
-                                                            ) { onFontChange(preset) }
-                                                            .semantics {
-                                                                selected = active
-                                                                contentDescription = "Font size $label"
-                                                            },
-                                                        color = if (active) colors.sheet else Color.Transparent,
-                                                        border = null,
-                                                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                                                    ) {
-                                                        Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-                                                            Text(label, color = colors.foreground,
-                                                                fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                                                                style = MaterialTheme.typography.labelMedium)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+
                                 }
                             }
                             KlyroAppearanceGroup("Launcher icon") {
@@ -1074,20 +1013,12 @@ internal fun KlyroSettingsSheet(
                             com.oryn.terminal.updates.UpdateLookup.NonePublished -> KlyroInlineNotice(
                                 if (updateChannel == com.oryn.terminal.updates.UpdateChannel.STABLE)
                                     "No Stable release is published yet. Preview builds may be available on the Preview channel."
-                                else "No valid Preview build was found for this branch. Builds can expire after 14 days.")
+                                else "No Preview release has been published for this branch.")
                             null -> if (updateChecking) KlyroInlineNotice("Checking ${updateChannel.label} updates…")
                         }
                         updateError?.let { error ->
                             KlyroInlineNotice(error, isError = true)
-                            if (!updateChecking && !updateDownloading) {
-                                TextButton(
-                                    onClick = ::checkForUpdates,
-                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                ) {
-                                    Text(if (updateStalePreview) "Find a newer Preview" else "Try again",
-                                        color = colors.accent)
-                                }
-                            }
+
                         }
                         OutlinedButton(
                             onClick = ::checkForUpdates,
@@ -1096,7 +1027,11 @@ internal fun KlyroSettingsSheet(
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foreground),
                             border = BorderStroke(1.dp, colors.muted.copy(alpha = .35f))
-                        ) { Text(if (updateChecking) "Checking…" else "Check for updates") }
+                        ) { Text(when {
+                            updateChecking -> "Checking…"
+                            updateStalePreview -> "Find a newer Preview"
+                            else -> "Check for updates"
+                        }) }
                     }
                 }
                 }

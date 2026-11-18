@@ -236,7 +236,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertNotIn('sessionClient.setOutputObserver(observer)', terminal)
         self.assertNotIn(' · Selected', workspace)
         self.assertIn('textAlign = TextAlign.Start', workspace)
-        self.assertIn('Text(\n                    "Sessions"', workspace)
+        self.assertIn('Text("Sessions"', workspace)
         self.assertNotIn('"Sessions (" + projectTabs.size', workspace)
 
     def test_hugeicons_assets_are_vectorized_and_ui_actions_use_real_icons(self):

@@ -1,6 +1,13 @@
 package com.oryn.terminal.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material3.IconButton
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -72,15 +79,28 @@ internal fun KlyroWorkspaceSheet(
     onDeleteProject: (String) -> Unit,
     onAssignCurrentTab: (String) -> Unit,
     onSwitchTab: (Long) -> Unit,
+    onRenameTab: (Long, String) -> Unit = { _, _ -> },
+    onCloseTab: (Long) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val c = LocalKlyroColors.current
+    var editingSessions by rememberSaveable { mutableStateOf(false) }
+    var renameSessionId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var closeSessionId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val motionEnabled = android.os.Build.VERSION.SDK_INT < 26 || android.animation.ValueAnimator.areAnimatorsEnabled()
+    val wiggle by rememberInfiniteTransition(label = "session edit").animateFloat(
+        initialValue = -0.7f, targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(tween(220), RepeatMode.Reverse), label = "wiggle")
     var editorId by rememberSaveable { mutableStateOf<String?>(null) }
     var editorText by rememberSaveable { mutableStateOf("") }
     var editorError by rememberSaveable { mutableStateOf(false) }
     var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
     var menuId by rememberSaveable { mutableStateOf<String?>(null) }
     var lastAssignedWorkspaceId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(tabs) {
+        if (renameSessionId != null && tabs.none { it.first == renameSessionId }) renameSessionId = null
+        if (closeSessionId != null && tabs.none { it.first == closeSessionId }) closeSessionId = null
+    }
     // Menus can outlive their backing workspace after a deletion.
     LaunchedEffect(entries, menuId) {
         if (menuId != null && entries.none { it.id == menuId }) menuId = null
@@ -126,7 +146,7 @@ internal fun KlyroWorkspaceSheet(
 
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onDismiss,
-            dismissEnabled = editorId == null && deletingId == null && menuId == null) {
+            dismissEnabled = editorId == null && deletingId == null && menuId == null && renameSessionId == null && closeSessionId == null) {
             Column(
                 Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
                     .fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
@@ -340,12 +360,13 @@ internal fun KlyroWorkspaceSheet(
                     }
                 }
 
-                Text(
-                    "Sessions",
-                    fontWeight = FontWeight.SemiBold,
-                    color = c.foreground,
-                    style = MaterialTheme.typography.titleSmall
-                )
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Sessions", modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold,
+                        color = c.foreground, style = MaterialTheme.typography.titleSmall)
+                    if (projectTabs.isNotEmpty()) TextButton(onClick = { editingSessions = !editingSessions }) {
+                        Text(if (editingSessions) "Done" else "Edit")
+                    }
+                }
                 if (projectTabs.isEmpty()) {
                     Text("No sessions yet.",
                         modifier = Modifier.padding(vertical = KlyroUiMetrics.spaceSm),
@@ -355,8 +376,9 @@ internal fun KlyroWorkspaceSheet(
                         val current = id == activeTabId
                         Surface(
                             modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+                                .graphicsLayer { rotationZ = if (editingSessions && motionEnabled) wiggle else 0f }
                                 .clickable(
-                                    enabled = !current,
+                                    enabled = !current && !editingSessions,
                                     role = Role.Button,
                                     onClickLabel = "Switch to " + name
                                 ) {
@@ -380,7 +402,16 @@ internal fun KlyroWorkspaceSheet(
                                 Text(name.ifBlank { "Terminal" },
                                     modifier = Modifier.weight(1f), maxLines = 1,
                                     overflow = TextOverflow.Ellipsis, color = c.foreground)
-                                if (current) {
+                                if (editingSessions) {
+                                    IconButton(onClick = { renameSessionId = id }) {
+                                        Icon(painterResource(R.drawable.hugeicons_pen_01),
+                                            contentDescription = "Rename $name", tint = c.foreground)
+                                    }
+                                    IconButton(onClick = { closeSessionId = id }) {
+                                        Icon(painterResource(R.drawable.hugeicons_cancel_circle),
+                                            contentDescription = "Close $name", tint = c.danger)
+                                    }
+                                } else if (current) {
                                     Text("Current", color = c.accent,
                                         style = MaterialTheme.typography.labelMedium)
                                 } else {
@@ -410,6 +441,27 @@ internal fun KlyroWorkspaceSheet(
                 }
                 }
             }
+        }
+
+        renameSessionId?.let { id ->
+            tabs.firstOrNull { it.first == id }?.let { (_, name) ->
+                KlyroRenameSessionDialog(name = name, onSave = { onRenameTab(id, it); renameSessionId = null },
+                    onDismiss = { renameSessionId = null })
+            }
+        }
+        closeSessionId?.let { id ->
+            val target = tabs.firstOrNull { it.first == id }
+            if (target != null) AlertDialog(
+                onDismissRequest = { closeSessionId = null },
+                title = { Text("Close ${target.second.ifBlank { "session" }}?") },
+                text = { Text("Closing a session stops its shell and any running commands.") },
+                confirmButton = { TextButton(onClick = { onCloseTab(id); closeSessionId = null }) {
+                    Text("Close session", color = c.danger)
+                } },
+                dismissButton = { TextButton(onClick = { closeSessionId = null }) { Text("Keep session") } },
+                containerColor = c.sheet,
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner)
+            )
         }
 
         deletingId?.let { id ->

@@ -29,7 +29,7 @@
             android:windowSoftInputMode="adjustResize">
         </activity>
         <activity-alias
-            android:name=".LauncherB"
+            android:name="com.oryn.terminal.LauncherB"
             android:enabled="true"
             android:exported="true"
             android:label="Klyro Shell"
@@ -42,7 +42,7 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherA"
+            android:name="com.oryn.terminal.LauncherA"
             android:enabled="false"
             android:exported="true"
             android:label="Klyro Shell"

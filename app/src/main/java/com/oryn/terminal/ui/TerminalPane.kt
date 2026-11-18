@@ -1541,6 +1541,8 @@ fun TerminalPane(
                 }
             },
             onSwitchTab = onSelectTab,
+            onRenameTab = onRenameTab,
+            onCloseTab = onCloseTab,
             onDismiss = { showWorkspaceSheet = false }
         )
     }
