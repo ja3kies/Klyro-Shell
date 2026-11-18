@@ -57,7 +57,9 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
             drawRect(
                 brush = Brush.verticalGradient(
                     0f to Color.Transparent,
-                    .66f to Color.Transparent,
+                    .50f to Color.Transparent,
+                    .74f to screenChrome.copy(alpha = .28f),
+                    .90f to screenChrome.copy(alpha = .76f),
                     1f to screenChrome
                 )
             )

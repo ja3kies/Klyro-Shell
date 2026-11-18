@@ -545,6 +545,9 @@ class MainActivity : ComponentActivity() {
                         onSurface = palette.foreground
                     )
                 ) {
+                // Material3 and foundation controls share the same transparent
+                // touch feedback. Accessibility focus and real haptics remain active.
+                com.oryn.terminal.ui.KlyroTransparentTouchFeedback {
                 com.oryn.terminal.ui.FreezeRecoveryNotice()
                 LaunchedEffect(Unit) {
                     androidx.compose.runtime.withFrameNanos { }
@@ -677,6 +680,7 @@ class MainActivity : ComponentActivity() {
                             TextButton(onClick = { showExportPathDialog = false }) { Text("Cancel") }
                         }
                     )
+                }
                 }
                 }
             }
@@ -1858,7 +1862,7 @@ private fun KlyroHomeNavigationTile(
     val ui = LocalKlyroColors.current
     val iconColor = if (emphasized) ui.accent else ui.muted
     Surface(
-        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 124.dp),
+        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 112.dp),
         color = ui.tile,
         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
     ) {
@@ -1887,8 +1891,8 @@ private fun KlyroHomeNavigationTile(
             }
         } else {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
