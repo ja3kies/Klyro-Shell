@@ -61,7 +61,8 @@ public final class KlyroCommandCatalog {
         commands.add(builtin("jobs", "jobs", "Show background jobs in this shell"));
         commands.add(builtin("fg", "fg", "Resume a job in the foreground"));
         commands.add(builtin("bg", "bg", "Resume a stopped job in the background"));
-        commands.add(builtin("exit", "exit", "Leave the active shell; this closes its tab"));
+        commands.add(new Entry("exit", "exit", "Leave the active shell; this closes its tab",
+                "Bash built-ins", "Closes the active shell when you press Enter", true, true));
         commands.add(pkg("pkg search", "pkg search ", "Find an available package", false));
         commands.add(pkg("pkg install", "pkg install ", "Install a package in private storage", true));
         commands.add(pkg("pkg update", "pkg update", "Refresh package repository metadata", true));

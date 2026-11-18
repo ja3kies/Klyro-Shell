@@ -1,6 +1,5 @@
 package com.oryn.terminal.ui
 
-import androidx.activity.compose.BackHandler
 import android.content.Context
 
 import androidx.compose.foundation.clickable
@@ -10,6 +9,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -67,7 +73,7 @@ import java.io.File
  * Command discovery, not a second Settings/tools menu. Selecting a command
  * inserts literal text into Bash without Enter; Klyro never auto-executes it.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun KlyroCommandPalette(
     installedPrefix: File?,
@@ -78,6 +84,8 @@ internal fun KlyroCommandPalette(
     val colors = LocalKlyroColors.current
     val keyboard = LocalSoftwareKeyboardController.current
     val searchFocus = remember { FocusRequester() }
+    val resultListState = rememberLazyListState()
+    val guideScrollState = rememberScrollState()
     val context = LocalContext.current
     val prefs = remember(context) {
         context.getSharedPreferences("klyro_command_quick_access", Context.MODE_PRIVATE)
@@ -100,22 +108,30 @@ internal fun KlyroCommandPalette(
     }
     var query by rememberSaveable { mutableStateOf("") }
     var showingGuide by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(showingGuide) {
-        if (!showingGuide) searchFocus.requestFocus()
-    }
-    var info by remember { mutableStateOf<String?>(null) }
-    var unsafeFeedback by remember { mutableStateOf(false) }
+    var searchFocused by rememberSaveable { mutableStateOf(false) }
+    var info by rememberSaveable { mutableStateOf<String?>(null) }
+    var feedbackRevision by rememberSaveable { mutableStateOf(0) }
+    var unsafeFeedback by rememberSaveable { mutableStateOf(false) }
     var pendingCautionCommand by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCautionId by rememberSaveable { mutableStateOf<String?>(null) }
     var pinnedOnly by rememberSaveable { mutableStateOf(false) }
     var availableOnly by rememberSaveable { mutableStateOf(false) }
     var confirmClearRecent by rememberSaveable { mutableStateOf(false) }
+    var insertionAccepted by remember { mutableStateOf(false) }
+    fun insertOnce(snippet: String): Boolean {
+        if (insertionAccepted) return false
+        val accepted = onInsert(snippet)
+        if (accepted) insertionAccepted = true
+        return accepted
+    }
     fun insertCurated(id: String, snippet: String) {
-        if (onInsert(snippet)) {
+        if (insertOnce(snippet)) {
             recordInsertion(id)
+            keyboard?.hide()
             onDismiss()
         } else {
             unsafeFeedback = true
+            feedbackRevision++
             info = "Not inserted: terminal unavailable or input buffer full. Return to the Bash prompt and retry."
         }
     }
@@ -123,13 +139,16 @@ internal fun KlyroCommandPalette(
         val next = KlyroCommandQuickAccess.togglePinned(pinnedIds, id)
         if (next == pinnedIds && id !in pinnedIds) {
             unsafeFeedback = false
-            info = "Up to 8 pinned commands. Unpin one to make room."
+            feedbackRevision++
+            info = "Up to ${KlyroCommandQuickAccess.MAX_PINNED} pinned commands. Unpin one to make room."
             return
         }
         pinnedIds = next
         prefs.edit().putString("pinned",
             KlyroCommandQuickAccess.encode(next, KlyroCommandQuickAccess.MAX_PINNED)).apply()
-        info = null
+        unsafeFeedback = false
+        feedbackRevision++
+        info = if (id in next) "Command pinned." else "Command unpinned."
     }
     val matches = remember(query, pinnedIds, recentIds, pinnedOnly, availableOnly, installedPrefix) {
         val ranked = KlyroCommandQuickAccess.rank(
@@ -144,13 +163,18 @@ internal fun KlyroCommandPalette(
         if (pinnedOnly || availableOnly) emptyList() else pluginCommands.filter { command ->
             KlyroCommandSearch.matches(query, command.label,
                 command.description + " " + command.insert)
-        }
+        }.distinctBy { it.label to it.insert }
     }
 
+    var lastShownRevision by rememberSaveable { mutableStateOf(0) }
+    LaunchedEffect(feedbackRevision) {
+        if (info != null && feedbackRevision != lastShownRevision) resultListState.animateScrollToItem(0)
+        lastShownRevision = feedbackRevision
+    }
     val resultCount = matches.size + pluginMatches.size
 
     KlyroModalTheme {
-        KlyroSheet(onDismissRequest = onDismiss,
+        KlyroSheet(onDismissRequest = { keyboard?.hide(); onDismiss() },
             dismissEnabled = pendingCautionCommand == null && !confirmClearRecent) {
             Column(
                 modifier = Modifier.widthIn(max = KlyroUiMetrics.sheetContentWidth)
@@ -168,138 +192,167 @@ internal fun KlyroCommandPalette(
                 ) {
                     KlyroSheetTitle(if (showingGuide) "Welcome to Klyro" else "Command Palette",
                         modifier = Modifier.weight(1f))
-                    TextButton(onClick = {
+                    TextButton(onClick = { keyboard?.hide(); onDismiss() }) { Text("Close") }
+                }
+                TextButton(onClick = {
                         keyboard?.hide()
                         showingGuide = !showingGuide
+                        if (!showingGuide) searchFocused = false
                         info = null
                         unsafeFeedback = false
                     }) {
-                        Text(if (showingGuide) "Commands" else "Welcome guide")
+                        Text(if (showingGuide) "Back to commands" else "Welcome guide")
                     }
-                }
 
                 if (showingGuide) {
                     // One in-sheet help page; scroll independently on small phones.
                     Column(Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.paletteListMax)
-                        .verticalScroll(rememberScrollState())) {
-                        Text(KlyroWelcomeGuide.MESSAGE,
+                        .weight(1f, fill = false)
+                        .verticalScroll(guideScrollState)) {
+                        SelectionContainer { Text(KlyroWelcomeGuide.MESSAGE,
                             modifier = Modifier.fillMaxWidth().padding(8.dp),
                             fontFamily = FontFamily.Monospace,
                             style = MaterialTheme.typography.bodySmall,
-                            color = colors.foreground)
+                            color = colors.foreground) }
                     }
                 } else {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = {
-                            query = KlyroTextLimit.takeCodePoints(it, KlyroCommandSearch.MAX_QUERY_LENGTH)
-                            info = null
-                            unsafeFeedback = false
-                        },
-                        modifier = Modifier.fillMaxWidth().focusRequester(searchFocus),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
-                        label = { Text("Find a shell command") },
-                        placeholder = { Text("pwd, pkg search, exit…") },
-                        singleLine = true,
-                        trailingIcon = {
-                            if (query.isNotEmpty()) {
-                                TextButton(onClick = { query = ""; info = null; unsafeFeedback = false }) {
-                                    Text("Clear")
-                                }
-                            }
-                        },
-                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                    )
-                    Text(
-                        "Insert only; press Enter to run. Recent items are not Bash history.",
-                        color = colors.muted,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        FilterChip(
-                            selected = pinnedOnly,
-                            onClick = { pinnedOnly = !pinnedOnly },
-                            modifier = Modifier.weight(1f)
-                                .heightIn(min = KlyroUiMetrics.minTouch),
-                            label = {
-                                Text("Pinned ${pinnedIds.size}/8",
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            },
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                            colors = FilterChipDefaults.filterChipColors(
-                                containerColor = colors.tile,
-                                labelColor = colors.foreground,
-                                selectedContainerColor = colors.accent.copy(alpha = .17f),
-                                selectedLabelColor = colors.foreground
-                            )
-                        )
-                        FilterChip(
-                            selected = availableOnly,
-                            onClick = { availableOnly = !availableOnly },
-                            modifier = Modifier.weight(1f)
-                                .heightIn(min = KlyroUiMetrics.minTouch),
-                            label = {
-                                Text("Available only",
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            },
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                            colors = FilterChipDefaults.filterChipColors(
-                                containerColor = colors.tile,
-                                labelColor = colors.foreground,
-                                selectedContainerColor = colors.accent.copy(alpha = .17f),
-                                selectedLabelColor = colors.foreground
-                            )
-                        )
-                    }
-                    if (availableOnly) {
-                        KlyroInlineNotice(
-                            "Available filters verified built-in commands. Plugin suggestions " +
-                                "are hidden because their dependencies cannot be verified."
-                        )
-                    }
-                    Text(
-                        if (query.isBlank()) "$resultCount commands"
-                        else "$resultCount matching commands",
-                        color = colors.muted,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-                    )
-                    if (recentIds.isNotEmpty() && !pinnedOnly) {
-                        Row(modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Text("Recently inserted · ${recentIds.size}",
-                                color = colors.muted, style = MaterialTheme.typography.labelSmall)
-                            TextButton(onClick = { confirmClearRecent = true },
-                                colors = ButtonDefaults.textButtonColors(
-                                    contentColor = colors.foreground
-                                )) { Text("Clear recent") }
-                        }
-                    }
-                    info?.let { KlyroInlineNotice(it, isError = unsafeFeedback) }
                     LazyColumn(
+                        state = resultListState,
                         modifier = Modifier.fillMaxWidth()
                             .weight(1f, fill = false)
                             .heightIn(max = KlyroUiMetrics.paletteListMax),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        if (info != null) {
+                            item(key = "feedback") {
+                                Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+                                    KlyroInlineNotice(info.orEmpty(), isError = unsafeFeedback)
+                                }
+                            }
+                        }
+                        item(key = "search-controls") {
+                            LaunchedEffect(Unit) {
+                                if (!searchFocused) {
+                                    searchFocus.requestFocus()
+                                    searchFocused = true
+                                }
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                OutlinedTextField(
+                                    value = query,
+                                    onValueChange = {
+                                        query = KlyroTextLimit.takeCodePoints(it, KlyroCommandSearch.MAX_QUERY_LENGTH)
+                                        info = null
+                                        unsafeFeedback = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth().focusRequester(searchFocus),
+                                    keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Search),
+                                    keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
+                                    label = { Text("Find a shell command") },
+                                    placeholder = { Text("pwd, pkg search, exit…") },
+                                    singleLine = true,
+                                    leadingIcon = { Icon(painterResource(R.drawable.hugeicons_search_01),
+                                        contentDescription = null, modifier = Modifier.size(20.dp)) },
+                                    trailingIcon = {
+                                        if (query.isNotEmpty()) {
+                                            IconButton(onClick = {
+                                                query = ""; info = null; unsafeFeedback = false
+                                                searchFocus.requestFocus()
+                                                keyboard?.show()
+                                            }) {
+                                                Icon(painterResource(R.drawable.hugeicons_cancel_circle),
+                                                    contentDescription = "Clear search", modifier = Modifier.size(20.dp))
+                                            }
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                                )
+                                Text(
+                                    "Inserts into the terminal. Press Enter there to run.",
+                                    color = colors.muted,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    FilterChip(
+                                        selected = pinnedOnly,
+                                        onClick = { pinnedOnly = !pinnedOnly; info = null; unsafeFeedback = false },
+                                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                        label = {
+                                            Text("Pinned (${pinnedIds.size})")
+                                        },
+                                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            containerColor = colors.tile,
+                                            labelColor = colors.foreground,
+                                            selectedContainerColor = colors.accent.copy(alpha = .17f),
+                                            selectedLabelColor = colors.foreground
+                                        )
+                                    )
+                                    FilterChip(
+                                        selected = availableOnly,
+                                        onClick = { availableOnly = !availableOnly; info = null; unsafeFeedback = false },
+                                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                        label = {
+                                            Text("Available only")
+                                        },
+                                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            containerColor = colors.tile,
+                                            labelColor = colors.foreground,
+                                            selectedContainerColor = colors.accent.copy(alpha = .17f),
+                                            selectedLabelColor = colors.foreground
+                                        )
+                                    )
+                                }
+
+                            }
+                        }
+                        item(key = "result-summary") {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (availableOnly) {
+                                    KlyroInlineNotice(
+                                        "Plugins are hidden: their dependencies are not verified."
+                                    )
+                                }
+                                Text(
+                                    if (resultCount == 1) "1 command" else "$resultCount commands",
+                                    color = colors.muted,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                                )
+                                if (recentIds.isNotEmpty() && !pinnedOnly) {
+                                    FlowRow(modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("Recently inserted · ${recentIds.size}",
+                                            color = colors.muted, style = MaterialTheme.typography.labelSmall)
+                                        TextButton(onClick = { confirmClearRecent = true },
+                                            colors = ButtonDefaults.textButtonColors(
+                                                contentColor = colors.foreground
+                                            )) { Text("Clear recent") }
+                                    }
+                                }
+
+                            }
+                        }
                         if (matches.isEmpty() && pluginMatches.isEmpty()) {
                             item {
                                 Column(Modifier.fillMaxWidth().padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                                     Text(
                                         if (pinnedOnly && pinnedIds.isEmpty()) "No pinned commands yet."
+                                        else if (pinnedOnly) "No pinned commands match."
                                         else if (availableOnly) "No available commands match."
                                         else "No matching commands.",
                                         color = colors.muted
                                     )
                                     TextButton(onClick = {
                                         query = ""; pinnedOnly = false; availableOnly = false
+                                        feedbackRevision++
                                         info = null; unsafeFeedback = false
                                     }) {
                                         Text("Show all commands")
@@ -309,27 +362,29 @@ internal fun KlyroCommandPalette(
                         }
                         if (pluginMatches.isNotEmpty()) {
                             item {
-                                Text("Installed plugins", color = colors.muted,
+                                Text("Plugin commands", color = colors.muted,
                                     style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.padding(horizontal = 8.dp))
+                                    modifier = Modifier.padding(horizontal = 8.dp).semantics { heading() })
                             }
                         }
-                        items(pluginMatches, key = { "plugin:" + it.label + ":" + it.insert }) { command ->
+                        items(pluginMatches, key = { "plugin:${it.label.length}:${it.label}:${it.insert}" }) { command ->
                             Surface(
                                 modifier = Modifier.fillMaxWidth().clickable(
                                     role = Role.Button,
                                     onClickLabel = "Insert " + command.label,
                                     onClick = {
                                         if (KlyroPluginManager.safeInsertion(command.insert)) {
-                                            if (onInsert(command.insert)) {
+                                            if (insertOnce(command.insert)) {
                                                 keyboard?.hide()
                                                 onDismiss()
                                             } else {
                                                 unsafeFeedback = true
-                                                info = "Terminal unavailable for insertion. Retry at the Bash prompt."
+                                                feedbackRevision++
+                                                info = "Not inserted: terminal unavailable or input buffer full. Return to the Bash prompt and retry."
                                             }
                                         } else {
                                             unsafeFeedback = true
+                                            feedbackRevision++
                                             info = "This plugin command cannot be inserted safely."
                                         }
                                     }
@@ -350,6 +405,8 @@ internal fun KlyroCommandPalette(
                                     Column(Modifier.weight(1f)) {
                                         Text(command.label, fontWeight = FontWeight.SemiBold,
                                             color = colors.foreground)
+                                        if (command.description.isNotBlank()) Text(command.description,
+                                            color = colors.muted, style = MaterialTheme.typography.bodySmall)
                                         Text(command.insert, color = colors.muted,
                                             fontFamily = FontFamily.Monospace,
                                             style = MaterialTheme.typography.bodySmall)
@@ -357,6 +414,13 @@ internal fun KlyroCommandPalette(
                                     Text("Insert", color = colors.accent,
                                         style = MaterialTheme.typography.labelSmall)
                                 }
+                            }
+                        }
+                        if (matches.isNotEmpty()) {
+                            item(key = "catalog-heading") {
+                                Text("Shell commands", color = colors.muted,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 8.dp).semantics { heading() })
                             }
                         }
                         items(matches, key = { it.command }) { entry ->
@@ -378,9 +442,14 @@ internal fun KlyroCommandPalette(
                                                     keyboard?.hide()
                                                     insertCurated(entry.command, snippet)
                                                 }
+                                            } else {
+                                                unsafeFeedback = true
+                                                feedbackRevision++
+                                                info = "This command cannot be inserted safely."
                                             }
                                         } else {
                                             unsafeFeedback = false
+                                            feedbackRevision++
                                             info = if (!entry.insertable) entry.note else
                                                 "Command not installed in Klyro's private prefix. " + entry.note
                                         }
@@ -412,8 +481,13 @@ internal fun KlyroCommandPalette(
                                             entry.purpose,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = colors.muted,
-                                            maxLines = 2
+                                            overflow = TextOverflow.Ellipsis,
+                                            maxLines = 3
                                         )
+                                        if (entry.insertion.trim() != entry.command) {
+                                            Text(entry.insertion, fontFamily = FontFamily.Monospace,
+                                                style = MaterialTheme.typography.bodySmall, color = colors.muted)
+                                        }
                                         if (entry.command in pinnedIds || entry.command in recentIds) {
                                             Text(
                                                 if (entry.command in pinnedIds) "Pinned"
@@ -425,9 +499,9 @@ internal fun KlyroCommandPalette(
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            if (!available) "Info" else if (entry.caution)
+                                            if (!available) "Details" else if (entry.caution)
                                                 "Review" else "Insert",
-                                            color = if (entry.caution) colors.warningInk
+                                            color = if (!available) colors.muted else if (entry.caution) colors.warningInk
                                                 else colors.accent,
                                             style = MaterialTheme.typography.labelSmall
                                         )
@@ -437,7 +511,9 @@ internal fun KlyroCommandPalette(
                                                 contentColor = colors.foreground
                                             ),
                                             modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                                .semantics { contentDescription = if (entry.command in pinnedIds)
+                                                .semantics {
+                                                    stateDescription = if (entry.command in pinnedIds) "Pinned" else "Not pinned"
+                                                    contentDescription = if (entry.command in pinnedIds)
                                                     "Unpin ${entry.command}" else "Pin ${entry.command}" }
                                         ) {
                                             Text(if (entry.command in pinnedIds) "Unpin" else "Pin")
@@ -460,15 +536,19 @@ internal fun KlyroCommandPalette(
                 containerColor = colors.sheet,
                 title = { Text("Review command") },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("This command may change installed packages or files. " +
+                    Column(Modifier.heightIn(max = KlyroUiMetrics.paletteListMax)
+                        .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(KlyroCommandCatalog.search("").firstOrNull { it.command == pendingCautionId }?.purpose
+                            ?: "Review the command before inserting it.")
+                        Text("This command can change your environment. " +
                             "It will be inserted into the terminal, not run automatically.",
                             color = colors.foreground)
                         Surface(color = colors.key,
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)) {
-                            Text(command, fontFamily = FontFamily.Monospace,
+                            SelectionContainer { Text(command, fontFamily = FontFamily.Monospace,
                                 color = colors.foreground,
-                                modifier = Modifier.fillMaxWidth().padding(12.dp))
+                                modifier = Modifier.fillMaxWidth().padding(12.dp)) }
                         }
                     }
                 },
@@ -478,7 +558,14 @@ internal fun KlyroCommandPalette(
                             val id = pendingCautionId
                             pendingCautionCommand = null
                             pendingCautionId = null
-                            if (id != null) insertCurated(id, command)
+                            val entry = KlyroCommandCatalog.search("").firstOrNull { it.command == id }
+                            if (entry != null && KlyroCommandCatalog.isInstalled(entry, installedPrefix)) {
+                                insertCurated(entry.command, KlyroCommandCatalog.safeInsertion(entry))
+                            } else {
+                                unsafeFeedback = true
+                                feedbackRevision++
+                                info = "Command no longer available. Check its requirements and retry."
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.accent, contentColor = colors.onAccent
@@ -503,13 +590,18 @@ internal fun KlyroCommandPalette(
                 title = { Text("Clear recent insertions?") },
                 text = {
                     Text("Only this quick-access list is cleared. Running sessions, " +
-                        "Bash history and pinned commands stay unchanged.")
+                        "Bash history and pinned commands stay unchanged.",
+                        modifier = Modifier.heightIn(max = KlyroUiMetrics.paletteListMax)
+                            .verticalScroll(rememberScrollState()))
                 },
                 confirmButton = {
                     TextButton(onClick = {
                         recentIds = emptyList()
                         prefs.edit().remove("recent_inserts").apply()
                         confirmClearRecent = false
+                        unsafeFeedback = false
+                        feedbackRevision++
+                        info = "Recent insertions cleared."
                     }) { Text("Clear recent") }
                 },
                 dismissButton = {
