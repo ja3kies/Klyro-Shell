@@ -180,8 +180,7 @@ internal fun KlyroActionRow(
     Row(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)
-            .clickable(enabled = enabled, indication = null,
-                interactionSource = null, role = Role.Button,
+            .clickable(enabled = enabled, role = Role.Button,
                 onClickLabel = label, onClick = onClick)
             .semantics {
                 contentDescription = if (subtitle.isNullOrBlank()) label else "$label. $subtitle"
