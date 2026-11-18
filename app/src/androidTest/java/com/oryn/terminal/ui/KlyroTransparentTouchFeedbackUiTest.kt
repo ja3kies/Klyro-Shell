@@ -12,7 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertHasClickAction
@@ -33,11 +32,13 @@ class KlyroTransparentTouchFeedbackUiTest {
     @Test fun noVisibleRippleDoesNotDisableMaterialOrFoundationActions() {
         var foundationClicks = 0
         var materialClicks = 0
-        var rippleColor: Color? = null
+        var pressedAlpha: Float? = null
+        var focusedAlpha: Float? = null
         ui.setContent {
             MaterialTheme {
                 KlyroTransparentTouchFeedback {
-                    rippleColor = LocalRippleConfiguration.current?.color
+                    pressedAlpha = LocalRippleConfiguration.current?.rippleAlpha?.pressedAlpha
+                    focusedAlpha = LocalRippleConfiguration.current?.rippleAlpha?.focusedAlpha
                     Column {
                         Box(
                             modifier = Modifier.size(56.dp)
@@ -62,7 +63,8 @@ class KlyroTransparentTouchFeedbackUiTest {
             .assertHasClickAction()
             .performClick()
         ui.runOnIdle {
-            assertEquals(Color.Transparent, rippleColor)
+            assertEquals(0f, pressedAlpha)
+            assertEquals(.14f, focusedAlpha)
             assertEquals(1, foundationClicks)
             assertEquals(1, materialClicks)
         }
