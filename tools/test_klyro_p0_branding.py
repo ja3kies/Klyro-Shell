@@ -14,8 +14,8 @@ class LauncherAliasHardening(unittest.TestCase):
         cls.manifest = MANIFEST.read_text()
 
     def test_default_launcher_remains_explicit(self):
-        self.assertIn('android:name=".LauncherB"', self.manifest)
-        self.assertIn('android:name=".LauncherA"', self.manifest)
+        self.assertIn('android:name="com.oryn.terminal.LauncherB"', self.manifest)
+        self.assertIn('android:name="com.oryn.terminal.LauncherA"', self.manifest)
 
     def test_android_manifest_defaults_are_not_mistaken_for_disabled(self):
         self.assertIn("else -> manifestDefault", self.source)

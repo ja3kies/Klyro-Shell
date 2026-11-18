@@ -39,67 +39,55 @@ internal class KlyroUpdateRepository(private val context: Context) {
             UpdateChannel.PREVIEW -> checkPreview(branch, installed)
         }
 
-    private fun checkStable(installed: KlyroVersion): UpdateLookup {
-      return try {
-        val release = getJson("$api/releases/latest")
+    private fun checkStable(installed: KlyroVersion): UpdateLookup =
+        checkRelease("$api/releases/latest", UpdateChannel.STABLE, installed)
+
+    private fun checkPreview(branch: String, installed: KlyroVersion): UpdateLookup {
+        val safeBranch = KlyroUpdatePolicy.branchOrMain(branch)
+        val branchHash = MessageDigest.getInstance("SHA-256")
+            .digest(safeBranch.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        return checkRelease("$api/releases/tags/preview-$branchHash", UpdateChannel.PREVIEW,
+            installed, safeBranch)
+    }
+
+    private fun checkRelease(
+        url: String,
+        channel: UpdateChannel,
+        installed: KlyroVersion,
+        branch: String? = null
+    ): UpdateLookup {
+        val release = try {
+            getJson(url)
+        } catch (failure: UpdateException) {
+            if (failure.message == "GitHub returned HTTP 404") return UpdateLookup.NonePublished
+            throw failure
+        }
+        if (release.optBoolean("draft", true) ||
+            release.optBoolean("prerelease") != (channel == UpdateChannel.PREVIEW)) {
+            return UpdateLookup.NonePublished
+        }
         val assets = release.optJSONArray("assets")
-            ?: throw UpdateException("Stable release is missing its asset list")
+            ?: throw UpdateException("Release is missing its asset list")
         val apk = assets.findByName("klyro-shell.apk")
-            ?: throw UpdateException("Stable release is missing the signed APK")
+            ?: throw UpdateException("Release is missing the signed APK")
         val manifestAsset = assets.findByName("klyro-update.json")
-            ?: throw UpdateException("Stable release is missing update metadata")
+            ?: throw UpdateException("Release is missing update metadata")
         val manifest = getJson(manifestAsset.optString("browser_download_url"))
+        if (branch != null && manifest.optString("branch") != branch) {
+            throw UpdateException("Preview metadata does not match the installed branch")
+        }
         val candidate = manifest.toCandidate(
-            channel = UpdateChannel.STABLE,
+            channel = channel,
             notes = release.optString("body").take(8_000),
             downloadUrl = apk.optString("browser_download_url"),
             digest = apk.optString("digest").takeIf(String::isNotBlank),
             archive = false,
             size = apk.optLong("size", 0)
-        ) ?: throw UpdateException("Stable update metadata failed validation")
-        candidate.let {
-            if (KlyroUpdatePolicy.isNewer(installed, it.version)) UpdateLookup.Available(it)
-            else UpdateLookup.Current
-        } ?: UpdateLookup.NonePublished
-      } catch (failure: UpdateException) {
-        if (failure.message?.contains("HTTP 404") == true) UpdateLookup.NonePublished else throw failure
-      }
-    }
-
-    private fun checkPreview(branch: String, installed: KlyroVersion): UpdateLookup {
-        val safeBranch = KlyroUpdatePolicy.branchOrMain(branch)
-        val encodedBranch = java.net.URLEncoder.encode(safeBranch, Charsets.UTF_8.name())
-        val runs = getJson("$api/actions/workflows/android-build.yml/runs?branch=$encodedBranch&status=success&per_page=10")
-            .optJSONArray("workflow_runs") ?: return UpdateLookup.NonePublished
-        for (index in 0 until runs.length()) {
-            val run = runs.optJSONObject(index) ?: continue
-            if (run.optString("head_branch") != safeBranch || run.optString("conclusion") != "success" ||
-                run.optString("status") != "completed") continue
-            val artifacts = getJson("${run.optString("artifacts_url")}?per_page=100")
-                .optJSONArray("artifacts") ?: continue
-            val artifact = artifacts.findByName(KlyroUpdatePolicy.SIGNED_PREVIEW_ARTIFACT) ?: continue
-            val workflowPath = run.optJSONObject("path")?.optString("path")
-                ?: run.optString("path")
-            val digest = artifact.optString("digest").takeIf(String::isNotBlank)
-            val policyArtifact = PreviewArtifact(
-                name = artifact.optString("name"), expired = artifact.optBoolean("expired", true),
-                sizeBytes = artifact.optLong("size_in_bytes", 0), branch = safeBranch,
-                workflowPath = workflowPath, runConclusion = run.optString("conclusion"), digest = digest
-            )
-            if (!KlyroUpdatePolicy.isEligiblePreview(policyArtifact, safeBranch)) continue
-            val versionCode = run.optLong("run_number", 0) * 100 + run.optLong("run_attempt", 1) + 31
-            val versionName = "Build ${run.optLong("run_number")}.${run.optLong("run_attempt", 1)}"
-            val candidate = KlyroUpdateCandidate(
-                UpdateChannel.PREVIEW,
-                KlyroVersion(versionCode, versionName),
-                "Preview build from ${safeBranch}. ${run.optString("head_sha").take(7)}",
-                artifact.optString("archive_download_url"), digest, true,
-                artifact.optLong("size_in_bytes", 0), safeBranch
-            )
-            return if (KlyroUpdatePolicy.isNewer(installed, candidate.version))
-                UpdateLookup.Available(candidate) else UpdateLookup.Current
-        }
-        return UpdateLookup.NonePublished
+        ) ?: throw UpdateException("Release update metadata failed validation")
+        return if (KlyroUpdatePolicy.isNewer(installed, candidate.version)) {
+            UpdateLookup.Available(candidate)
+        } else UpdateLookup.Current
     }
 
     fun download(candidate: KlyroUpdateCandidate, onProgress: (Long, Long) -> Unit): File {
@@ -109,7 +97,7 @@ internal class KlyroUpdateRepository(private val context: Context) {
         try {
             transfer(candidate.downloadUrl, source,
                 candidate.artifactSize.takeIf { it > 0 } ?: KlyroUpdatePolicy.MAX_PREVIEW_ZIP_BYTES,
-                candidate.isArchive, onProgress)
+                candidate.channel == UpdateChannel.PREVIEW, onProgress)
         } catch (failure: Throwable) {
             source.delete()
             throw failure
@@ -234,6 +222,10 @@ internal class KlyroUpdateRepository(private val context: Context) {
             if (connection.responseCode !in 200..299) {
                 if (isPreview && connection.responseCode in setOf(404, 410)) {
                     throw UpdateException("This Preview build has expired. Check again to find the latest build.",
+                        stalePreview = true)
+                }
+                if (isPreview && connection.responseCode == 401) {
+                    throw UpdateException("This Preview download is unavailable without signing in. Check for another Preview.",
                         stalePreview = true)
                 }
                 throw UpdateException("Download failed with HTTP ${connection.responseCode}")

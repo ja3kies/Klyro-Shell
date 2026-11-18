@@ -27,8 +27,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
     def test_typography_controls_use_slider_not_oversized_steppers(self):
         settings = src(UI / "KlyroSettingsSheet.kt")
         self.assertIn("KlyroThinSlider(", settings)
-        self.assertIn("valueRange = 9f..24f", settings)
-        self.assertIn("steps = 29", settings)
+        self.assertIn("valueRange = KlyroTerminalFonts.MIN_SIZE.toFloat()..KlyroTerminalFonts.MAX_SIZE.toFloat()", settings)
+        self.assertIn("steps = KlyroTerminalFonts.MAX_SIZE - KlyroTerminalFonts.MIN_SIZE - 1", settings)
         shared = src(UI / "KlyroUiComponents.kt")
         self.assertIn("SliderDefaults.colors(", shared)
         self.assertIn("thumb = {", shared)
@@ -236,7 +236,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertNotIn('sessionClient.setOutputObserver(observer)', terminal)
         self.assertNotIn(' · Selected', workspace)
         self.assertIn('textAlign = TextAlign.Start', workspace)
-        self.assertIn('Text(\n                    "Sessions"', workspace)
+        self.assertIn('Text("Sessions"', workspace)
         self.assertNotIn('"Sessions (" + projectTabs.size', workspace)
 
     def test_hugeicons_assets_are_vectorized_and_ui_actions_use_real_icons(self):

@@ -21,27 +21,19 @@ class InAppUpdateContractTest(unittest.TestCase):
     def test_settings_checks_on_entry_and_has_manual_recheck(self):
         self.assertIn('LaunchedEffect(section, updateChannel)', SETTINGS)
         self.assertIn('if (section == "updates") checkForUpdates()', SETTINGS)
-        self.assertIn('Text(if (updateChecking) "Checking…" else "Check for updates")', SETTINGS)
+        self.assertIn('else -> "Check for updates"', SETTINGS)
 
     def test_stable_source_selects_latest_release_and_named_apk(self):
         self.assertIn('"$api/releases/latest"', REPO)
         self.assertIn('findByName("klyro-shell.apk")', REPO)
         self.assertIn('findByName("klyro-update.json")', REPO)
 
-    def test_preview_is_branch_and_workflow_scoped(self):
-        self.assertIn('android-build.yml/runs?branch=$encodedBranch&status=success', REPO)
-        self.assertIn('run.optString("head_branch") != safeBranch', REPO)
-        self.assertIn('WORKFLOW_PATH = ".github/workflows/android-build.yml"', POLICY)
-
-    def test_only_signed_preview_artifact_is_eligible(self):
-        self.assertIn('SIGNED_PREVIEW_ARTIFACT = "klyro-shell-debug"', POLICY)
-        self.assertIn('artifact.name == SIGNED_PREVIEW_ARTIFACT', POLICY)
-        self.assertNotIn('SIGNED_PREVIEW_ARTIFACT = "klyro-shell-debug-key"', POLICY)
-
-    def test_preview_requires_completed_success_and_sha256(self):
-        self.assertIn('run.optString("status") != "completed"', REPO)
-        self.assertIn('runConclusion == "success"', POLICY)
-        self.assertIn('sha256:[a-fA-F0-9]{64}', POLICY)
+    def test_preview_is_branch_scoped_and_uses_public_release_assets(self):
+        self.assertIn('releases/tags/preview-$branchHash', REPO)
+        self.assertIn('manifest.optString("branch") != branch', REPO)
+        self.assertIn('release.optBoolean("prerelease")', REPO)
+        self.assertIn('apk.optString("browser_download_url")', REPO)
+        self.assertNotIn('archive_download_url', REPO)
 
     def test_expired_preview_has_separate_message_and_recovery_action(self):
         self.assertIn('connection.responseCode in setOf(404, 410)', REPO)
