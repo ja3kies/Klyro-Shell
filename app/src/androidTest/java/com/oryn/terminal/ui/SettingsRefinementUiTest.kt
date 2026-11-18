@@ -11,9 +11,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -100,6 +103,30 @@ class SettingsRefinementUiTest {
         ui.onNodeWithContentDescription("Font size 16 sp").performScrollTo().performClick()
         ui.onNodeWithContentDescription("Font size 16 sp").assertIsSelected()
         ui.runOnIdle { assertEquals(16f, size.value) }
+    }
+
+    @Test fun fontSizePresetsStackAtLargeTextScale() {
+        ui.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
+                MaterialTheme { Fixture("appearance", fontSize = 13.5f) }
+            }
+        }
+        val bounds = listOf("12 sp", "13.5 sp", "16 sp").map { label ->
+            ui.onNodeWithContentDescription("Font size $label")
+                .performScrollTo().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        }
+        assertTrue(bounds[1].top >= bounds[0].bottom)
+        assertTrue(bounds[2].top >= bounds[1].bottom)
+    }
+
+    @Test fun settingsCategoryButtonExposesTitleAndSubtitle() {
+        ui.setContent { MaterialTheme { Fixture("home") } }
+        val tile = ui.onNodeWithText("Appearance")
+        tile.assertIsDisplayed().assertHasClickAction()
+        val labels = tile.fetchSemanticsNode().config[SemanticsProperties.Text].map { it.text }
+        assertTrue(labels.contains("Appearance"))
+        assertTrue(labels.contains("Themes & type"))
     }
 
     @Test fun foldedMonochromeChoicesKeepExistingThemesAndCurrentValue() {
@@ -191,10 +218,10 @@ class SettingsRefinementUiTest {
         ui.setContent {
             MaterialTheme { if (visible.value) Fixture("home", onDismiss = { closes++; visible.value = false }) }
         }
-        ui.onNodeWithContentDescription("Appearance").performClick()
+        ui.onNodeWithText("Appearance").performClick()
         ui.onNodeWithText("App theme").assertIsDisplayed()
         ui.onNodeWithText("Settings").performClick()
-        ui.onNodeWithContentDescription("Appearance").assertIsDisplayed()
+        ui.onNodeWithText("Appearance").assertIsDisplayed()
         ui.onNodeWithText("Close").performClick()
         ui.runOnIdle { assertEquals(1, closes) }
         ui.onNodeWithTag("klyro-modal-sheet").assertDoesNotExist()

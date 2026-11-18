@@ -6,5 +6,5 @@ class WarningNoteRotationTest(unittest.TestCase):
  def test_warning_dismissal_saved_per_session(self):
   self.assertIn("var warningNoteDismissed by rememberSaveable(session, runtimeHasWarnings)",S)
   self.assertIn("runtimeHasWarnings && sessionFailureMessage == null && !warningNoteDismissed",S)
-  self.assertIn("onClick = { warningNoteDismissed = true }",S)
+  self.assertIn("onDismiss = { warningNoteDismissed = true }",S)
 if __name__=="__main__":unittest.main()

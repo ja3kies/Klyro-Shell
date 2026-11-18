@@ -17,10 +17,13 @@ class RobotAccessibleRoutesTests(unittest.TestCase):
         fragment = MAIN[start:start + 220]
         self.assertIn('contentDescription = "Settings"', fragment)
 
-    def test_settings_section_tiles_have_semantic_names(self):
+    def test_settings_section_tiles_merge_both_visible_labels(self):
         function = SETTINGS.split("private fun SettingsBentoTile(", 1)[1]
         fragment = function.split("private fun ", 1)[0]
-        self.assertIn('contentDescription = title', fragment)
+        self.assertIn('Text(title', fragment)
+        self.assertIn('Text(subtitle', fragment)
+        self.assertNotIn('contentDescription = title', fragment)
+        self.assertIn('clickable(role = Role.Button', fragment)
         self.assertIn('onClickLabel = "Open " + title', fragment)
 
     def test_icon_only_custom_accent_has_accessible_semantic_description(self):
