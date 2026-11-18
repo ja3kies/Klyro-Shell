@@ -55,6 +55,18 @@ class SessionTabActionContract(unittest.TestCase):
         self.assertIn("KlyroTerminalSessionTab(", PANE)
         self.assertNotIn('KlyroMenuItem("Session shortcuts"', PANE)
 
+    def test_real_terminal_menu_opens_the_active_session_management_sheet(self):
+        ui_test = (ROOT / "app/src/androidTest/java/com/oryn/terminal/ui/"
+                   "TerminalSessionManagementRouteUiTest.kt").read_text()
+        for action in (
+            'onNodeWithContentDescription("More actions").performClick()',
+            'onNodeWithText("Manage active session").assertIsDisplayed().performClick()',
+            'onNodeWithText("Rename").assertIsDisplayed()',
+            'onNodeWithText("Close terminal").assertIsDisplayed()',
+        ):
+            with self.subTest(action=action):
+                self.assertIn(action, ui_test)
+
 
 if __name__ == "__main__":
     unittest.main()
