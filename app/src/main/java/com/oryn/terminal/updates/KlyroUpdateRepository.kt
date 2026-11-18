@@ -106,11 +106,21 @@ internal class KlyroUpdateRepository(private val context: Context) {
         val updatesDir = File(context.cacheDir, "updates").apply { mkdirs() }
         updatesDir.listFiles()?.forEach { it.delete() }
         val source = File(updatesDir, if (candidate.isArchive) "preview.zip" else "download.apk")
-        transfer(candidate.downloadUrl, source, candidate.artifactSize.takeIf { it > 0 } ?: KlyroUpdatePolicy.MAX_PREVIEW_ZIP_BYTES, onProgress)
+        try {
+            transfer(candidate.downloadUrl, source,
+                candidate.artifactSize.takeIf { it > 0 } ?: KlyroUpdatePolicy.MAX_PREVIEW_ZIP_BYTES,
+                candidate.isArchive, onProgress)
+        } catch (failure: Throwable) {
+            source.delete()
+            throw failure
+        }
         candidate.expectedDigest?.let { expected ->
             val normalized = KlyroUpdatePolicy.normalizeDigest(expected)
                 ?: throw UpdateException("GitHub returned an invalid SHA-256 digest")
-            if (sha256(source) != normalized) throw UpdateException("Downloaded file failed SHA-256 verification")
+            if (sha256(source) != normalized) {
+                source.delete()
+                throw UpdateException("Downloaded file failed SHA-256 verification")
+            }
         }
         if (!candidate.isArchive) return source
         val apk = File(updatesDir, "klyro-shell.apk")
@@ -208,7 +218,10 @@ internal class KlyroUpdateRepository(private val context: Context) {
         } finally { connection.disconnect() }
     }
 
-    private fun transfer(url: String, destination: File, maxBytes: Long, onProgress: (Long, Long) -> Unit) {
+    private fun transfer(
+        url: String, destination: File, maxBytes: Long, isPreview: Boolean,
+        onProgress: (Long, Long) -> Unit
+    ) {
         if (!url.startsWith("https://api.github.com/") && !url.startsWith("https://github.com/")) {
             throw UpdateException("Unexpected download URL")
         }
@@ -218,7 +231,13 @@ internal class KlyroUpdateRepository(private val context: Context) {
             connection.readTimeout = 30_000
             connection.setRequestProperty("User-Agent", "Klyro-Shell-Updater")
             connection.connect()
-            if (connection.responseCode !in 200..299) throw UpdateException("Download failed with HTTP ${connection.responseCode}")
+            if (connection.responseCode !in 200..299) {
+                if (isPreview && connection.responseCode in setOf(404, 410)) {
+                    throw UpdateException("This Preview build has expired. Check again to find the latest build.",
+                        stalePreview = true)
+                }
+                throw UpdateException("Download failed with HTTP ${connection.responseCode}")
+            }
             val declared = connection.contentLengthLong
             if (declared > maxBytes) throw UpdateException("Download exceeds the size limit")
             connection.inputStream.use { input -> FileOutputStream(destination).use { output ->
@@ -249,4 +268,4 @@ internal class KlyroUpdateRepository(private val context: Context) {
     }
 }
 
-internal class UpdateException(message: String) : Exception(message)
+internal class UpdateException(message: String, val stalePreview: Boolean = false) : Exception(message)

@@ -43,6 +43,20 @@ class InAppUpdateContractTest(unittest.TestCase):
         self.assertIn('runConclusion == "success"', POLICY)
         self.assertIn('sha256:[a-fA-F0-9]{64}', POLICY)
 
+    def test_expired_preview_has_separate_message_and_recovery_action(self):
+        self.assertIn('connection.responseCode in setOf(404, 410)', REPO)
+        self.assertIn('stalePreview = true', REPO)
+        self.assertIn('Find a newer Preview', SETTINGS)
+        self.assertIn('!updateStalePreview', SETTINGS)
+
+    def test_channel_switch_is_disabled_while_checking_or_downloading(self):
+        self.assertIn('enabled = !updateDownloading && !updateChecking', SETTINGS)
+
+    def test_invalid_and_replaced_apks_are_removed_from_cache(self):
+        self.assertIn('if (sha256(source) != normalized) {\n                source.delete()', REPO)
+        self.assertIn('unverifiedDownload?.delete()', SETTINGS)
+        self.assertIn('downloadedUpdate?.delete()', SETTINGS)
+
     def test_asset_downloads_are_bounded_and_digest_checked(self):
         self.assertIn('MAX_APK_BYTES = 250L * 1024L * 1024L', POLICY)
         self.assertIn('MAX_PREVIEW_ZIP_BYTES = 300L * 1024L * 1024L', POLICY)
