@@ -129,6 +129,15 @@ class SettingsRefinementUiTest {
         assertTrue(labels.contains("Themes & type"))
     }
 
+    @Test fun appUpdatesRowIsAFullWidthAccessibleSettingsAction() {
+        ui.setContent { MaterialTheme { Fixture("home") } }
+        val row = ui.onNodeWithText("App updates").performScrollTo()
+            .assertIsDisplayed().assertHasClickAction()
+        assertTrue("Update destination must keep a 48 dp touch target",
+            row.fetchSemanticsNode().boundsInRoot.height >= with(ui.density) { 48.dp.toPx() })
+        ui.onNodeWithText("Check and install Klyro updates").assertIsDisplayed()
+    }
+
     @Test fun foldedMonochromeChoicesKeepExistingThemesAndCurrentValue() {
         val mode = mutableStateOf("light")
         ui.setContent {

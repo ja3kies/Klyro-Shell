@@ -1,0 +1,99 @@
+{
+  "kind": "architecture",
+  "goal": "Let users discover and install Klyro updates from Settings without visiting GitHub.",
+  "proposal": "Provide stable and preview update channels from the existing public GitHub repository.",
+  "evidence": [
+    {
+      "source": "GitHub REST GET /repos/ja3kies/Klyro-Shell/releases?per_page=20",
+      "finding": "The repository currently has no published releases.",
+      "level": "observed"
+    },
+    {
+      "source": ".github/workflows/android-build.yml",
+      "finding": "The Klyro-signed APK artifact is uploaded by CI with 14-day retention; the Klyro signing step is available on the current repository CI.",
+      "level": "observed"
+    },
+    {
+      "source": "docs/BRANCH_AND_RELEASE_POLICY.md",
+      "finding": "A successful CI run does not authorize a release or main merge; versionCode is generated from a monotonic workflow run counter.",
+      "level": "observed"
+    },
+    {
+      "source": "Android Developers app signing and PackageInstaller docs",
+      "finding": "Updates must retain the signing identity; sideloaded installation can require user approval.",
+      "level": "observed"
+    }
+  ],
+  "direct_check": {
+    "status": "found",
+    "source": "GitHub Releases REST endpoint and current android-build.yml artifacts",
+    "finding": "Stable releases are durable but none exist today; CI artifacts provide a preview source but expire after 14 days."
+  },
+  "assumptions": [
+    {
+      "claim": "Stable is the default update channel.",
+      "state": "verified",
+      "basis": "The user selected the dual-channel option, which was presented as stable by default."
+    },
+    {
+      "claim": "Preview follows the branch encoded in the installed CI APK; local builds use main.",
+      "state": "unverified",
+      "basis": "This maps updates to the code line the user installed without asking for a branch name; validate through CI metadata tests."
+    },
+    {
+      "claim": "The in-app flow may download an APK but Android confirms installation.",
+      "state": "verified",
+      "basis": "Android PackageInstaller and unknown-source approval behavior."
+    }
+  ],
+  "decision_axes": [
+    {
+      "name": "Update source",
+      "considered": ["latest stable GitHub release", "latest successful branch CI artifact", "both channels"],
+      "selected": "both channels; stable default and preview selectable"
+    },
+    {
+      "name": "Install handoff",
+      "considered": ["silent install", "Android system installer with explicit approval"],
+      "selected": "Android system installer with explicit approval"
+    }
+  ],
+  "alternatives": [
+    {
+      "name": "Stable releases only",
+      "benefit": "Durable, named, reviewable APKs and the simplest trust model.",
+      "risk": "Does not expose development builds; no release is currently published.",
+      "reversal": "Add a preview source without changing the stable endpoint."
+    },
+    {
+      "name": "Latest CI artifact only",
+      "benefit": "Makes the newest successful development APK available without leaving the app.",
+      "risk": "Artifact expiry, branch ambiguity, and no durable stable channel.",
+      "reversal": "Replace it with a release source; app data and installer stay unchanged."
+    },
+    {
+      "name": "Stable and Preview",
+      "benefit": "Covers durable public updates and the user's branch-testing workflow.",
+      "risk": "Adds branch/artifact discovery, expiration and channel-state handling.",
+      "reversal": "Remove Preview while preserving the stable channel and installed app data."
+    }
+  ],
+  "horizons": [
+    {
+      "stage": "current",
+      "scenario": "The app has no stable GitHub release and development APKs are CI artifacts.",
+      "consequence": "Stable shows no release; Preview can find the installed branch's signed CI artifact."
+    },
+    {
+      "stage": "later",
+      "scenario": "Klyro publishes stable releases or changes its distribution provider.",
+      "consequence": "Stable keeps a durable update source; Play distribution would require replacing this installer flow."
+    }
+  ],
+  "decision": {
+    "action": "proceed",
+    "choice": "Implement stable GitHub Releases and branch-aware Preview CI updates in Settings; validate artifacts before presenting the Android installer.",
+    "reason": "The user selected both channels; the repository has neither stable releases nor a current in-app updater, while the CI already produces Klyro-signed branch APKs.",
+    "invalidated_by": "Preview artifacts become private/inaccessible or no longer carry the Klyro signing identity; the release channel moves to another distribution platform."
+  }
+}

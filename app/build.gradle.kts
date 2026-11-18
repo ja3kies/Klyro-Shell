@@ -21,8 +21,12 @@ val ciBuild = if (System.getenv("GITHUB_ACTIONS") == "true") {
 
 val finalVersionCode = baseKlyroVersionCode +
     (ciBuild?.let { (run, attempt) -> run * 100 + attempt } ?: 0)
-val finalVersionName = baseKlyroVersionName +
-    (ciBuild?.let { (run, attempt) -> ".$run.$attempt" } ?: "")
+val releaseVersionName = System.getenv("KLYRO_RELEASE_VERSION_NAME")?.takeIf { it.matches(Regex("[0-9]+\\.[0-9]+\\.[0-9]+")) }
+val finalVersionName = releaseVersionName ?: (baseKlyroVersionName +
+    (ciBuild?.let { (run, attempt) -> ".$run.$attempt" } ?: ""))
+val updateBranch = (System.getenv("GITHUB_HEAD_REF")?.takeIf { it.isNotBlank() }
+    ?: System.getenv("GITHUB_REF_NAME")?.takeIf { it.isNotBlank() && !it.startsWith("v") }
+    ?: "main").replace("\\", "").replace("\"", "")
 
 android {
     namespace = "com.oryn.terminal"
@@ -35,6 +39,7 @@ android {
         targetSdk = 36
         versionCode = finalVersionCode
         versionName = finalVersionName
+        buildConfigField("String", "UPDATE_BRANCH", "\"$updateBranch\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
