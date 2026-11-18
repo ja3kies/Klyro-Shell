@@ -17,6 +17,9 @@ test inspection; a current Settings capture and device execution are pending.
   Share use neutral outlines with consistent icon spacing.
 - Expose sheet/section headings to accessibility navigation; omit decorative
   preview glyphs from speech. Keep meaningful labels and selection semantics.
+- Keep Settings category tiles as large bento navigation buttons, but let their
+  merged button semantics announce both the destination and its short context.
+  Avoid replacing those visible labels with a title-only content description.
 - Show folder checking, failed lookup, empty and connected states separately.
   Failed permission reads offer a retry instead of being reported as zero folders.
 - A launcher display fallback is not a confirmed selection. Confirm the OS state
