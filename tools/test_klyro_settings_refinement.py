@@ -42,6 +42,13 @@ class SettingsRefinement(unittest.TestCase):
         self.assertIn('fontScale >= 1.3f', presets)
         self.assertIn('Role.RadioButton', presets)
 
+    def test_settings_category_destination_keeps_title_and_context_in_button_semantics(self):
+        tile = S.split('private fun SettingsBentoTile', 1)[1]
+        self.assertIn('.clickable(role = Role.Button', tile)
+        self.assertIn('Text(title', tile)
+        self.assertIn('Text(subtitle', tile)
+        self.assertNotIn('contentDescription = title', tile)
+
     def test_unknown_launcher_state_is_not_selected_as_default(self):
         self.assertIn('fun confirmedSelection(context: Context): String?', B)
         self.assertIn('brandReady = actual != null', S)

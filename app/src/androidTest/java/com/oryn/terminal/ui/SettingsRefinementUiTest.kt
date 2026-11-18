@@ -11,9 +11,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -117,6 +120,15 @@ class SettingsRefinementUiTest {
         assertTrue(bounds[2].top >= bounds[1].bottom)
     }
 
+    @Test fun settingsCategoryButtonExposesTitleAndSubtitle() {
+        ui.setContent { MaterialTheme { Fixture("home") } }
+        val tile = ui.onNodeWithText("Appearance")
+        tile.assertIsDisplayed().assertHasClickAction()
+        val labels = tile.fetchSemanticsNode().config[SemanticsProperties.Text].map { it.text }
+        assertTrue(labels.contains("Appearance"))
+        assertTrue(labels.contains("Themes & type"))
+    }
+
     @Test fun foldedMonochromeChoicesKeepExistingThemesAndCurrentValue() {
         val mode = mutableStateOf("light")
         ui.setContent {
@@ -206,10 +218,10 @@ class SettingsRefinementUiTest {
         ui.setContent {
             MaterialTheme { if (visible.value) Fixture("home", onDismiss = { closes++; visible.value = false }) }
         }
-        ui.onNodeWithContentDescription("Appearance").performClick()
+        ui.onNodeWithText("Appearance").performClick()
         ui.onNodeWithText("App theme").assertIsDisplayed()
         ui.onNodeWithText("Settings").performClick()
-        ui.onNodeWithContentDescription("Appearance").assertIsDisplayed()
+        ui.onNodeWithText("Appearance").assertIsDisplayed()
         ui.onNodeWithText("Close").performClick()
         ui.runOnIdle { assertEquals(1, closes) }
         ui.onNodeWithTag("klyro-modal-sheet").assertDoesNotExist()
