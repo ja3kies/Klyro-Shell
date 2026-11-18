@@ -104,7 +104,9 @@ class HomeAnimatedGifContract(unittest.TestCase):
         self.assertIn("val homeVisible = !showPlugins &&", HOME)
         self.assertIn("if (homeVisible) {", HOME)
         self.assertIn("KlyroHomePixelCover(bannerHeight, screenChrome, animate = !showHomeSettings && !showRepairConfirmation)", HOME)
-        self.assertIn(".66f to Color.Transparent", COVER)
+        self.assertIn(".50f to Color.Transparent", COVER)
+        self.assertIn(".74f to screenChrome.copy(alpha = .28f)", COVER)
+        self.assertIn(".90f to screenChrome.copy(alpha = .76f)", COVER)
         self.assertIn("1f to screenChrome", COVER)
         home = HOME.split("// The primary action, runtime and tools", 1)[1]
         self.assertLess(home.index("Spacer(Modifier.fillMaxWidth().height(bannerSpace))"),
