@@ -25,6 +25,30 @@ class SettingsRefinement(unittest.TestCase):
         self.assertIn('minimumInlineWidth: Dp = 340.dp', source)
         self.assertNotIn('maxLines = 1', P)
 
+    def test_accent_presets_are_exposed_as_one_radio_group(self):
+        appearance = S.split('"appearance" -> {', 1)[1].split('"keyboard" -> {', 1)[0]
+        swatches = appearance.split('KlyroColors.primary.forEach { preset ->', 1)[0]
+        self.assertIn('Modifier.selectableGroup()', swatches[-500:])
+        self.assertIn('clickable(role = Role.RadioButton', appearance)
+        self.assertIn('selected = active', appearance)
+
+    def test_font_size_presets_use_an_adaptive_single_choice_control(self):
+        appearance = S.split('"appearance" -> {', 1)[1].split('"keyboard" -> {', 1)[0]
+        presets = appearance.split('val fontPresets = listOf(12f, 13.5f, 16f)', 1)[1].split(
+            'KlyroAppearanceGroup("Launcher icon")', 1
+        )[0]
+        self.assertIn('SingleChoiceSegmentedButtonRow', presets)
+        self.assertIn('SegmentedButton(', presets)
+        self.assertIn('fontScale >= 1.3f', presets)
+        self.assertIn('Role.RadioButton', presets)
+
+    def test_settings_category_destination_keeps_title_and_context_in_button_semantics(self):
+        tile = S.split('private fun SettingsBentoTile', 1)[1]
+        self.assertIn('.clickable(role = Role.Button', tile)
+        self.assertIn('Text(title', tile)
+        self.assertIn('Text(subtitle', tile)
+        self.assertNotIn('contentDescription = title', tile)
+
     def test_unknown_launcher_state_is_not_selected_as_default(self):
         self.assertIn('fun confirmedSelection(context: Context): String?', B)
         self.assertIn('brandReady = actual != null', S)
