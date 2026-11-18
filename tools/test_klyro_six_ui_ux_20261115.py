@@ -72,8 +72,10 @@ class KlyroSixUiUx(unittest.TestCase):
         self.assertNotIn("tabStripScroll.maxValue.toLong() * selectedIndex", a)
         self.assertIn(".horizontalScroll(tabStripScroll)", a)
         self.assertIn("onClick = onNewTab", a)
-        self.assertIn("role = Role.Tab", a)
-        self.assertIn("selected = active", a)
+        tab = (Path(__file__).resolve().parents[1] /
+               "app/src/main/java/com/oryn/terminal/ui/KlyroTerminalSessionTab.kt").read_text()
+        self.assertIn("role = Role.Tab", tab)
+        self.assertIn("selected = active", tab)
 
 
 if __name__ == "__main__":

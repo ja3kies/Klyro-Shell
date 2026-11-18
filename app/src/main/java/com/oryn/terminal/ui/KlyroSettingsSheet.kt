@@ -795,7 +795,9 @@ internal fun KlyroSettingsSheet(
                     "freeze" -> FreezeReportsPane(onStabilityTestStarted = onDismiss)
                     "diagnostics" -> {
                         KlyroSectionHeading("Diagnostics", "Local checks; no commands run automatically.")
-                        Surface(
+                        if (diagnosticReport.isBlank()) {
+                            KlyroInlineNotice("No environment report yet. Run a check to create one.")
+                        } else Surface(
                             color = colors.tile,
                             shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                         ) {
@@ -813,10 +815,12 @@ internal fun KlyroSettingsSheet(
                             }
                         }
                         if (verifyingRuntime) {
-                            KlyroInlineNotice(
-                                "Checking the private environment. The current report " +
-                                    "will refresh when verification finishes."
-                            )
+                            Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                androidx.compose.material3.LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                KlyroInlineNotice(if (diagnosticReport.isBlank()) "Checking the environment…"
+                                    else "Checking the environment… The report above is the previous snapshot.")
+                            }
                         }
                         Button(
                             onClick = onRecheckEnvironment,
@@ -833,6 +837,7 @@ internal fun KlyroSettingsSheet(
                         KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false) {
                             OutlinedButton(
                                 onClick = onCopyDiagnostic,
+                                enabled = diagnosticReport.isNotBlank(),
                                 modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foreground),
@@ -846,6 +851,7 @@ internal fun KlyroSettingsSheet(
                             }
                             OutlinedButton(
                                 onClick = onShareDiagnostic,
+                                enabled = diagnosticReport.isNotBlank(),
                                 modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foreground),
