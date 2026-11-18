@@ -92,6 +92,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -838,31 +839,13 @@ fun TerminalPane(
         }
 
         if (runtimeHasWarnings && sessionFailureMessage == null && !warningNoteDismissed) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-                color = ui.warningContainer,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Environment warnings detected. Review Diagnostics for details.",
-                        color = ui.warningInk,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(
-                        onClick = { warningNoteDismissed = true },
-                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                    ) {
-                        Text("Dismiss", color = TerminalText, fontSize = 12.sp)
-                    }
-                }
-            }
+            KlyroTerminalRuntimeWarningBanner(
+                onReviewDiagnostics = {
+                    initialSettingsSection = "diagnostics"
+                    showTerminalSettings = true
+                },
+                onDismiss = { warningNoteDismissed = true }
+            )
         }
 
         Box(
@@ -1676,6 +1659,137 @@ fun TerminalPane(
 }
 
 internal enum class ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }
+
+@Composable
+internal fun KlyroTerminalRuntimeWarningBanner(
+    onReviewDiagnostics: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val ui = LocalKlyroColors.current
+    val largeText = LocalDensity.current.fontScale >= 1.5f
+    Surface(
+        modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .semantics {
+                liveRegion = LiveRegionMode.Polite
+                testTag = "terminal-runtime-warning"
+            },
+        color = ui.warningContainer,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.cardCorner),
+        border = BorderStroke(1.dp, ui.warningInk.copy(alpha = 0.16f))
+    ) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val stacked = maxWidth < 380.dp || largeText
+            if (stacked) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    KlyroTerminalWarningCopy(Modifier.fillMaxWidth())
+                    KlyroTerminalWarningActions(
+                        onReviewDiagnostics = onReviewDiagnostics,
+                        onDismiss = onDismiss,
+                        stacked = largeText,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    KlyroTerminalWarningCopy(Modifier.weight(1f))
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                    ) { Text("Dismiss", color = ui.foreground) }
+                    KlyroTerminalDiagnosticsButton(
+                        onClick = onReviewDiagnostics
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun KlyroTerminalWarningCopy(modifier: Modifier = Modifier) {
+    val ui = LocalKlyroColors.current
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            "Environment checks need attention",
+            color = ui.warningInk,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            "One or more shell checks need a closer look.",
+            color = ui.warningInk,
+            fontSize = 12.sp,
+            lineHeight = 17.sp
+        )
+    }
+}
+
+@Composable
+private fun KlyroTerminalWarningActions(
+    onReviewDiagnostics: () -> Unit,
+    onDismiss: () -> Unit,
+    stacked: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (stacked) {
+        Column(
+            modifier = modifier,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            KlyroTerminalDiagnosticsButton(
+                onClick = onReviewDiagnostics,
+                modifier = Modifier.fillMaxWidth()
+            )
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+            ) { Text("Dismiss") }
+        }
+    } else {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+            ) { Text("Dismiss") }
+            KlyroTerminalDiagnosticsButton(
+                onClick = onReviewDiagnostics
+            )
+        }
+    }
+}
+
+@Composable
+private fun KlyroTerminalDiagnosticsButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val ui = LocalKlyroColors.current
+    Button(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = KlyroUiMetrics.minTouch),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = ui.accent,
+            contentColor = ui.onAccent
+        )
+    ) { Text("Review diagnostics") }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
