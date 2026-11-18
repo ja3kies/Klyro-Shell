@@ -1,7 +1,11 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.LocalRippleConfiguration
+import androidx.compose.material3.RippleConfiguration
+import androidx.compose.material3.ripple
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -69,6 +73,24 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.oryn.terminal.R
+
+/**
+ * Transparent touch indication for the entire Klyro Compose surface.
+ *
+ * Keep clicks, haptics, drag gestures, selected states and accessibility semantics
+ * intact. Only the press/ripple overlay is transparent. Direct foundation
+ * clickables read LocalIndication; Material3 controls read RippleConfiguration.
+ * This intentionally does not change Android system views or the terminal IME.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun KlyroTransparentTouchFeedback(content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalIndication provides ripple(color = Color.Transparent),
+        LocalRippleConfiguration provides RippleConfiguration(color = Color.Transparent),
+        content = content
+    )
+}
 
 /**
  * Shared presentation primitives for Klyro sheets, menus and action rows.
@@ -212,7 +234,6 @@ internal fun KlyroMenuItem(
 ) {
     val colors = LocalKlyroColors.current
     val ink = if (!enabled) colors.muted else if (destructive) colors.danger else colors.foreground
-    CompositionLocalProvider(LocalRippleConfiguration provides null) {
     DropdownMenuItem(
         text = { Text(label, color = ink) },
         leadingIcon = { Icon(painterResource(icon), contentDescription = null, tint = ink,
@@ -226,7 +247,6 @@ internal fun KlyroMenuItem(
         enabled = enabled,
         onClick = onClick
     )
-    }
 }
 
 @Composable
