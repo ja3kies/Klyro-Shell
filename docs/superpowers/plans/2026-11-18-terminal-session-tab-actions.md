@@ -10,7 +10,7 @@ Make each session pill behave like the `Role.Tab` it advertises: tapping any tab
 - PR #47 is still a draft and its hosted head `fa7318a` has a successful Android build run `44356430631`.
 - PRs #32 and #33 are still drafts; #33's latest observed run `43792033879` succeeded. PR #32 has no workflow run discoverable for its head in the GitHub connector, so do not describe it as CI-validated.
 - Baseline `python3 tools/test_klyro_session_tab_semantics.py`: PASS, but it only guards a handful of structural semantics and misses the active-tab tap mismatch.
-- Corrected focused session-tab source suite: 7 PASS; full Python regression suite: 639 PASS.
+- Corrected focused session-tab source suite: 8 PASS; full Python regression suite: 640 PASS.
 
 ## 45-point completion checklist
 
@@ -36,7 +36,7 @@ Make each session pill behave like the `Role.Tab` it advertises: tapping any tab
 - [x] 15. Keep the unread-output dot for inactive sessions.
 - [x] 16. Keep the compact activity badge and its existing color mapping.
 - [x] 17. Keep horizontal strip scrolling and selected-tab bring-into-view.
-- [x] 18. Preserve the always-reachable New session action at the eight-tab limit.
+- [x] 18. Pin More and New session actions outside the tab scroller at the eight-tab limit.
 
 ### Accessibility contract (19–27)
 

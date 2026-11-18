@@ -23,6 +23,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
@@ -678,14 +679,17 @@ fun TerminalPane(
             modifier = Modifier.fillMaxWidth().background(TerminalSurface),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Pin the menu beside the tab scroller so the active tab can never
+            // scroll the only visible route to session management off-screen.
+            if (compact) toolsMenu()
             Row(
                 modifier = Modifier.weight(1f)
                     .horizontalScroll(tabStripScroll)
+                    .selectableGroup()
                     .padding(start = 10.dp, top = 2.dp, bottom = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (compact) toolsMenu()
                 tabs.forEach { (id, tabTitle) ->
                 val active = id == activeTabId
                 val activityTag = compactActivity(id)

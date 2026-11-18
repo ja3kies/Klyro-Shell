@@ -60,13 +60,27 @@ class SessionTabActionContract(unittest.TestCase):
         ui_test = (ROOT / "app/src/androidTest/java/com/oryn/terminal/ui/"
                    "TerminalSessionManagementRouteUiTest.kt").read_text()
         for action in (
-            'onNodeWithContentDescription("More actions").performClick()',
+            'onNodeWithContentDescription("More actions")',
             'onNodeWithText("Manage active session").assertIsDisplayed().performClick()',
             'onNodeWithText("Rename").assertIsDisplayed()',
             'onNodeWithText("Close terminal").assertIsDisplayed()',
         ):
             with self.subTest(action=action):
                 self.assertIn(action, ui_test)
+
+    def test_more_menu_stays_pinned_outside_the_horizontally_scrolling_tab_group(self):
+        strip = PANE.split("// The new-session action remains", 1)[1].split(
+            "Box(\n                modifier = Modifier\n                    .size(48.dp)", 1
+        )[0]
+        self.assertLess(strip.index("if (compact) toolsMenu()"),
+                        strip.index(".horizontalScroll(tabStripScroll)"))
+        tab_items = strip.split(".horizontalScroll(tabStripScroll)", 1)[1]
+        self.assertIn(".selectableGroup()", tab_items)
+        self.assertNotIn("toolsMenu()", tab_items)
+        route_test = (ROOT / "app/src/androidTest/java/com/oryn/terminal/ui/"
+                      "TerminalSessionManagementRouteUiTest.kt").read_text()
+        self.assertIn("(1L..8L).map", route_test)
+        self.assertIn('onNodeWithContentDescription("More actions")\n                .assertIsDisplayed()', route_test)
 
 
 if __name__ == "__main__":

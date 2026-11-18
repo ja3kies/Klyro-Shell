@@ -9,11 +9,10 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertWidthIsAtLeast
-import androidx.compose.ui.test.fetchSemanticsNode
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performLongClick
+import androidx.compose.ui.test.performTouchInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -54,7 +53,8 @@ class KlyroTerminalSessionTabUiTest {
         var managed = 0
         showTab(active = false, unread = false, onSelect = {}, onManage = { managed++ })
 
-        ui.onNodeWithContentDescription("Build, project General").performLongClick()
+        ui.onNodeWithContentDescription("Build, project General")
+            .performTouchInput { longClick() }
         ui.runOnIdle { assertEquals(1, managed) }
     }
 
@@ -63,7 +63,7 @@ class KlyroTerminalSessionTabUiTest {
         showTab(active = true, unread = false, onSelect = {}, onManage = { managed++ })
 
         val action = ui.onNodeWithContentDescription("Build, project General")
-            .fetchSemanticsNode().config[SemanticsProperties.CustomActions]
+            .fetchSemanticsNode().config[SemanticsActions.CustomActions]
             .single { it.label == "Manage session" }
         assertTrue(action.action())
         ui.runOnIdle { assertEquals(1, managed) }
@@ -77,7 +77,7 @@ class KlyroTerminalSessionTabUiTest {
         assertEquals(Role.Tab, semantics[SemanticsProperties.Role])
         assertEquals("Open terminal, Running, New terminal output",
             semantics[SemanticsProperties.StateDescription])
-        assertTrue(semantics[SemanticsProperties.CustomActions].any { it.label == "Manage session" })
+        assertTrue(semantics[SemanticsActions.CustomActions].any { it.label == "Manage session" })
         assertEquals("Select session", semantics[SemanticsActions.OnClick].label)
         assertEquals("Manage session", semantics[SemanticsActions.OnLongClick].label)
     }

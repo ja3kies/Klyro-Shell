@@ -19,7 +19,7 @@ import org.junit.Test
 class TerminalSessionManagementRouteUiTest {
     @get:Rule val ui = createAndroidComposeRule<ComponentActivity>()
 
-    @Test fun moreMenuCanOpenTheActiveSessionsManagementSheet() {
+    @Test fun pinnedMoreMenuRemainsReachableAfterEightTabsScrollToTheActiveSession() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val client = OrynTerminalSessionClient(context, null)
         val viewClient = OrynTerminalViewClient(context)
@@ -33,16 +33,18 @@ class TerminalSessionManagementRouteUiTest {
                     TerminalPane(
                         session = session, darkChrome = true, themeMode = "dark", accentId = "mint",
                         onAccentIdChange = {}, onThemeModeChange = {}, title = "Build",
-                        tabs = listOf(7L to "Build"), activeTabId = 7L, outputRevision = 0,
+                        tabs = (1L..8L).map { it to "Terminal $it" },
+                        activeTabId = 8L, outputRevision = 0,
                         launchingBash = false,
                         workspaces = listOf(KlyroWorkspaceCatalog.Entry("general", "General")),
-                        selectedWorkspaceId = "general", tabWorkspaces = mapOf(7L to "general"),
+                        selectedWorkspaceId = "general",
+                        tabWorkspaces = (1L..8L).associateWith { "general" },
                         tabsWithUnreadOutput = emptySet(), finishedTabIds = emptySet(),
-                        jobSessions = mapOf(7L to session), lastOutputElapsedMs = emptyMap(),
+                        jobSessions = mapOf(8L to session), lastOutputElapsedMs = emptyMap(),
                         onSelectWorkspace = {}, onCreateWorkspace = { true },
                         onRenameWorkspace = { _, _ -> true }, onDeleteWorkspace = {},
                         onAssignWorkspace = { _, _ -> }, diagnosticReport = "Fixture", onRecheck = {},
-                        currentSessionId = { 7L }, onSelectTab = {}, onRenameTab = { _, _ -> },
+                        currentSessionId = { 8L }, onSelectTab = {}, onRenameTab = { _, _ -> },
                         onCloseTab = {}, onNewTab = {}, onReturnHome = {}, onImportFile = {},
                         onExportFile = {}, onSetupStorage = {}, onImportStorageFolder = {},
                         sessionClient = client, viewClient = viewClient, sessionFailureMessage = null,
@@ -51,7 +53,8 @@ class TerminalSessionManagementRouteUiTest {
                 }
             }
 
-            ui.onNodeWithContentDescription("More actions").performClick()
+            ui.onNodeWithContentDescription("More actions")
+                .assertIsDisplayed().performClick()
             ui.onNodeWithText("Manage active session").assertIsDisplayed().performClick()
             ui.onNodeWithText("Rename").assertIsDisplayed()
             ui.onNodeWithText("Close terminal").assertIsDisplayed()
