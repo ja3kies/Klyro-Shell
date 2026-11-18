@@ -45,14 +45,14 @@ Stable GitHub releases by default and branch-aware Preview updates, entirely fro
 - [x] 39. Require the Klyro signing secret set before publishing a release.
 - [x] 40. Publish the exact signed asset name `klyro-shell.apk` and release notes.
 - [x] 41. Keep release job contents write permission scoped to that job.
-- [ ] 42. Add unit tests for channel parsing, version ordering, workflow/artifact selection.
-- [ ] 43. Add regression tests for digest mismatch, downgrade, package and signer rejection.
-- [ ] 44. Run full CI, JVM, lint and APK packaging (Python passed locally); fix any regressions.
+- [x] 42. Add unit tests for channel parsing, version ordering, workflow/artifact selection.
+- [x] 43. Add regression tests for digest mismatch, downgrade, package and signer rejection.
+- [x] 44. Run full CI, JVM, lint and APK packaging; exact-tree CI run 44393998412 passed, including 656 Python tests and APK signing.
 - [ ] 45. Install the delivered APK on Pixel 9, test both channels and capture real screens.
 
 ## Acceptance
 - All code and workflow changes are committed on this feature branch only.
 - No signed artifact is shown as installable before package, version, digest and signer checks.
 - Android's installer remains user-confirmed.
-- CI and source tests pass; real-device acceptance remains open unless the Pixel is available.
+- CI and source tests pass (44393998412); real-device acceptance remains open until Pixel 9 installation, screenshots and TalkBack review.
 - No visual score is claimed until the real screen capture is inspected.
