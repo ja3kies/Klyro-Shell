@@ -1862,7 +1862,7 @@ private fun KlyroHomeNavigationTile(
     val ui = LocalKlyroColors.current
     val iconColor = if (emphasized) ui.accent else ui.muted
     Surface(
-        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 124.dp),
+        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 112.dp),
         color = ui.tile,
         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
     ) {
@@ -1891,8 +1891,8 @@ private fun KlyroHomeNavigationTile(
             }
         } else {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
