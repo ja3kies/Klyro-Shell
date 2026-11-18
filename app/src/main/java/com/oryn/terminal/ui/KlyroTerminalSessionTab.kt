@@ -3,7 +3,8 @@ package com.oryn.terminal.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.material3.ripple
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.combinedClickable
@@ -51,14 +52,16 @@ internal fun KlyroTerminalSessionTab(
     val colors = LocalKlyroColors.current
     val safeTitle = title.ifBlank { "Session" }
     val contentInk = if (active) colors.onAccent else colors.foreground
+    val interactions = remember { MutableInteractionSource() }
+    val focused = interactions.collectIsFocusedAsState()
     Box(
         modifier = modifier
             .height(48.dp)
             .widthIn(min = KlyroUiMetrics.minTouch)
             .clip(RoundedCornerShape(24.dp))
             .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(),
+                interactionSource = interactions,
+                indication = null,
                 onClickLabel = "Select session",
                 onLongClickLabel = "Manage session",
                 onClick = onSelect,
@@ -87,6 +90,7 @@ internal fun KlyroTerminalSessionTab(
             modifier = Modifier.height(36.dp).widthIn(max = 140.dp),
             color = if (active) colors.accent else colors.key,
             contentColor = contentInk,
+            border = if (focused.value) BorderStroke(2.dp, colors.foreground) else null,
             shape = RoundedCornerShape(19.dp)
         ) {
             Row(

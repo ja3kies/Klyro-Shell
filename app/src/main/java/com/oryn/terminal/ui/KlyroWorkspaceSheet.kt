@@ -1,7 +1,9 @@
 package com.oryn.terminal.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
+import com.oryn.terminal.rememberHomeMotionEnabled
+import kotlin.math.sin
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -87,16 +89,22 @@ internal fun KlyroWorkspaceSheet(
     var editingSessions by rememberSaveable { mutableStateOf(false) }
     var renameSessionId by rememberSaveable { mutableStateOf<Long?>(null) }
     var closeSessionId by rememberSaveable { mutableStateOf<Long?>(null) }
-    val motionEnabled = android.os.Build.VERSION.SDK_INT < 26 || android.animation.ValueAnimator.areAnimatorsEnabled()
-    val wiggle by rememberInfiniteTransition(label = "session edit").animateFloat(
-        initialValue = -0.7f, targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(tween(220), RepeatMode.Reverse), label = "wiggle")
     var editorId by rememberSaveable { mutableStateOf<String?>(null) }
     var editorText by rememberSaveable { mutableStateOf("") }
     var editorError by rememberSaveable { mutableStateOf(false) }
     var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
     var menuId by rememberSaveable { mutableStateOf<String?>(null) }
     var lastAssignedWorkspaceId by rememberSaveable { mutableStateOf<String?>(null) }
+    val motionEnabled = rememberHomeMotionEnabled()
+    val editPhase = if (editingSessions && motionEnabled && renameSessionId == null &&
+        closeSessionId == null && editorId == null && deletingId == null && menuId == null
+    ) {
+        rememberInfiniteTransition(label = "Session editing").animateFloat(
+            initialValue = 0f, targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(2400, easing = LinearEasing)),
+            label = "Edit phase"
+        )
+    } else null
     LaunchedEffect(tabs) {
         if (renameSessionId != null && tabs.none { it.first == renameSessionId }) renameSessionId = null
         if (closeSessionId != null && tabs.none { it.first == closeSessionId }) closeSessionId = null
@@ -376,7 +384,17 @@ internal fun KlyroWorkspaceSheet(
                         val current = id == activeTabId
                         Surface(
                             modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
-                                .graphicsLayer { rotationZ = if (editingSessions && motionEnabled) wiggle else 0f }
+                                .graphicsLayer {
+                                    val phase = editPhase?.value
+                                    if (phase == null) {
+                                        rotationZ = 0f
+                                        translationY = 0f
+                                    } else {
+                                        val offset = (id % 17) / 17.0
+                                        rotationZ = (0.65 * sin(2 * Math.PI * (phase * 5 + offset))).toFloat()
+                                        translationY = (sin(2 * Math.PI * (phase * 7 + offset * 2))).toFloat().dp.toPx()
+                                    }
+                                }
                                 .clickable(
                                     enabled = !current && !editingSessions,
                                     role = Role.Button,

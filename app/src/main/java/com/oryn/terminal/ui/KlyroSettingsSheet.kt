@@ -513,7 +513,7 @@ internal fun KlyroSettingsSheet(
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
                                     val displayedFontSize = kotlin.math.round(fontSizeSp * 2f) / 2f
-                                    val fontSizeLabel = if (displayedFontSize % 1f == 0f) "${displayedFontSize.toInt()} sp" else "$displayedFontSize sp"
+                                    val fontSizeLabel = if (displayedFontSize % 1f == 0f) displayedFontSize.toInt().toString() else displayedFontSize.toString()
                                     KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false, minimumInlineWidth = appearanceInlineWidth) {
                                         Box(
                                             modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
