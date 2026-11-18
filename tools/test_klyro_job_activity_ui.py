@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 ROOT=Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal"
 S=(ROOT/"ui/TerminalPane.kt").read_text()
+TAB=(ROOT/"ui/KlyroTerminalSessionTab.kt").read_text()
 class JobActivityUiContracts(unittest.TestCase):
  def test_proc_polling_is_throttled_visible_only_and_off_main(self):
   self.assertIn('LaunchedEffect(jobSessions, lifecycleOwner)',S)
@@ -21,7 +22,8 @@ class JobActivityUiContracts(unittest.TestCase):
   self.assertIn('KlyroJobProbe.statusLabel',S)
   self.assertIn('KlyroJobProbe.elapsedLabel(',S)
  def test_accessibility_and_details_explain_uncertainty(self):
-  self.assertIn('append(activitySpeech(id))',S)
+  self.assertIn('activityAnnouncement = activitySpeech(id)',S)
+  self.assertIn('append(activityAnnouncement)',TAB)
   self.assertIn('activityStatus = activityLabel(id)',S)
   self.assertIn('Keep TalkBack descriptions stable',S)
   self.assertIn('Android did not provide a readable foreground process group.',S)

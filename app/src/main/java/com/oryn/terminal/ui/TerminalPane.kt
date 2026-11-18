@@ -23,10 +23,12 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -91,6 +93,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -191,6 +194,7 @@ fun TerminalPane(
     var showWorkspaceSheet by remember(session) { mutableStateOf(false) }
     var showCommandPalette by remember(session) { mutableStateOf(false) }
     val currentProject = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
+    val activeSession = tabs.firstOrNull { it.first == activeTabId }
     var showTerminalSettings by remember(session) { mutableStateOf(false) }
     var initialSettingsSection by remember(session) { mutableStateOf("home") }
     var sessionSheetId by remember(session) { mutableStateOf<Long?>(null) }
@@ -473,7 +477,7 @@ fun TerminalPane(
         // steal focus from a new dialog opened while the IME was resizing.
         pendingSearch = null
     }
-    fun openSessionSheet(id: Long, name: String) {
+    fun openSessionSheet(id: Long) {
         if (tabs.any { it.first == id }) {
             sessionSheetId = id
         }
@@ -566,6 +570,12 @@ fun TerminalPane(
                     ),
                     containerColor = ui.sheet
                 ) {
+                    if (activeSession != null) {
+                        KlyroMenuItem("Manage active session", R.drawable.hugeicons_terminal) {
+                            showToolsMenu = false
+                            openSessionSheet(activeSession.first)
+                        }
+                    }
                     KlyroMenuItem("Command Palette", R.drawable.hugeicons_search_01) {
                         showToolsMenu = false
                         showCommandPalette = true
@@ -619,16 +629,45 @@ fun TerminalPane(
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 1.sp
                 )
-                Text(
-                    currentProject,
-                    modifier = Modifier.align(Alignment.Center).widthIn(max = 136.dp),
-                    color = TerminalText,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
+                Surface(
+                    modifier = Modifier.align(Alignment.Center)
+                        .widthIn(max = 160.dp)
+                        .heightIn(min = KlyroUiMetrics.minTouch)
+                        .clickable(
+                            onClickLabel = "Choose workspace",
+                            role = Role.Button,
+                            onClick = { showWorkspaceSheet = true }
+                        )
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = "Workspace: $currentProject"
+                        },
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        KlyroUiMetrics.controlCorner
+                    ),
+                    color = inactiveTabSurface
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            currentProject,
+                            modifier = Modifier.weight(1f, fill = false).widthIn(max = 118.dp),
+                            color = TerminalText,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.hugeicons_chevron_right),
+                            contentDescription = null,
+                            modifier = Modifier.rotate(90f).size(16.dp),
+                            tint = TerminalMuted
+                        )
+                    }
+                }
                 Box(modifier = Modifier.align(Alignment.CenterEnd)) {
                     toolsMenu()
                 }
@@ -640,91 +679,34 @@ fun TerminalPane(
             modifier = Modifier.fillMaxWidth().background(TerminalSurface),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Pin the menu beside the tab scroller so the active tab can never
+            // scroll the only visible route to session management off-screen.
+            if (compact) toolsMenu()
             Row(
                 modifier = Modifier.weight(1f)
                     .horizontalScroll(tabStripScroll)
+                    .selectableGroup()
                     .padding(start = 10.dp, top = 2.dp, bottom = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (compact) toolsMenu()
                 tabs.forEach { (id, tabTitle) ->
                 val active = id == activeTabId
                 val activityTag = compactActivity(id)
-                Box(
-                    modifier = Modifier
-                        .height(48.dp)
-                        .widthIn(min = KlyroUiMetrics.minTouch)
-                        .then(if (active) Modifier.bringIntoViewRequester(selectedTabRequester) else Modifier)
-                        .combinedClickable(
-                            onClickLabel = if (active) "Edit session" else "Switch session",
-                            onLongClickLabel = "Edit session",
-                            onClick = {
-                                if (active) openSessionSheet(id, tabTitle) else onSelectTab(id)
-                            },
-                            onLongClick = { openSessionSheet(id, tabTitle) }
-                        )
-                        .semantics {
-                            role = Role.Tab
-                            selected = active
-                            contentDescription = tabTitle.ifBlank { "Session" } +
-                                ", project " + (workspaces.firstOrNull {
-                                    it.id == (tabWorkspaces[id] ?: KlyroWorkspaceCatalog.GENERAL)
-                                }?.name ?: "General")
-                            stateDescription = buildString {
-                                append(if (active) "Selected terminal" else "Open terminal")
-                                append(", ")
-                                append(activitySpeech(id))
-                                if (id in tabsWithUnreadOutput && !active) {
-                                    append(", New terminal output")
-                                }
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(
-                        modifier = Modifier.height(36.dp).widthIn(max = 140.dp),
-                        color = if (active) TerminalAccent else inactiveTabSurface,
-                        contentColor = if (active) ui.onAccent else TerminalText,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(19.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (id in tabsWithUnreadOutput && !active) {
-                                Box(Modifier.size(7.dp).background(
-                                    TerminalAccent, androidx.compose.foundation.shape.CircleShape))
-                            }
-                            Text(
-                                tabTitle.ifBlank { "Session" },
-                                fontSize = 12.sp,
-                                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                            if (activityTag != null) {
-                                Box(
-                                    modifier = Modifier.background(
-                                        if (active) ui.onAccent.copy(alpha = 0.14f)
-                                        else TerminalAccent.copy(alpha = 0.12f),
-                                        androidx.compose.foundation.shape.RoundedCornerShape(6.dp)
-                                    ).padding(horizontal = 5.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        activityTag,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (active) ui.onAccent else if (activityTag == "JOB")
-                                            ui.readyInk else ui.muted,
-                                        maxLines = 1
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                KlyroTerminalSessionTab(
+                    title = tabTitle,
+                    workspaceName = workspaces.firstOrNull {
+                        it.id == (tabWorkspaces[id] ?: KlyroWorkspaceCatalog.GENERAL)
+                    }?.name ?: "General",
+                    active = active,
+                    activityTag = activityTag,
+                    activityAnnouncement = activitySpeech(id),
+                    showUnreadOutput = id in tabsWithUnreadOutput,
+                    modifier = if (active) Modifier.bringIntoViewRequester(selectedTabRequester)
+                        else Modifier,
+                    onSelect = { onSelectTab(id) },
+                    onManage = { openSessionSheet(id) }
+                )
             }
             }
             Box(
@@ -808,31 +790,13 @@ fun TerminalPane(
         }
 
         if (runtimeHasWarnings && sessionFailureMessage == null && !warningNoteDismissed) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-                color = ui.warningContainer,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Environment warnings detected. Review Diagnostics for details.",
-                        color = ui.warningInk,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(
-                        onClick = { warningNoteDismissed = true },
-                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                    ) {
-                        Text("Dismiss", color = TerminalText, fontSize = 12.sp)
-                    }
-                }
-            }
+            KlyroTerminalRuntimeWarningBanner(
+                onReviewDiagnostics = {
+                    initialSettingsSection = "diagnostics"
+                    showTerminalSettings = true
+                },
+                onDismiss = { warningNoteDismissed = true }
+            )
         }
 
         Box(
@@ -1646,6 +1610,137 @@ fun TerminalPane(
 }
 
 internal enum class ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }
+
+@Composable
+internal fun KlyroTerminalRuntimeWarningBanner(
+    onReviewDiagnostics: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val ui = LocalKlyroColors.current
+    val largeText = LocalDensity.current.fontScale >= 1.5f
+    Surface(
+        modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .semantics {
+                liveRegion = LiveRegionMode.Polite
+                testTag = "terminal-runtime-warning"
+            },
+        color = ui.warningContainer,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.cardCorner),
+        border = BorderStroke(1.dp, ui.warningInk.copy(alpha = 0.16f))
+    ) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val stacked = maxWidth < 380.dp || largeText
+            if (stacked) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    KlyroTerminalWarningCopy(Modifier.fillMaxWidth())
+                    KlyroTerminalWarningActions(
+                        onReviewDiagnostics = onReviewDiagnostics,
+                        onDismiss = onDismiss,
+                        stacked = largeText,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    KlyroTerminalWarningCopy(Modifier.weight(1f))
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                    ) { Text("Dismiss", color = ui.foreground) }
+                    KlyroTerminalDiagnosticsButton(
+                        onClick = onReviewDiagnostics
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun KlyroTerminalWarningCopy(modifier: Modifier = Modifier) {
+    val ui = LocalKlyroColors.current
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            "Environment checks need attention",
+            color = ui.warningInk,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            "One or more shell checks need a closer look.",
+            color = ui.warningInk,
+            fontSize = 12.sp,
+            lineHeight = 17.sp
+        )
+    }
+}
+
+@Composable
+private fun KlyroTerminalWarningActions(
+    onReviewDiagnostics: () -> Unit,
+    onDismiss: () -> Unit,
+    stacked: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (stacked) {
+        Column(
+            modifier = modifier,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            KlyroTerminalDiagnosticsButton(
+                onClick = onReviewDiagnostics,
+                modifier = Modifier.fillMaxWidth()
+            )
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+            ) { Text("Dismiss") }
+        }
+    } else {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+            ) { Text("Dismiss") }
+            KlyroTerminalDiagnosticsButton(
+                onClick = onReviewDiagnostics
+            )
+        }
+    }
+}
+
+@Composable
+private fun KlyroTerminalDiagnosticsButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val ui = LocalKlyroColors.current
+    Button(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = KlyroUiMetrics.minTouch),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = ui.accent,
+            contentColor = ui.onAccent
+        )
+    ) { Text("Review diagnostics") }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
