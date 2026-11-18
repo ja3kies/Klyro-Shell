@@ -1,5 +1,9 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
+import com.oryn.terminal.core.KlyroTextLimit
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -26,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,7 +71,7 @@ internal fun KlyroSessionSheet(
     onCloseSession: () -> Unit,
     sessionRunning: Boolean = true
 ) {
-    var closeTargetId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var closeTargetId by rememberSaveable(sessionId) { mutableStateOf<Long?>(null) }
     val confirmClose = closeTargetId == sessionId
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
@@ -103,7 +108,7 @@ internal fun KlyroSessionSheet(
                         shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             Text(
@@ -124,7 +129,7 @@ internal fun KlyroSessionSheet(
                         KlyroActionRow("Rename", R.drawable.hugeicons_pen_01, onRename)
                         KlyroActionRow("New terminal", R.drawable.hugeicons_plus_sign,
                             onChooseShell,
-                            trailing = true, enabled = canCreateSession,
+                            trailing = true, enabled = canCreateSession && !launchingBash,
                             subtitle = if (launchingBash) "Starting Bash…" else
                                 if (canCreateSession) null else "Maximum 8 sessions")
                         if (!isActive) KlyroActionRow("Switch to session",
@@ -133,7 +138,7 @@ internal fun KlyroSessionSheet(
                 }
                 Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)) {
                     Column {
-                        KlyroActionRow("Close terminal", R.drawable.hugeicons_cancel_circle,
+                        KlyroActionRow(if (sessionRunning) "Close terminal" else "Remove finished terminal", R.drawable.hugeicons_cancel_circle,
                             onClick = { closeTargetId = sessionId }, destructive = true)
                     }
                 }
@@ -149,14 +154,16 @@ internal fun KlyroSessionSheet(
                 text = {
                     Text(if (sessionRunning)
                         "This stops its Bash process and running child commands. Other sessions remain open."
-                        else "This removes the retained output. Its process has already exited. Other sessions remain open.")
+                        else "This removes the retained output. Its process has already exited. Other sessions remain open.",
+                        modifier = Modifier.heightIn(max = KlyroUiMetrics.paletteListMax)
+                            .verticalScroll(rememberScrollState()))
                 },
                 confirmButton = {
                     TextButton(onClick = {
                         val expected = closeTargetId
                         closeTargetId = null
                         TerminalActionPolicy.runIfCurrent(expected, sessionId, true, onCloseSession)
-                    }) { Text("Close session", color = colors.danger, fontWeight = FontWeight.SemiBold) }
+                    }) { Text(if (sessionRunning) "Close session" else "Remove output", color = colors.danger, fontWeight = FontWeight.SemiBold) }
                 },
                 dismissButton = {
                     TextButton(onClick = { closeTargetId = null }) { Text("Keep session") }
@@ -178,18 +185,31 @@ internal fun KlyroRenameSessionDialog(
     }
     val requester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    val canSave = value.text.trim().isNotBlank() && value.text.trim() != name
+    var confirmDiscard by rememberSaveable(name) { mutableStateOf(false) }
+    var submitted by remember(name) { mutableStateOf(false) }
+    val normalized = KlyroWorkspaceCatalog.cleanName(value.text)
+    val error = when {
+        value.text.length > KlyroWorkspaceCatalog.MAX_NAME_CHARS -> "Name is too long. Maximum 32 characters."
+        value.text.isNotEmpty() && normalized.isBlank() -> "Enter a visible session name."
+        normalized != value.text.trim() -> "Remove unsupported control characters."
+        else -> null
+    }
+    val changed = value.text.trim() != name
+    val canSave = !submitted && normalized.isNotBlank() && normalized != name && error == null
+    fun dismissRename() {
+        keyboard?.hide()
+        if (changed) confirmDiscard = true else onDismiss()
+    }
     fun saveRename() {
         if (!canSave) return
+        submitted = true
         keyboard?.hide()
-        onSave(value.text.trim())
+        onSave(normalized)
     }
     val colors = LocalKlyroColors.current
     KlyroModalTheme {
         AlertDialog(
-            onDismissRequest = { if (value.text == name) onDismiss() },
-            properties = androidx.compose.ui.window.DialogProperties(
-                dismissOnBackPress = value.text == name, dismissOnClickOutside = value.text == name),
+            onDismissRequest = { dismissRename() },
             shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = colors.sheet,
             title = { Text("Rename terminal", fontWeight = FontWeight.Bold) },
@@ -197,24 +217,22 @@ internal fun KlyroRenameSessionDialog(
                 OutlinedTextField(
                     value = value,
                     onValueChange = {
-                        val cleaned = it.text.replace("\n", "").replace("\r", "")
-                        if (cleaned.length <= 32) {
-                            value = it.copy(
-                                text = cleaned,
-                                selection = TextRange(
-                                    it.selection.start.coerceIn(0, cleaned.length),
-                                    it.selection.end.coerceIn(0, cleaned.length)
-                                )
-                            )
-                        }
+                        val bounded = KlyroTextLimit.takeCodePoints(it.text, 128)
+                        value = if (bounded == it.text) it else it.copy(
+                            text = bounded,
+                            selection = TextRange(it.selection.start.coerceAtMost(bounded.length),
+                                it.selection.end.coerceAtMost(bounded.length)),
+                            composition = null
+                        )
                     },
                     modifier = Modifier.fillMaxWidth().focusRequester(requester),
-                    isError = value.text.trim().isBlank() && value.text.isNotEmpty(),
+                    isError = error != null,
                     supportingText = {
-                        Text("Maximum 32 characters. Save or Cancel to close a changed name.")
+                        Text(error ?: "${value.text.length}/${KlyroWorkspaceCatalog.MAX_NAME_CHARS}",
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { saveRename() }),
                     label = { Text("Session name") },
                 )
@@ -227,13 +245,37 @@ internal fun KlyroRenameSessionDialog(
                 ) { Text("Save") }
             },
             dismissButton = {
-                TextButton(onClick = { keyboard?.hide(); onDismiss() }) { Text("Cancel") }
+                TextButton(onClick = { dismissRename() }) { Text("Cancel") }
             }
         )
     }
-    LaunchedEffect(requester) {
-        requester.requestFocus()
-        keyboard?.show()
+    if (confirmDiscard) {
+        KlyroModalTheme {
+            AlertDialog(
+                onDismissRequest = { confirmDiscard = false },
+                shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
+                containerColor = colors.sheet,
+                title = { Text("Discard name changes?") },
+                text = { Text("The session keeps its current name.") },
+                confirmButton = {
+                    TextButton(onClick = { confirmDiscard = false; onDismiss() }) {
+                        Text("Discard changes", color = colors.danger)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmDiscard = false }) {
+                        Text("Keep editing")
+                    }
+                }
+            )
+        }
+    }
+    LaunchedEffect(requester, confirmDiscard) {
+        if (!confirmDiscard) {
+            withFrameNanos { }
+            requester.requestFocus()
+            keyboard?.show()
+        }
     }
 }
 
@@ -250,7 +292,8 @@ internal fun KlyroChooseShellSheet(
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onBack) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = KlyroUiMetrics.sheetGutter)
+                modifier = Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
+                    .verticalScroll(rememberScrollState()).padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)
             ) {
@@ -273,13 +316,14 @@ internal fun KlyroChooseShellSheet(
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .heightIn(min = KlyroUiMetrics.minTouch)
-                            .clickable(enabled = canStartBash, role = Role.Button,
+                            .clickable(enabled = canStartBash && !launchingBash, role = Role.Button,
                                 onClickLabel = if (launchingBash) "Starting Bash…"
                                     else if (canStartBash) "Start a Bash terminal"
                                     else "Maximum 8 sessions reached", onClick = onNewBash)
                             .semantics {
                                 role = Role.Button
-                                if (!canStartBash) stateDescription = "Unavailable"
+                                stateDescription = if (launchingBash) "Starting Bash" else if (!canStartBash) "Session limit reached" else "Ready"
+                                liveRegion = LiveRegionMode.Polite
                             }
                             .padding(KlyroUiMetrics.spaceLg),
                         verticalAlignment = Alignment.CenterVertically,
@@ -289,10 +333,9 @@ internal fun KlyroChooseShellSheet(
                             contentDescription = null,
                             tint = if (canStartBash) colors.accent else colors.muted,
                             modifier = Modifier.size(KlyroUiMetrics.glyphMedium))
-                        Column {
+                        Column(Modifier.weight(1f)) {
                             Text("bash", fontWeight = FontWeight.SemiBold)
-                            Text(if (canStartBash) "/bin/bash" else if (launchingBash)
-                                "Starting Bash…" else "Maximum 8 sessions. Close a terminal first.",
+                            Text(if (launchingBash) "Starting Bash…" else if (canStartBash) "/bin/bash" else "Maximum 8 sessions. Close a terminal first.",
                                 color = colors.muted,
                                 style = MaterialTheme.typography.bodySmall)
                         }

@@ -1,5 +1,15 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.core.KlyroTextLimit
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
 import android.content.ClipData
 import android.content.Intent
 import android.content.ClipboardManager
@@ -10,6 +20,10 @@ import android.os.SystemClock
 import android.widget.EditText
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.sample
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material3.DropdownMenu
@@ -27,6 +41,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -73,6 +88,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -91,6 +109,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -121,7 +140,7 @@ private data class JobActivityUi(
     val detectedAtElapsedMs: Long
 )
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, FlowPreview::class)
 @Composable
 fun TerminalPane(
     session: TerminalSession,
@@ -385,6 +404,7 @@ fun TerminalPane(
     var searchSnapshot by remember(session) {
         mutableStateOf<TranscriptSearch.Snapshot?>(null)
     }
+    var lastSearchRequest by remember(session) { mutableStateOf<Triple<String, Boolean, Int>?>(null) }
     var searchingTranscript by remember(session) { mutableStateOf(false) }
     var pendingSearch by remember(session) { mutableStateOf<Int?>(null) }
     var pendingSearchOffset by remember(session) { mutableStateOf(0) }
@@ -398,19 +418,29 @@ fun TerminalPane(
     LaunchedEffect(diagnosticImeBottom) {
         com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.IME, diagnosticImeBottom.toLong())
     }
+    val latestOutputRevision by rememberUpdatedState(outputRevision)
+    var sampledOutputRevision by remember(session) { mutableStateOf(outputRevision) }
+    LaunchedEffect(showTranscriptSearch, session) {
+        if (showTranscriptSearch) {
+            snapshotFlow { latestOutputRevision }.sample(250).collect { sampledOutputRevision = it }
+        }
+    }
     // Query changes are debounced. The mutable PTY buffer is read on the UI
     // thread after the delay, and only the most recent 300 matches are kept.
     LaunchedEffect(
         showTranscriptSearch, transcriptQuery, findMatchCase, searchPage,
-        outputRevision, session
+        sampledOutputRevision, session
     ) {
         if (!showTranscriptSearch || transcriptQuery.isBlank()) {
             searchSnapshot = null
             searchingTranscript = false
             return@LaunchedEffect
         }
-        searchingTranscript = true
-        delay(170)
+        val request = Triple(transcriptQuery, findMatchCase, searchPage)
+        if (lastSearchRequest != request) {
+            searchingTranscript = true
+            delay(170)
+        }
         val emulator = session.emulator
         val snapshot = if (emulator == null) null else TranscriptSearch.scanPage(
             emulator.screen, emulator.mColumns, emulator.mRows,
@@ -431,6 +461,7 @@ fun TerminalPane(
             searchPage = snapshot.pageFromNewest
         }
         searchSnapshot = snapshot
+        lastSearchRequest = request
         searchingTranscript = false
     }
     LaunchedEffect(pendingSearch, session, activeTerminalView) {
@@ -579,7 +610,8 @@ fun TerminalPane(
                         initialSettingsSection = "home"
                         showTerminalSettings = true
                     }
-                    KlyroMenuItem("Paste clipboard", R.drawable.hugeicons_clipboard_paste) {
+                    KlyroMenuItem("Paste clipboard", R.drawable.hugeicons_clipboard_paste,
+                        enabled = canSendKeys && clipboardAvailable) {
                         showToolsMenu = false
                         pasteClipboard()
                     }
@@ -592,7 +624,7 @@ fun TerminalPane(
     }
     val tabStripScroll = rememberScrollState()
     val selectedTabRequester = remember { BringIntoViewRequester() }
-    LaunchedEffect(activeTabId, tabs, compact) {
+    LaunchedEffect(activeTabId, tabs, compact, density.fontScale) {
         // Real tab widths vary with titles, activity badges and accessibility font scaling.
         if (activeTabId != null && tabs.any { it.first == activeTabId }) {
             withFrameNanos { }
@@ -619,16 +651,45 @@ fun TerminalPane(
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 1.sp
                 )
-                Text(
-                    currentProject,
-                    modifier = Modifier.align(Alignment.Center).widthIn(max = 136.dp),
-                    color = TerminalText,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
+                Surface(
+                    modifier = Modifier.align(Alignment.Center)
+                        .widthIn(max = 160.dp)
+                        .heightIn(min = KlyroUiMetrics.minTouch)
+                        .clickable(
+                            onClickLabel = "Choose workspace",
+                            role = Role.Button,
+                            onClick = { showWorkspaceSheet = true }
+                        )
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = "Workspace: $currentProject"
+                        },
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        KlyroUiMetrics.controlCorner
+                    ),
+                    color = inactiveTabSurface
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            currentProject,
+                            modifier = Modifier.weight(1f, fill = false).widthIn(max = 118.dp),
+                            color = TerminalText,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.hugeicons_chevron_right),
+                            contentDescription = null,
+                            modifier = Modifier.rotate(90f).size(16.dp),
+                            tint = TerminalMuted
+                        )
+                    }
+                }
                 Box(modifier = Modifier.align(Alignment.CenterEnd)) {
                     toolsMenu()
                 }
@@ -640,20 +701,21 @@ fun TerminalPane(
             modifier = Modifier.fillMaxWidth().background(TerminalSurface),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (compact) toolsMenu()
             Row(
                 modifier = Modifier.weight(1f)
+                    .selectableGroup()
                     .horizontalScroll(tabStripScroll)
                     .padding(start = 10.dp, top = 2.dp, bottom = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (compact) toolsMenu()
                 tabs.forEach { (id, tabTitle) ->
                 val active = id == activeTabId
                 val activityTag = compactActivity(id)
                 Box(
                     modifier = Modifier
-                        .height(48.dp)
+                        .heightIn(min = KlyroUiMetrics.minTouch)
                         .widthIn(min = KlyroUiMetrics.minTouch)
                         .then(if (active) Modifier.bringIntoViewRequester(selectedTabRequester) else Modifier)
                         .combinedClickable(
@@ -666,6 +728,10 @@ fun TerminalPane(
                         )
                         .semantics {
                             role = Role.Tab
+                            customActions = listOf(CustomAccessibilityAction("Manage session") {
+                                openSessionSheet(id, tabTitle)
+                                true
+                            })
                             selected = active
                             contentDescription = tabTitle.ifBlank { "Session" } +
                                 ", project " + (workspaces.firstOrNull {
@@ -683,7 +749,7 @@ fun TerminalPane(
                     contentAlignment = Alignment.Center
                 ) {
                     Surface(
-                        modifier = Modifier.height(36.dp).widthIn(max = 140.dp),
+                        modifier = Modifier.heightIn(min = 36.dp).widthIn(max = 180.dp),
                         color = if (active) TerminalAccent else inactiveTabSurface,
                         contentColor = if (active) ui.onAccent else TerminalText,
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(19.dp)
@@ -699,6 +765,7 @@ fun TerminalPane(
                             }
                             Text(
                                 tabTitle.ifBlank { "Session" },
+                                modifier = Modifier.weight(1f, fill = false),
                                 fontSize = 12.sp,
                                 fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                                 maxLines = 1,
@@ -780,17 +847,19 @@ fun TerminalPane(
                 color = ui.dangerContainer,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
             ) {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         sessionFailureMessage,
                         color = ui.danger,
                         fontSize = 12.sp,
                         lineHeight = 17.sp,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 96.dp)
+                            .verticalScroll(rememberScrollState())
                     )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
                         onClick = onReturnHome,
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
@@ -801,38 +870,21 @@ fun TerminalPane(
                         onClick = { endSessionTargetId = activeTabId },
                         modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
                     ) {
-                        Text("Close tab", color = TerminalText, fontSize = 12.sp)
+                        Text("Close tab", color = ui.danger, fontSize = 12.sp)
+                    }
                     }
                 }
             }
         }
 
         if (runtimeHasWarnings && sessionFailureMessage == null && !warningNoteDismissed) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-                color = ui.warningContainer,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Environment warnings detected. Review Diagnostics for details.",
-                        color = ui.warningInk,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(
-                        onClick = { warningNoteDismissed = true },
-                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                    ) {
-                        Text("Dismiss", color = TerminalText, fontSize = 12.sp)
-                    }
-                }
-            }
+            KlyroTerminalRuntimeWarningBanner(
+                onReviewDiagnostics = {
+                    initialSettingsSection = "diagnostics"
+                    showTerminalSettings = true
+                },
+                onDismiss = { warningNoteDismissed = true }
+            )
         }
 
         Box(
@@ -1041,6 +1093,7 @@ fun TerminalPane(
     selectedOutput?.let { output ->
         val truncated = selectedOutputTruncated
         val visibleOutput = output
+        var outputHasSelection by remember(output) { mutableStateOf(true) }
         fun closeSelection() {
             outputSelectionView = null
             selectedOutput = null
@@ -1056,7 +1109,7 @@ fun TerminalPane(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (truncated) {
                         Text(
-                            "Only the latest 2 million UTF-16 characters are selectable; older output is omitted for memory safety.",
+                            "Only the most recent output is included. Older output is omitted.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -1064,9 +1117,15 @@ fun TerminalPane(
                         Text("No output available to select.")
                     } else {
                         AndroidView(
-                            modifier = Modifier.fillMaxWidth().height(244.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp, max =
+                                (LocalConfiguration.current.screenHeightDp * .35f).dp.coerceAtLeast(80.dp)),
                             factory = { activityContext ->
-                                EditText(activityContext).apply {
+                                object : EditText(activityContext) {
+                                    override fun onSelectionChanged(start: Int, end: Int) {
+                                        super.onSelectionChanged(start, end)
+                                        outputHasSelection = start >= 0 && end >= 0 && start != end
+                                    }
+                                }.apply {
                                     setText(visibleOutput)
                                     setTextIsSelectable(true)
                                     // Select and copy, but never edit the transcript preview.
@@ -1079,7 +1138,13 @@ fun TerminalPane(
                                     setTextColor(ui.terminalInk.toArgb())
                                     setBackgroundColor(ui.terminal.toArgb())
                                     typeface = android.graphics.Typeface.MONOSPACE
-                                    setPadding(12, 8, 12, 8)
+                                    setPadding((12 * resources.displayMetrics.density).toInt(),
+                                        (8 * resources.displayMetrics.density).toInt(),
+                                        (12 * resources.displayMetrics.density).toInt(),
+                                        (8 * resources.displayMetrics.density).toInt())
+                                    contentDescription = "Terminal output, read only"
+                                    importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO
+                                    setSelectAllOnFocus(false)
                                     outputSelectionView = this
                                     post {
                                         if (isAttachedToWindow) {
@@ -1127,10 +1192,15 @@ fun TerminalPane(
                         ).show()
                         if (copied) closeSelection()
                     }
-                ) { Text("Copy selection") }
+                ) { Text(if (outputHasSelection) "Copy selection" else "Copy all output") }
             },
             dismissButton = {
-                TextButton(onClick = { closeSelection() }) { Text("Close") }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(enabled = visibleOutput.isNotEmpty(), onClick = {
+                        outputSelectionView?.let { it.requestFocus(); it.selectAll() }
+                    }) { Text("Select all") }
+                    TextButton(onClick = { closeSelection() }) { Text("Close") }
+                }
             }
         )
         }
@@ -1205,6 +1275,11 @@ fun TerminalPane(
     }
 
     pendingMultilinePaste?.let { review ->
+        var pasteFailure by remember(review) { mutableStateOf<String?>(null) }
+        var pasteAccepted by remember(review) { mutableStateOf(false) }
+        var pasteAttempt by remember(review) { mutableStateOf(0) }
+        val pasteScroll = rememberScrollState()
+        LaunchedEffect(pasteAttempt) { if (pasteFailure != null) pasteScroll.animateScrollTo(0) }
         KlyroModalTheme {
         AlertDialog(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
@@ -1212,17 +1287,25 @@ fun TerminalPane(
             onDismissRequest = { pendingMultilinePaste = null },
             title = { Text("Review terminal paste") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.heightIn(max = KlyroUiMetrics.paletteListMax)
+                    .verticalScroll(pasteScroll),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Destination: ${tabs.firstOrNull { it.first == review.tabId }?.second ?: "Session"}",
+                        fontWeight = FontWeight.SemiBold)
+                    pasteFailure?.let { message ->
+                        Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+                            KlyroInlineNotice(message, isError = true)
+                        }
+                    }
                     Text("Pasting multiple lines may execute commands in the terminal.")
                     Text("${review.lineCount} lines • ${review.utf8ByteCount} UTF-8 bytes",
                         style = MaterialTheme.typography.labelMedium)
-                    Text(
+                    SelectionContainer { Text(
                         review.preview,
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
-                            .verticalScroll(rememberScrollState()),
+                        modifier = Modifier.fillMaxWidth(),
                         fontFamily = FontFamily.Monospace,
                         style = MaterialTheme.typography.bodySmall
-                    )
+                    ) }
                     if (review.isPreviewTruncated) {
                         Text(
                             "Only the first ${review.preview.length} of ${review.text.length} characters are shown. The entire script will be pasted.",
@@ -1235,20 +1318,24 @@ fun TerminalPane(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val requested = pendingMultilinePaste
-                    pendingMultilinePaste = null
+                Button(enabled = !pasteAccepted, onClick = {
+                    if (pasteAccepted) return@Button
+                    val requested = pendingMultilinePaste ?: return@Button
+                    pasteAttempt++
                     val emulator = session.emulator
-                    if (!session.isRunning() || emulator == null) {
-                        Toast.makeText(context, "Terminal unavailable; paste cancelled",
-                            Toast.LENGTH_SHORT).show()
-                    } else if (requested == null || !requested.sendIfCurrent(activeTabId, currentSessionId(), session.isRunning()) {
+                    if (!session.isRunning() || emulator == null ||
+                        requested.tabId != activeTabId || requested.tabId != currentSessionId()) {
+                        pasteFailure = "This session is no longer available. Cancel and choose a terminal."
+                    } else if (requested.sendIfCurrent(activeTabId, currentSessionId(), session.isRunning()) {
                             emulator.pasteWithResult(it)
                         }) {
-                        Toast.makeText(context, "Paste not sent — session changed or input busy",
-                            Toast.LENGTH_SHORT).show()
+                        pasteAccepted = true
+                        pendingMultilinePaste = null
+                        keyboard?.hide()
+                    } else {
+                        pasteFailure = "Input is busy. Nothing was pasted. Try again."
                     }
-                }) { Text("Paste all ${review.lineCount} lines") }
+                }) { Text(if (pasteFailure == null) "Paste ${review.lineCount} lines" else "Retry paste") }
             },
             dismissButton = {
                 TextButton(onClick = { pendingMultilinePaste = null }) { Text("Cancel") }
@@ -1299,14 +1386,14 @@ fun TerminalPane(
     renameDialogId?.let { id ->
         val name = tabs.firstOrNull { it.first == id }?.second
         if (name != null) {
-            KlyroRenameSessionDialog(
+            key(id) { KlyroRenameSessionDialog(
                 name = name,
                 onSave = { newName ->
                     onRenameTab(id, newName)
                     renameDialogId = null
                 },
                 onDismiss = { renameDialogId = null }
-            )
+            ) }
         }
     }
     shellChooserSourceId?.let { sourceId ->
@@ -1325,6 +1412,8 @@ fun TerminalPane(
     }
 
     if (showTranscriptSearch) {
+        val searchFocus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { searchFocus.requestFocus() }
         val findContentMax = if (LocalConfiguration.current.screenHeightDp < 700)
             KlyroUiMetrics.findDialogCompactMax else KlyroUiMetrics.findDialogContentMax
         val emulator = session.emulator
@@ -1348,8 +1437,8 @@ fun TerminalPane(
         AlertDialog(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
             containerColor = ui.sheet,
-            onDismissRequest = { showTranscriptSearch = false },
-            title = { Text("Find in terminal", style = MaterialTheme.typography.titleLarge, maxLines = 1) },
+            onDismissRequest = { keyboard?.hide(); showTranscriptSearch = false },
+            title = { Text("Find in terminal", style = MaterialTheme.typography.titleLarge, maxLines = 2) },
             text = {
                 Column(
                     modifier = Modifier.heightIn(max = findContentMax)
@@ -1359,23 +1448,28 @@ fun TerminalPane(
                     OutlinedTextField(
                         value = transcriptQuery,
                         onValueChange = {
-                            transcriptQuery = it.take(128)
+                            transcriptQuery = KlyroTextLimit.takeCodePoints(it, 128)
                             searchIndex = 0
                             searchPage = 0
                             searchSnapshot = null
                         },
-                        label = { Text("Find text") },
-                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Find text in this session") },
+                        modifier = Modifier.fillMaxWidth().focusRequester(searchFocus),
+                        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
                         singleLine = true,
                         trailingIcon = {
                             if (transcriptQuery.isNotEmpty()) {
-                                TextButton(onClick = {
+                                IconButton(onClick = {
                                     transcriptQuery = ""
                                     searchIndex = 0
                                     searchPage = 0
                                     searchSnapshot = null
+                                    searchFocus.requestFocus()
+                                    keyboard?.show()
                                 }) {
-                                    Text("Clear")
+                                    Icon(painterResource(R.drawable.hugeicons_cancel_circle),
+                                        contentDescription = "Clear search", modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
@@ -1399,7 +1493,7 @@ fun TerminalPane(
                             transcriptQuery.isBlank() -> "Enter text to search"
                             searchingTranscript -> "Searching terminal output…"
                             emulator == null -> "Terminal output unavailable"
-                            snapshot == null || snapshot.totalCount == 0 -> "No matches"
+                            snapshot == null || snapshot.totalCount == 0 -> if (findMatchCase) "No matches with this capitalization" else "No matches"
                             else -> "Match ${snapshot.firstOrdinal + position + 1} of ${snapshot.totalCount}"
                         },
                         color = ui.foreground,
@@ -1443,8 +1537,7 @@ fun TerminalPane(
                                     text = preview,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp,
-                                    maxLines = 3,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                                 TextButton(
                                     onClick = {
@@ -1463,23 +1556,35 @@ fun TerminalPane(
                         }
                     }
                     if (matches.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             TextButton(
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
-                                    searchIndex = TranscriptSearch.nextIndex(position, -1, matches.size)
-                                    goToMatch(searchIndex)
+                                    if (position == 0 && snapshot != null && snapshot.pageCount > 1) {
+                                        searchPage = if (searchPage < snapshot.pageCount - 1) searchPage + 1 else 0
+                                        searchIndex = Int.MAX_VALUE
+                                        searchSnapshot = null
+                                    } else {
+                                        searchIndex = TranscriptSearch.nextIndex(position, -1, matches.size)
+                                        goToMatch(searchIndex)
+                                    }
                                 }
                             ) { Text("Previous") }
                             TextButton(
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
-                                    searchIndex = TranscriptSearch.nextIndex(position, 1, matches.size)
-                                    goToMatch(searchIndex)
+                                    if (position == matches.lastIndex && snapshot != null && snapshot.pageCount > 1) {
+                                        searchPage = if (searchPage > 0) searchPage - 1 else snapshot.pageCount - 1
+                                        searchIndex = 0
+                                        searchSnapshot = null
+                                    } else {
+                                        searchIndex = TranscriptSearch.nextIndex(position, 1, matches.size)
+                                        goToMatch(searchIndex)
+                                    }
                                 }
                             ) { Text("Next") }
                             TextButton(
@@ -1499,8 +1604,9 @@ fun TerminalPane(
                     }
                     if (snapshot != null && snapshot.pageCount > 1 &&
                         !searchingTranscript) {
-                        Row(modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween) {
+                        FlowRow(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             TextButton(
                                 enabled = searchPage < snapshot.pageCount - 1,
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
@@ -1524,11 +1630,12 @@ fun TerminalPane(
                     if (transcriptQuery.isNotBlank() && !searchingTranscript &&
                         snapshot?.totalCount == 0) {
                         TextButton(onClick = {
-                            transcriptQuery = ""; searchIndex = 0
-                            searchPage = 0; searchSnapshot = null
-                        }) { Text("Clear search") }
+                            if (findMatchCase) findMatchCase = false else transcriptQuery = ""
+                            searchIndex = 0; searchPage = 0; searchSnapshot = null
+                            searchFocus.requestFocus()
+                        }) { Text(if (findMatchCase) "Ignore capitalization" else "Clear search") }
                     }
-                    if (transcriptQuery.length >= 128) {
+                    if (KlyroTextLimit.codePointCount(transcriptQuery) >= 128) {
                         Text("Search text limit reached (128 characters)",
                             color = ui.muted, style = MaterialTheme.typography.bodySmall)
                     }
@@ -1538,6 +1645,12 @@ fun TerminalPane(
                 Button(
                     onClick = {
                         val chosen = selectedMatch ?: return@Button
+                        if (activeTabId != currentSessionId()) {
+                            keyboard?.hide()
+                            showTranscriptSearch = false
+                            Toast.makeText(context, "Session changed; search closed", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
                         // Snapshot the selected physical match before IME animation.
                         pendingSearchQuery = transcriptQuery
                         pendingSearchCase = findMatchCase
@@ -1553,7 +1666,7 @@ fun TerminalPane(
                 ) { Text("Go to line") }
             },
             dismissButton = {
-                TextButton(onClick = { showTranscriptSearch = false }) { Text("Cancel") }
+                TextButton(onClick = { keyboard?.hide(); showTranscriptSearch = false }) { Text("Close") }
             }
         )
         }
@@ -1618,7 +1731,9 @@ fun TerminalPane(
             title = { Text("Close ${tabs.firstOrNull { it.first == endSessionTargetId }?.second ?: "session"}?") },
             text = { Text(if (session.isRunning())
                 "This will stop the running shell and its child processes."
-                else "The shell has exited. Closing this tab discards its retained output.") },
+                else "The shell has exited. Closing this tab discards its retained output.",
+                modifier = Modifier.heightIn(max = KlyroUiMetrics.paletteListMax)
+                    .verticalScroll(rememberScrollState())) },
             confirmButton = {
                 TextButton(onClick = {
                     val expected = endSessionTargetId
@@ -1646,6 +1761,137 @@ fun TerminalPane(
 }
 
 internal enum class ShortcutState { ACTIVE, HOLD, INACTIVE, DEFAULT }
+
+@Composable
+internal fun KlyroTerminalRuntimeWarningBanner(
+    onReviewDiagnostics: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val ui = LocalKlyroColors.current
+    val largeText = LocalDensity.current.fontScale >= 1.5f
+    Surface(
+        modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .semantics {
+                liveRegion = LiveRegionMode.Polite
+                testTag = "terminal-runtime-warning"
+            },
+        color = ui.warningContainer,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.cardCorner),
+        border = BorderStroke(1.dp, ui.warningInk.copy(alpha = 0.16f))
+    ) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val stacked = maxWidth < 380.dp || largeText
+            if (stacked) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    KlyroTerminalWarningCopy(Modifier.fillMaxWidth())
+                    KlyroTerminalWarningActions(
+                        onReviewDiagnostics = onReviewDiagnostics,
+                        onDismiss = onDismiss,
+                        stacked = largeText,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    KlyroTerminalWarningCopy(Modifier.weight(1f))
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                    ) { Text("Dismiss", color = ui.foreground) }
+                    KlyroTerminalDiagnosticsButton(
+                        onClick = onReviewDiagnostics
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun KlyroTerminalWarningCopy(modifier: Modifier = Modifier) {
+    val ui = LocalKlyroColors.current
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            "Environment checks need attention",
+            color = ui.warningInk,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            "One or more shell checks need a closer look.",
+            color = ui.warningInk,
+            fontSize = 12.sp,
+            lineHeight = 17.sp
+        )
+    }
+}
+
+@Composable
+private fun KlyroTerminalWarningActions(
+    onReviewDiagnostics: () -> Unit,
+    onDismiss: () -> Unit,
+    stacked: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (stacked) {
+        Column(
+            modifier = modifier,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            KlyroTerminalDiagnosticsButton(
+                onClick = onReviewDiagnostics,
+                modifier = Modifier.fillMaxWidth()
+            )
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+            ) { Text("Dismiss") }
+        }
+    } else {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+            ) { Text("Dismiss") }
+            KlyroTerminalDiagnosticsButton(
+                onClick = onReviewDiagnostics
+            )
+        }
+    }
+}
+
+@Composable
+private fun KlyroTerminalDiagnosticsButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val ui = LocalKlyroColors.current
+    Button(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = KlyroUiMetrics.minTouch),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = ui.accent,
+            contentColor = ui.onAccent
+        )
+    ) { Text("Review diagnostics") }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
