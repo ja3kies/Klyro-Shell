@@ -8,6 +8,12 @@ TAB_PATH = ROOT / "app/src/main/java/com/oryn/terminal/ui/KlyroTerminalSessionTa
 
 
 class SessionTabActionContract(unittest.TestCase):
+    def test_compose_long_press_test_uses_the_supported_touch_injection_extension(self):
+        ui_test = (ROOT / "app/src/androidTest/java/com/oryn/terminal/ui/"
+                   "KlyroTerminalSessionTabUiTest.kt").read_text()
+        self.assertIn("import androidx.compose.ui.test.longClick", ui_test)
+        self.assertIn("performTouchInput { longClick() }", ui_test)
+
     def test_tab_is_a_separate_component_with_a_stable_semantics_contract(self):
         self.assertTrue(TAB_PATH.exists())
         tab = TAB_PATH.read_text()
