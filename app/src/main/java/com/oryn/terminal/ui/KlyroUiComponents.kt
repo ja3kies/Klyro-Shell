@@ -1,11 +1,11 @@
 package com.oryn.terminal.ui
 
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.ripple
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -77,17 +77,28 @@ import com.oryn.terminal.R
 /**
  * Transparent touch indication for the entire Klyro Compose surface.
  *
- * Keep clicks, haptics, drag gestures, selected states and accessibility semantics
- * intact. Only the press/ripple overlay is transparent. Direct foundation
- * clickables read LocalIndication; Material3 controls read RippleConfiguration.
+ * Keep clicks, haptics, drag gestures, selection and accessibility semantics.
+ * Touch presses and drags have zero visual overlay, while keyboard focus
+ * retains a visible accent state. Foundation clickables read LocalIndication;
+ * Material3 controls read RippleConfiguration.
  * This intentionally does not change Android system views or the terminal IME.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun KlyroTransparentTouchFeedback(content: @Composable () -> Unit) {
+    val focusAccent = LocalKlyroColors.current.accent
+    val quietAlpha = RippleAlpha(
+        pressedAlpha = 0f,
+        draggedAlpha = 0f,
+        hoveredAlpha = 0f,
+        focusedAlpha = .14f
+    )
     CompositionLocalProvider(
-        LocalIndication provides ripple(color = Color.Transparent),
-        LocalRippleConfiguration provides RippleConfiguration(color = Color.Transparent),
+        LocalIndication provides ripple(color = focusAccent),
+        LocalRippleConfiguration provides RippleConfiguration(
+            color = focusAccent,
+            rippleAlpha = quietAlpha
+        ),
         content = content
     )
 }
