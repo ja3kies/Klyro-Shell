@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oryn.terminal.R
 import com.oryn.terminal.ui.motion.klyroPressScale
+import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginRecord
 import kotlinx.coroutines.Dispatchers
@@ -298,8 +299,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     onAction = { page = "explore" }
                 )
             }
-            installed.forEach { plugin ->
+            installed.forEachIndexed { index, plugin ->
                 Surface(
+                    modifier = Modifier.klyroStaggeredEntrance(index, "installed-${plugin.id}"),
                     color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
                     Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
@@ -330,9 +332,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             }
         } else {
-            KlyroPluginManager.bundled.forEach { plugin ->
+            KlyroPluginManager.bundled.forEachIndexed { index, plugin ->
                 val isInstalled = installed.any { it.id == plugin.id }
                 Surface(
+                    modifier = Modifier.klyroStaggeredEntrance(index, "explore-${plugin.id}"),
                     color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
                     Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
