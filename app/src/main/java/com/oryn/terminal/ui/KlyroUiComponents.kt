@@ -5,6 +5,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +49,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -301,8 +306,17 @@ internal fun KlyroThinSlider(
     showTrack: Boolean = true
 ) {
     val colors = LocalKlyroColors.current
+    val dragSource = remember { MutableInteractionSource() }
+    val dragged by dragSource.collectIsDraggedAsState()
+    val thumbScale by animateFloatAsState(
+        targetValue = if (dragged) 1.13f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium),
+        label = "slider-drag-feedback"
+    )
     Slider(
         value = value.coerceIn(valueRange.start, valueRange.endInclusive),
+        interactionSource = dragSource,
         onValueChange = onValueChange,
         valueRange = valueRange,
         steps = steps,
@@ -315,6 +329,7 @@ internal fun KlyroThinSlider(
         thumb = {
             Box(
                 Modifier.size(KlyroUiMetrics.iosSliderThumb)
+                    .graphicsLayer { scaleX = thumbScale; scaleY = thumbScale }
                     .background(colors.foreground, CircleShape)
                     .border(KlyroUiMetrics.iosSliderBorder,
                         colors.muted.copy(alpha = .35f), CircleShape)
