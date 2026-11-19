@@ -397,7 +397,7 @@ jobs:
             --title "$GITHUB_REF_NAME" --generate-notes
 
   publish-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/screen-audit-20261118'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/fix/screen-audit-20261118' || github.ref == 'refs/heads/feat/product-overhaul-latest')
     needs: debug-apk
     runs-on: ubuntu-latest
     permissions:
