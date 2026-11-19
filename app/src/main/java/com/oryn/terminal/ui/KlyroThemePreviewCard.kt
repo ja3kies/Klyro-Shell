@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +17,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -27,6 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.oryn.terminal.ui.motion.klyroPressScale
 
 /**
  * The actual theme palettes are represented by miniature terminal surfaces,
@@ -59,10 +65,18 @@ internal fun KlyroThemePreviewCard(
     val preview = KlyroThemePreviewPalette.forMode(mode, accentId)
     val (lightPreview, darkPreview) = KlyroThemePreviewPalette.systemPair(accentId)
     val shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val labelColor by animateColorAsState(
+        if (active) current.accent else current.foreground,
+        label = "theme-preview-label"
+    )
     Surface(
         modifier = modifier
             .heightIn(min = 78.dp)
-            .clickable(role = Role.RadioButton, onClickLabel = "Use $label theme", onClick = onClick)
+            .klyroPressScale(pressed)
+            .clickable(interactionSource = source, indication = null,
+                role = Role.RadioButton, onClickLabel = "Use $label theme", onClick = onClick)
             .semantics { selected = active }
             .testTag("theme-preview-$mode"),
         shape = shape,
@@ -110,7 +124,7 @@ internal fun KlyroThemePreviewCard(
                 }
             }
             Text(label, modifier = Modifier.fillMaxWidth(),
-                color = if (active) current.accent else current.foreground,
+                color = labelColor,
                 fontSize = 11.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                 maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
