@@ -17,7 +17,8 @@ class UXFivePriorities(unittest.TestCase):
         cls.terminal = (UI / "TerminalPane.kt").read_text()
 
     def test_shared_actions_have_button_semantics(self):
-        self.assertIn(".clickable(enabled = enabled, role = Role.Button", self.shared)
+        self.assertIn(".clickable(interactionSource = pressSource, indication = null,", self.shared)
+        self.assertIn("enabled = enabled, role = Role.Button", self.shared)
         self.assertIn('if (!enabled) stateDescription = "Unavailable"', self.shared)
 
     def test_shared_actions_expose_subtitle_to_screen_readers(self):
