@@ -122,6 +122,13 @@ class PluginsRefinementUiTest {
         }
     }
 
+    @Test fun readableRegistryStillProvidesEnabledPluginCommands() {
+        val manager = KlyroPluginManager(isolatedContext)
+        val plugin = KlyroPluginManager.bundled.first()
+        manager.installBundled(plugin.id)
+        assertEquals(plugin.commands, manager.activeCommands())
+    }
+
     @Test fun commandPaletteShowsPluginRegistryFailureInsteadOfAnEmptyResult() {
         val message = "Saved plugin shortcuts are unavailable. Open Plugins to reload the registry."
         ui.setContent {
