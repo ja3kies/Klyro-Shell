@@ -22,8 +22,8 @@ class SessionNotificationLiveSync(unittest.TestCase):
         close = MODEL.split("fun closeTab(", 1)[1].split("fun closeSession(", 1)[0]
         self.assertIn("notifyRunningPtyInventoryChanged()", close)
         finish = MODEL.split("private fun finishTab(", 1)[1].split("// Legacy", 1)[0]
-        self.assertIn("if (exitStatus == 0)", finish)
-        self.assertIn("closeTab(id)", finish)
+        self.assertIn("entry.exitStatus != null", finish)
+        self.assertNotIn("closeTab(id)", finish)
 
     def test_retained_failed_session_notifies_service_without_discarding_output(self):
         finish = MODEL.split("private fun finishTab(", 1)[1].split("// Legacy", 1)[0]

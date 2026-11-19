@@ -258,20 +258,15 @@ class TerminalSessionViewModel : ViewModel(), OrynTerminalSessionClient.Listener
         }
     }
 
-    private fun exitMessage(exitStatus: Int): String =
+    private fun exitMessage(exitStatus: Int): String? = if (exitStatus == 0) null else
         "Bash exited unexpectedly (code $exitStatus). Output retained here; inspect or copy it before closing this tab."
 
     private fun finishTab(id: Long, session: TerminalSession, exitStatus: Int) {
         val index = tabs.indexOfFirst { it.id == id }
         if (index < 0) return
         val entry = tabs[index]
-        if (entry.session !== session) return
+        if (entry.session !== session || entry.exitStatus != null) return
         val wasActive = activeTabId == id
-        if (exitStatus == 0) {
-            closeTab(id)
-            if (wasActive) sessionStatus = "Bash session ended."
-            return
-        }
         // Keep the exited emulator and final screen; input stays disabled
         // because TerminalSession.isRunning() now returns false.
         tabs[index] = entry.copy(exitStatus = exitStatus)

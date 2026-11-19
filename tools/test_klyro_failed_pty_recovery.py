@@ -17,8 +17,8 @@ class FailedPtyRecoveryContracts(unittest.TestCase):
     def test_failure_retains_scrollback_and_code_without_closing_tab(self):
         self.assertIn("val exitStatus: Int? = null", MODEL)
         action = MODEL.split("private fun finishTab(", 1)[1].split("// Legacy", 1)[0]
-        self.assertIn("if (exitStatus == 0)", action)
-        self.assertIn("closeTab(id)", action)
+        self.assertIn("entry.exitStatus != null", action)
+        self.assertNotIn("closeTab(id)", action)
         self.assertIn("entry.copy(exitStatus = exitStatus)", action)
         self.assertIn("Bash exited unexpectedly (code $exitStatus)", MODEL)
         self.assertIn("pendingNativePaste", action)
@@ -59,9 +59,10 @@ class FailedPtyRecoveryContracts(unittest.TestCase):
         self.assertIn("sessionFailureMessage", UI)
         self.assertIn("Paste not sent", UI)
 
-    def test_successfully_completed_tabs_still_auto_close(self):
+    def test_successful_exit_retains_tab_without_failure_notice(self):
         block = MODEL.split("private fun finishTab(", 1)[1].split("// Legacy", 1)[0]
-        self.assertRegex(block, r"if \(exitStatus == 0\)\s*\{\s*closeTab\(id\)")
+        self.assertNotIn("closeTab(id)", block)
+        self.assertIn("if (exitStatus == 0) null", MODEL)
 
 if __name__ == "__main__":
     unittest.main()
