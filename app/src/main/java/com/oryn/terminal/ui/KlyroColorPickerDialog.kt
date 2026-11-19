@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.oryn.terminal.ui
 
 import com.oryn.terminal.core.KlyroTextLimit
@@ -330,10 +332,7 @@ internal fun KlyroColorPickerDialog(
                         )
                     }
                     Text("Presets", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
+                    KlyroSettingsChoiceGrid(columns = KlyroColors.extended.size) {
                         KlyroColors.extended.forEach { preset ->
                             val swatch = KlyroColors.create(colors.dark, preset.id)
                             Button(
@@ -363,7 +362,7 @@ internal fun KlyroColorPickerDialog(
                                     contentColor = swatch.onAccent
                                 )
                             ) {
-                                Text(preset.label, fontSize = 12.sp, maxLines = 1)
+                                Text(preset.label, fontSize = 12.sp)
                             }
                         }
                     }

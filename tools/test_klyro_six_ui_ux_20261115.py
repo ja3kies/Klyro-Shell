@@ -27,7 +27,7 @@ class KlyroSixUiUx(unittest.TestCase):
         self.assertIn("selected = pinnedOnly", P)
         self.assertIn("selected = availableOnly", P)
         self.assertIn("modifier = Modifier.weight(1f)", P)
-        self.assertIn("maxLines = 1, overflow = TextOverflow.Ellipsis", P)
+        self.assertIn("KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false)", P)
         self.assertIn("pinnedOnly = !pinnedOnly", P)
         self.assertIn("availableOnly = !availableOnly", P)
 

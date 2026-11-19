@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.oryn.terminal.ui
 
 import androidx.activity.compose.BackHandler
@@ -55,7 +57,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.termux.KlyroWelcomeGuide
 import com.oryn.terminal.core.KlyroTextLimit
@@ -217,19 +218,14 @@ internal fun KlyroCommandPalette(
                         color = colors.muted,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false) {
                         FilterChip(
                             selected = pinnedOnly,
                             onClick = { pinnedOnly = !pinnedOnly },
                             modifier = Modifier.weight(1f)
                                 .heightIn(min = KlyroUiMetrics.minTouch),
                             label = {
-                                Text("Pinned ${pinnedIds.size}/8",
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("Pinned ${pinnedIds.size}/8")
                             },
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                             colors = FilterChipDefaults.filterChipColors(
@@ -245,8 +241,7 @@ internal fun KlyroCommandPalette(
                             modifier = Modifier.weight(1f)
                                 .heightIn(min = KlyroUiMetrics.minTouch),
                             label = {
-                                Text("Available only",
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("Available only")
                             },
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                             colors = FilterChipDefaults.filterChipColors(

@@ -6,12 +6,16 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -22,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun FreezeReportsPane(
     onStabilityTestStarted: () -> Unit = {},
@@ -65,26 +70,43 @@ internal fun FreezeReportsPane(
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Freeze reports", style = MaterialTheme.typography.titleLarge)
+        Text("Freeze reports", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
         Text(status, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         FreezeRecorder.lastError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Row {
+        FlowRow {
             TextButton(onClick = { revision++ }, enabled = !busy) { Text("Refresh") }
             TextButton(onClick = { export.launch("klyro-freeze-diagnostics.zip") }, enabled = !busy && reports.isNotEmpty()) { Text("Export ZIP") }
         }
         for ((id, body) in reports) {
             Column(Modifier.fillMaxWidth().testTag("freeze-report-$id")) {
-            val state = body.lineSequence().firstOrNull { it.startsWith("summary_state=") }?.removePrefix("summary_")
-                ?: body.lineSequence().lastOrNull { it.startsWith("state=") } ?: "unconfirmed"
-            Text(java.util.Date(id.substringBefore('-').toLongOrNull() ?: 0).toString())
-            Text(state)
-            Row {
-                TextButton(onClick = { selected = if (selected == id) null else id }) { Text("Details") }
-                TextButton(onClick = { deleteTarget = id }, enabled = !busy) { Text("Delete report") }
+                val state = remember(body) {
+                    val line = body.lineSequence().firstOrNull { it.startsWith("summary_state=") }
+                        ?: body.lineSequence().lastOrNull { it.startsWith("state=") }
+                    when (line?.substringAfter('=')?.substringBefore(' ')) {
+                        "UI_RECOVERED" -> "Interface recovered"
+                        "UI_FREEZE_DETECTED" -> "Probable interface freeze"
+                        "UI_STALL_DETECTED" -> "Possible interface stall"
+                        "SYSTEM_ANR_CONFIRMED" -> "Android confirmed an ANR"
+                        "PROCESS_EXIT_OTHER" -> "Process exited"
+                        "STABILITY_TEST_STARTED" -> "Stability test started"
+                        "STABILITY_TEST_OBSERVED" -> "Stability test observed"
+                        else -> "Unconfirmed incident"
+                    }
+                }
+                Text(state, style = MaterialTheme.typography.titleMedium)
+                id.substringBefore('-').toLongOrNull()?.let { timestamp ->
+                    Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(timestamp)),
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                FlowRow {
+                    TextButton(onClick = { selected = if (selected == id) null else id }) {
+                        Text(if (selected == id) "Hide details" else "Details")
+                    }
+                    TextButton(onClick = { deleteTarget = id }, enabled = !busy) { Text("Delete report") }
+                }
+                if (selected == id) Text(body, style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState()))
             }
-            if (selected == id) Text(body, style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState()))
-        }
         }
         if (com.oryn.terminal.BuildConfig.DEBUG) FreezeStabilityControls(onStabilityTestStarted)
     }
@@ -156,9 +178,16 @@ private fun FreezeStabilityControls(onStabilityTestStarted: () -> Unit) {
     var feedback by remember { mutableStateOf("") }
     var strictIo by remember { mutableStateOf(false) }
     DisposableEffect(Unit) { onDispose { FreezeRecorder.setStrictIo(false) } }
-    Row {
-        Text("Check UI I/O (debug)")
-        Switch(checked = strictIo, onCheckedChange = { strictIo = it; FreezeRecorder.setStrictIo(it) })
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+            .toggleable(value = strictIo, role = Role.Switch) {
+                strictIo = it
+                FreezeRecorder.setStrictIo(it)
+            },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Check UI I/O (debug)", modifier = Modifier.weight(1f))
+        Switch(checked = strictIo, onCheckedChange = null)
     }
     Text("Stability test (diagnostic build)", style = MaterialTheme.typography.titleMedium)
     Text("Creates a separate Bash tab, waits 3 seconds, then prints 1,500 lines. Go Home, open another app, then return. Keep the test tab until you inspect the END marker; close it explicitly when finished. Existing sessions receive no commands.")
