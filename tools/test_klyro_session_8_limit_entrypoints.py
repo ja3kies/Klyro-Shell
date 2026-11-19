@@ -8,7 +8,8 @@ T=(P/"TerminalPane.kt").read_text()
 class SessionLimitConsistency(unittest.TestCase):
  def test_action_row_has_disabled_semantics(self):
   self.assertIn('enabled: Boolean = true',U)
-  self.assertIn('.clickable(enabled = enabled, role = Role.Button,',U)
+  self.assertIn('.clickable(interactionSource = pressSource, indication = null,',U)
+  self.assertIn('enabled = enabled, role = Role.Button,',U)
   self.assertIn('if (!enabled) stateDescription = "Unavailable"',U)
  def test_session_details_disable_new_when_full(self):
   self.assertIn('canCreateSession = tabs.size < 8',T)
