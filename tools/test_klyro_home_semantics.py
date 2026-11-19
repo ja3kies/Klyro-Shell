@@ -6,7 +6,7 @@ MAIN = (ROOT / "app/src/main/java/com/oryn/terminal/MainActivity.kt").read_text(
 
 class HomeSemanticsTest(unittest.TestCase):
     def test_plugins_card_has_button_role(self):
-        self.assertIn('.clickable(role = Role.Button, onClickLabel = "Open Klyro plugins")', MAIN)
+        self.assertRegex(MAIN, r"(?s)\.clickable\(interactionSource = pluginsSource, indication = null,\s*role = Role.Button, onClickLabel = \"Open Klyro plugins\"\)")
 
     def test_runtime_text_is_a_polite_live_region(self):
         text = MAIN.split("homeStatus.runtimeMessage,", 1)[1][:170]

@@ -3,6 +3,12 @@ package com.oryn.terminal.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.DisposableEffect
@@ -42,6 +49,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -51,6 +59,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.oryn.terminal.R
+import com.oryn.terminal.ui.motion.klyroPressScale
 
 /**
  * Shared presentation primitives for Klyro sheets, menus and action rows.
@@ -136,10 +145,14 @@ internal fun KlyroActionRow(
 ) {
     val colors = LocalKlyroColors.current
     val ink = if (!enabled) colors.muted else if (destructive) colors.danger else colors.muted
+    val pressSource = remember { MutableInteractionSource() }
+    val pressed by pressSource.collectIsPressedAsState()
     Row(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)
-            .clickable(enabled = enabled, role = Role.Button,
+            .klyroPressScale(pressed, enabled)
+            .clickable(interactionSource = pressSource, indication = null,
+                enabled = enabled, role = Role.Button,
                 onClickLabel = label, onClick = onClick)
             .semantics {
                 contentDescription = if (subtitle.isNullOrBlank()) label else "$label. $subtitle"
@@ -293,8 +306,17 @@ internal fun KlyroThinSlider(
     showTrack: Boolean = true
 ) {
     val colors = LocalKlyroColors.current
+    val dragSource = remember { MutableInteractionSource() }
+    val dragged by dragSource.collectIsDraggedAsState()
+    val thumbScale by animateFloatAsState(
+        targetValue = if (dragged) 1.13f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium),
+        label = "slider-drag-feedback"
+    )
     Slider(
         value = value.coerceIn(valueRange.start, valueRange.endInclusive),
+        interactionSource = dragSource,
         onValueChange = onValueChange,
         valueRange = valueRange,
         steps = steps,
@@ -307,6 +329,7 @@ internal fun KlyroThinSlider(
         thumb = {
             Box(
                 Modifier.size(KlyroUiMetrics.iosSliderThumb)
+                    .graphicsLayer { scaleX = thumbScale; scaleY = thumbScale }
                     .background(colors.foreground, CircleShape)
                     .border(KlyroUiMetrics.iosSliderBorder,
                         colors.muted.copy(alpha = .35f), CircleShape)

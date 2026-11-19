@@ -7,6 +7,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,6 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oryn.terminal.R
+import com.oryn.terminal.ui.motion.klyroPressScale
+import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginRecord
 import kotlinx.coroutines.Dispatchers
@@ -246,11 +251,24 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
             listOf("installed" to "Installed (${installed.size})",
                 "explore" to "Explore").forEach { (id, label) ->
                 val selected = page == id
+                val source = remember(id) { MutableInteractionSource() }
+                val pressed by source.collectIsPressedAsState()
+                val enabled = !mutationBusy && !confirmedMutationPending
+                val tabColor by animateColorAsState(
+                    if (selected) colors.accent else colors.key,
+                    label = "plugin-tab-background"
+                )
+                val ink by animateColorAsState(
+                    if (selected) colors.onAccent else colors.foreground,
+                    label = "plugin-tab-text"
+                )
                 Surface(
                     modifier = Modifier.weight(1f)
                         .heightIn(min = KlyroUiMetrics.minTouch)
+                        .klyroPressScale(pressed, enabled)
                         .clickable(
-                            enabled = !mutationBusy && !confirmedMutationPending, role = Role.Tab,
+                            interactionSource = source, indication = null,
+                            enabled = enabled, role = Role.Tab,
                             onClickLabel = "Show $label"
                         ) {
                             page = id
@@ -258,8 +276,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         }
                         .semantics { this.selected = selected },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                    color = if (selected) colors.accent else colors.key,
-                    contentColor = if (selected) colors.onAccent else colors.foreground
+                    color = tabColor,
+                    contentColor = ink
                 ) {
                     Text(label, modifier = Modifier.padding(vertical = 13.dp),
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
@@ -281,8 +299,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     onAction = { page = "explore" }
                 )
             }
-            installed.forEach { plugin ->
+            installed.forEachIndexed { index, plugin ->
                 Surface(
+                    modifier = Modifier.klyroStaggeredEntrance(index, "installed-${plugin.id}"),
                     color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
                     Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
@@ -313,9 +332,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 }
             }
         } else {
-            KlyroPluginManager.bundled.forEach { plugin ->
+            KlyroPluginManager.bundled.forEachIndexed { index, plugin ->
                 val isInstalled = installed.any { it.id == plugin.id }
                 Surface(
+                    modifier = Modifier.klyroStaggeredEntrance(index, "explore-${plugin.id}"),
                     color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
                     Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
