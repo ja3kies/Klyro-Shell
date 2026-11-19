@@ -3,22 +3,32 @@ package com.oryn.terminal
 import android.Manifest
 import android.graphics.BitmapFactory
 import android.provider.Settings
+import android.graphics.drawable.AnimatedImageDrawable
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.max
 import org.junit.Assert.assertTrue
@@ -28,7 +38,7 @@ import org.junit.Test
 /** Runs against the real Android settings provider and decoded GIF, without a PTY. */
 @SdkSuppress(minSdkVersion = 29)
 class HomeCoverUiTest {
-    @get:Rule val ui = createComposeRule()
+    @get:Rule val ui = createAndroidComposeRule<ComponentActivity>()
 
     private fun withAnimationScale(block: (setScale: (String) -> Unit) -> Unit) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -96,5 +106,38 @@ class HomeCoverUiTest {
         } finally {
             source.recycle()
         }
+    }
+
+    @Test fun animatedCoverStopsAndResumesWithComposeLifecycleOwner() = withAnimationScale { setScale ->
+        setScale("1")
+        val owner = object : LifecycleOwner {
+            override val lifecycle = LifecycleRegistry(this)
+        }
+        ui.runOnUiThread { owner.lifecycle.currentState = Lifecycle.State.RESUMED }
+        ui.setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
+                KlyroHomePixelCover(148.dp, Color.Black)
+            }
+        }
+
+        var drawable: AnimatedImageDrawable? = null
+        ui.waitUntil(10_000) {
+            drawable = findAnimatedImage(ui.activity.window.decorView)
+            drawable != null && drawable!!.isRunning
+        }
+        ui.runOnUiThread { owner.lifecycle.currentState = Lifecycle.State.CREATED }
+        ui.waitUntil(5_000) { drawable?.isRunning == false }
+        ui.runOnUiThread { owner.lifecycle.currentState = Lifecycle.State.RESUMED }
+        ui.waitUntil(5_000) { drawable?.isRunning == true }
+    }
+
+    private fun findAnimatedImage(view: View): AnimatedImageDrawable? {
+        if (view is ImageView) return view.drawable as? AnimatedImageDrawable
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                findAnimatedImage(view.getChildAt(index))?.let { return it }
+            }
+        }
+        return null
     }
 }

@@ -82,9 +82,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.stateDescription
@@ -216,6 +216,7 @@ fun TerminalPane(
     var selectedOutputTruncated by remember(session) { mutableStateOf(false) }
     var outputSelectionView by remember(session) { mutableStateOf<EditText?>(null) }
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(activeTabId) {
         com.oryn.terminal.diagnostics.FreezeRecorder.event(com.oryn.terminal.diagnostics.FreezeEvents.Code.TERMINAL, activeTabId ?: 0)
     }
@@ -225,7 +226,6 @@ fun TerminalPane(
     var clipboardAvailable by remember(session) {
         mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
-    val lifecycleOwner = context as? LifecycleOwner
     var tabJobActivity by remember { mutableStateOf<Map<Long, JobActivityUi>>(emptyMap()) }
     var activityElapsedMs by remember { mutableStateOf(SystemClock.elapsedRealtime()) }
 
@@ -233,8 +233,7 @@ fun TerminalPane(
         while (true) {
             // No /proc polling while the app is backgrounded. Sampling uses the
             // IO dispatcher so terminal rendering and typing never block.
-            val foreground = lifecycleOwner?.lifecycle?.currentState
-                ?.isAtLeast(Lifecycle.State.RESUMED) != false
+            val foreground = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
             if (foreground) {
                 val measured = withContext(Dispatchers.IO) {
                     jobSessions.mapValues { (_, terminal) -> KlyroJobProbe.sample(terminal) }
@@ -288,11 +287,11 @@ fun TerminalPane(
                 clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
             }
         }
-        lifecycleOwner?.lifecycle?.addObserver(observer)
+        lifecycleOwner.lifecycle.addObserver(observer)
         runCatching { clipboardManager?.addPrimaryClipChangedListener(listener) }
         clipboardAvailable = ClipboardTextReader.hasPlainText(clipboardManager)
         onDispose {
-            lifecycleOwner?.lifecycle?.removeObserver(observer)
+            lifecycleOwner.lifecycle.removeObserver(observer)
             runCatching { clipboardManager?.removePrimaryClipChangedListener(listener) }
         }
     }

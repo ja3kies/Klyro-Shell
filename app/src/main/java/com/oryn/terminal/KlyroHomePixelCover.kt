@@ -32,12 +32,12 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -99,6 +99,7 @@ internal fun rememberHomeMotionEnabled(): Boolean {
 @Composable
 private fun KlyroAnimatedGifCover(animate: Boolean) {
     val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val decoded by produceState<AnimatedImageDrawable?>(null, context) {
         value = withContext(Dispatchers.IO) {
             runCatching {
@@ -132,7 +133,6 @@ private fun KlyroAnimatedGifCover(animate: Boolean) {
     )
 
     // A hidden screen or stopped Activity must not keep decoding GIF frames.
-    val lifecycle = (context as? LifecycleOwner)?.lifecycle
     DisposableEffect(animated, lifecycle, animate) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -141,13 +141,12 @@ private fun KlyroAnimatedGifCover(animate: Boolean) {
                 else -> Unit
             }
         }
-        lifecycle?.addObserver(observer)
-        if (animate && (lifecycle == null ||
-            lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
-        ) animated.start() else animated.stop()
+        lifecycle.addObserver(observer)
+        if (animate && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) animated.start()
+        else animated.stop()
 
         onDispose {
-            lifecycle?.removeObserver(observer)
+            lifecycle.removeObserver(observer)
             animated.stop()
         }
     }
