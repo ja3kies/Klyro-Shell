@@ -1,5 +1,9 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import kotlin.math.roundToInt
+import androidx.compose.animation.core.tween
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -411,6 +415,10 @@ internal fun KlyroSettingsSheet(
                                                 KlyroColors.primary.forEach { preset ->
                                                     val swatch = KlyroColors.create(colors.dark, preset.id)
                                                     val active = accentId == preset.id
+                                                    val selection by animateFloatAsState(
+                                                        if (active) 1f else 0f, tween(200), label = "Accent selection"
+                                                    )
+                                                    val face = RoundedCornerShape(percent = (50 - 20 * selection).roundToInt())
                                                     Box(
                                                         modifier = Modifier.size(KlyroUiMetrics.minTouch)
                                                             .clickable(role = Role.RadioButton,
@@ -425,18 +433,16 @@ internal fun KlyroSettingsSheet(
                                                     ) {
                                                         Box(
                                                             modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
-                                                                .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
-                                                                .then(if (active) Modifier.border(
-                                                                    KlyroUiMetrics.selectedBorder,
-                                                                    colors.foreground,
-                                                                    androidx.compose.foundation.shape.CircleShape
-                                                                ) else Modifier),
+                                                                .rotate(45f * (1f - selection))
+                                                                .background(swatch.accent, face)
+                                                                .border(KlyroUiMetrics.selectedBorder,
+                                                                    colors.foreground.copy(alpha = selection), face),
                                                             contentAlignment = Alignment.Center
                                                         ) {
-                                                            if (active) {
+                                                            if (selection > 0f) {
                                                                 Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
-                                                                    contentDescription = null, tint = swatch.onAccent,
-                                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
+                                                                    contentDescription = null, tint = swatch.onAccent.copy(alpha = selection),
+                                                                    modifier = Modifier.rotate(-45f * (1f - selection)).size(KlyroUiMetrics.glyphSmall))
                                                             }
                                                         }
                                                     }

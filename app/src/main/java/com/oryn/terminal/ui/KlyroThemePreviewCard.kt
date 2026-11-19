@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.animation.animateColorAsState
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -94,7 +96,7 @@ internal fun KlyroThemePreviewCard(
                                     .padding(start = 6.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
-                                Text("›_", color = palette.terminalPrompt, fontFamily = FontFamily.Monospace,
+                                Text("›_", color = animateColorAsState(palette.terminalPrompt, label = "System preview prompt").value, fontFamily = FontFamily.Monospace,
                                     fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -106,13 +108,13 @@ internal fun KlyroThemePreviewCard(
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("› _", color = preview.terminalPrompt, fontFamily = FontFamily.Monospace,
+                        Text("› _", color = animateColorAsState(preview.terminalPrompt, label = "Preview prompt").value, fontFamily = FontFamily.Monospace,
                             fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
             Text(label, modifier = Modifier.fillMaxWidth(),
-                color = if (active) current.accent else current.foreground,
+                color = animateColorAsState(if (active) current.accent else current.foreground, label = "Theme label").value,
                 fontSize = 11.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
