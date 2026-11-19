@@ -3,6 +3,8 @@ package com.oryn.terminal.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.DisposableEffect
@@ -51,6 +54,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.oryn.terminal.R
+import com.oryn.terminal.ui.motion.klyroPressScale
 
 /**
  * Shared presentation primitives for Klyro sheets, menus and action rows.
@@ -136,10 +140,14 @@ internal fun KlyroActionRow(
 ) {
     val colors = LocalKlyroColors.current
     val ink = if (!enabled) colors.muted else if (destructive) colors.danger else colors.muted
+    val pressSource = remember { MutableInteractionSource() }
+    val pressed by pressSource.collectIsPressedAsState()
     Row(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)
-            .clickable(enabled = enabled, role = Role.Button,
+            .klyroPressScale(pressed, enabled)
+            .clickable(interactionSource = pressSource, indication = null,
+                enabled = enabled, role = Role.Button,
                 onClickLabel = label, onClick = onClick)
             .semantics {
                 contentDescription = if (subtitle.isNullOrBlank()) label else "$label. $subtitle"
