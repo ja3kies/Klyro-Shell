@@ -1,5 +1,9 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -64,7 +68,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -434,4 +437,18 @@ internal fun KlyroThinSlider(
             }
         }
     )
+}
+
+/** Apply to the face inside the touch target so pressing never changes hit bounds. */
+@Composable
+internal fun Modifier.terminalPressFace(pressed: Boolean): Modifier {
+    val scale = animateFloatAsState(
+        targetValue = if (pressed) 0.95f else 1f,
+        animationSpec = tween(if (pressed) 65 else 110),
+        label = "Terminal control press"
+    )
+    return graphicsLayer {
+        scaleX = scale.value
+        scaleY = scale.value
+    }
 }

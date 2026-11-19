@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.clip
@@ -53,6 +54,7 @@ internal fun KlyroTerminalSessionTab(
     val safeTitle = title.ifBlank { "Session" }
     val contentInk = if (active) colors.onAccent else colors.foreground
     val interactions = remember { MutableInteractionSource() }
+    val pressed = interactions.collectIsPressedAsState()
     val focused = interactions.collectIsFocusedAsState()
     Box(
         modifier = modifier
@@ -87,7 +89,7 @@ internal fun KlyroTerminalSessionTab(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            modifier = Modifier.height(36.dp).widthIn(max = 140.dp),
+            modifier = Modifier.height(36.dp).widthIn(max = 140.dp).terminalPressFace(pressed.value),
             color = if (active) colors.accent else colors.key,
             contentColor = contentInk,
             border = if (focused.value) BorderStroke(2.dp, colors.foreground) else null,

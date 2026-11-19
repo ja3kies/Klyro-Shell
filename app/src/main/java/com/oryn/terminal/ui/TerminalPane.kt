@@ -1,5 +1,8 @@
 package com.oryn.terminal.ui
 
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
+
 import android.content.ClipData
 import android.content.Intent
 import android.content.ClipboardManager
@@ -1769,6 +1772,11 @@ internal fun TerminalExtraKey(
     onClick: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
+    val view = LocalView.current
+    val tap = {
+        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        onClick()
+    }
     val tooltipOffset = with(LocalDensity.current) { (-60).dp.roundToPx() }
     val interaction = remember { MutableInteractionSource() }
     val held by interaction.collectIsPressedAsState()
@@ -1857,7 +1865,7 @@ internal fun TerminalExtraKey(
     Box(contentAlignment = Alignment.Center) {
     if (onLongClick == null) {
         Button(
-            onClick = onClick,
+            onClick = tap,
             enabled = enabled,
             modifier = Modifier
                 .heightIn(min = 50.dp)
@@ -1877,7 +1885,7 @@ internal fun TerminalExtraKey(
                 disabledContentColor = stateInk
             )
         ) {
-            keyContents()
+            Box(Modifier.terminalPressFace(held && enabled), contentAlignment = Alignment.Center) { keyContents() }
         }
     } else {
         // Own the full gesture for long-press keys: Button's internal click handler
@@ -1894,7 +1902,7 @@ internal fun TerminalExtraKey(
                     onClickLabel = description ?: label,
                     onLongClickLabel = longClickDescription ?: "Long press",
                     onLongClick = onLongClick,
-                    onClick = onClick
+                    onClick = tap
                 )
                 .semantics {
                     contentDescription = description ?: label
@@ -1905,7 +1913,7 @@ internal fun TerminalExtraKey(
             color = stateBackground,
             contentColor = stateInk
         ) {
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth().terminalPressFace(held && enabled).padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
                 keyContents()
             }
         }
