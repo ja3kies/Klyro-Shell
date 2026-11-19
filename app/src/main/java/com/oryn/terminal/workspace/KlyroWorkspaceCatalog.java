@@ -46,6 +46,7 @@ public final class KlyroWorkspaceCatalog {
     public static String cleanName(String value) {
         if (value == null) return "";
         StringBuilder result = new StringBuilder();
+        int codePoints = 0;
         for (int i = 0; i < value.length();) {
             int point = value.codePointAt(i);
             i += Character.charCount(point);
@@ -54,8 +55,9 @@ public final class KlyroWorkspaceCatalog {
                     Character.isISOControl(point) || type == Character.FORMAT ||
                     type == Character.LINE_SEPARATOR || type == Character.PARAGRAPH_SEPARATOR)
                 continue;
-            if (result.length() + Character.charCount(point) > MAX_NAME_CHARS) break;
+            if (codePoints >= MAX_NAME_CHARS) break;
             result.appendCodePoint(point);
+            codePoints++;
         }
         return result.toString().trim();
     }

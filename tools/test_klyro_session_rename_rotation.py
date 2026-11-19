@@ -6,7 +6,8 @@ class SessionRenameTest(unittest.TestCase):
     def test_draft_is_saveable_text_field_value(self):
         self.assertIn("rememberSaveable(name, stateSaver = TextFieldValue.Saver)",S)
         self.assertIn("TextFieldValue(name, selection = TextRange(0, name.length))",S)
-        self.assertIn("cleaned.length <= 32",S)
+        self.assertIn("KlyroTextLimit.takeCodePoints(cleaned, 32)",S)
+        self.assertIn("it.selection.end.coerceAtMost(bounded.length)",S)
         self.assertIn("val canSave = value.text.trim().isNotBlank()",S)
         self.assertIn("enabled = canSave", S)
     def test_no_implicit_write(self):

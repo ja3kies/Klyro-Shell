@@ -92,4 +92,10 @@ public class KlyroWorkspaceCatalogTest {
         assertNull(catalog.create("Project 99"));
         assertTrue(KlyroWorkspaceCatalog.cleanName("x".repeat(64)).length() <= 32);
     }
+
+    @Test public void nameLimitCountsUnicodeCodePointsWithoutSplittingEmoji() {
+        String expected = "a".repeat(31) + "😀";
+        assertEquals(expected, KlyroWorkspaceCatalog.cleanName(expected + "z"));
+        assertEquals(32, expected.codePointCount(0, expected.length()));
+    }
 }

@@ -109,6 +109,7 @@ import com.oryn.terminal.TerminalSessionViewModel
 import com.oryn.terminal.session.OrynTerminalSessionClient
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import com.oryn.terminal.core.OrynPaths
+import com.oryn.terminal.core.KlyroTextLimit
 import com.oryn.terminal.plugins.KlyroPluginManager
 import java.io.File
 import com.termux.terminal.TerminalSession
@@ -1322,7 +1323,7 @@ fun TerminalPane(
                     OutlinedTextField(
                         value = transcriptQuery,
                         onValueChange = {
-                            transcriptQuery = it.take(128)
+                            transcriptQuery = KlyroTextLimit.takeCodePoints(it, 128)
                             searchIndex = 0
                             searchPage = 0
                             searchSnapshot = null

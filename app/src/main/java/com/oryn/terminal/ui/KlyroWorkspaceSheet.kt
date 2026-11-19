@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.R
+import com.oryn.terminal.core.KlyroTextLimit
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 
 /** A workspace groups live PTYs but does not claim to restore dead processes. */
@@ -326,14 +327,16 @@ internal fun KlyroWorkspaceSheet(
                             OutlinedTextField(
                                 value = editorText,
                                 onValueChange = {
-                                    editorText = it.take(KlyroWorkspaceCatalog.MAX_NAME_CHARS)
+                                    editorText = KlyroTextLimit.takeCodePoints(
+                                        it, KlyroWorkspaceCatalog.MAX_NAME_CHARS
+                                    )
                                     editorError = false
                                 },
                                 label = { Text("Workspace name") },
                                 singleLine = true,
                                 isError = editorError,
                                 supportingText = {
-                                    Text("${KlyroWorkspaceCatalog.MAX_NAME_CHARS - editorText.length} characters remaining")
+                                    Text("${KlyroWorkspaceCatalog.MAX_NAME_CHARS - KlyroTextLimit.codePointCount(editorText)} characters remaining")
                                 },
                                 modifier = Modifier.fillMaxWidth().focusRequester(editorFocus),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
