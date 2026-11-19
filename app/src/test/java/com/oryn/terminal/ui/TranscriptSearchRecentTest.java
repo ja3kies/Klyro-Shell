@@ -118,4 +118,17 @@ public class TranscriptSearchRecentTest {
         TranscriptSearch.scanRecent(screen, COLUMNS, ROWS, "hit", false);
         assertEquals(original, screen.getSelectedText(0, 2, COLUMNS - 1, 2, false, false));
     }
+
+    @Test public void searchMatchesCompleteZeroWidthJoinedEmojiSequence() {
+        TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
+        String family = "👨‍👩‍👧‍👦";
+        write(screen, 0, "hi " + family + " ok");
+
+        TranscriptSearch.Snapshot result = TranscriptSearch.scanRecent(
+                screen, COLUMNS, ROWS, family, false);
+
+        assertEquals(1, result.totalCount);
+        TranscriptSearch.Occurrence match = result.newest.get(0);
+        assertEquals(family, match.preview.substring(match.highlightStart, match.highlightEnd));
+    }
 }
