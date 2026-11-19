@@ -13,8 +13,10 @@ public class TranscriptSearchRecentTest {
         int x = 0;
         for (int i = 0; i < text.length();) {
             int point = text.codePointAt(i);
-            screen.setChar(x, row, point, screen.getStyleAt(0, 0));
-            x += com.termux.terminal.WcWidth.width(point);
+            int width = com.termux.terminal.WcWidth.width(point);
+            screen.setChar(x - (width == 0 && x > 0 ? 1 : 0), row,
+                    point, screen.getStyleAt(0, 0));
+            x += width;
             i += Character.charCount(point);
         }
     }
@@ -123,6 +125,8 @@ public class TranscriptSearchRecentTest {
         TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
         String family = "👨‍👩‍👧‍👦";
         write(screen, 0, "hi " + family + " ok");
+        assertEquals("hi " + family + " ok",
+                screen.getSelectedText(0, 0, COLUMNS - 1, 0, false, false));
 
         TranscriptSearch.Snapshot result = TranscriptSearch.scanRecent(
                 screen, COLUMNS, ROWS, family, false);
