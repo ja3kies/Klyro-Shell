@@ -350,6 +350,49 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  android-instrumentation:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/product-overhaul-latest'
+    needs: debug-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Download debug-key app APK
+        uses: actions/download-artifact@v4
+        with:
+          name: klyro-shell-debug-key
+          path: instrumentation/app
+      - name: Download matching debug-key test APK
+        uses: actions/download-artifact@v4
+        with:
+          name: klyro-shell-tests-debug-key
+          path: instrumentation/tests
+      - name: Execute Android instrumentation on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            adb wait-for-device
+            adb install -r instrumentation/app/app-debug.apk
+            adb install -r instrumentation/tests/app-debug-androidTest.apk
+            timeout 1200 adb shell am instrument -w -r \
+              com.klyro.shell.test/androidx.test.runner.AndroidJUnitRunner \
+              | tee instrumentation-results.txt
+            grep -q 'OK (' instrumentation-results.txt
+      - name: Upload instrumentation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-instrumentation-results
+          path: instrumentation-results.txt
+          if-no-files-found: warn
+          retention-days: 14
+
   publish-stable-release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: debug-apk
