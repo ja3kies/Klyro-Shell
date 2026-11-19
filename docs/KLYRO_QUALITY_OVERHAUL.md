@@ -49,3 +49,9 @@ No new security vulnerability is claimed from this initial inventory. The outsta
 - Revu Diagnostics/Freeze Reports: opérations de stockage et export sur IO; ZIP créé via SAF, erreurs d’export signalent explicitement qu’un document de destination peut être incomplet, et suppression ne cible qu’un identifiant de rapport. Les tests de suppression existent mais n’ont pas été exécutés sur Android.
 - Revu Command Palette/Find: la palette insère les modèles validés sans envoyer Enter, les commandes marquées caution ouvrent une confirmation d’insertion, et le refus de PTY/input plein reste affiché. FIND conserve des coordonnées terminal et attend la fin du resize/IME avant le saut. Les protections et cas Unicode sont couverts côté JVM; aucun rendu/tap physique vérifié.
 - Les autres écrans du cycle restent à traiter dans l’ordre; aucun statut « Validé » ne leur est attribué sur la seule base de compilation.
+
+### 2026-11-20 — Palette, custom accents and freeze reports
+
+Commit `452ac94` reuses the adaptive Settings grid for independent command filters and color presets. Narrow widths and large fonts stack these controls. Freeze reports distinguish Android ANRs from heuristic detections using readable labels, localize incident timestamps, and allow action buttons to wrap. The debug I/O switch exposes a single labeled touch target. The original report remains accessible in Details and through ZIP export.
+
+655 local Python tests passed. [CI for the implementation](https://github.com/ja3kies/Klyro-Shell/actions/runs/44638573279) passed JVM, native, lint and APK assembly/signature checks. The new Compose report-disclosure test was assembled. Current renders, TalkBack and touch behavior await device execution.
