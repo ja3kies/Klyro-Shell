@@ -27,6 +27,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -73,6 +75,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.toArgb
 import com.oryn.terminal.ui.KlyroColors
+import com.oryn.terminal.ui.motion.klyroPressScale
+import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
 import com.oryn.terminal.ui.KlyroUiMetrics
 import com.oryn.terminal.ui.KlyroSettingsSheet
 import com.oryn.terminal.ui.KlyroTerminalFonts
@@ -1340,6 +1344,12 @@ private fun OrynTerminalApp(
                 onClose = onClose
             )
         } else {
+            val launchSource = remember { MutableInteractionSource() }
+            val launchPressed by launchSource.collectIsPressedAsState()
+            val pluginsSource = remember { MutableInteractionSource() }
+            val pluginsPressed by pluginsSource.collectIsPressedAsState()
+            val settingsSource = remember { MutableInteractionSource() }
+            val settingsPressed by settingsSource.collectIsPressedAsState()
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1355,6 +1365,7 @@ private fun OrynTerminalApp(
                 ) {
                     Box(
                         modifier = Modifier.size(60.dp)
+                            .klyroStaggeredEntrance(0, "home-brand")
                             .clip(RoundedCornerShape(19.dp))
                             .background(ui.tile),
                         contentAlignment = Alignment.Center
@@ -1391,7 +1402,8 @@ private fun OrynTerminalApp(
                 }
 
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
+                        .klyroStaggeredEntrance(1, "home-runtime-status"),
                     color = ui.chrome,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                 ) {
@@ -1538,7 +1550,10 @@ private fun OrynTerminalApp(
                             Button(
                                 onClick = onLaunch,
                                 enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                                interactionSource = launchSource,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                                    .klyroPressScale(launchPressed,
+                                        homeAction != KlyroHomeAction.START_BASH || !launchingBash),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = ui.accent,
                                     contentColor = ui.onAccent
@@ -1607,7 +1622,10 @@ private fun OrynTerminalApp(
                 }
                 Surface(
                     modifier = Modifier.fillMaxWidth()
-                        .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
+                        .klyroStaggeredEntrance(2, "home-plugins")
+                        .klyroPressScale(pluginsPressed)
+                        .clickable(interactionSource = pluginsSource, indication = null,
+                            role = Role.Button, onClickLabel = "Open Klyro plugins") { showPlugins = true }
                         .semantics { contentDescription = "Plugins" },
                     color = ui.tile,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
@@ -1640,7 +1658,10 @@ private fun OrynTerminalApp(
 
                 Surface(
                     modifier = Modifier.fillMaxWidth()
-                        .clickable(role = Role.Button,
+                        .klyroStaggeredEntrance(3, "home-settings")
+                        .klyroPressScale(settingsPressed)
+                        .clickable(interactionSource = settingsSource, indication = null,
+                            role = Role.Button,
                             onClickLabel = "Open Klyro settings") {
                             showHomeSettings = true
                         }.semantics { contentDescription = "Settings" },
