@@ -1,6 +1,12 @@
 package com.oryn.terminal.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.Color
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -281,37 +287,50 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
         Text("Offline packs · commands run only when you choose.",
             color = colors.muted, fontSize = 13.sp, lineHeight = 18.sp)
 
-        Row(
+        BoxWithConstraints(
             modifier = Modifier.fillMaxWidth()
                 .selectableGroup()
                 .background(colors.key, RoundedCornerShape(KlyroUiMetrics.selectedCorner))
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(4.dp)
         ) {
-            listOf("explore" to "Explore", "installed" to
-                if (registryLoading || registryReadFailed) "Installed"
-                else "Installed (${installed.size})").forEach { (id, label) ->
-                val selected = page == id
+            val tabWidth = ((maxWidth - 4.dp) / 2).coerceAtLeast(0.dp)
+            val offset = animateDpAsState(
+                if (page == "installed") tabWidth + 4.dp else 0.dp,
+                tween(180), label = "Plugin tab indicator"
+            )
+            Box(Modifier.matchParentSize()) {
                 Surface(
-                    modifier = Modifier.weight(1f)
-                        .heightIn(min = KlyroUiMetrics.minTouch)
-                        .clickable(
-                            enabled = !mutationBusy && !confirmedMutationPending, role = Role.Tab,
-                            onClickLabel = "Show $label"
-                        ) {
-                            page = id
-                            error = null
-                        }
-                        .semantics { this.selected = selected },
+                    modifier = Modifier.offset(x = offset.value).width(tabWidth).fillMaxSize(),
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                    color = if (selected) colors.sheet else colors.key,
-                    border = if (selected) BorderStroke(1.dp, colors.muted.copy(alpha = .45f)) else null,
-                    contentColor = colors.foreground
-                ) {
-                    Text(label, modifier = Modifier.padding(horizontal = 8.dp, vertical = 11.dp),
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        fontSize = 13.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    color = colors.sheet,
+                    border = BorderStroke(1.dp, colors.muted.copy(alpha = .45f))
+                ) {}
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                listOf("explore" to "Explore", "installed" to
+                    if (registryLoading || registryReadFailed) "Installed"
+                    else "Installed (${installed.size})").forEach { (id, label) ->
+                    val selected = page == id
+                    Surface(
+                        modifier = Modifier.weight(1f)
+                            .heightIn(min = KlyroUiMetrics.minTouch)
+                            .clickable(
+                                enabled = !mutationBusy && !confirmedMutationPending, role = Role.Tab,
+                                onClickLabel = "Show $label"
+                            ) {
+                                page = id
+                                error = null
+                            }
+                            .semantics { this.selected = selected },
+                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                        color = Color.Transparent,
+                        contentColor = colors.foreground
+                    ) {
+                        Text(label, modifier = Modifier.padding(horizontal = 8.dp, vertical = 11.dp),
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 13.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
                 }
             }
         }

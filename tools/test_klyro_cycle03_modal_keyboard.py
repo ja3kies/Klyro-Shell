@@ -108,7 +108,7 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn("searchIndex = TranscriptSearch.nextIndex(position, 1", self.pane)
 
     def test_plugin_tabs_are_large(self):
-        self.assertIn("modifier = Modifier.weight(1f)\n                        .heightIn(min = KlyroUiMetrics.minTouch)", self.plugins)
+        self.assertRegex(self.plugins, r"modifier = Modifier\.weight\(1f\)\s*\.heightIn\(min = KlyroUiMetrics\.minTouch\)")
 
     def test_plugin_dialog_cancel_resets_error(self):
         self.assertIn("pendingImport = null; pendingImportUri = null; error = null", self.plugins)

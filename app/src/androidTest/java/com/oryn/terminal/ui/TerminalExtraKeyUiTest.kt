@@ -23,6 +23,19 @@ class TerminalExtraKeyUiTest {
   ui.onNodeWithContentDescription("Test left").performTouchInput { longClick() }
   ui.runOnIdle { assertEquals(1,holds);assertEquals(0,taps) }
  }
+ @Test fun hintWaitsForHoldAndDisappearsOnRelease() {
+  ui.setContent { MaterialTheme { TerminalExtraKey(label="Tab",description="Insert tab",onClick={}) } }
+  ui.mainClock.autoAdvance = false
+  val key = ui.onNodeWithContentDescription("Insert tab")
+  key.performTouchInput { down(center) }
+  ui.mainClock.advanceTimeBy(100)
+  ui.onNodeWithText("Insert tab").assertDoesNotExist()
+  ui.mainClock.advanceTimeBy(500)
+  ui.onNodeWithText("Insert tab").assertExists()
+  key.performTouchInput { up() }
+  ui.mainClock.advanceTimeByFrame()
+  ui.onNodeWithText("Insert tab").assertDoesNotExist()
+ }
  @Test fun largeFontCanExpandBeyondOldFixedHeight() {
   ui.setContent { val density=LocalDensity.current
    CompositionLocalProvider(LocalDensity provides Density(density.density,3f)) {

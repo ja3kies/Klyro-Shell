@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateFloatAsState
 import kotlin.math.roundToInt
 import androidx.compose.animation.core.tween
@@ -381,11 +383,15 @@ internal fun KlyroSettingsSheet(
                                             contentDescription = null,
                                             tint = colors.muted,
                                             modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
-                                                .rotate(if (showMonochromeThemes) 90f else 0f)
+                                                .rotate(animateFloatAsState(if (showMonochromeThemes) 90f else 0f, tween(180), label = "Theme disclosure").value)
                                         )
                                     }
                                 }
-                                if (showMonochromeThemes) {
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = showMonochromeThemes,
+                                    enter = expandVertically(tween(180), expandFrom = Alignment.Top),
+                                    exit = shrinkVertically(tween(180), shrinkTowards = Alignment.Top)
+                                ) {
                                     KlyroSettingsChoiceGrid(columns = 3, minimumInlineWidth = appearanceInlineWidth) {
                                         listOf("mono-contrast" to "Contrast", "mono-black" to "OLED",
                                             "mono-paper" to "Paper").forEach { (mode, label) ->

@@ -1,5 +1,8 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
 
@@ -1921,20 +1924,30 @@ internal fun TerminalExtraKey(
     // A brief, visible action hint helps sighted users discover shortcuts.
     // Non-focusable popup does not interrupt the held touch gesture or PTY.
     if (held && enabled) {
-        Popup(
-            alignment = Alignment.TopCenter,
-            offset = IntOffset(0, tooltipOffset),
-            properties = PopupProperties(focusable = false)
-        ) {
-            Surface(
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                    KlyroUiMetrics.controlCorner),
-                color = colors.sheet,
-                contentColor = colors.foreground
+        var hintVisible by remember { mutableStateOf(false) }
+        val opacity = remember { Animatable(0f) }
+        LaunchedEffect(Unit) {
+            delay(250)
+            hintVisible = true
+            opacity.animateTo(1f, tween(90))
+        }
+        if (hintVisible) {
+            Popup(
+                alignment = Alignment.TopCenter,
+                offset = IntOffset(0, tooltipOffset),
+                properties = PopupProperties(focusable = false)
             ) {
-                Text(longClickDescription ?: description ?: label,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    fontSize = 12.sp, maxLines = 2)
+                Surface(
+                    modifier = Modifier.graphicsLayer { alpha = opacity.value },
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        KlyroUiMetrics.controlCorner),
+                    color = colors.sheet,
+                    contentColor = colors.foreground
+                ) {
+                    Text(longClickDescription ?: description ?: label,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        fontSize = 12.sp, maxLines = 2)
+                }
             }
         }
     }

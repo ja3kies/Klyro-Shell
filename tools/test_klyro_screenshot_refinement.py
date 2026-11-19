@@ -16,8 +16,10 @@ class ScreenshotRefinementTest(unittest.TestCase):
         self.assertIn('if (calmHomeReady) screenChrome else ui.sheet', HOME)
 
     def test_plugin_tabs_use_selection_outline_instead_of_primary_action_fill(self):
-        self.assertIn('border = if (selected) BorderStroke', PLUGINS)
-        self.assertIn('color = if (selected) colors.sheet else colors.key', PLUGINS)
+        indicator = PLUGINS.split('val tabWidth =', 1)[1].split('Row(Modifier.fillMaxWidth()', 1)[0]
+        self.assertIn('if (page == "installed") tabWidth + 4.dp else 0.dp', indicator)
+        self.assertIn('border = BorderStroke', indicator)
+        self.assertIn('color = colors.sheet', indicator)
         self.assertIn('selectableGroup()', PLUGINS)
 
     def test_catalog_card_adapts_instead_of_squeezing_action_beside_large_text(self):
