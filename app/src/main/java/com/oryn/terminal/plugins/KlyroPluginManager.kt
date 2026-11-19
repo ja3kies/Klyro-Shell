@@ -133,8 +133,7 @@ class KlyroPluginManager(context: Context) {
     }
 
     // A LazyColumn key must be unique even if different packs reuse a label.
-    fun activeCommands(): List<KlyroPluginCommand> = runCatching { installed() }
-        .getOrDefault(emptyList())
+    fun activeCommands(): List<KlyroPluginCommand> = installed()
         .filter { it.enabled }.flatMap { it.commands }
         .distinctBy { it.label to it.insert }
 

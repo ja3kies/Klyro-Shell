@@ -117,7 +117,29 @@ class PluginsRefinementUiTest {
             assertTrue(runCatching { manager.installBundled(KlyroPluginManager.bundled.first().id) }
                 .exceptionOrNull() is IllegalStateException)
             assertEquals(manifest, preferences.getString("manifest", null))
-            assertTrue(manager.activeCommands().isEmpty())
+            assertTrue("Palette callers must distinguish an unreadable registry from no plugins",
+                runCatching { manager.activeCommands() }.exceptionOrNull() is IllegalStateException)
         }
+    }
+
+    @Test fun commandPaletteShowsPluginRegistryFailureInsteadOfAnEmptyResult() {
+        val message = "Saved plugin shortcuts are unavailable. Open Plugins to reload the registry."
+        ui.setContent {
+            CompositionLocalProvider(
+                LocalContext provides isolatedContext,
+                LocalKlyroColors provides KlyroColors.create(true, "cyan")
+            ) {
+                MaterialTheme {
+                    KlyroCommandPalette(
+                        installedPrefix = null,
+                        pluginCommands = emptyList(),
+                        pluginLoadError = message,
+                        onInsert = { true },
+                        onDismiss = {}
+                    )
+                }
+            }
+        }
+        ui.onNodeWithText(message).assertIsDisplayed()
     }
 }

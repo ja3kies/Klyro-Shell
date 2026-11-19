@@ -72,6 +72,7 @@ import java.io.File
 internal fun KlyroCommandPalette(
     installedPrefix: File?,
     pluginCommands: List<KlyroPluginCommand>,
+    pluginLoadError: String? = null,
     onInsert: (String) -> Boolean,
     onDismiss: () -> Unit
 ) {
@@ -282,6 +283,7 @@ internal fun KlyroCommandPalette(
                         }
                     }
                     info?.let { KlyroInlineNotice(it, isError = unsafeFeedback) }
+                    pluginLoadError?.let { KlyroInlineNotice(it, isError = true) }
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth()
                             .weight(1f, fill = false)

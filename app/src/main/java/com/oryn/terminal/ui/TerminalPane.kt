@@ -1554,9 +1554,15 @@ fun TerminalPane(
                     File(context.applicationInfo.nativeLibraryDir)).prefix
             }.getOrNull()
         }
+        val pluginCommandResult = remember(context) {
+            runCatching { KlyroPluginManager(context).activeCommands() }
+        }
         KlyroCommandPalette(
             installedPrefix = privatePrefix,
-            pluginCommands = remember(context) { KlyroPluginManager(context).activeCommands() },
+            pluginCommands = pluginCommandResult.getOrDefault(emptyList()),
+            pluginLoadError = if (pluginCommandResult.isFailure)
+                "Saved plugin shortcuts are unavailable. Open Plugins to reload the registry."
+                else null,
             onInsert = { snippet ->
                 // A curated command is pasted, never submitted with Enter.
                 // Full-screen applications retain their own keyboard focus.
