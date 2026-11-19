@@ -4,6 +4,9 @@ import androidx.activity.compose.BackHandler
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.oryn.terminal.R
+import com.oryn.terminal.ui.motion.klyroPressScale
 import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 
 /** A workspace groups live PTYs but does not claim to restore dead processes. */
@@ -178,8 +182,14 @@ internal fun KlyroWorkspaceSheet(
                         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == entry.id
                     }
                     val active = entry.id == selected.id
-                    val cardColor = if (active) c.accent.copy(alpha = .11f) else c.tile
+                    val source = remember(entry.id) { MutableInteractionSource() }
+                    val pressed by source.collectIsPressedAsState()
+                    val cardColor by animateColorAsState(
+                        targetValue = if (active) c.accent.copy(alpha = .11f) else c.tile,
+                        label = "workspace-selection"
+                    )
                     Surface(
+                        modifier = Modifier.klyroPressScale(pressed),
                         color = cardColor,
                         border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder,
                             c.accent.copy(alpha = .68f)) else null,
@@ -193,7 +203,8 @@ internal fun KlyroWorkspaceSheet(
                             Row(
                                 modifier = Modifier.weight(1f)
                                     .heightIn(min = KlyroUiMetrics.workspaceRow)
-                                    .clickable(role = Role.RadioButton,
+                                    .clickable(interactionSource = source, indication = null,
+                                        role = Role.RadioButton,
                                         onClickLabel = "Select workspace " + entry.name) {
                                         onSelectProject(entry.id)
                                     }.semantics { this.selected = active },
