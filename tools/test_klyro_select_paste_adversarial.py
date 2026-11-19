@@ -33,6 +33,7 @@ class SelectPasteAdversarialAudit(unittest.TestCase):
 
     def test_find_query_uses_unicode_safe_limit(self):
         self.assertIn("KlyroTextLimit.takeCodePoints(it, 128)", self.pane)
+        self.assertIn("KlyroTextLimit.codePointCount(transcriptQuery) >= 128", self.pane)
 
     def test_select_mode_never_silently_switches_to_paste(self):
         part = self.pane.split("fun selectTerminalOutput(expectedSelection: Boolean)", 1)[1].split("// Fit seven", 1)[0]

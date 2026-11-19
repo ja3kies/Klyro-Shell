@@ -1492,7 +1492,7 @@ fun TerminalPane(
                             searchPage = 0; searchSnapshot = null
                         }) { Text("Clear search") }
                     }
-                    if (transcriptQuery.length >= 128) {
+                    if (KlyroTextLimit.codePointCount(transcriptQuery) >= 128) {
                         Text("Search text limit reached (128 characters)",
                             color = ui.muted, style = MaterialTheme.typography.bodySmall)
                     }
