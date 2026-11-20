@@ -83,7 +83,8 @@ object FreezeRecorder {
                     body.contains("UI_FREEZE_DETECTED") || body.contains("SYSTEM_ANR_CONFIRMED")
                 }?.let { id ->
                     val body = store!!.read(id)
-                    if (body.contains("UI_FREEZE_DETECTED") && !body.contains("UI_RECOVERED"))
+                    if (body.contains("UI_FREEZE_DETECTED") && !body.contains("UI_RECOVERED") &&
+                        !body.contains("recovery=NOT_OBSERVED_BEFORE_PROCESS_RESTART"))
                         store!!.write(id, body.removePrefix("KLYRO_FREEZE_V1\n") + "\nrecovery=NOT_OBSERVED_BEFORE_PROCESS_RESTART\n")
                     if (!File(app.noBackupFilesDir,"freeze-seen").readTextOrEmpty().contains(id)) notice.value = id
                 }
@@ -230,14 +231,13 @@ object FreezeRecorder {
         check(Looper.myLooper() != Looper.getMainLooper()) { "Timeline persistence requires worker IO" }
         if (target !== store) return // Isolated test stores never touch the application's reports.
         val run = stabilityRun ?: return
-        if (run.first !in target.list()) return
-        target.write(run.first, "state=STABILITY_TEST_OBSERVED\nversion=${BuildConfig.VERSION_NAME} pid=${Process.myPid()} lifecycle=$lifecycle\nmonotonic_ms=${now()} session=${run.second} lines_requested=1500\n" +
+        target.updateIfPresent(run.first, "state=STABILITY_TEST_OBSERVED\nversion=${BuildConfig.VERSION_NAME} pid=${Process.myPid()} lifecycle=$lifecycle\nmonotonic_ms=${now()} session=${run.second} lines_requested=1500\n" +
             "heartbeat_delay_ms=$lastHeartbeatDelayMs max_heartbeat_delay_ms=$maxHeartbeatDelayMs\n" +
             "Completion=NOT_VERIFIED inspect END marker\n" + events.snapshot())
     }
     fun repository(): FreezeReportStore = store ?: throw java.io.IOException("Diagnostics initializing; retry shortly")
     fun acknowledgeNotice(id: String) {
-        notice.value = null
+        if (!notice.compareAndSet(id, null)) return
         worker.execute { guard { File(app.noBackupFilesDir,"freeze-seen").writeText(id) } }
     }
     private fun File.readTextOrEmpty() = if (exists()) readText() else ""

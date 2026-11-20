@@ -16,6 +16,31 @@ public class FreezeReportStoreTest {
  @Test public void storageRotatesOldestFirst()throws Exception{FreezeReportStore s=store();for(int i=0;i<15;i++)s.write(String.format("%013d-a",i),"x");assertEquals(10,s.list().size());assertTrue(s.list().get(0).startsWith("0000000000005"));}
  @Test public void overLimitBodyIsExplicitlyTruncated()throws Exception{FreezeReportStore s=store();s.write("x","界".repeat(300000));assertTrue(s.read("x").contains("TRUNCATED"));assertTrue(Files.size(temp.getRoot().toPath().resolve("x.report"))<=FreezeReportStore.MAX_BYTES);}
  @Test public void truncationDoesNotBreakUtf8()throws Exception{FreezeReportStore s=store();s.write("x","😀".repeat(300000));assertFalse(s.read("x").contains("\ufffd"));}
+ @Test public void finalRecoverySurvivesSizeLimitInPreviewAndExport() throws Exception {
+     FreezeReportStore s = store();
+     s.write("a", "state=UI_FREEZE_DETECTED\n" + "界".repeat(200000) + "\nstate=UI_RECOVERED duration_ms=6500\n");
+     assertTrue(s.preview("a").startsWith("summary_state=UI_RECOVERED duration_ms=6500\n"));
+     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+     s.exportZip(bytes);
+     try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+         zip.getNextEntry();
+         assertTrue(new String(zip.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).contains("state=UI_RECOVERED duration_ms=6500"));
+     }
+ }
+ @Test public void deletedReportCannotReappearOnTimelineRefresh() throws Exception {
+     FreezeReportStore s = store();
+     s.write("a", "first");
+     s.updateIfPresent("a", "second");
+     assertTrue(s.read("a").endsWith("second"));
+     s.delete("a");
+     s.updateIfPresent("a", "third");
+     assertTrue(s.list().isEmpty());
+ }
+ @Test public void emptyExportFailsBeforeWritingZip() throws Exception {
+     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+     try { store().exportZip(bytes); fail("Empty export succeeded"); } catch (IOException expected) { }
+     assertEquals(0, bytes.size());
+ }
  @Test public void secondSnapshotUpdatesSameIncident()throws Exception{FreezeReportStore s=store();s.write("x","one");s.write("x","two");assertEquals(1,s.list().size());assertTrue(s.read("x").endsWith("two"));}
  @Test public void recoveryIsDurable()throws Exception{store().write("x","state=UI_RECOVERED duration_ms=6000");assertTrue(store().read("x").contains("6000"));}
  @Test public void deleteOnlyChosenReport()throws Exception{FreezeReportStore s=store();s.write("a","a");s.write("b","b");s.delete("a");assertEquals(Arrays.asList("b"),s.list());}

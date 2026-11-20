@@ -29,7 +29,14 @@ public final class FreezeReportStore {
     public synchronized void write(String id,String body) throws IOException {
         byte[] bytes=(HEADER+body).getBytes(StandardCharsets.UTF_8);
         if(bytes.length>MAX_BYTES) {
-            byte[] suffix="\n[TRUNCATED]\n".getBytes(StandardCharsets.UTF_8);
+            String suffixText = "\n[TRUNCATED]\n";
+            int state = body.lastIndexOf("\nstate=");
+            if (state >= 0) {
+                int stop = body.indexOf('\n', state + 1);
+                if (stop < 0) stop = body.length();
+                if (stop - state <= 128) suffixText += body.substring(state + 1, stop) + "\n";
+            }
+            byte[] suffix = suffixText.getBytes(StandardCharsets.UTF_8);
             int end=MAX_BYTES-suffix.length;
             while(end>0 && (bytes[end]&0xc0)==0x80) end--;
             byte[] bounded=new byte[end+suffix.length];System.arraycopy(bytes,0,bounded,0,end);
@@ -78,11 +85,15 @@ public final class FreezeReportStore {
         }
         return "summary_"+summary+"\n"+text.substring(0,end)+"\n[PREVIEW TRUNCATED — export ZIP for full report]";
     }
+    public synchronized void updateIfPresent(String id, String body) throws IOException {
+        if (list().contains(id)) write(id, body);
+    }
     public synchronized void delete(String id) throws IOException { Files.deleteIfExists(path(id)); }
     public void exportZip(OutputStream output) throws IOException {
         // Snapshot at most 5 MiB under the store lock; never hold it across a slow SAF write.
         Map<String,String> reports=new LinkedHashMap<>();
         synchronized(this) { for(String id:list()) reports.put(id,read(id)); }
+        if (reports.isEmpty()) throw new IOException("No reports remain to export");
         try(ZipOutputStream zip=new ZipOutputStream(output)) {
             for(Map.Entry<String,String> entry:reports.entrySet()) {
                 zip.putNextEntry(new ZipEntry(entry.getKey()+".txt"));
