@@ -23,3 +23,5 @@ Compteur UX : 11/150 corrections implémentées. Le dernier lot couvre le clavie
 FIND : 13/150 corrections implémentées après traitement de la recherche affamée par le flux PTY et du suffixe tronqué dans les aperçus. 20 tests JVM de recherche passent sur le véritable TerminalBuffer. Reproduire la cadence continue sur Pixel ; aucun appareil dans adb devices.
 
 Compteur : 15/150 corrections implémentées. FIND traverse maintenant les pages avec Précédent/Suivant et défile aussi sur Latest depuis une ancienne page. Suite JVM FIND : 21 réussites. Prochain contrôle : compilation Android du lot et défilement réel sur appareil.
+
+Compteur : 17/150 corrections implémentées. Apparence conserve le brouillon HEX incomplet en cas de retour et empêche la transformation silencieuse d’un collage invalide en couleur applicable. Test JVM du normaliseur et 655 tests Python réussis. Test Compose de fermeture ajouté, exécution physique en attente.

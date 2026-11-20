@@ -126,7 +126,7 @@ internal fun KlyroColorPickerDialog(
         hexInput = "#%06X".format(rgb() and 0xFFFFFF)
     }
 
-    val hasUnsavedColor = argb() != initialArgb
+    val hasUnsavedColor = argb() != initialArgb || !KlyroHexInput.isComplete(hexInput) || pendingPreset != null
     KlyroModalTheme {
         if (!showAdvanced && pendingFavoriteDeletion == null) AlertDialog(
             onDismissRequest = { if (!hasUnsavedColor) onDismiss() },
@@ -204,7 +204,7 @@ internal fun KlyroColorPickerDialog(
                             border = androidx.compose.foundation.BorderStroke(1.dp, colors.muted)
                         ) {}
                     }
-                    if (hexInput.length != 7) {
+                    if (!KlyroHexInput.isComplete(hexInput)) {
                         Text("Enter six hexadecimal digits (0–9, A–F).",
                             style = MaterialTheme.typography.labelSmall,
                             color = colors.danger,

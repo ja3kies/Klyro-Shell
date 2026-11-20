@@ -305,6 +305,18 @@ class ModalLifecycleUiTest {
         ui.waitForIdle(); ui.onNodeWithText("Custom accent").assertExists()
         ui.onNodeWithText("Cancel").performClick(); assertRemovedAndTapUnderlying()
     }
+    @Test fun incompleteHexSurvivesBackWhilePreviewStillHasOriginalColor() {
+        host { close -> KlyroColorPickerDialog(initialArgb=0xff112233.toInt(),onApply={},onDismiss=close) }
+        ui.onNodeWithContentDescription("Hex color value").performTextReplacement("#11")
+        repeat(2) {
+            InstrumentationRegistry.getInstrumentation().uiAutomation.performGlobalAction(
+                android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+            ui.waitForIdle()
+        }
+        ui.onNodeWithText("Enter six hexadecimal digits (0–9, A–F).").assertExists()
+        ui.onNodeWithText("Cancel").performClick()
+        assertRemovedAndTapUnderlying()
+    }
     @Test fun sessionConfirmationCancelThenSwipeNeverTerminates() {
         var terminated=0
         host { close -> KlyroSessionSheet(sessionId=42,sessionName="Fixture",isActive=true,

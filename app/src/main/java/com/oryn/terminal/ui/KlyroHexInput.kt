@@ -5,10 +5,10 @@ package com.oryn.terminal.ui
 internal object KlyroHexInput {
     private val complete = Regex("^#[0-9A-F]{6}$")
     fun sanitize(raw: String): String {
-        val digits = raw.removePrefix("#").filter {
-            it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F'
-        }.take(6).uppercase()
-        return "#$digits"
+        // Keep an overlong or malformed draft invalid until the user corrects it.
+        return "#" + raw.removePrefix("#").take(32).map {
+            if (it in 'a'..'f') it.uppercaseChar() else it
+        }.joinToString("")
     }
     fun isComplete(value: String): Boolean = complete.matches(value)
 }
