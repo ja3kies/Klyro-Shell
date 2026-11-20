@@ -79,7 +79,7 @@ internal class KlyroUpdateRepository(private val context: Context) {
         }
         val candidate = manifest.toCandidate(
             channel = channel,
-            notes = release.optString("body").take(8_000),
+            notes = release.optString("body"),
             downloadUrl = apk.optString("browser_download_url"),
             digest = apk.optString("digest").takeIf(String::isNotBlank),
             archive = false,

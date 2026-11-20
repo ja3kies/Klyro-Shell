@@ -63,6 +63,23 @@ class SettingsInputUiTest {
         org.junit.Assert.assertTrue("Expected blue-violet near 270 degrees", sample.blue > sample.green)
     }
 
+    @Test fun releaseNotesCanExpandAndCollapseWithoutLosingTheirEnd() {
+        val notes = (1..12).joinToString("\n") { "Change $it" }
+        ui.setContent {
+            CompositionLocalProvider(LocalKlyroColors provides KlyroColors.create(false, "lime")) {
+                androidx.compose.foundation.layout.Column { KlyroReleaseNotes(notes) }
+            }
+        }
+        ui.onNodeWithText("Show all release notes").performClick()
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        ui.onNodeWithText(notes).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { getLayout ->
+            org.junit.Assert.assertTrue(getLayout(layouts))
+        }
+        assertEquals(notes.length, layouts.single().getLineEnd(layouts.single().lineCount - 1))
+        ui.onNodeWithText("Show fewer release notes").performClick()
+        ui.onNodeWithText("Show all release notes").assertExists()
+    }
+
     @Test fun fontSliderReportsSelectedSizeNotDelta() {
         var selectedSize = 13.5f
         ui.setContent {

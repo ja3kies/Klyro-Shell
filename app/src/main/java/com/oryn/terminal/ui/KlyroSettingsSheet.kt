@@ -69,7 +69,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
@@ -151,6 +150,7 @@ internal fun KlyroSettingsSheet(
     var openingInstaller by remember { mutableStateOf(false) }
     var verifyingDownload by remember { mutableStateOf(false) }
     var updateChecking by remember { mutableStateOf(false) }
+    var updateNotice by remember { mutableStateOf<String?>(null) }
     var updateError by remember { mutableStateOf<String?>(null) }
     var updateStalePreview by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<com.oryn.terminal.updates.UpdateLookup?>(null) }
@@ -223,6 +223,7 @@ internal fun KlyroSettingsSheet(
         if (updateChecking || updateDownloading || openingInstaller) return
         updateChecking = true
         updateError = null
+        updateNotice = null
         scope.launch {
             try {
                 val checked = withContext(Dispatchers.IO) {
@@ -909,6 +910,7 @@ internal fun KlyroSettingsSheet(
                                             updateResult = null
                                             updateStalePreview = false
                                             updateError = null
+                                            updateNotice = null
                                             downloadedUpdate?.delete()
                                             downloadedUpdate = null
                                         }
@@ -944,16 +946,13 @@ internal fun KlyroSettingsSheet(
                                         fontWeight = FontWeight.SemiBold)
                                     Text(result.candidate.version.name, color = colors.foreground,
                                         style = MaterialTheme.typography.bodyLarge)
-                                    if (result.candidate.notes.isNotBlank()) Text(
-                                        result.candidate.notes.take(2_000), color = colors.muted,
-                                        style = MaterialTheme.typography.bodySmall)
+                                    KlyroReleaseNotes(result.candidate.notes)
                                     if (updateDownloading) {
                                         LinearProgressIndicator(progress = { updatePercent / 100f },
                                             modifier = Modifier.fillMaxWidth(), color = colors.accent)
                                         Text(if (verifyingDownload) "Verifying downloaded APK…" else if (updatePercent > 0)
                                             "Downloading ${updatePercent}%" else "Preparing secure download…",
-                                            color = colors.muted,
-                                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                                            color = colors.muted)
                                         TextButton(onClick = { updateDownloadJob?.cancel() },
                                             modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)) {
                                             Text("Cancel download", color = colors.muted)
@@ -966,12 +965,13 @@ internal fun KlyroSettingsSheet(
                                             if (readyFile != null) {
                                                 openingInstaller = true
                                                 updateError = null
+                                                updateNotice = null
                                                 scope.launch {
                                                     try {
                                                         val action = com.oryn.terminal.updates.KlyroUpdateInstaller.install(
                                                             context, readyFile, result.candidate)
                                                         if (action == com.oryn.terminal.updates.InstallAction.PermissionRequired)
-                                                            updateError = "Allow Klyro to install updates in Android settings, then tap Install again."
+                                                            updateNotice = "Allow Klyro to install updates in Android settings, then tap Install again."
                                                     } catch (cancelled: CancellationException) {
                                                         throw cancelled
                                                     } catch (failure: Exception) {
@@ -988,6 +988,7 @@ internal fun KlyroSettingsSheet(
                                                 updateDownloading = true
                                                 updatePercent = 0
                                                 updateError = null
+                                                updateNotice = null
                                                 updateStalePreview = false
                                                 updateDownloadJob = scope.launch {
                                                     var unverifiedDownload: java.io.File? = null
@@ -1011,7 +1012,7 @@ internal fun KlyroSettingsSheet(
                                                         unverifiedDownload = null
                                                     } catch (failure: CancellationException) {
                                                         unverifiedDownload?.delete()
-                                                        updateError = "Download cancelled. You can try again."
+                                                        updateNotice = "Download cancelled. You can try again."
                                                     } catch (failure: Exception) {
                                                         unverifiedDownload?.delete()
                                                         updateStalePreview = (failure as? com.oryn.terminal.updates.UpdateException)
@@ -1048,6 +1049,7 @@ internal fun KlyroSettingsSheet(
                                 else "No Preview release has been published for this branch.")
                             null -> if (updateChecking) KlyroInlineNotice("Checking ${updateChannel.label} updates…")
                         }
+                        updateNotice?.let { KlyroInlineNotice(it) }
                         updateError?.let { error ->
                             KlyroInlineNotice(error, isError = true)
 
@@ -1090,6 +1092,22 @@ internal fun KlyroSettingsSheet(
             KlyroLicenseDialog("JetBrains Mono · OFL 1.1", "fonts/OFL.txt") {
                 showFontLicense = false
             }
+        }
+    }
+}
+
+@Composable
+internal fun KlyroReleaseNotes(notes: String) {
+    if (notes.isBlank()) return
+    var expanded by rememberSaveable(notes) { mutableStateOf(false) }
+    var clipped by remember(notes) { mutableStateOf(false) }
+    Text(notes, color = LocalKlyroColors.current.muted, style = MaterialTheme.typography.bodySmall,
+        maxLines = if (expanded) Int.MAX_VALUE else 4,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        onTextLayout = { if (!expanded) clipped = it.hasVisualOverflow })
+    if (expanded || clipped) {
+        TextButton(onClick = { expanded = !expanded }) {
+            Text(if (expanded) "Show fewer release notes" else "Show all release notes")
         }
     }
 }
