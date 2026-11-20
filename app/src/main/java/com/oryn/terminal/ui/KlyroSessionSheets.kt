@@ -250,7 +250,9 @@ internal fun KlyroChooseShellSheet(
     KlyroModalTheme {
         KlyroSheet(onDismissRequest = onBack) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = KlyroUiMetrics.sheetGutter)
+                modifier = Modifier.fillMaxWidth().heightIn(max = KlyroUiMetrics.sheetContentMax)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = KlyroUiMetrics.sheetGutter)
                     .padding(bottom = KlyroUiMetrics.spaceXl),
                 verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.sectionGap)
             ) {
@@ -279,7 +281,7 @@ internal fun KlyroChooseShellSheet(
                                     else "Maximum 8 sessions reached", onClick = onNewBash)
                             .semantics {
                                 role = Role.Button
-                                if (!canStartBash) stateDescription = "Unavailable"
+                                if (!canStartBash) stateDescription = if (launchingBash) "Starting Bash" else "Session limit reached"
                             }
                             .padding(KlyroUiMetrics.spaceLg),
                         verticalAlignment = Alignment.CenterVertically,

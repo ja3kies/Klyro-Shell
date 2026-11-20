@@ -87,7 +87,7 @@ internal fun KlyroWorkspaceSheet(
     onDismiss: () -> Unit
 ) {
     val c = LocalKlyroColors.current
-    var editingSessions by rememberSaveable { mutableStateOf(false) }
+    var editingSessions by rememberSaveable(selectedId) { mutableStateOf(false) }
     var renameSessionId by rememberSaveable { mutableStateOf<Long?>(null) }
     var closeSessionId by rememberSaveable { mutableStateOf<Long?>(null) }
     var editorId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -379,7 +379,7 @@ internal fun KlyroWorkspaceSheet(
                     }
                 }
                 if (projectTabs.isEmpty()) {
-                    Text("No sessions yet.",
+                    Text("No sessions in this workspace.",
                         modifier = Modifier.padding(vertical = KlyroUiMetrics.spaceSm),
                         color = c.muted, style = MaterialTheme.typography.bodySmall)
                 } else {

@@ -223,6 +223,28 @@ class ModalLifecycleUiTest {
         }
     }
 
+    @Test fun changingWorkspaceLeavesSessionEditMode() {
+        var switched: Long? = null
+        host { close ->
+            var project by remember { mutableStateOf("general") }
+            KlyroWorkspaceSheet(
+                entries = listOf(KlyroWorkspaceCatalog.Entry("general", "General"),
+                    KlyroWorkspaceCatalog.Entry("work", "Work")),
+                selectedId = project, tabs = listOf(1L to "First", 2L to "Second"),
+                tabWorkspaces = mapOf(2L to "work"), activeTabId = 1L,
+                onSelectProject = { project = it }, onCreateProject = { false },
+                onRenameProject = { _, _ -> false }, onDeleteProject = {},
+                onAssignCurrentTab = {}, onSwitchTab = { switched = it }, onDismiss = close
+            )
+        }
+        ui.onNodeWithText("Edit").performScrollTo().performClick()
+        ui.onNodeWithContentDescription("Rename First").assertExists()
+        ui.onNodeWithText("Work").performScrollTo().performClick()
+        ui.onNodeWithContentDescription("Close Second").assertDoesNotExist()
+        ui.onNodeWithText("Second").performScrollTo().performClick()
+        ui.runOnIdle { assertEquals(2L, switched) }
+    }
+
     @Test fun darkModeDismissRestoresTouch() {
         host(dark=true) { close -> SettingsFixture(close) }
         ui.onNodeWithText("Appearance").performClick(); swipeAway(); assertRemovedAndTapUnderlying()
