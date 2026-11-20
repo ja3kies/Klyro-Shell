@@ -121,6 +121,8 @@ import java.io.File
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import java.nio.charset.StandardCharsets
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -410,38 +412,39 @@ fun TerminalPane(
     }
     // Query changes are debounced. The mutable PTY buffer is read on the UI
     // thread after the delay, and only the most recent 300 matches are kept.
-    LaunchedEffect(
-        showTranscriptSearch, transcriptQuery, findMatchCase, searchPage,
-        outputRevision, session
-    ) {
+    val currentRevision = androidx.compose.runtime.rememberUpdatedState(outputRevision)
+    LaunchedEffect(showTranscriptSearch, transcriptQuery, findMatchCase, searchPage, session) {
         if (!showTranscriptSearch || transcriptQuery.isBlank()) {
             searchSnapshot = null
             searchingTranscript = false
             return@LaunchedEffect
         }
         searchingTranscript = true
-        delay(170)
-        val emulator = session.emulator
-        val snapshot = if (emulator == null) null else TranscriptSearch.scanPage(
-            emulator.screen, emulator.mColumns, emulator.mRows,
-            transcriptQuery, findMatchCase, searchPage
-        )
-        val previous = if (searchSnapshot?.pageFromNewest == searchPage) {
-            searchSnapshot?.newest?.getOrNull(searchIndex)
-        } else null
-        searchIndex = when {
-            snapshot == null -> 0
-            searchIndex == Int.MAX_VALUE -> snapshot.newest.lastIndex.coerceAtLeast(0)
-            previous != null -> TranscriptSearch.nearestIndex(
-                snapshot.newest, previous.row, previous.logicalOffset
+        // A continuous PTY stream must not restart the query debounce indefinitely.
+        androidx.compose.runtime.snapshotFlow { currentRevision.value }.conflate().collect {
+            delay(170)
+            val emulator = session.emulator
+            val snapshot = if (emulator == null) null else TranscriptSearch.scanPage(
+                emulator.screen, emulator.mColumns, emulator.mRows,
+                transcriptQuery, findMatchCase, searchPage
             )
-            else -> 0
+            val previous = if (searchSnapshot?.pageFromNewest == searchPage) {
+                searchSnapshot?.newest?.getOrNull(searchIndex)
+            } else null
+            searchIndex = when {
+                snapshot == null -> 0
+                searchIndex == Int.MAX_VALUE -> snapshot.newest.lastIndex.coerceAtLeast(0)
+                previous != null -> TranscriptSearch.nearestIndex(
+                    snapshot.newest, previous.row, previous.logicalOffset
+                )
+                else -> 0
+            }
+            if (snapshot != null && snapshot.pageFromNewest != searchPage) {
+                searchPage = snapshot.pageFromNewest
+            }
+            searchSnapshot = snapshot
+            searchingTranscript = false
         }
-        if (snapshot != null && snapshot.pageFromNewest != searchPage) {
-            searchPage = snapshot.pageFromNewest
-        }
-        searchSnapshot = snapshot
-        searchingTranscript = false
     }
     LaunchedEffect(pendingSearch, session, activeTerminalView) {
         val targetRow = pendingSearch ?: return@LaunchedEffect
@@ -1397,6 +1400,7 @@ fun TerminalPane(
                                     selectedMatch.highlightStart, selectedMatch.highlightEnd))
                             }
                             append(context.substring(selectedMatch.highlightEnd))
+                            if (selectedMatch.hasMoreAfter) append("…")
                         }
                         Surface(
                             color = ui.tile,

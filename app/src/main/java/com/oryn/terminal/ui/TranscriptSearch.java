@@ -55,13 +55,15 @@ public final class TranscriptSearch {
         public final String preview;
         public final int highlightStart;
         public final int highlightEnd;
+        public final boolean hasMoreAfter;
         private Occurrence(int row, int logicalOffset, String preview,
-                int highlightStart, int highlightEnd) {
+                int highlightStart, int highlightEnd, boolean hasMoreAfter) {
             this.row = row;
             this.logicalOffset = logicalOffset;
             this.preview = preview;
             this.highlightStart = highlightStart;
             this.highlightEnd = highlightEnd;
+            this.hasMoreAfter = hasMoreAfter;
         }
     }
 
@@ -127,7 +129,7 @@ public final class TranscriptSearch {
                 Character.isHighSurrogate(text.charAt(to - 1)) &&
                 Character.isLowSurrogate(text.charAt(to))) to++;
         return new Occurrence(row, offset, text.substring(from, to),
-                offset - from, offset - from + queryLength);
+                offset - from, offset - from + queryLength, to < text.length());
     }
 
     /**

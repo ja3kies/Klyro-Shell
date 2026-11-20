@@ -21,6 +21,16 @@ public class TranscriptSearchRecentTest {
         }
     }
 
+    @Test public void previewMarksOnlyAnOmittedSuffix() {
+        TerminalBuffer screen = new TerminalBuffer(150, 100, ROWS);
+        write(screen, 0, "hit" + "x".repeat(100) + "hit");
+        List<TranscriptSearch.Occurrence> results =
+                TranscriptSearch.scanRecent(screen, 150, ROWS, "hit", true).newest;
+        assertTrue(results.get(0).hasMoreAfter);
+        assertFalse(results.get(1).hasMoreAfter);
+        assertFalse(results.get(0).preview.endsWith("…"));
+    }
+
     @Test public void emptyAndInvalidQueriesAreSafe() {
         TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
         assertEquals(0, TranscriptSearch.scanRecent(screen, COLUMNS, ROWS, "", false).totalCount);

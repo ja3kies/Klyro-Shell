@@ -19,3 +19,5 @@ Palette de commandes : quatre régressions de recherche couvertes et libellé ex
 Campagne UX, 9 défauts distincts traités sur 150 : cinq au premier lot et quatre au second (accès disque pendant les interactions, explication du filtre, singulier des résultats, annonce de confirmation). Vérifier sur Android la recherche pendant le chargement et le libellé TalkBack des commandes sensibles.
 
 Compteur UX : 11/150 corrections implémentées. Le dernier lot couvre le clavier après refus d’insertion et la conservation de la notice après restauration. Vérifier rejectedPluginInsertionKeepsFeedbackAcrossRestoration sur Android.
+
+FIND : 13/150 corrections implémentées après traitement de la recherche affamée par le flux PTY et du suffixe tronqué dans les aperçus. 20 tests JVM de recherche passent sur le véritable TerminalBuffer. Reproduire la cadence continue sur Pixel ; aucun appareil dans adb devices.
