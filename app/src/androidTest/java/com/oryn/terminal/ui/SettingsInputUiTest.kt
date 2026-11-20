@@ -7,6 +7,8 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -45,6 +47,20 @@ class SettingsInputUiTest {
         } finally {
             base.deleteSharedPreferences(name)
         }
+    }
+
+    @Test fun rightToLeftHueTrackIsBlueOnItsLowXSide() {
+        ui.setContent {
+            CompositionLocalProvider(LocalKlyroColors provides KlyroColors.create(false, "lime"),
+                androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+                MaterialTheme {
+                    KlyroColorPickerDialog(0xffff0000.toInt(), onApply = {}, onDismiss = {})
+                }
+            }
+        }
+        val pixels = ui.onNodeWithContentDescription("Hue in degrees").captureToImage().toPixelMap()
+        val sample = pixels[pixels.width / 4, pixels.height / 2]
+        org.junit.Assert.assertTrue("Expected blue-violet near 270 degrees", sample.blue > sample.green)
     }
 
     @Test fun fontSliderReportsSelectedSizeNotDelta() {

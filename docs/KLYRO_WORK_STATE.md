@@ -27,3 +27,5 @@ Compteur : 15/150 corrections implémentées. FIND traverse maintenant les pages
 Compteur : 17/150 corrections implémentées. Apparence conserve le brouillon HEX incomplet en cas de retour et empêche la transformation silencieuse d’un collage invalide en couleur applicable. Test JVM du normaliseur et 655 tests Python réussis. Test Compose de fermeture ajouté, exécution physique en attente.
 
 Compteur : 20/150 corrections implémentées. Couleurs favorites : action de renommage explicite, chargement dans le brouillon identifié par Use, identification de la couleur sur les actions accessibles et la confirmation. Test Compose sur des préférences isolées ajouté.
+
+Compteur : 22/150 corrections implémentées. Apparence : piste de teinte alignée sur la course du pouce et sens du dégradé adapté au RTL. Test de rendu Compose ajouté ; contrôler la capture sur Android.

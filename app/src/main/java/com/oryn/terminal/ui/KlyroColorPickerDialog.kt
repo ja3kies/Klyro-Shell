@@ -304,14 +304,18 @@ internal fun KlyroColorPickerDialog(
                     // Draw an actual rainbow under the native slider: the
                     // Material3 default accent track gives no hue feedback.
                     Box(modifier = Modifier.fillMaxWidth()) {
-                        Canvas(Modifier.fillMaxWidth().height(KlyroUiMetrics.minTouch)) {
+                        Canvas(Modifier.fillMaxWidth().height(KlyroUiMetrics.minTouch)
+                            .padding(horizontal = KlyroUiMetrics.iosSliderThumb / 2)) {
                             val track = KlyroUiMetrics.iosSliderTrack.toPx()
                             drawRoundRect(
                                 brush = Brush.horizontalGradient(
                                     listOf(
                                         Color.Red, Color.Yellow, Color.Green,
                                         Color.Cyan, Color.Blue, Color.Magenta, Color.Red
-                                    )
+                                    ).let { stops ->
+                                        if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl)
+                                            stops.asReversed() else stops
+                                    }
                                 ),
                                 topLeft = Offset(0f, (size.height - track) / 2f),
                                 size = Size(size.width, track),
