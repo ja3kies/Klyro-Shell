@@ -162,9 +162,9 @@ class KlyroMobileDesignAudit(unittest.TestCase):
 
         # One inaccessible provider may not abort remaining SAF grants.
         self.assertIn("if (imported >= 30) break", activity)
-        self.assertIn("readableFolders == 0", activity)
+        self.assertIn("KlyroDiagnostics.folderImportSummary(", activity)
         self.assertIn("skippedFolders++", activity)
-        self.assertIn("folders unavailable; reconnect and retry", activity)
+        self.assertIn("skippedFiles++", activity)
         self.assertIn("Copy up to 30 files", settings)
         self.assertIn("Export a private file", settings)
 

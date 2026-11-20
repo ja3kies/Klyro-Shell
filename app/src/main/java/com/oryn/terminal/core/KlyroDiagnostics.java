@@ -41,6 +41,28 @@ public final class KlyroDiagnostics {
         return "Storage operation failed (" + (problem == null ? "unknown" : problem.getClass().getSimpleName()) + "). Retry or review Diagnostics.";
     }
 
+    public static String folderImportSummary(int imported, int skippedFiles, int skippedFolders,
+                                             int readableFolders, String firstFailure) {
+        StringBuilder summary = new StringBuilder();
+        if (readableFolders == 0) summary.append("No readable folders. Reconnect a folder and try again.");
+        else if (imported == 0 && skippedFiles == 0 && skippedFolders == 0)
+            summary.append("No files found directly inside the selected folders.");
+        else summary.append("Files imported to ~/storage-imports: ").append(imported).append('.');
+        if (skippedFiles > 0) summary.append("\nFiles skipped: ").append(skippedFiles).append('.');
+        if (skippedFolders > 0) summary.append("\nFolders unavailable or incomplete: ").append(skippedFolders).append('.');
+        if (imported == 30) summary.append("\nReached the limit of 30 files per import.");
+        if (firstFailure != null) summary.append("\n").append(firstFailure);
+        return summary.toString();
+    }
+
+    public static String exportPathFailure(Throwable error) {
+        String message = error.getMessage();
+        if ("Choose a relative path inside HOME".equals(message)
+                || "Export must be a regular Klyro-private file".equals(message)
+                || "Choose an existing regular file inside HOME".equals(message)) return message;
+        return storageFailure(error);
+    }
+
     public static String summarize(Throwable problem) {
         if (problem == null) return "Unknown error";
         return problem.getClass().getSimpleName() + ": " + sanitize(problem.getMessage());
