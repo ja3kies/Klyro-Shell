@@ -70,6 +70,7 @@ import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
@@ -147,12 +148,14 @@ internal fun KlyroSettingsSheet(
         mutableStateOf(com.oryn.terminal.updates.UpdateChannel.fromStorage(
             updatePreferences.getString("channel", "stable")))
     }
+    var openingInstaller by remember { mutableStateOf(false) }
+    var verifyingDownload by remember { mutableStateOf(false) }
     var updateChecking by remember { mutableStateOf(false) }
     var updateError by remember { mutableStateOf<String?>(null) }
     var updateStalePreview by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<com.oryn.terminal.updates.UpdateLookup?>(null) }
     var updateDownloading by remember { mutableStateOf(false) }
-    var updateProgress by remember { mutableFloatStateOf(0f) }
+    var updatePercent by remember { mutableIntStateOf(0) }
     var updateDownloadJob by remember { mutableStateOf<Job?>(null) }
     var downloadedUpdate by remember { mutableStateOf<java.io.File?>(null) }
     var selectedBrand by remember { mutableStateOf(KlyroBrandChoice.DEFAULT) }
@@ -217,16 +220,12 @@ internal fun KlyroSettingsSheet(
             com.oryn.terminal.BuildConfig.VERSION_CODE.toLong(), version)
     }
     fun checkForUpdates() {
-        if (updateChecking || updateDownloading) return
+        if (updateChecking || updateDownloading || openingInstaller) return
         updateChecking = true
         updateError = null
-        updateStalePreview = false
-        updateResult = null
-        downloadedUpdate?.delete()
-        downloadedUpdate = null
         scope.launch {
             try {
-                updateResult = withContext(Dispatchers.IO) {
+                val checked = withContext(Dispatchers.IO) {
                     com.oryn.terminal.updates.KlyroUpdateRepository(context).check(
                         updateChannel,
                         com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(
@@ -234,6 +233,14 @@ internal fun KlyroSettingsSheet(
                         installedUpdateVersion
                     )
                 }
+                val prior = (updateResult as? com.oryn.terminal.updates.UpdateLookup.Available)?.candidate
+                val next = (checked as? com.oryn.terminal.updates.UpdateLookup.Available)?.candidate
+                if (prior?.expectedDigest != next?.expectedDigest || prior?.version != next?.version) {
+                    downloadedUpdate?.delete()
+                    downloadedUpdate = null
+                }
+                updateStalePreview = false
+                updateResult = checked
             } catch (failure: Exception) {
                 updateError = failure.message ?: "Could not check for updates. Try again."
             } finally { updateChecking = false }
@@ -894,12 +901,14 @@ internal fun KlyroSettingsSheet(
                             com.oryn.terminal.updates.UpdateChannel.entries.forEachIndexed { index, channel ->
                                 SegmentedButton(
                                     selected = updateChannel == channel,
-                                    enabled = !updateDownloading && !updateChecking,
+                                    enabled = !updateDownloading && !updateChecking && !openingInstaller,
                                     onClick = {
                                         if (updateChannel != channel) {
                                             updateChannel = channel
                                             updatePreferences.edit().putString("channel", channel.storageValue).apply()
                                             updateResult = null
+                                            updateStalePreview = false
+                                            updateError = null
                                             downloadedUpdate?.delete()
                                             downloadedUpdate = null
                                         }
@@ -939,10 +948,10 @@ internal fun KlyroSettingsSheet(
                                         result.candidate.notes.take(2_000), color = colors.muted,
                                         style = MaterialTheme.typography.bodySmall)
                                     if (updateDownloading) {
-                                        LinearProgressIndicator(progress = { updateProgress },
+                                        LinearProgressIndicator(progress = { updatePercent / 100f },
                                             modifier = Modifier.fillMaxWidth(), color = colors.accent)
-                                        Text(if (updateProgress > 0f)
-                                            "Downloading ${(updateProgress * 100).toInt()}%" else "Preparing secure download…",
+                                        Text(if (verifyingDownload) "Verifying downloaded APK…" else if (updatePercent > 0)
+                                            "Downloading ${updatePercent}%" else "Preparing secure download…",
                                             color = colors.muted,
                                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                                         TextButton(onClick = { updateDownloadJob?.cancel() },
@@ -953,24 +962,31 @@ internal fun KlyroSettingsSheet(
                                     Button(
                                         onClick = {
                                             val readyFile = downloadedUpdate
+                                            if (openingInstaller || updateChecking) return@Button
                                             if (readyFile != null) {
-                                                try {
-                                                    val action = com.oryn.terminal.updates.KlyroUpdateInstaller.install(
-                                                        context, readyFile, result.candidate)
-                                                    if (action == com.oryn.terminal.updates.InstallAction.PermissionRequired)
-                                                        updateError = "Allow Klyro to install updates in Android settings, then tap Install again."
-                                                } catch (failure: Exception) {
-                                                    if (failure is com.oryn.terminal.updates.UpdateException) {
-                                                        downloadedUpdate?.delete()
-                                                        downloadedUpdate = null
-                                                    }
-                                                    updateStalePreview = (failure as? com.oryn.terminal.updates.UpdateException)
-                                                        ?.stalePreview == true
-                                                    updateError = failure.message ?: "The APK could not be verified."
+                                                openingInstaller = true
+                                                updateError = null
+                                                scope.launch {
+                                                    try {
+                                                        val action = com.oryn.terminal.updates.KlyroUpdateInstaller.install(
+                                                            context, readyFile, result.candidate)
+                                                        if (action == com.oryn.terminal.updates.InstallAction.PermissionRequired)
+                                                            updateError = "Allow Klyro to install updates in Android settings, then tap Install again."
+                                                    } catch (cancelled: CancellationException) {
+                                                        throw cancelled
+                                                    } catch (failure: Exception) {
+                                                        if (failure is com.oryn.terminal.updates.UpdateException) {
+                                                            downloadedUpdate?.delete()
+                                                            downloadedUpdate = null
+                                                        }
+                                                        updateStalePreview = (failure as? com.oryn.terminal.updates.UpdateException)
+                                                            ?.stalePreview == true
+                                                        updateError = failure.message ?: "The APK could not be verified."
+                                                    } finally { openingInstaller = false }
                                                 }
                                             } else if (!updateDownloading) {
                                                 updateDownloading = true
-                                                updateProgress = 0f
+                                                updatePercent = 0
                                                 updateError = null
                                                 updateStalePreview = false
                                                 updateDownloadJob = scope.launch {
@@ -981,9 +997,11 @@ internal fun KlyroSettingsSheet(
                                                                 .download(result.candidate) { received, total ->
                                                                     if (updateDownloadJob?.isActive == false)
                                                                         throw CancellationException("Download cancelled")
-                                                                    if (total > 0) updateProgress = (received.toFloat() / total).coerceIn(0f, 1f)
+                                                                    updatePercent = com.oryn.terminal.updates.KlyroUpdatePolicy.downloadPercent(
+                                                                        received, total, result.candidate.artifactSize)
                                                                 }
                                                         }
+                                                        verifyingDownload = true
                                                         unverifiedDownload = file
                                                         withContext(Dispatchers.IO) {
                                                             com.oryn.terminal.updates.KlyroUpdateInstaller.validate(
@@ -1000,19 +1018,21 @@ internal fun KlyroSettingsSheet(
                                                             ?.stalePreview == true
                                                         updateError = failure.message ?: "Download or verification failed."
                                                     } finally {
+                                                        verifyingDownload = false
                                                         updateDownloading = false
                                                         updateDownloadJob = null
                                                     }
                                                 }
                                             }
                                         },
-                                        enabled = !updateDownloading && !updateStalePreview,
+                                        enabled = !updateDownloading && !updateStalePreview && !openingInstaller && !updateChecking,
                                         modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch),
                                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                                         colors = ButtonDefaults.buttonColors(containerColor = colors.accent,
                                             contentColor = colors.onAccent)
                                     ) {
                                         Text(when {
+                                            openingInstaller || verifyingDownload -> "Verifying APK…"
                                             updateDownloading -> "Downloading…"
                                             downloadedUpdate != null -> "Install update"
                                             else -> "Download update"
@@ -1034,7 +1054,7 @@ internal fun KlyroSettingsSheet(
                         }
                         OutlinedButton(
                             onClick = ::checkForUpdates,
-                            enabled = !updateChecking && !updateDownloading,
+                            enabled = !updateChecking && !updateDownloading && !openingInstaller,
                             modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch),
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foreground),

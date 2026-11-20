@@ -35,3 +35,5 @@ Compteur : 29/150 corrections implémentées. Diagnostics : conservation du rapp
 Compteur : 32/150 corrections implémentées. Diagnostics : lancement différé lié à l’écran, annulation au passage en arrière-plan et exclusion mutuelle des tests planifiés. Vérifier annulation, sortie et retour rapide sur Pixel sans session ouverte.
 
 Compteur : 37/150 défauts UX implémentés. Rapports : état récupéré préservé à la troncation, actualisation atomique après suppression, export vide refusé, annotation de redémarrage idempotente et acquittement ciblé sur le bon incident. 21 tests JVM du stockage et des aperçus et 655 contrôles Python réussis. La CI 44767773648 du lot précédent a réussi.
+
+Compteur : 42/150 corrections implémentées. App Updates : conservation de l’APK vérifié durant une revérification, contrôle de signature hors UI à la remise à Android, progression sur réponse sans Content-Length, phase de vérification affichée, protection contre les doubles lancements. 8 tests JVM et 655 contrôles Python réussis ; vérifier le parcours réseau et système sur appareil.

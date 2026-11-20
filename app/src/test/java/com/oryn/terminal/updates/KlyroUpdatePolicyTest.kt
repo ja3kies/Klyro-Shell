@@ -6,6 +6,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class KlyroUpdatePolicyTest {
+    @Test fun downloadProgressUsesReleaseSizeWhenTransferLengthIsUnknown() {
+        assertEquals(50, KlyroUpdatePolicy.downloadPercent(100, -1, 200))
+        assertEquals(25, KlyroUpdatePolicy.downloadPercent(100, 400, 200))
+        assertEquals(100, KlyroUpdatePolicy.downloadPercent(300, -1, 200))
+        assertEquals(0, KlyroUpdatePolicy.downloadPercent(0, -1, 0))
+    }
+
     private val valid = PreviewArtifact(
         name = "klyro-shell-debug", expired = false, sizeBytes = 10_000,
         branch = "feat/in-app-updates-20261118",

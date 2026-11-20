@@ -39,6 +39,12 @@ internal object KlyroUpdatePolicy {
         } ?: "main"
     }
 
+    fun downloadPercent(received: Long, declared: Long, assetSize: Long): Int {
+        val total = declared.takeIf { it > 0 } ?: assetSize
+        if (total <= 0) return 0
+        return (received.coerceIn(0L, total).toDouble() / total * 100).toInt()
+    }
+
     fun isNewer(installed: KlyroVersion, candidate: KlyroVersion): Boolean =
         candidate.code > installed.code
 

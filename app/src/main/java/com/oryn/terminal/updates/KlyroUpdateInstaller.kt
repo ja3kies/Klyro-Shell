@@ -17,13 +17,13 @@ internal sealed interface InstallAction {
 
 /** Validates the APK locally before the Android package installer receives it. */
 internal object KlyroUpdateInstaller {
-    fun install(context: Context, file: File, candidate: KlyroUpdateCandidate): InstallAction {
+    suspend fun install(context: Context, file: File, candidate: KlyroUpdateCandidate): InstallAction {
         if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
             context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                 Uri.parse("package:${context.packageName}")))
             return InstallAction.PermissionRequired
         }
-        validate(context, file, candidate)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { validate(context, file, candidate) }
         val uri = FileProvider.getUriForFile(context,
             "${context.packageName}.updates", file)
         context.startActivity(Intent(Intent.ACTION_VIEW).apply {
