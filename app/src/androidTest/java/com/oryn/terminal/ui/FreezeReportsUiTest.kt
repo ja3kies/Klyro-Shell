@@ -26,6 +26,7 @@ class FreezeReportsUiTest {
     @After fun removeOwnReport() { directory.walkBottomUp().forEach { it.delete() } }
     @Test fun recoveredReportShowsReadableStatusAndTogglesTechnicalDetails() {
         ui.onNodeWithText("Interface recovered").assertExists()
+        ui.onNodeWithText("Observed stall: 6500 ms").assertIsDisplayed()
         ui.onNodeWithText("Details").performClick()
         ui.onNodeWithText("state=UI_RECOVERED duration_ms=6500", substring = true).assertExists()
         ui.onNodeWithText("Hide details").performClick()
@@ -40,6 +41,7 @@ class FreezeReportsUiTest {
         ui.onNode(hasText("Delete report") and hasAnyAncestor(hasTestTag("freeze-report-$id"))).performClick()
         ui.onNode(hasText("Delete report") and hasAnyAncestor(isDialog())).performClick()
         ui.waitUntil(5000) { !store.list().contains(id) }
+        ui.waitUntil(5000) { ui.onAllNodesWithText("Diagnostic report removed.").fetchSemanticsNodes().isNotEmpty() }
         assertFalse(store.list().contains(id))
     }
 }

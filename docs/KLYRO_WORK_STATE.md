@@ -29,3 +29,5 @@ Compteur : 17/150 corrections implémentées. Apparence conserve le brouillon HE
 Compteur : 20/150 corrections implémentées. Couleurs favorites : action de renommage explicite, chargement dans le brouillon identifié par Use, identification de la couleur sur les actions accessibles et la confirmation. Test Compose sur des préférences isolées ajouté.
 
 Compteur : 22/150 corrections implémentées. Apparence : piste de teinte alignée sur la course du pouce et sens du dégradé adapté au RTL. Test de rendu Compose ajouté ; contrôler la capture sur Android.
+
+Compteur : 29/150 corrections implémentées. Diagnostics : conservation du rapport déplié, durée visible, identification de la suppression, retour après suppression, état de l’export, annulation et absence de sélecteur SAF. Exécution des interactions Android en attente.
