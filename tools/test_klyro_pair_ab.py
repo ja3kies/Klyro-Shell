@@ -16,7 +16,7 @@ class KlyroPairABTest(unittest.TestCase):
         self.assertIn('pendingPreset = null', picker)
         self.assertNotIn('onApply(preset.id)', picker)
         # Preview was a duplicate of Edit; editing still stages until Apply.
-        self.assertIn('Text("Edit")', picker)
+        self.assertIn('Text("Use")', picker)
         self.assertNotIn('Text("Preview")', picker)
         self.assertIn('keyboardType = KeyboardType.Ascii', picker)
         self.assertIn('LocalConfiguration.current.screenHeightDp', picker)

@@ -25,3 +25,5 @@ FIND : 13/150 corrections implémentées après traitement de la recherche affam
 Compteur : 15/150 corrections implémentées. FIND traverse maintenant les pages avec Précédent/Suivant et défile aussi sur Latest depuis une ancienne page. Suite JVM FIND : 21 réussites. Prochain contrôle : compilation Android du lot et défilement réel sur appareil.
 
 Compteur : 17/150 corrections implémentées. Apparence conserve le brouillon HEX incomplet en cas de retour et empêche la transformation silencieuse d’un collage invalide en couleur applicable. Test JVM du normaliseur et 655 tests Python réussis. Test Compose de fermeture ajouté, exécution physique en attente.
+
+Compteur : 20/150 corrections implémentées. Couleurs favorites : action de renommage explicite, chargement dans le brouillon identifié par Use, identification de la couleur sur les actions accessibles et la confirmation. Test Compose sur des préférences isolées ajouté.

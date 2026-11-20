@@ -7,6 +7,9 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
@@ -16,6 +19,33 @@ import org.junit.Test
 
 class SettingsInputUiTest {
     @get:Rule val ui = createComposeRule()
+
+    @Test fun savingAnExistingColorIdentifiesTheRenameAndDisablesRepeatSave() {
+        val base = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val name = "color-fixture-${java.util.UUID.randomUUID()}"
+        val prefs = base.getSharedPreferences(name, android.content.Context.MODE_PRIVATE)
+        val isolated = object : android.content.ContextWrapper(base) {
+            override fun getSharedPreferences(name: String, mode: Int) = prefs
+        }
+        try {
+            prefs.edit().putString("custom_favorites", "#FF112233|Ocean").commit()
+            ui.setContent {
+                CompositionLocalProvider(androidx.compose.ui.platform.LocalContext provides isolated,
+                    LocalKlyroColors provides KlyroColors.create(false, "lime")) {
+                    MaterialTheme {
+                        KlyroColorPickerDialog(0xff112233.toInt(), onApply = {}, onDismiss = {})
+                    }
+                }
+            }
+            ui.onNodeWithText("Opacity & saved colors").performClick()
+            ui.onNodeWithText("Rename “Ocean”").performScrollTo().performClick()
+            ui.onNodeWithText("Color saved").assertIsNotEnabled()
+            ui.onNodeWithContentDescription("Remove Custom, #FF112233").assertExists()
+            ui.runOnIdle { assertEquals("#FF112233|Custom", prefs.getString("custom_favorites", null)) }
+        } finally {
+            base.deleteSharedPreferences(name)
+        }
+    }
 
     @Test fun fontSliderReportsSelectedSizeNotDelta() {
         var selectedSize = 13.5f

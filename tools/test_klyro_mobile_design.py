@@ -152,7 +152,7 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertNotIn("private fun SheetAction(", sessions)
         picker = src(UI / "KlyroColorPickerDialog.kt")
         self.assertNotIn('Text("Preview")', picker)
-        self.assertIn('Text("Edit")', picker)
+        self.assertIn('Text("Use")', picker)
 
     def test_operational_release_gates_for_storage_clipboard_and_workspace_accessibility(self):
         activity = src(APP / "MainActivity.kt")

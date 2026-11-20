@@ -416,6 +416,8 @@ internal fun KlyroColorPickerDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
                         val currentFavoriteHex = "#%08X".format(argb())
+                        val storedFavorite = favorites.firstOrNull { it.hex == currentFavoriteHex }
+                        val alreadySaved = storedFavorite?.label == KlyroFavoriteColors.normalizeLabel(favoriteName)
                         val hasFavoriteSpace = KlyroFavoriteColors.canSaveWithoutEviction(
                             favorites, currentFavoriteHex
                         )
@@ -431,10 +433,16 @@ internal fun KlyroColorPickerDialog(
                                     favorites, currentFavoriteHex, favoriteName
                                 ))
                             },
-                            enabled = KlyroHexInput.isComplete(hexInput) && hasFavoriteSpace,
+                            enabled = KlyroHexInput.isComplete(hexInput) && hasFavoriteSpace && !alreadySaved,
                             modifier = Modifier.fillMaxWidth()
                                 .heightIn(min = KlyroUiMetrics.minTouch)
-                        ) { Text("Save current color") }
+                        ) {
+                            Text(when {
+                                alreadySaved -> "Color saved"
+                                storedFavorite != null -> "Rename “${storedFavorite.label}”"
+                                else -> "Save current color"
+                            }, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                        }
                         favorites.forEach { favorite ->
                             Row(
                                 modifier = Modifier.fillMaxWidth()
@@ -454,7 +462,8 @@ internal fun KlyroColorPickerDialog(
                                     style = MaterialTheme.typography.bodySmall
                                 )
                                 TextButton(
-                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                        .semantics { contentDescription = "Use ${favorite.label}, ${favorite.hex}" },
                                     onClick = {
                                     favoriteName = favorite.label
                                     val favArgb = AndroidColor.parseColor(favorite.hex)
@@ -467,9 +476,10 @@ internal fun KlyroColorPickerDialog(
                                     hexInput = "#%06X".format(favArgb and 0xFFFFFF)
                                     pendingPreset = null
                                     showAdvanced = false
-                                }) { Text("Edit") }
+                                }) { Text("Use") }
                                 TextButton(
-                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                        .semantics { contentDescription = "Remove ${favorite.label}, ${favorite.hex}" },
                                     onClick = { pendingFavoriteDeletionHex = favorite.hex }
                                 ) { Text("Remove", color = colors.danger) }
                             }
@@ -491,7 +501,7 @@ internal fun KlyroColorPickerDialog(
                 shape = RoundedCornerShape(KlyroUiMetrics.modalCorner),
                 containerColor = colors.sheet,
                 title = { Text("Remove saved color?") },
-                text = { Text("Remove \"${favorite.label}\" from your saved colors?") },
+                text = { Text("Remove \"${favorite.label}\" (${favorite.hex}) from your saved colors?") },
                 confirmButton = {
                     TextButton(onClick = {
                         saveFavorites(favorites.filterNot { it.hex == favorite.hex })
