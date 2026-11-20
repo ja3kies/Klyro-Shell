@@ -13,3 +13,5 @@ Updated: 2026-11-19
 - **Next exact action:** Audit shared modal/menu dismissal, focus and error surfaces across the reviewed screens. When an authorized Android ARM64 target or the labeled self-hosted runner exists, run `connectedDebugAndroidTest` and `android-device-robot.yml`; do not mark UI validation passed before execution.
 
 **2026-11-20 continuation** — Current branch `feat/terminal-touch-feedback`, tested source `452ac94`. Palette, custom accents and freeze report layout changes are described in the quality report. On the next connected Pixel, first open these three screens with large text and narrow width, inspect both themes, then execute FreezeReportsUiTest and the full instrumented suite. No device was attached during this pass.
+
+Palette de commandes : quatre régressions de recherche couvertes et libellé exit corrigé. Prochaine vérification : coût de la détection des commandes installées lors de la saisie dans la palette. Validation tactile Pixel en attente.

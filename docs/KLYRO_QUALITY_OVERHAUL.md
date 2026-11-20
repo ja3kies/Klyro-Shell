@@ -55,3 +55,7 @@ No new security vulnerability is claimed from this initial inventory. The outsta
 Commit `452ac94` reuses the adaptive Settings grid for independent command filters and color presets. Narrow widths and large fonts stack these controls. Freeze reports distinguish Android ANRs from heuristic detections using readable labels, localize incident timestamps, and allow action buttons to wrap. The debug I/O switch exposes a single labeled touch target. The original report remains accessible in Details and through ZIP export.
 
 655 local Python tests passed. [CI for the implementation](https://github.com/ja3kies/Klyro-Shell/actions/runs/44638573279) passed JVM, native, lint and APK assembly/signature checks. The new Compose report-disclosure test was assembled. Current renders, TalkBack and touch behavior await device execution.
+
+### Palette de commandes — recherche Unicode et aide
+
+Quatre régressions reproduites puis corrigées dans KlyroCommandSearch et KlyroCommandCatalog : limite de recherche comptée en unités UTF-16, espace insécable ignorée comme séparateur, noms accentués canoniquement équivalents introuvables et recherche impossible par le véritable nom de la commande de stockage. Les quatre nouveaux tests échouaient avant correction. Après correction, les sept tests JVM ciblés et les 655 tests Python passent. Le texte de la commande exit décrit désormais la conservation de la session terminée jusqu’à fermeture explicite. Cette indication a été vérifiée dans le code de gestion des sessions. Interaction sur Pixel non exécutée.

@@ -6,7 +6,6 @@ import java.nio.file.LinkOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 /** Curated command reference. Every insertion is literal shell text without Enter. */
 public final class KlyroCommandCatalog {
@@ -61,7 +60,7 @@ public final class KlyroCommandCatalog {
         commands.add(builtin("jobs", "jobs", "Show background jobs in this shell"));
         commands.add(builtin("fg", "fg", "Resume a job in the foreground"));
         commands.add(builtin("bg", "bg", "Resume a stopped job in the background"));
-        commands.add(builtin("exit", "exit", "Leave the active shell; this closes its tab"));
+        commands.add(builtin("exit", "exit", "End the shell and keep its output until you close the tab"));
         commands.add(pkg("pkg search", "pkg search ", "Find an available package", false));
         commands.add(pkg("pkg install", "pkg install ", "Install a package in private storage", true));
         commands.add(pkg("pkg update", "pkg update", "Refresh package repository metadata", true));
@@ -89,11 +88,10 @@ public final class KlyroCommandCatalog {
 
     public static List<Entry> search(String query) {
         if (query == null || query.trim().isEmpty()) return ENTRIES;
-        if (query.length() > KlyroCommandSearch.MAX_QUERY_LENGTH) return Collections.emptyList();
         List<Entry> matching = new ArrayList<>();
         for (Entry entry : ENTRIES) {
             if (KlyroCommandSearch.matches(query, entry.command,
-                    entry.purpose + " " + entry.category + " " + entry.note)) {
+                    entry.insertion + " " + entry.purpose + " " + entry.category + " " + entry.note)) {
                 matching.add(entry);
             }
         }
