@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -127,6 +128,27 @@ class PluginsRefinementUiTest {
         val plugin = KlyroPluginManager.bundled.first()
         manager.installBundled(plugin.id)
         assertEquals(plugin.commands, manager.activeCommands())
+    }
+
+    @Test fun rejectedPluginInsertionKeepsFeedbackAcrossRestoration() {
+        val restoration = StateRestorationTester(ui)
+        val shortcut = KlyroPluginManager.bundled.first().commands.first()
+        var attempts = 0
+        restoration.setContent {
+            CompositionLocalProvider(LocalContext provides isolatedContext,
+                LocalKlyroColors provides KlyroColors.create(true, "cyan")) {
+                MaterialTheme {
+                    KlyroCommandPalette(installedPrefix = null, pluginCommands = listOf(shortcut),
+                        onInsert = { attempts++; false }, onDismiss = { error("Rejected insertion dismissed palette") })
+                }
+            }
+        }
+        ui.onNodeWithText(shortcut.label).performClick()
+        val notice = "Terminal unavailable for insertion. Retry at the Bash prompt."
+        ui.onNodeWithText(notice).assertIsDisplayed()
+        restoration.emulateSavedInstanceStateRestore()
+        ui.onNodeWithText(notice).assertIsDisplayed()
+        ui.runOnIdle { assertEquals(1, attempts) }
     }
 
     @Test fun commandPaletteShowsPluginRegistryFailureInsteadOfAnEmptyResult() {

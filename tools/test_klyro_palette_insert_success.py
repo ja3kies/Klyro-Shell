@@ -7,7 +7,7 @@ T=(UI/"TerminalPane.kt").read_text()
 class InsertSuccessContract(unittest.TestCase):
  def test_insert_callback_reports_delivery(self):
   self.assertIn('onInsert: (String) -> Boolean',P)
-  self.assertIn('if (onInsert(snippet)) {\n            recordInsertion(id)\n            onDismiss()',P)
+  self.assertIn('if (onInsert(snippet)) {\n            recordInsertion(id)\n            keyboard?.hide()\n            onDismiss()',P)
   self.assertIn('Return to the Bash prompt and retry',P)
   self.assertIn('val emulator = session.emulator',T)
   self.assertIn('TerminalActionPolicy.pasteIfCurrent(activeTabId, currentSessionId(), session.isRunning(), snippet)',T)

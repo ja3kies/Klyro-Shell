@@ -17,3 +17,5 @@ Updated: 2026-11-19
 Palette de commandes : quatre régressions de recherche couvertes et libellé exit corrigé. Prochaine vérification : coût de la détection des commandes installées lors de la saisie dans la palette. Validation tactile Pixel en attente.
 
 Campagne UX, 9 défauts distincts traités sur 150 : cinq au premier lot et quatre au second (accès disque pendant les interactions, explication du filtre, singulier des résultats, annonce de confirmation). Vérifier sur Android la recherche pendant le chargement et le libellé TalkBack des commandes sensibles.
+
+Compteur UX : 11/150 corrections implémentées. Le dernier lot couvre le clavier après refus d’insertion et la conservation de la notice après restauration. Vérifier rejectedPluginInsertionKeepsFeedbackAcrossRestoration sur Android.

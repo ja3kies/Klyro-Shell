@@ -107,8 +107,8 @@ internal fun KlyroCommandPalette(
     LaunchedEffect(showingGuide) {
         if (!showingGuide) searchFocus.requestFocus()
     }
-    var info by remember { mutableStateOf<String?>(null) }
-    var unsafeFeedback by remember { mutableStateOf(false) }
+    var info by rememberSaveable { mutableStateOf<String?>(null) }
+    var unsafeFeedback by rememberSaveable { mutableStateOf(false) }
     var pendingCautionCommand by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCautionId by rememberSaveable { mutableStateOf<String?>(null) }
     var pinnedOnly by rememberSaveable { mutableStateOf(false) }
@@ -117,6 +117,7 @@ internal fun KlyroCommandPalette(
     fun insertCurated(id: String, snippet: String) {
         if (onInsert(snippet)) {
             recordInsertion(id)
+            keyboard?.hide()
             onDismiss()
         } else {
             unsafeFeedback = true
@@ -387,7 +388,6 @@ internal fun KlyroCommandPalette(
                                                     pendingCautionId = entry.command
                                                     pendingCautionCommand = snippet
                                                 } else {
-                                                    keyboard?.hide()
                                                     insertCurated(entry.command, snippet)
                                                 }
                                             }
