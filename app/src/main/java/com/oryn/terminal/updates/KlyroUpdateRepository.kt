@@ -60,7 +60,7 @@ internal class KlyroUpdateRepository(private val context: Context) {
         val release = try {
             getJson(url)
         } catch (failure: UpdateException) {
-            if (failure.message == "GitHub returned HTTP 404") return UpdateLookup.NonePublished
+            if (failure.httpCode == 404) return UpdateLookup.NonePublished
             throw failure
         }
         if (release.optBoolean("draft", true) ||
@@ -177,6 +177,11 @@ internal class KlyroUpdateRepository(private val context: Context) {
     private fun JSONArray.findByName(name: String): JSONObject? =
         (0 until length()).mapNotNull { optJSONObject(it) }.firstOrNull { it.optString("name") == name }
 
+    private fun HttpURLConnection.httpFailure() = UpdateException(
+        KlyroUpdatePolicy.httpFailure(responseCode, getHeaderField("X-RateLimit-Remaining"), getHeaderField("Retry-After")),
+        httpCode = responseCode
+    )
+
     private fun getJson(url: String): JSONObject {
         if (!url.startsWith("https://api.github.com/") && !url.startsWith("https://github.com/")) {
             throw UpdateException("Unexpected update metadata URL")
@@ -188,7 +193,7 @@ internal class KlyroUpdateRepository(private val context: Context) {
             connection.setRequestProperty("Accept", "application/vnd.github+json")
             connection.setRequestProperty("User-Agent", "Klyro-Shell-Updater")
             connection.connect()
-            if (connection.responseCode !in 200..299) throw UpdateException("GitHub returned HTTP ${connection.responseCode}")
+            if (connection.responseCode !in 200..299) throw connection.httpFailure()
             val bytes = connection.inputStream.use { input ->
                 val output = ByteArrayOutputStream()
                 val buffer = ByteArray(8 * 1024)
@@ -228,7 +233,7 @@ internal class KlyroUpdateRepository(private val context: Context) {
                     throw UpdateException("This Preview download is unavailable without signing in. Check for another Preview.",
                         stalePreview = true)
                 }
-                throw UpdateException("Download failed with HTTP ${connection.responseCode}")
+                throw connection.httpFailure()
             }
             val declared = connection.contentLengthLong
             if (declared > maxBytes) throw UpdateException("Download exceeds the size limit")
@@ -242,6 +247,9 @@ internal class KlyroUpdateRepository(private val context: Context) {
                     if (total > maxBytes) throw UpdateException("Download exceeds the size limit")
                     output.write(buffer, 0, count)
                     onProgress(total, declared)
+                }
+                if (declared >= 0 && total < declared) {
+                    throw UpdateException("Download interrupted before all bytes arrived. Reconnect and retry.")
                 }
             } }
         } catch (failure: Throwable) {
@@ -260,4 +268,4 @@ internal class KlyroUpdateRepository(private val context: Context) {
     }
 }
 
-internal class UpdateException(message: String, val stalePreview: Boolean = false) : Exception(message)
+internal class UpdateException(message: String, val stalePreview: Boolean = false, val httpCode: Int? = null) : Exception(message)

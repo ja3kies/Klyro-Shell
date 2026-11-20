@@ -39,6 +39,25 @@ internal object KlyroUpdatePolicy {
         } ?: "main"
     }
 
+    fun httpFailure(code: Int, rateRemaining: String?, retryAfter: String?): String = when {
+        code == 429 || (code == 403 && (rateRemaining == "0" || retryAfter != null)) -> {
+            val seconds = retryAfter?.toLongOrNull()?.takeIf { it > 0 }
+            if (seconds == null) "GitHub temporarily limited update requests. Try again later."
+            else "GitHub temporarily limited update requests. Retry in ${seconds} " +
+                (if (seconds == 1L) "second." else "seconds.")
+        }
+        code in 500..599 -> "GitHub is temporarily unavailable (HTTP $code). Try again later."
+        else -> "GitHub returned HTTP $code."
+    }
+
+    fun failureMessage(failure: Exception, fallback: String): String = when (failure) {
+        is java.net.UnknownHostException -> "Cannot reach GitHub. Check your connection or DNS, then retry."
+        is java.net.SocketTimeoutException -> "The connection timed out. Check your network and retry."
+        is javax.net.ssl.SSLException -> "Could not establish a secure connection to GitHub. Check your network and device clock."
+        is java.net.SocketException -> "The network connection failed. Reconnect and retry."
+        else -> failure.message?.takeIf { it.isNotBlank() } ?: fallback
+    }
+
     fun downloadPercent(received: Long, declared: Long, assetSize: Long): Int {
         val total = declared.takeIf { it > 0 } ?: assetSize
         if (total <= 0) return 0

@@ -243,7 +243,7 @@ internal fun KlyroSettingsSheet(
                 updateStalePreview = false
                 updateResult = checked
             } catch (failure: Exception) {
-                updateError = failure.message ?: "Could not check for updates. Try again."
+                updateError = com.oryn.terminal.updates.KlyroUpdatePolicy.failureMessage(failure, "Could not check for updates. Try again.")
             } finally { updateChecking = false }
         }
     }
@@ -1017,7 +1017,7 @@ internal fun KlyroSettingsSheet(
                                                         unverifiedDownload?.delete()
                                                         updateStalePreview = (failure as? com.oryn.terminal.updates.UpdateException)
                                                             ?.stalePreview == true
-                                                        updateError = failure.message ?: "Download or verification failed."
+                                                        updateError = com.oryn.terminal.updates.KlyroUpdatePolicy.failureMessage(failure, "Download or verification failed.")
                                                     } finally {
                                                         verifyingDownload = false
                                                         updateDownloading = false

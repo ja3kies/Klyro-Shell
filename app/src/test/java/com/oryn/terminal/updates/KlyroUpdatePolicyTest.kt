@@ -6,6 +6,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class KlyroUpdatePolicyTest {
+    @Test fun rateLimitsGiveRetryGuidanceWithoutMislabelingDeniedAccess() {
+        assertTrue(KlyroUpdatePolicy.httpFailure(429, null, "20").contains("20 seconds"))
+        assertTrue(KlyroUpdatePolicy.httpFailure(403, "0", null).contains("later"))
+        assertTrue(KlyroUpdatePolicy.httpFailure(403, null, null).contains("403"))
+        assertTrue(KlyroUpdatePolicy.httpFailure(503, null, null).contains("temporarily unavailable"))
+    }
+
+    @Test fun networkFailuresGiveActionableMessagesWithoutRawSocketDetails() {
+        assertTrue(KlyroUpdatePolicy.failureMessage(java.net.UnknownHostException("host"), "").contains("DNS"))
+        assertTrue(KlyroUpdatePolicy.failureMessage(java.net.SocketTimeoutException(), "").contains("timed out"))
+        assertTrue(KlyroUpdatePolicy.failureMessage(javax.net.ssl.SSLException("detail"), "").contains("secure connection"))
+        assertEquals("Integrity check failed", KlyroUpdatePolicy.failureMessage(Exception("Integrity check failed"), ""))
+    }
+
     @Test fun downloadProgressUsesReleaseSizeWhenTransferLengthIsUnknown() {
         assertEquals(50, KlyroUpdatePolicy.downloadPercent(100, -1, 200))
         assertEquals(25, KlyroUpdatePolicy.downloadPercent(100, 400, 200))
