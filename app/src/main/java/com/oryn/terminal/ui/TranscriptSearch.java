@@ -76,6 +76,14 @@ public final class TranscriptSearch {
         public final int pageFromNewest;
         public final int pageCount;
 
+        public int pageForOrdinal(int ordinal) {
+            return (totalCount - 1 - ordinal) / MAX_VISIBLE_MATCHES;
+        }
+
+        public int firstOnPage(int page) {
+            return (int) Math.max(0L, totalCount - ((long) page + 1) * MAX_VISIBLE_MATCHES);
+        }
+
         private Snapshot(List<Occurrence> matches, int count, int firstOrdinal, int page) {
             this.newest = java.util.Collections.unmodifiableList(matches);
             this.totalCount = count;

@@ -55,6 +55,24 @@ public class TranscriptSearchRecentTest {
         assertEquals(1, TranscriptSearch.scanRecent(screen, COLUMNS, ROWS, "Alpha", true).totalCount);
     }
 
+    @Test public void nextAndPreviousReachEveryOccurrenceAcrossPartialPages() {
+        TerminalBuffer screen = new TerminalBuffer(720, 100, ROWS);
+        write(screen, 0, "x".repeat(701));
+        TranscriptSearch.Snapshot results = TranscriptSearch.scanRecent(screen, 720, ROWS, "x", true);
+        for (int direction : new int[]{1, -1}) {
+            int ordinal = 0;
+            for (int i = 0; i < 701; i++) {
+                ordinal = TranscriptSearch.nextIndex(ordinal, direction, results.totalCount);
+                int page = results.pageForOrdinal(ordinal);
+                if (results.pageFromNewest != page) {
+                    results = TranscriptSearch.scanPage(screen, 720, ROWS, "x", true, page);
+                }
+                assertEquals(ordinal, results.newest.get(ordinal - results.firstOnPage(page)).logicalOffset);
+            }
+            assertEquals(0, ordinal);
+        }
+    }
+
     @Test public void wrappedMatchStartsOnCorrectRowAndHasContinuousContext() {
         TerminalBuffer screen = new TerminalBuffer(COLUMNS, 100, ROWS);
         write(screen, 0, "123456789012345678hi");

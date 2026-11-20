@@ -104,8 +104,8 @@ class CycleThreeUX(unittest.TestCase):
         self.assertGreaterEqual(self.pane.count("liveRegion = LiveRegionMode.Polite"), 2)
 
     def test_terminal_find_has_large_navigation_targets(self):
-        self.assertIn("searchIndex = TranscriptSearch.nextIndex(position, -1", self.pane)
-        self.assertIn("searchIndex = TranscriptSearch.nextIndex(position, 1", self.pane)
+        self.assertIn("moveMatch(-1)", self.pane)
+        self.assertIn("moveMatch(1)", self.pane)
 
     def test_plugin_tabs_are_large(self):
         self.assertRegex(self.plugins, r"modifier = Modifier\.weight\(1f\)\s*\.heightIn\(min = KlyroUiMetrics\.minTouch\)")

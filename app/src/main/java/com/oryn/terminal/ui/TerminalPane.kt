@@ -437,7 +437,7 @@ fun TerminalPane(
                 previous != null -> TranscriptSearch.nearestIndex(
                     snapshot.newest, previous.row, previous.logicalOffset
                 )
-                else -> 0
+                else -> searchIndex.coerceIn(0, snapshot.newest.lastIndex.coerceAtLeast(0))
             }
             if (snapshot != null && snapshot.pageFromNewest != searchPage) {
                 searchPage = snapshot.pageFromNewest
@@ -1317,6 +1317,26 @@ fun TerminalPane(
                 view.invalidate()
             }
         }
+        var jumpAfterPageLoad by remember(session, transcriptQuery, findMatchCase) { mutableStateOf(false) }
+        LaunchedEffect(snapshot) {
+            if (jumpAfterPageLoad && snapshot != null) {
+                goToMatch(position)
+                jumpAfterPageLoad = false
+            }
+        }
+        fun moveMatch(direction: Int) {
+            val results = snapshot ?: return
+            val ordinal = TranscriptSearch.nextIndex(results.firstOrdinal + position, direction, results.totalCount)
+            val page = results.pageForOrdinal(ordinal)
+            searchIndex = ordinal - results.firstOnPage(page)
+            if (page == searchPage) {
+                goToMatch(searchIndex)
+            } else {
+                searchPage = page
+                searchSnapshot = null
+                jumpAfterPageLoad = true
+            }
+        }
         KlyroModalTheme {
         AlertDialog(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.modalCorner),
@@ -1445,15 +1465,13 @@ fun TerminalPane(
                             TextButton(
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
-                                    searchIndex = TranscriptSearch.nextIndex(position, -1, matches.size)
-                                    goToMatch(searchIndex)
+                                    moveMatch(-1)
                                 }
                             ) { Text("Previous") }
                             TextButton(
                                 modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                 onClick = {
-                                    searchIndex = TranscriptSearch.nextIndex(position, 1, matches.size)
-                                    goToMatch(searchIndex)
+                                    moveMatch(1)
                                 }
                             ) { Text("Next") }
                             TextButton(
@@ -1462,6 +1480,7 @@ fun TerminalPane(
                                     if (searchPage > 0) {
                                         searchPage = 0
                                         searchIndex = Int.MAX_VALUE
+                                        jumpAfterPageLoad = true
                                         searchSnapshot = null
                                     } else {
                                         searchIndex = matches.lastIndex
