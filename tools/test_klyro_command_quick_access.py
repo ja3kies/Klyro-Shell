@@ -23,7 +23,9 @@ class CommandQuickAccessContract(unittest.TestCase):
   self.assertIn('if (onInsert(snippet))',S)
   self.assertIn('not run automatically',S)
  def test_filter_ready_only_uses_prefix_check(self):
-  self.assertIn('KlyroCommandQuickAccess.available(selected, installedPrefix)',S)
+  self.assertIn('withContext(Dispatchers.IO)',S)
+  self.assertIn('KlyroCommandQuickAccess.available(KlyroCommandCatalog.all(), installedPrefix)',S)
+  self.assertNotIn('KlyroCommandCatalog.isInstalled(',S)
   self.assertIn('KlyroCommandQuickAccess.rank(',S)
  def test_clear_recent_does_not_modify_bash_or_pins(self):
   self.assertIn('if (confirmClearRecent)',S)

@@ -62,6 +62,8 @@ import com.oryn.terminal.termux.KlyroWelcomeGuide
 import com.oryn.terminal.core.KlyroTextLimit
 import com.oryn.terminal.plugins.KlyroPluginManager
 import com.oryn.terminal.plugins.KlyroPluginCommand
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -133,12 +135,20 @@ internal fun KlyroCommandPalette(
             KlyroCommandQuickAccess.encode(next, KlyroCommandQuickAccess.MAX_PINNED)).apply()
         info = null
     }
-    val matches = remember(query, pinnedIds, recentIds, pinnedOnly, availableOnly, installedPrefix) {
+    var availableEntries by remember(installedPrefix) {
+        mutableStateOf<Set<KlyroCommandCatalog.Entry>?>(null)
+    }
+    LaunchedEffect(installedPrefix) {
+        availableEntries = withContext(Dispatchers.IO) {
+            KlyroCommandQuickAccess.available(KlyroCommandCatalog.all(), installedPrefix).toSet()
+        }
+    }
+    val matches = remember(query, pinnedIds, recentIds, pinnedOnly, availableOnly, availableEntries) {
         val ranked = KlyroCommandQuickAccess.rank(
             KlyroCommandCatalog.search(query), pinnedIds, recentIds
         )
         val selected = if (pinnedOnly) ranked.filter { it.command in pinnedIds } else ranked
-        if (availableOnly) KlyroCommandQuickAccess.available(selected, installedPrefix) else selected
+        if (availableOnly) selected.filter { it in availableEntries.orEmpty() } else selected
     }
     // Plugin templates have no verified executable/dependency status.
     // Do not include them when the user explicitly requests Available.
@@ -254,12 +264,15 @@ internal fun KlyroCommandPalette(
                     }
                     if (availableOnly) {
                         KlyroInlineNotice(
-                            "Available filters verified built-in commands. Plugin suggestions " +
+                            "Available includes Bash built-ins and commands found in the private prefix. Plugin suggestions " +
                                 "are hidden because their dependencies cannot be verified."
                         )
                     }
                     Text(
-                        if (query.isBlank()) "$resultCount commands"
+                        if (availableOnly && availableEntries == null) "Checking command availability…"
+                        else if (resultCount == 1 && query.isBlank()) "1 command"
+                        else if (resultCount == 1) "1 matching command"
+                        else if (query.isBlank()) "$resultCount commands"
                         else "$resultCount matching commands",
                         color = colors.muted,
                         style = MaterialTheme.typography.labelMedium,
@@ -285,7 +298,7 @@ internal fun KlyroCommandPalette(
                             .heightIn(max = KlyroUiMetrics.paletteListMax),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        if (matches.isEmpty() && pluginMatches.isEmpty()) {
+                        if (matches.isEmpty() && pluginMatches.isEmpty() && (!availableOnly || availableEntries != null)) {
                             item {
                                 Column(Modifier.fillMaxWidth().padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
@@ -357,11 +370,13 @@ internal fun KlyroCommandPalette(
                             }
                         }
                         items(matches, key = { it.command }) { entry ->
-                            val available = KlyroCommandCatalog.isInstalled(entry, installedPrefix)
+                            val available = entry in availableEntries.orEmpty()
                             Surface(
                                 modifier = Modifier.fillMaxWidth().clickable(
                                     role = Role.Button,
-                                    onClickLabel = if (available) "Insert " + entry.command
+                                    enabled = availableEntries != null,
+                                    onClickLabel = if (available && entry.caution) "Review " + entry.command
+                                        else if (available) "Insert " + entry.command
                                         else "Show command requirements",
                                     onClick = {
                                         if (available) {
@@ -422,7 +437,7 @@ internal fun KlyroCommandPalette(
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            if (!available) "Info" else if (entry.caution)
+                                            if (availableEntries == null) "Checking…" else if (!available) "Info" else if (entry.caution)
                                                 "Review" else "Insert",
                                             color = if (entry.caution) colors.warningInk
                                                 else colors.accent,

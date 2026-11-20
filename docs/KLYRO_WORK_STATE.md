@@ -15,3 +15,5 @@ Updated: 2026-11-19
 **2026-11-20 continuation** — Current branch `feat/terminal-touch-feedback`, tested source `452ac94`. Palette, custom accents and freeze report layout changes are described in the quality report. On the next connected Pixel, first open these three screens with large text and narrow width, inspect both themes, then execute FreezeReportsUiTest and the full instrumented suite. No device was attached during this pass.
 
 Palette de commandes : quatre régressions de recherche couvertes et libellé exit corrigé. Prochaine vérification : coût de la détection des commandes installées lors de la saisie dans la palette. Validation tactile Pixel en attente.
+
+Campagne UX, 9 défauts distincts traités sur 150 : cinq au premier lot et quatre au second (accès disque pendant les interactions, explication du filtre, singulier des résultats, annonce de confirmation). Vérifier sur Android la recherche pendant le chargement et le libellé TalkBack des commandes sensibles.
