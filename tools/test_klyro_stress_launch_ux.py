@@ -44,7 +44,7 @@ class StressLaunchUxContracts(unittest.TestCase):
     def test_button_acknowledges_tap_and_ignores_double_taps(self):
         controls = self.controls()
         self.assertIn("var launching by remember", controls)
-        self.assertIn("if (launching) return@TextButton", controls)
+        self.assertIn("if (launching || scheduledSeconds != 0) return@TextButton", controls)
         self.assertIn('feedback = "Preparing isolated test…"', controls)
         self.assertIn("scope.launch {", controls)
         self.assertIn("startDiagnosticStress()", controls)

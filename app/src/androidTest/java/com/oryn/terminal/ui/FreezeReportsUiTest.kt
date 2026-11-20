@@ -32,6 +32,23 @@ class FreezeReportsUiTest {
         ui.onNodeWithText("Hide details").performClick()
         ui.onNodeWithText("state=UI_RECOVERED duration_ms=6500", substring = true).assertDoesNotExist()
     }
+    @Test fun cancelPendingStallReenablesTestsWithoutRunningOne() {
+        ui.onNodeWithText("Test 6s stall").performClick()
+        ui.mainClock.autoAdvance = false
+        try {
+            ui.onNodeWithText("Run deliberate test").performClick()
+            ui.mainClock.advanceTimeBy(80)
+            ui.onNodeWithText("Test 11s stall").assertIsNotEnabled()
+            ui.onNodeWithText("Cancel scheduled stall").performClick()
+            ui.mainClock.advanceTimeBy(1600)
+            ui.onNodeWithText("Stall test cancelled.").assertExists()
+            ui.onNodeWithText("Test 11s stall").assertIsEnabled()
+            ui.onNodeWithText("Cancel scheduled stall").assertDoesNotExist()
+        } finally {
+            ui.mainClock.autoAdvance = true
+        }
+    }
+
     @Test fun cancelDeletionPreservesReport() {
         ui.onNode(hasText("Delete report") and hasAnyAncestor(hasTestTag("freeze-report-$id"))).performClick()
         ui.onNodeWithText("Keep report").performClick()

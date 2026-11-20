@@ -195,7 +195,34 @@ private fun FreezeStabilityControls(onStabilityTestStarted: () -> Unit) {
     val scope = rememberCoroutineScope()
     var launching by remember { mutableStateOf(false) }
     var blockSeconds by remember { mutableIntStateOf(0) }
+    var scheduledSeconds by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf("") }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE && scheduledSeconds != 0) {
+                scheduledSeconds = 0
+                feedback = "Test cancelled when Klyro left the foreground."
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(scheduledSeconds) {
+        val seconds = scheduledSeconds
+        if (seconds == 0) return@LaunchedEffect
+        kotlinx.coroutines.delay(1500)
+        if (scheduledSeconds != seconds) return@LaunchedEffect
+        scheduledSeconds = 0
+        if (com.oryn.terminal.KlyroSessionRuntime.sessions.hasOpenSessions()) {
+            feedback = "Test cancelled because a session is open."
+        } else if (lifecycle.currentState != androidx.lifecycle.Lifecycle.State.RESUMED) {
+            feedback = "Test cancelled because Klyro is not in the foreground."
+        } else {
+            android.os.SystemClock.sleep(seconds * 1000L)
+            feedback = "Deliberate stall finished. Refresh the report list to check the recording."
+        }
+    }
     var strictIo by remember { mutableStateOf(false) }
     DisposableEffect(Unit) { onDispose { FreezeRecorder.setStrictIo(false) } }
     Row(
@@ -213,7 +240,7 @@ private fun FreezeStabilityControls(onStabilityTestStarted: () -> Unit) {
     Text("Creates a separate Bash tab, waits 3 seconds, then prints 1,500 lines. Go Home, open another app, then return. Keep the test tab until you inspect the END marker; close it explicitly when finished. Existing sessions receive no commands.")
     TextButton(onClick = {
         // Guard at touch dispatch too: recomposition can lag behind rapid taps.
-        if (launching) return@TextButton
+        if (launching || scheduledSeconds != 0) return@TextButton
         launching = true
         feedback = "Preparing isolated test…"
         scope.launch {
@@ -227,26 +254,30 @@ private fun FreezeStabilityControls(onStabilityTestStarted: () -> Unit) {
                 feedback = "Test not started (${error.javaClass.simpleName}); try again."
             } finally { launching = false }
         }
-    }, enabled = !launching) {
+    }, enabled = !launching && scheduledSeconds == 0) {
         Text(if (launching) "Preparing…" else "Start isolated 1,500-line test")
     }
     Text(feedback, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
     val hasSessions = com.oryn.terminal.KlyroSessionRuntime.sessions.hasOpenSessions()
     Text("Artificial UI stalls can trigger Android termination. Available only with no open sessions.")
     Row {
-        TextButton(onClick = { blockSeconds = 6 }, enabled = !hasSessions) { Text("Test 6s stall") }
-        TextButton(onClick = { blockSeconds = 11 }, enabled = !hasSessions) { Text("Test 11s stall") }
+        TextButton(onClick = { blockSeconds = 6 }, enabled = !hasSessions && !launching && scheduledSeconds == 0) { Text("Test 6s stall") }
+        TextButton(onClick = { blockSeconds = 11 }, enabled = !hasSessions && !launching && scheduledSeconds == 0) { Text("Test 11s stall") }
+    }
+    if (scheduledSeconds != 0) {
+        TextButton(onClick = { scheduledSeconds = 0; feedback = "Stall test cancelled." }) {
+            Text("Cancel scheduled stall")
+        }
     }
     if (blockSeconds != 0) AlertDialog(onDismissRequest = { blockSeconds = 0 },
         title = { Text("Block the interface for $blockSeconds seconds?") },
         text = { Text("This deliberate test may cause Android to terminate Klyro. No sessions may be open. The independent recorder should capture before recovery.") },
         confirmButton = { TextButton(onClick = {
-            val seconds = blockSeconds; blockSeconds = 0
-            if (!com.oryn.terminal.KlyroSessionRuntime.sessions.hasOpenSessions())
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    if (!com.oryn.terminal.KlyroSessionRuntime.sessions.hasOpenSessions() && FreezeRecorder.lifecycle == "RESUMED")
-                        android.os.SystemClock.sleep(seconds * 1000L)
-                }, 1500)
+            if (scheduledSeconds == 0 && blockSeconds != 0) {
+                scheduledSeconds = blockSeconds
+                feedback = "Preparing a ${blockSeconds}-second stall…"
+            }
+            blockSeconds = 0
         }) { Text("Run deliberate test") } },
         dismissButton = { TextButton(onClick = { blockSeconds = 0 }) { Text("Cancel") } })
 }

@@ -31,3 +31,5 @@ Compteur : 20/150 corrections implémentées. Couleurs favorites : action de ren
 Compteur : 22/150 corrections implémentées. Apparence : piste de teinte alignée sur la course du pouce et sens du dégradé adapté au RTL. Test de rendu Compose ajouté ; contrôler la capture sur Android.
 
 Compteur : 29/150 corrections implémentées. Diagnostics : conservation du rapport déplié, durée visible, identification de la suppression, retour après suppression, état de l’export, annulation et absence de sélecteur SAF. Exécution des interactions Android en attente.
+
+Compteur : 32/150 corrections implémentées. Diagnostics : lancement différé lié à l’écran, annulation au passage en arrière-plan et exclusion mutuelle des tests planifiés. Vérifier annulation, sortie et retour rapide sur Pixel sans session ouverte.
