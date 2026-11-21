@@ -47,8 +47,13 @@ internal class KlyroUpdateRepository(private val context: Context) {
         val branchHash = MessageDigest.getInstance("SHA-256")
             .digest(safeBranch.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it.toInt() and 0xff) }
-        return checkRelease("$api/releases/tags/preview-$branchHash", UpdateChannel.PREVIEW,
+        // The global Preview tracks successful signed builds across branches.
+        // Keep support for older branch-only publications during migration.
+        val latest = checkRelease("$api/releases/tags/preview-latest", UpdateChannel.PREVIEW, installed)
+        if (latest is UpdateLookup.Available) return latest
+        val local = checkRelease("$api/releases/tags/preview-$branchHash", UpdateChannel.PREVIEW,
             installed, safeBranch)
+        return if (local == UpdateLookup.NonePublished) latest else local
     }
 
     private fun checkRelease(
@@ -77,6 +82,11 @@ internal class KlyroUpdateRepository(private val context: Context) {
         if (branch != null && manifest.optString("branch") != branch) {
             throw UpdateException("Preview metadata does not match the installed branch")
         }
+        if (channel == UpdateChannel.PREVIEW) {
+            val publishedBranch = manifest.optString("branch")
+            if (publishedBranch.isBlank() || KlyroUpdatePolicy.branchOrMain(publishedBranch) != publishedBranch)
+                throw UpdateException("Preview metadata contains an invalid source branch")
+        }
         val candidate = manifest.toCandidate(
             channel = channel,
             notes = release.optString("body").take(8_000),
@@ -86,7 +96,9 @@ internal class KlyroUpdateRepository(private val context: Context) {
             size = apk.optLong("size", 0)
         ) ?: throw UpdateException("Release update metadata failed validation")
         return if (KlyroUpdatePolicy.isNewer(installed, candidate.version)) {
-            UpdateLookup.Available(candidate)
+            UpdateLookup.Available(candidate.copy(
+                sourceBranch = manifest.optString("branch").takeIf(String::isNotBlank)
+            ))
         } else UpdateLookup.Current
     }
 
