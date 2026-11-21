@@ -61,6 +61,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -965,17 +966,18 @@ internal fun KlyroSettingsSheet(
                                                     var unverifiedDownload: java.io.File? = null
                                                     try {
                                                         val file = withContext(Dispatchers.IO) {
-                                                            com.oryn.terminal.updates.KlyroUpdateRepository(context)
+                                                            val ioContext = coroutineContext
+                                                            val downloaded = com.oryn.terminal.updates.KlyroUpdateRepository(context)
                                                                 .download(result.candidate) { received, total ->
-                                                                    if (updateDownloadJob?.isActive == false)
-                                                                        throw CancellationException("Download cancelled")
+                                                                    ioContext.ensureActive()
                                                                     if (total > 0) updateProgress = (received.toFloat() / total).coerceIn(0f, 1f)
                                                                 }
-                                                        }
-                                                        unverifiedDownload = file
-                                                        withContext(Dispatchers.IO) {
+                                                            // Own the file before crossing the cancellable dispatcher boundary.
+                                                            unverifiedDownload = downloaded
+                                                            ioContext.ensureActive()
                                                             com.oryn.terminal.updates.KlyroUpdateInstaller.validate(
-                                                                context, file, result.candidate)
+                                                                context, downloaded, result.candidate)
+                                                            downloaded
                                                         }
                                                         downloadedUpdate = file
                                                         unverifiedDownload = null
