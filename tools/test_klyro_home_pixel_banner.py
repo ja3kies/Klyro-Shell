@@ -16,7 +16,7 @@ class HomePatternContract(unittest.TestCase):
         self.assertIn("drawWithCache", COVER)
         self.assertIn("drawRect(Color.Black)", COVER)
         self.assertIn("LocalKlyroColors.current.accent", COVER)
-        self.assertIn("drawPath(pattern, homePatternTint(accent, phase?.value ?: 0f))", COVER)
+        self.assertIn("drawPath(pattern, homePatternTint(accent, angle))", COVER)
         self.assertNotIn("ImageDecoder", COVER)
         self.assertNotIn("AndroidView", COVER)
         self.assertNotIn("R.drawable.klyro_home_landscape_loop", COVER)
