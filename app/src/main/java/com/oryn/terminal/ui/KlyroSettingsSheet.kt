@@ -434,7 +434,7 @@ internal fun KlyroSettingsSheet(
                                                             contentAlignment = Alignment.Center
                                                         ) {
                                                             if (active) {
-                                                                Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
+                                                                Icon(painterResource(R.drawable.klyro_accent_shaked),
                                                                     contentDescription = null, tint = swatch.onAccent,
                                                                     modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                                             }
