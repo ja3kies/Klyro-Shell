@@ -38,7 +38,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import kotlin.math.ceil
 import kotlin.math.cos
-import kotlin.math.sin
+import com.oryn.terminal.ui.LocalKlyroColors
 
 internal const val HOME_PATTERN_PERIOD_MS = 20_000
 
@@ -56,35 +56,24 @@ internal fun homePatternColoredCell(column: Int, row: Int): Boolean {
     }
 }
 
-/** CSS hue-rotate is an RGB matrix, not an HSV hue substitution. */
-internal fun homePatternHue(degrees: Float): Color {
-    val angle = degrees.toDouble() * Math.PI / 180.0
-    val c = cos(angle).toFloat()
-    val s = sin(angle).toFloat()
-    // hsl(270, 60%, 65%) in sRGB.
-    val r = .65f
-    val g = .44f
-    val b = .86f
+/** Animate luminance within the selected theme, without rotating into unrelated hues. */
+internal fun homePatternTint(accent: Color, degrees: Float): Color {
+    val intensity = (.63 + .21 * cos(degrees.toDouble() * Math.PI / 180.0)).toFloat()
     return Color(
-        red = ((.213f + c * .787f - s * .213f) * r +
-            (.715f - c * .715f - s * .715f) * g +
-            (.072f - c * .072f + s * .928f) * b).coerceIn(0f, 1f),
-        green = ((.213f - c * .213f + s * .143f) * r +
-            (.715f + c * .285f + s * .140f) * g +
-            (.072f - c * .072f - s * .283f) * b).coerceIn(0f, 1f),
-        blue = ((.213f - c * .213f - s * .787f) * r +
-            (.715f - c * .715f + s * .715f) * g +
-            (.072f + c * .928f + s * .072f) * b).coerceIn(0f, 1f)
+        red = accent.red * intensity,
+        green = accent.green * intensity,
+        blue = accent.blue * intensity,
     )
 }
 
 /** Native replacement for the old GIF, preserving Home's existing banner layout. */
 @Composable
 internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boolean = true) {
+    val accent = LocalKlyroColors.current.accent
     val motionEnabled = rememberHomeMotionEnabled()
     val started = rememberCoverStarted()
-    val hue = if (animate && motionEnabled && started) {
-        val transition = rememberInfiniteTransition(label = "home-pattern-hue")
+    val phase = if (animate && motionEnabled && started) {
+        val transition = rememberInfiniteTransition(label = "home-pattern-pulse")
         transition.animateFloat(
             initialValue = 0f,
             targetValue = 360f,
@@ -92,7 +81,7 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
                 animation = tween(HOME_PATTERN_PERIOD_MS, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             ),
-            label = "home-pattern-hue-angle"
+            label = "home-pattern-phase"
         )
     } else null
 
@@ -122,7 +111,7 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
             }
             onDrawBehind {
                 drawRect(Color.Black)
-                drawPath(pattern, homePatternHue(hue?.value ?: 0f))
+                drawPath(pattern, homePatternTint(accent, phase?.value ?: 0f))
             }
         })
 
@@ -130,7 +119,8 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
         Canvas(Modifier.fillMaxSize()) {
             drawRect(
                 brush = Brush.verticalGradient(
-                    0f to Color.Transparent,
+                    0f to Color.Black.copy(alpha = .45f),
+                    .16f to Color.Transparent,
                     .50f to Color.Transparent,
                     .74f to screenChrome.copy(alpha = .28f),
                     .90f to screenChrome.copy(alpha = .76f),
