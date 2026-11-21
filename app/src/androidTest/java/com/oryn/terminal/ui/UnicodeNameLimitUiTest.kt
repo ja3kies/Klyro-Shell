@@ -59,6 +59,21 @@ class UnicodeNameLimitUiTest {
         ui.runOnIdle { assertEquals("New work", saved) }
     }
 
+    @Test fun sessionRenameSavesSameSanitizedNameUsedBySessionModel() {
+        var saved: String? = null
+        ui.setContent {
+            CompositionLocalProvider(LocalKlyroColors provides KlyroColors.create(false, "lime")) {
+                MaterialTheme {
+                    KlyroRenameSessionDialog(name = "Fixture",
+                        onSave = { saved = KlyroWorkspaceCatalog.cleanName(it) }, onDismiss = {})
+                }
+            }
+        }
+        ui.onNodeWithText("Session name").performTextReplacement("  New name  ")
+        ui.onNodeWithText("Save").performClick()
+        ui.runOnIdle { assertEquals("New name", saved) }
+    }
+
     @Test fun sessionRenameAcceptsThirtyTwoCodePointsIncludingBoundaryEmoji() {
         val expected = "a".repeat(31) + "😀"
         var saved: String? = null

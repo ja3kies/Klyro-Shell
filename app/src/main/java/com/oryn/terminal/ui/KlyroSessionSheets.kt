@@ -179,11 +179,12 @@ internal fun KlyroRenameSessionDialog(
     }
     val requester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    val canSave = value.text.trim().isNotBlank() && value.text.trim() != name
+    val normalizedName = KlyroWorkspaceCatalog.cleanName(value.text)
+    val canSave = normalizedName.isNotBlank() && normalizedName != name
     fun saveRename() {
         if (!canSave) return
         keyboard?.hide()
-        onSave(value.text.trim())
+        onSave(normalizedName)
     }
     val colors = LocalKlyroColors.current
     KlyroModalTheme {

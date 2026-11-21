@@ -8,7 +8,8 @@ class SessionRenameTest(unittest.TestCase):
         self.assertIn("TextFieldValue(name, selection = TextRange(0, name.length))",S)
         self.assertIn("KlyroTextLimit.takeCodePoints(cleaned, 32)",S)
         self.assertIn("it.selection.end.coerceAtMost(bounded.length)",S)
-        self.assertIn("val canSave = value.text.trim().isNotBlank()",S)
+        self.assertIn("val normalizedName = KlyroWorkspaceCatalog.cleanName(value.text)",S)
+        self.assertIn("val canSave = normalizedName.isNotBlank()",S)
         self.assertIn("enabled = canSave", S)
     def test_no_implicit_write(self):
         self.assertIn("onClick = { saveRename() }",S)

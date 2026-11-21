@@ -33,7 +33,8 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn("Maximum 32 characters.", self.sessions)
 
     def test_session_rename_rejects_blank_inputs(self):
-        self.assertIn("value.text.trim().isNotBlank()", self.sessions)
+        self.assertIn("val normalizedName = KlyroWorkspaceCatalog.cleanName(value.text)", self.sessions)
+        self.assertIn("normalizedName.isNotBlank()", self.sessions)
 
     def test_shell_selection_has_role_and_hit_target(self):
         self.assertIn('onClickLabel = if (launchingBash) "Starting Bash…"', self.sessions)
