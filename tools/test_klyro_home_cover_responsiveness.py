@@ -11,15 +11,17 @@ class HomeCoverResponsivenessTest(unittest.TestCase):
         self.assertIn("val cell = 4.dp.toPx()", COVER)
         self.assertIn("ceil(size.width / cell)", COVER)
         self.assertIn("ceil(size.height / cell)", COVER)
-        self.assertIn("coerceAtMost(size.width)", COVER)
-        self.assertIn("coerceAtMost(size.height)", COVER)
+        self.assertIn("clipRect {", COVER)
+        self.assertIn("translate(left = -offset, top = -offset)", COVER)
 
     def test_geometry_is_cached_and_frames_only_change_color(self):
         self.assertIn("drawWithCache", COVER)
         geometry, draw = COVER.split("onDrawBehind {", 1)
         self.assertIn("val pattern = Path()", geometry)
         self.assertNotIn("phase?.value", geometry)
-        self.assertIn("homePatternTint(accent, phase?.value", draw)
+        self.assertIn("homePatternTint(accent, angle)", draw)
+        self.assertIn("phase?.value", draw)
+        self.assertIn("findViewTreeLifecycleOwner()", COVER)
         self.assertNotIn("ImageDecoder", COVER)
         self.assertNotIn("BitmapFactory", COVER)
 
