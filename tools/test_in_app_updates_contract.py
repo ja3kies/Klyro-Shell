@@ -35,6 +35,29 @@ class InAppUpdateContractTest(unittest.TestCase):
         self.assertIn('apk.optString("browser_download_url")', REPO)
         self.assertNotIn('archive_download_url', REPO)
 
+    def test_global_preview_is_published_for_all_branch_builds(self):
+        self.assertIn("branches: ['**']", WORKFLOW)
+        preview = WORKFLOW.split("  publish-preview:", 1)[1]
+        self.assertIn("github.ref_type == 'branch'", preview)
+        self.assertIn("github.event_name == 'push'", preview)
+        self.assertIn("github.event_name == 'workflow_dispatch'", preview)
+        self.assertIn("needs: debug-apk", preview)
+        self.assertIn("scope: [branch, global]", preview)
+        self.assertIn('tag="preview-latest"', preview)
+        self.assertIn("new_code <= old_code", preview)
+        self.assertIn("cancel-in-progress: false", preview)
+        self.assertIn("--prerelease --latest=false", preview)
+        self.assertIn('metadata["branch"] != os.environ["GITHUB_REF_NAME"]', preview)
+        self.assertIn('metadata["apkSha256"] != hashlib.sha256', preview)
+
+    def test_preview_prefers_global_with_legacy_branch_fallback(self):
+        self.assertIn('releases/tags/preview-latest', REPO)
+        self.assertIn('releases/tags/preview-$branchHash', REPO)
+        self.assertIn('sourceBranch = manifest.optString("branch")', REPO)
+        self.assertIn("publishedBranch.isBlank()", REPO)
+        self.assertIn("Source branch: $source", SETTINGS)
+        self.assertIn("may not contain all installed features", SETTINGS)
+
     def test_expired_preview_has_separate_message_and_recovery_action(self):
         self.assertIn('connection.responseCode in setOf(404, 410)', REPO)
         self.assertIn('stalePreview = true', REPO)
