@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
+import com.oryn.terminal.rememberHomeMotionEnabled
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -75,6 +77,7 @@ import kotlinx.coroutines.withContext
 /** Acode-inspired Installed / Explore manager, intentionally no remote code execution. */
 @Composable
 internal fun KlyroPluginsPage(onBack: () -> Unit) {
+    val motionEnabled = rememberHomeMotionEnabled()
     val colors = LocalKlyroColors.current
     val context = LocalContext.current
     val manager = remember(context) { KlyroPluginManager(context) }
@@ -356,8 +359,9 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         onAction = { page = "explore" }
                     )
                 }
-                installed.forEach { plugin ->
+                installed.forEachIndexed { index, plugin ->
                     Surface(
+                        modifier = Modifier.klyroStaggeredEntrance(index, "installed-${plugin.id}", motionEnabled),
                         color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                     ) {
                         Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
@@ -400,9 +404,10 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     }
                 }
             } else {
-                KlyroPluginManager.bundled.forEach { plugin ->
+                KlyroPluginManager.bundled.forEachIndexed { index, plugin ->
                     val isInstalled = installed.any { it.id == plugin.id }
                     KlyroExplorePluginCard(
+                        modifier = Modifier.klyroStaggeredEntrance(index, "explore-${plugin.id}", motionEnabled),
                         plugin = plugin,
                         isInstalled = isInstalled,
                         enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
@@ -625,10 +630,11 @@ internal fun KlyroExplorePluginCard(
     plugin: KlyroPluginRecord,
     isInstalled: Boolean,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     onAdd: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
-    Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
+    Surface(modifier = modifier, color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
             val stacked = maxWidth < 320.dp || LocalDensity.current.fontScale >= 1.3f
             val addAction: @Composable () -> Unit = {

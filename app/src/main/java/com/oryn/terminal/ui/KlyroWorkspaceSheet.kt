@@ -1,5 +1,6 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.animation.animateColorAsState
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import com.oryn.terminal.rememberHomeMotionEnabled
@@ -206,7 +207,10 @@ internal fun KlyroWorkspaceSheet(
                         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == entry.id
                     }
                     val active = entry.id == selected.id
-                    val cardColor = if (active) c.accent.copy(alpha = .11f) else c.tile
+                    val cardColor by animateColorAsState(
+                        if (active) c.accent.copy(alpha = .11f) else c.tile,
+                        label = "workspace-selection"
+                    )
                     Surface(
                         color = cardColor,
                         border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder,

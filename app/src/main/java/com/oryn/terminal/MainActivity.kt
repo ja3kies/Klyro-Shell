@@ -1,5 +1,9 @@
 package com.oryn.terminal
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import com.oryn.terminal.ui.motion.klyroPressScale
+import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Bundle
@@ -1377,6 +1381,9 @@ private fun OrynTerminalApp(
                 onClose = onClose
             )
         } else {
+            val motionEnabled = rememberHomeMotionEnabled()
+            val launchSource = remember { MutableInteractionSource() }
+            val launchPressed by launchSource.collectIsPressedAsState()
             // The primary action, runtime and tools are one scrollable group.
             // Avoid separating the CTA from its context with an empty viewport.
             Column(
@@ -1393,7 +1400,7 @@ private fun OrynTerminalApp(
                 // The identity sits just beneath the faded cover art.
                 Spacer(Modifier.fillMaxWidth().height(bannerSpace))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().klyroStaggeredEntrance(0, "home-identity", motionEnabled),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -1432,6 +1439,7 @@ private fun OrynTerminalApp(
                     if (homeAction != KlyroHomeAction.NONE) {
                         Button(
                             onClick = onLaunch,
+                            interactionSource = launchSource,
                             enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                             colors = ButtonDefaults.buttonColors(
@@ -1440,27 +1448,29 @@ private fun OrynTerminalApp(
                             ),
                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                         ) {
-                            if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
-                                    color = ui.onAccent)
-                                Spacer(Modifier.width(10.dp))
+                            Row(Modifier.klyroPressScale(launchPressed), verticalAlignment = Alignment.CenterVertically) {
+                                if (launchingBash && homeAction == KlyroHomeAction.START_BASH) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                                        color = ui.onAccent)
+                                    Spacer(Modifier.width(10.dp))
+                                }
+                                Text(
+                                    if (homeAction == KlyroHomeAction.RESUME_SESSION)
+                                        "Return to terminal"
+                                    else if (launchingBash) "Starting Bash…"
+                                    else "Launch Bash",
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Start
+                                )
+                                Icon(
+                                    painter = painterResource(R.drawable.hugeicons_chevron_right),
+                                    contentDescription = null,
+                                    tint = ui.onAccent,
+                                    modifier = Modifier.size(22.dp)
+                                )
                             }
-                            Text(
-                                if (homeAction == KlyroHomeAction.RESUME_SESSION)
-                                    "Return to terminal"
-                                else if (launchingBash) "Starting Bash…"
-                                else "Launch Bash",
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Start
-                            )
-                            Icon(
-                                painter = painterResource(R.drawable.hugeicons_chevron_right),
-                                contentDescription = null,
-                                tint = ui.onAccent,
-                                modifier = Modifier.size(22.dp)
-                            )
                         }
                     }
                     if (!runtimeVerified) {
@@ -1490,7 +1500,9 @@ private fun OrynTerminalApp(
                 }
 
                 Surface(
-                    modifier = Modifier.fillMaxWidth().animateContentSize(),
+                    modifier = Modifier.fillMaxWidth()
+                        .klyroStaggeredEntrance(1, "home-runtime", motionEnabled)
+                        .animateContentSize(),
                     color = if (calmHomeReady) screenChrome else ui.sheet,
                     shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
                     border = if (calmHomeReady) null else BorderStroke(1.dp, ui.key.copy(alpha = .5f))
@@ -1704,29 +1716,41 @@ private fun OrynTerminalApp(
                 }
 
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val pluginsSource = remember { MutableInteractionSource() }
+                    val settingsSource = remember { MutableInteractionSource() }
+                    val pluginsPressed by pluginsSource.collectIsPressedAsState()
+                    val settingsPressed by settingsSource.collectIsPressedAsState()
                     val compactTiles = maxWidth < 340.dp ||
                         LocalDensity.current.fontScale >= 1.3f
                     if (compactTiles) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             KlyroHomeNavigationTile(
                                 title = "Plugins",
+                                pressed = pluginsPressed,
                                 description = "Extend your commands",
                                 iconRes = R.drawable.ic_klyro_plugins,
                                 emphasized = true,
                                 horizontal = compactTiles,
                                 modifier = Modifier.fillMaxWidth()
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                    .klyroStaggeredEntrance(2, "home-plugins", motionEnabled)
+                                    .clickable(interactionSource = pluginsSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro plugins") {
                                         showPlugins = true
                                     }.semantics { contentDescription = "Plugins" }
                             )
                             KlyroHomeNavigationTile(
                                 title = "Settings",
+                                pressed = settingsPressed,
                                 description = "Look & behavior",
                                 iconRes = R.drawable.hugeicons_settings_01,
                                 emphasized = false,
                                 horizontal = compactTiles,
                                 modifier = Modifier.fillMaxWidth()
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                    .klyroStaggeredEntrance(3, "home-settings", motionEnabled)
+                                    .clickable(interactionSource = settingsSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro settings") {
                                         showHomeSettings = true
                                     }.semantics { contentDescription = "Settings" }
                             )
@@ -1735,23 +1759,31 @@ private fun OrynTerminalApp(
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             KlyroHomeNavigationTile(
                                 title = "Plugins",
+                                pressed = pluginsPressed,
                                 description = "Extend your commands",
                                 iconRes = R.drawable.ic_klyro_plugins,
                                 emphasized = true,
                                 horizontal = compactTiles,
                                 modifier = Modifier.weight(1f)
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                    .klyroStaggeredEntrance(2, "home-plugins", motionEnabled)
+                                    .clickable(interactionSource = pluginsSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro plugins") {
                                         showPlugins = true
                                     }.semantics { contentDescription = "Plugins" }
                             )
                             KlyroHomeNavigationTile(
                                 title = "Settings",
+                                pressed = settingsPressed,
                                 description = "Look & behavior",
                                 iconRes = R.drawable.hugeicons_settings_01,
                                 emphasized = false,
                                 horizontal = compactTiles,
                                 modifier = Modifier.weight(1f)
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                    .klyroStaggeredEntrance(3, "home-settings", motionEnabled)
+                                    .clickable(interactionSource = settingsSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro settings") {
                                         showHomeSettings = true
                                     }.semantics { contentDescription = "Settings" }
                             )
@@ -1853,6 +1885,7 @@ private fun OrynTerminalApp(
 @Composable
 private fun KlyroHomeNavigationTile(
     title: String,
+    pressed: Boolean,
     description: String,
     iconRes: Int,
     emphasized: Boolean,
@@ -1862,7 +1895,8 @@ private fun KlyroHomeNavigationTile(
     val ui = LocalKlyroColors.current
     val iconColor = if (emphasized) ui.accent else ui.muted
     Surface(
-        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 112.dp),
+        modifier = modifier.heightIn(min = if (horizontal) 72.dp else 112.dp)
+            .klyroPressScale(pressed),
         color = ui.tile,
         shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
     ) {

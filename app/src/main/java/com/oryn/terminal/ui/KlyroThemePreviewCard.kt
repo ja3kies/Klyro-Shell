@@ -1,5 +1,6 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.remember
@@ -63,6 +64,9 @@ internal fun KlyroThemePreviewCard(
     onClick: () -> Unit
 ) {
     val current = LocalKlyroColors.current
+    val labelColor by animateColorAsState(
+        if (active) current.accent else current.foreground, label = "theme-selection"
+    )
     // Generate previews from the selected accent instead of a fixed Lime palette.
     val preview = KlyroThemePreviewPalette.forMode(mode, accentId)
     val (lightPreview, darkPreview) = KlyroThemePreviewPalette.systemPair(accentId)
@@ -122,7 +126,7 @@ internal fun KlyroThemePreviewCard(
                 }
             }
             Text(label, modifier = Modifier.fillMaxWidth(),
-                color = if (active) current.accent else current.foreground,
+                color = labelColor,
                 fontSize = 11.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }

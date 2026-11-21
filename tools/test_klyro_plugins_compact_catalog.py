@@ -17,7 +17,7 @@ class PluginCompactCatalogTest(unittest.TestCase):
         )
 
     def test_catalog_has_compact_scannable_cards(self):
-        catalog = CODE.split('KlyroPluginManager.bundled.forEach { plugin ->', 1)[1].split(
+        catalog = CODE.split('KlyroPluginManager.bundled.forEachIndexed { index, plugin ->', 1)[1].split(
             'Surface(color = colors.chrome,', 1
         )[0]
         self.assertIn('KlyroExplorePluginCard(', catalog)

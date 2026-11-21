@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import com.oryn.terminal.ui.motion.klyroPressScale
 
 import androidx.compose.foundation.LocalIndication
@@ -369,6 +371,7 @@ internal fun KlyroThinSlider(
     val dragging by interactionSource.collectIsDraggedAsState()
     val pressed by interactionSource.collectIsPressedAsState()
     val focused by interactionSource.collectIsFocusedAsState()
+    val thumbScale by animateFloatAsState(if (dragging) 1.13f else 1f, label = "slider-thumb")
     val labelOffset = with(LocalDensity.current) {
         -(KlyroUiMetrics.iosSliderThumb + 8.dp).roundToPx()
     }
@@ -389,6 +392,7 @@ internal fun KlyroThinSlider(
         thumb = {
             Box(
                 Modifier.size(KlyroUiMetrics.iosSliderThumb)
+                    .graphicsLayer { scaleX = thumbScale; scaleY = thumbScale }
                     .shadow(if (dragging || pressed) 4.dp else 2.dp, CircleShape)
                     .background(colors.foreground, CircleShape)
                     .border(KlyroUiMetrics.iosSliderBorder,
