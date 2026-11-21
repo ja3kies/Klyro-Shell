@@ -1,4 +1,4 @@
-"""Guard the Home decoder boundaries; device tests exercise live settings changes."""
+"""Guard the native Home pattern rendering boundaries; device tests exercise live settings changes."""
 from pathlib import Path
 import unittest
 
@@ -7,15 +7,21 @@ COVER = (ROOT / "app/src/main/java/com/oryn/terminal/KlyroHomePixelCover.kt").re
 
 
 class HomeCoverResponsivenessTest(unittest.TestCase):
-    def test_still_and_animation_preserve_the_same_aspect_ratio(self):
-        self.assertIn("ImageView.ScaleType.CENTER_CROP", COVER)
-        self.assertIn("contentScale = ContentScale.Crop", COVER)
-        self.assertNotIn("ImageView.ScaleType.FIT_XY", COVER)
-        self.assertNotIn("ContentScale.FillBounds", COVER)
+    def test_square_tiles_follow_density_and_clip_to_banner(self):
+        self.assertIn("val cell = 4.dp.toPx()", COVER)
+        self.assertIn("ceil(size.width / cell)", COVER)
+        self.assertIn("ceil(size.height / cell)", COVER)
+        self.assertIn("coerceAtMost(size.width)", COVER)
+        self.assertIn("coerceAtMost(size.height)", COVER)
 
-    def test_decoding_does_not_block_composition(self):
-        self.assertIn("produceState", COVER)
-        self.assertGreaterEqual(COVER.count("withContext(Dispatchers.IO)"), 2)
+    def test_geometry_is_cached_and_frames_only_change_color(self):
+        self.assertIn("drawWithCache", COVER)
+        geometry, draw = COVER.split("onDrawBehind {", 1)
+        self.assertIn("val pattern = Path()", geometry)
+        self.assertNotIn("phase?.value", geometry)
+        self.assertIn("homePatternTint(accent, phase?.value", draw)
+        self.assertNotIn("ImageDecoder", COVER)
+        self.assertNotIn("BitmapFactory", COVER)
 
     def test_reduced_motion_is_observed_and_observer_is_released(self):
         self.assertIn("Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE)", COVER)
