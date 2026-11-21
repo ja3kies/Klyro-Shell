@@ -39,12 +39,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.geometry.Offset
 import kotlin.math.ceil
 import kotlin.math.cos
 import com.oryn.terminal.ui.LocalKlyroColors
 
 internal const val HOME_PATTERN_PERIOD_MS = 20_000
+
+/** Four tile translations per color cycle, so motion is visible within a second. */
+internal fun homePatternOffsetCells(degrees: Float): Float = (degrees / 360f * 64f) % 16f
 
 /** CSS conic layers, sampled on a 0.25em grid (4dp at the original 16px em).
  * The 4em tile is 16 cells wide; each repeating-conic tile is two cells wide.
@@ -116,7 +118,7 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
             onDrawBehind {
                 drawRect(Color.Black)
                 val angle = phase?.value ?: 0f
-                val offset = cell * 16f * angle / 360f
+                val offset = cell * homePatternOffsetCells(angle)
                 clipRect {
                     translate(left = -offset, top = -offset) {
                         drawPath(pattern, homePatternTint(accent, angle))
