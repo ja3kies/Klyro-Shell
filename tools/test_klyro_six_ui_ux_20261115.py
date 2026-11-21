@@ -49,7 +49,8 @@ class KlyroSixUiUx(unittest.TestCase):
         self.assertIn("focusRequester(editorFocus)", W)
         self.assertIn("KeyboardOptions(imeAction = ImeAction.Done)", W)
         self.assertIn("KeyboardActions(onDone = { if (canSave) saveWorkspaceEdit() })", W)
-        self.assertIn("val canSave = editorText.trim().isNotEmpty()", W)
+        self.assertIn("val normalizedEditorText = KlyroWorkspaceCatalog.cleanName(editorText)", W)
+        self.assertIn("val canSave = normalizedEditorText.isNotEmpty()", W)
         self.assertIn("onClick = { saveWorkspaceEdit() }", W)
         self.assertIn("if (saved)", W)
 

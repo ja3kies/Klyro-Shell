@@ -301,14 +301,14 @@ internal fun KlyroWorkspaceSheet(
                 if (editorId != null) {
                     val editing = !editorId.isNullOrEmpty()
                     val editTarget = entries.firstOrNull { it.id == editorId }
-                    val canSave = editorText.trim().isNotEmpty() &&
-                        (!editing || (editTarget != null &&
-                            editorText.trim() != editTarget.name))
+                    val normalizedEditorText = KlyroWorkspaceCatalog.cleanName(editorText)
+                    val canSave = normalizedEditorText.isNotEmpty() &&
+                        (!editing || (editTarget != null && normalizedEditorText != editTarget.name))
                     fun saveWorkspaceEdit() {
                         if (!canSave || editorId == null) return
                         val saved = if (editing) {
-                            editTarget != null && onRenameProject(editTarget.id, editorText)
-                        } else onCreateProject(editorText)
+                            editTarget != null && onRenameProject(editTarget.id, normalizedEditorText)
+                        } else onCreateProject(normalizedEditorText)
                         if (saved) {
                             keyboard?.hide()
                             editorId = null

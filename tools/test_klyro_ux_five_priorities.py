@@ -65,7 +65,7 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn("characters remaining", self.workspaces)
 
     def test_workspace_invalid_save_is_disabled(self):
-        self.assertIn("val canSave = editorText.trim().isNotEmpty()", self.workspaces)
+        self.assertIn("val normalizedEditorText = KlyroWorkspaceCatalog.cleanName(editorText)", self.workspaces)
         self.assertIn("enabled = canSave", self.workspaces)
         self.assertIn("if (!canSave || editorId == null) return", self.workspaces)
 

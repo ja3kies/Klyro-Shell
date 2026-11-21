@@ -11,7 +11,7 @@ class WorkspaceDraftTest(unittest.TestCase):
         self.assertIn("dismissEnabled = editorId == null && deletingId == null && menuId == null", S)
         self.assertIn("Save or Cancel this edit before closing Workspaces.", S)
     def test_save_requires_nonempty_name(self):
-        self.assertIn("val canSave = editorText.trim().isNotEmpty()", S)
+        self.assertIn("val normalizedEditorText = KlyroWorkspaceCatalog.cleanName(editorText)", S)
         self.assertIn("enabled = canSave", S)
         self.assertIn("KeyboardActions(onDone = { if (canSave) saveWorkspaceEdit() })", S)
 if __name__=="__main__": unittest.main()
