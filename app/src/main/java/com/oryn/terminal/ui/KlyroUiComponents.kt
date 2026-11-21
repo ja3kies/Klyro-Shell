@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.ui.motion.klyroPressScale
+
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -188,16 +190,21 @@ internal fun KlyroActionRow(
 ) {
     val colors = LocalKlyroColors.current
     val ink = if (!enabled) colors.muted else if (destructive) colors.danger else colors.muted
+    val pressSource = remember { MutableInteractionSource() }
+    val pressed by pressSource.collectIsPressedAsState()
     Row(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)
-            .clickable(enabled = enabled, role = Role.Button,
+            .clickable(interactionSource = pressSource,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                enabled = enabled, role = Role.Button,
                 onClickLabel = label, onClick = onClick)
             .semantics {
                 contentDescription = if (subtitle.isNullOrBlank()) label else "$label. $subtitle"
                 if (!enabled) stateDescription = "Unavailable"
                 else if (destructive) stateDescription = "Destructive action"
             }
+            .klyroPressScale(pressed, enabled)
             .padding(horizontal = KlyroUiMetrics.spaceLg, vertical = KlyroUiMetrics.spaceSm),
         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
         verticalAlignment = Alignment.CenterVertically
