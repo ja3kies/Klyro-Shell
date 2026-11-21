@@ -300,9 +300,9 @@ internal fun KlyroWorkspaceSheet(
                 if (editorId != null) {
                     val editing = !editorId.isNullOrEmpty()
                     val editTarget = entries.firstOrNull { it.id == editorId }
-                    val canSave = editorText.trim().isNotEmpty() &&
+                    val canSave = editorText.trim().isNotEmpty() && KlyroWorkspaceCatalog.cleanName(editorText).isNotEmpty() &&
                         (!editing || (editTarget != null &&
-                            editorText.trim() != editTarget.name))
+                            KlyroWorkspaceCatalog.cleanName(editorText) != editTarget.name))
                     fun saveWorkspaceEdit() {
                         if (!canSave || editorId == null) return
                         val saved = if (editing) {
@@ -326,7 +326,7 @@ internal fun KlyroWorkspaceSheet(
                             OutlinedTextField(
                                 value = editorText,
                                 onValueChange = {
-                                    editorText = it.take(KlyroWorkspaceCatalog.MAX_NAME_CHARS)
+                                    editorText = KlyroWorkspaceCatalog.limitDraftName(it)
                                     editorError = false
                                 },
                                 label = { Text("Workspace name") },
