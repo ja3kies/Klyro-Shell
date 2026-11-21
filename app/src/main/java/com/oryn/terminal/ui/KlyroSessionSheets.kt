@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.res.painterResource
 import com.oryn.terminal.R
 import com.oryn.terminal.core.KlyroTextLimit
+import com.oryn.terminal.workspace.KlyroWorkspaceCatalog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
