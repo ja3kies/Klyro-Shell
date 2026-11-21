@@ -1,5 +1,10 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import com.oryn.terminal.ui.motion.klyroPressScale
+
 import androidx.activity.compose.BackHandler
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -292,11 +297,15 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 if (registryLoading || registryReadFailed) "Installed"
                 else "Installed (${installed.size})").forEach { (id, label) ->
                 val selected = page == id
+                val enabled = !mutationBusy && !confirmedMutationPending
+                val pressSource = remember(id) { MutableInteractionSource() }
+                val pressed by pressSource.collectIsPressedAsState()
                 Surface(
                     modifier = Modifier.weight(1f)
                         .heightIn(min = KlyroUiMetrics.minTouch)
                         .clickable(
-                            enabled = !mutationBusy && !confirmedMutationPending, role = Role.Tab,
+                            interactionSource = pressSource, indication = LocalIndication.current,
+                            enabled = enabled, role = Role.Tab,
                             onClickLabel = "Show $label"
                         ) {
                             page = id
@@ -308,7 +317,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     border = if (selected) BorderStroke(1.dp, colors.muted.copy(alpha = .45f)) else null,
                     contentColor = colors.foreground
                 ) {
-                    Text(label, modifier = Modifier.padding(horizontal = 8.dp, vertical = 11.dp),
+                    Text(label, modifier = Modifier.klyroPressScale(pressed, enabled)
+                        .padding(horizontal = 8.dp, vertical = 11.dp),
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                         fontSize = 13.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
