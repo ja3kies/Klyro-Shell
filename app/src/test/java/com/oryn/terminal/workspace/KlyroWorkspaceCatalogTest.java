@@ -4,6 +4,19 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class KlyroWorkspaceCatalogTest {
+    @Test public void editableDraftNeverCutsEmojiAndKeepsWhitespace() {
+        String prefix = "x".repeat(31);
+        assertEquals(prefix, KlyroWorkspaceCatalog.limitDraftName(prefix + "😀"));
+        String fits = "x".repeat(30) + "😀";
+        assertEquals(fits, KlyroWorkspaceCatalog.limitDraftName(fits + "y"));
+        assertEquals(" Project ", KlyroWorkspaceCatalog.limitDraftName(" Project "));
+        assertEquals("", KlyroWorkspaceCatalog.limitDraftName(null));
+        KlyroWorkspaceCatalog catalog = new KlyroWorkspaceCatalog();
+        String id = catalog.create(KlyroWorkspaceCatalog.limitDraftName(fits + "y"));
+        assertNotNull(id);
+        assertEquals(fits, catalog.entries().get(1).name);
+    }
+
     @Test public void malformedUtf16NamesAreNotPersistedAsReplacementGlyphs() {
         assertEquals("Project", KlyroWorkspaceCatalog.cleanName("Project\uD800"));
         assertEquals("Project", KlyroWorkspaceCatalog.cleanName("Project\uDC00"));
