@@ -29,13 +29,17 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.geometry.Offset
 import kotlin.math.ceil
 import kotlin.math.cos
 import com.oryn.terminal.ui.LocalKlyroColors
@@ -88,10 +92,10 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
     Box(Modifier.fillMaxWidth().height(height).clearAndSetSemantics { }) {
         Box(Modifier.fillMaxSize().drawWithCache {
             val cell = 4.dp.toPx()
-            val columns = ceil(size.width / cell).toInt()
-            val rows = ceil(size.height / cell).toInt()
+            val columns = ceil(size.width / cell).toInt() + 16
+            val rows = ceil(size.height / cell).toInt() + 16
             val pattern = Path()
-            // Geometry is cached. Only the color changes on animation frames.
+            // Geometry is cached. Frames translate and tint a seamless repeated tile.
             // Merge neighboring colored cells horizontally to reduce path complexity.
             for (row in 0 until rows) {
                 var column = 0
@@ -104,14 +108,20 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
                     while (column < columns && homePatternColoredCell(column, row)) column++
                     pattern.addRect(Rect(
                         first * cell, row * cell,
-                        (column * cell).coerceAtMost(size.width),
-                        ((row + 1) * cell).coerceAtMost(size.height)
+                        column * cell,
+                        (row + 1) * cell
                     ))
                 }
             }
             onDrawBehind {
                 drawRect(Color.Black)
-                drawPath(pattern, homePatternTint(accent, phase?.value ?: 0f))
+                val angle = phase?.value ?: 0f
+                val offset = cell * 16f * angle / 360f
+                clipRect {
+                    translate(left = -offset, top = -offset) {
+                        drawPath(pattern, homePatternTint(accent, angle))
+                    }
+                }
             }
         })
 
@@ -134,7 +144,7 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
 /** Stop decorative animation when the hosting screen is no longer started. */
 @Composable
 private fun rememberCoverStarted(): Boolean {
-    val lifecycle = (LocalContext.current as? LifecycleOwner)?.lifecycle
+    val lifecycle = LocalView.current.findViewTreeLifecycleOwner()?.lifecycle
     var started by remember(lifecycle) {
         mutableStateOf(lifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED) ?: false)
     }
