@@ -1,5 +1,11 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import com.oryn.terminal.ui.motion.klyroPressScale
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,10 +67,14 @@ internal fun KlyroThemePreviewCard(
     val preview = KlyroThemePreviewPalette.forMode(mode, accentId)
     val (lightPreview, darkPreview) = KlyroThemePreviewPalette.systemPair(accentId)
     val shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+    val pressSource = remember { MutableInteractionSource() }
+    val pressed by pressSource.collectIsPressedAsState()
     Surface(
         modifier = modifier
             .heightIn(min = 78.dp)
-            .clickable(role = Role.RadioButton, onClickLabel = "Use $label theme", onClick = onClick)
+            .clickable(interactionSource = pressSource,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                role = Role.RadioButton, onClickLabel = "Use $label theme", onClick = onClick)
             .semantics { selected = active }
             .testTag("theme-preview-$mode"),
         shape = shape,
@@ -72,7 +82,7 @@ internal fun KlyroThemePreviewCard(
         border = null
     ) {
         Column(
-            modifier = Modifier.padding(6.dp),
+            modifier = Modifier.klyroPressScale(pressed).padding(6.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Box(
