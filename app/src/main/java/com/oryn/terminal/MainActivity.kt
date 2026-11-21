@@ -515,34 +515,37 @@ class MainActivity : ComponentActivity() {
                     controller.isAppearanceLightNavigationBars = !darkTheme
                 }
             }
-            CompositionLocalProvider(LocalKlyroColors provides palette) {
+            // Animate only Compose colors. Native PTY palette and system bars keep
+            // their final values, avoiding per-frame native and Binder updates.
+            val visualPalette = com.oryn.terminal.ui.rememberAnimatedKlyroPalette(palette)
+            CompositionLocalProvider(LocalKlyroColors provides visualPalette) {
                 MaterialTheme(
                     colorScheme = if (darkTheme) darkColorScheme(
-                        surface = palette.chrome,
-                        primary = palette.accent,
-                        onPrimary = palette.onAccent,
-                        secondary = palette.accent,
-                        onSecondary = palette.onAccent,
-                        surfaceVariant = palette.tile,
-                        onSurfaceVariant = palette.muted,
-                        outline = palette.muted,
-                        error = palette.danger,
-                        background = palette.background,
-                        onBackground = palette.foreground,
-                        onSurface = palette.foreground
+                        surface = visualPalette.chrome,
+                        primary = visualPalette.accent,
+                        onPrimary = visualPalette.onAccent,
+                        secondary = visualPalette.accent,
+                        onSecondary = visualPalette.onAccent,
+                        surfaceVariant = visualPalette.tile,
+                        onSurfaceVariant = visualPalette.muted,
+                        outline = visualPalette.muted,
+                        error = visualPalette.danger,
+                        background = visualPalette.background,
+                        onBackground = visualPalette.foreground,
+                        onSurface = visualPalette.foreground
                     ) else lightColorScheme(
-                        surface = palette.chrome,
-                        primary = palette.accent,
-                        onPrimary = palette.onAccent,
-                        secondary = palette.accent,
-                        onSecondary = palette.onAccent,
-                        surfaceVariant = palette.tile,
-                        onSurfaceVariant = palette.muted,
-                        outline = palette.muted,
-                        error = palette.danger,
-                        background = palette.background,
-                        onBackground = palette.foreground,
-                        onSurface = palette.foreground
+                        surface = visualPalette.chrome,
+                        primary = visualPalette.accent,
+                        onPrimary = visualPalette.onAccent,
+                        secondary = visualPalette.accent,
+                        onSecondary = visualPalette.onAccent,
+                        surfaceVariant = visualPalette.tile,
+                        onSurfaceVariant = visualPalette.muted,
+                        outline = visualPalette.muted,
+                        error = visualPalette.danger,
+                        background = visualPalette.background,
+                        onBackground = visualPalette.foreground,
+                        onSurface = visualPalette.foreground
                     )
                 ) {
                 // Material3 and foundation controls share the same transparent
