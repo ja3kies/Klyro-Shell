@@ -100,8 +100,10 @@ fun Modifier.klyroStaggeredEntrance(
         ),
         label = "klyro-item-entrance",
     )
+    // Keep actionable cards visible throughout their entrance. A graphics-layer
+    // alpha of zero does not disable pointer input or accessibility semantics:
+    // otherwise an invisible plugin card can still be activated during stagger.
     return this.graphicsLayer {
-        alpha = progress
         translationY = (1f - progress) * 14f
     }
 }
