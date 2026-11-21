@@ -91,9 +91,15 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn("onClick = onResetFont,", self.settings)
         self.assertIn("modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)", self.settings)
 
-    def test_launcher_selected_state_has_visual_check(self):
-        self.assertIn("if (brandReady && selectedBrand == choice)", self.settings)
-        self.assertIn("R.drawable.hugeicons_checkmark_circle_01", self.settings)
+    def test_launcher_selected_state_has_visual_border(self):
+        launcher = self.settings.split('KlyroAppearanceGroup("Launcher icon")', 1)[1].split('"keyboard" ->', 1)[0]
+        self.assertIn("selected = brandReady && selectedBrand == choice", launcher)
+        self.assertIn("border = if (brandReady && selectedBrand == choice) BorderStroke(1.dp, colors.accent) else null", launcher)
+
+    def test_accent_selected_state_has_custom_glyph(self):
+        self.assertIn("R.drawable.klyro_accent_shaked", self.settings)
+        self.assertIn("tint = swatch.onAccent", self.settings)
+        self.assertTrue((UI.parents[4] / "res/drawable/klyro_accent_shaked.xml").is_file())
 
     def test_launcher_error_can_recover_on_verified_choice(self):
         self.assertIn("KlyroBrandChoice.isVerifiedSelection(context, choice) ||", self.settings)
