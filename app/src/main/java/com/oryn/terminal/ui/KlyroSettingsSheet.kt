@@ -908,7 +908,7 @@ internal fun KlyroSettingsSheet(
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold)
                                 Text(if (updateChannel == com.oryn.terminal.updates.UpdateChannel.STABLE)
-                                    "Stable releases · signed APK" else "Preview builds · ${com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(com.oryn.terminal.BuildConfig.UPDATE_BRANCH)}",
+                                    "Stable releases · signed APK" else "Preview · latest signed build across branches",
                                     color = colors.muted, style = MaterialTheme.typography.bodySmall)
                             }
                         }
@@ -923,6 +923,16 @@ internal fun KlyroSettingsSheet(
                                         fontWeight = FontWeight.SemiBold)
                                     Text(result.candidate.version.name, color = colors.foreground,
                                         style = MaterialTheme.typography.bodyLarge)
+                                    result.candidate.sourceBranch?.takeIf {
+                                        result.candidate.channel == com.oryn.terminal.updates.UpdateChannel.PREVIEW
+                                    }?.let { source ->
+                                        Text("Source branch: $source", color = colors.muted,
+                                            style = MaterialTheme.typography.bodySmall)
+                                        if (source != com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(
+                                                com.oryn.terminal.BuildConfig.UPDATE_BRANCH)) {
+                                            KlyroInlineNotice("This Preview comes from a different development branch and may not contain all installed features.")
+                                        }
+                                    }
                                     if (result.candidate.notes.isNotBlank()) Text(
                                         result.candidate.notes.take(2_000), color = colors.muted,
                                         style = MaterialTheme.typography.bodySmall)
@@ -1013,7 +1023,7 @@ internal fun KlyroSettingsSheet(
                             com.oryn.terminal.updates.UpdateLookup.NonePublished -> KlyroInlineNotice(
                                 if (updateChannel == com.oryn.terminal.updates.UpdateChannel.STABLE)
                                     "No Stable release is published yet. Preview builds may be available on the Preview channel."
-                                else "No Preview release has been published for this branch.")
+                                else "No signed Preview build has been published yet.")
                             null -> if (updateChecking) KlyroInlineNotice("Checking ${updateChannel.label} updates…")
                         }
                         updateError?.let { error ->
