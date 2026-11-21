@@ -29,6 +29,13 @@ internal sealed interface UpdateLookup {
     data object NonePublished : UpdateLookup
 }
 
+/** Branch and global publications can finish independently. Never prefer a lower version. */
+internal fun newestPreview(global: UpdateLookup, branch: UpdateLookup): UpdateLookup =
+    listOf(global, branch).filterIsInstance<UpdateLookup.Available>()
+        .maxByOrNull { it.candidate.version.code }
+        ?: if (global == UpdateLookup.Current || branch == UpdateLookup.Current)
+            UpdateLookup.Current else UpdateLookup.NonePublished
+
 /** Public GitHub API client. All methods are blocking and must run on Dispatchers.IO. */
 internal class KlyroUpdateRepository(private val context: Context) {
     private val api = "https://api.github.com/repos/ja3kies/Klyro-Shell"
@@ -50,10 +57,9 @@ internal class KlyroUpdateRepository(private val context: Context) {
         // The global Preview tracks successful signed builds across branches.
         // Keep support for older branch-only publications during migration.
         val latest = checkRelease("$api/releases/tags/preview-latest", UpdateChannel.PREVIEW, installed)
-        if (latest is UpdateLookup.Available) return latest
         val local = checkRelease("$api/releases/tags/preview-$branchHash", UpdateChannel.PREVIEW,
             installed, safeBranch)
-        return if (local == UpdateLookup.NonePublished) latest else local
+        return newestPreview(latest, local)
     }
 
     private fun checkRelease(
