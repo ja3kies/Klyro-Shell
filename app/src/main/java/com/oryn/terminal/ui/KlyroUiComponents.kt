@@ -409,7 +409,6 @@ internal fun KlyroThinSlider(
                         colors.muted.copy(alpha = .35f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Box(Modifier.size(8.dp).background(colors.chrome, CircleShape))
                 if (valueLabel != null && (dragging || pressed || focused)) {
                     Popup(
                         alignment = Alignment.BottomCenter,

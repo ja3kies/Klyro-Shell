@@ -74,14 +74,12 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -474,28 +472,6 @@ internal fun KlyroSettingsSheet(
                                         option.id to FontFamily(KlyroTerminalFonts.load(context, option.id))
                                     }
                                 }
-                                // Render a static command sample in the actual terminal typeface
-                                // and size. No commands run and no terminal session is required.
-                                Surface(
-                                    color = colors.terminal,
-                                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                    modifier = Modifier.fillMaxWidth()
-                                        .semantics { contentDescription = "Terminal text preview" }
-                                ) {
-                                    Text(
-                                        text = buildAnnotatedString {
-                                            withStyle(SpanStyle(color = colors.terminalPrompt)) {
-                                                append("› ls\n")
-                                            }
-                                            append("src  README.md")
-                                        },
-                                        color = colors.terminalInk,
-                                        fontFamily = previewFonts.getValue(KlyroTerminalFonts.normalize(fontFamilyId)),
-                                        fontSize = displayedFontSize.sp,
-                                        lineHeight = (displayedFontSize * 1.35f).sp,
-                                        modifier = Modifier.padding(KlyroUiMetrics.spaceMd)
-                                    )
-                                }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
                                     KlyroSettingsChoiceGrid(columns = 2, minimumInlineWidth = appearanceInlineWidth) {
                                         KlyroTerminalFonts.options.forEach { option ->
@@ -510,6 +486,11 @@ internal fun KlyroSettingsSheet(
                                                 if (motionEnabled) tween(220) else androidx.compose.animation.core.snap(),
                                                 label = "font-family-shape"
                                             )
+                                            val fontOutline by animateColorAsState(
+                                                if (active) colors.accent else colors.muted.copy(alpha = .24f),
+                                                if (motionEnabled) tween(200) else androidx.compose.animation.core.snap(),
+                                                label = "font-family-outline"
+                                            )
                                             Surface(
                                                 modifier = Modifier.weight(1f)
                                                     .heightIn(min = KlyroUiMetrics.optionRow)
@@ -519,20 +500,28 @@ internal fun KlyroSettingsSheet(
                                                     }.semantics { selected = active },
                                                 color = fontFill,
                                                 shape = RoundedCornerShape(fontCorner),
-                                                border = null
+                                                border = BorderStroke(1.dp, fontOutline)
                                             ) {
-                                                Box(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(option.label, modifier = Modifier.padding(
+                                                Column(
+                                                    modifier = Modifier.fillMaxWidth().padding(
                                                         horizontal = KlyroUiMetrics.spaceSm,
-                                                        vertical = KlyroUiMetrics.spaceMd
-                                                    ), color = colors.foreground,
-                                                        fontWeight = if (active) FontWeight.SemiBold
-                                                            else FontWeight.Normal,
+                                                        vertical = KlyroUiMetrics.spaceSm
+                                                    ),
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
+                                                ) {
+                                                    // Each option is its own type specimen, not a separate terminal preview.
+                                                    Text("Aa 0O 1l",
+                                                        modifier = Modifier.clearAndSetSemantics { },
+                                                        color = colors.foreground,
                                                         fontFamily = previewFonts.getValue(option.id),
-                                                        style = MaterialTheme.typography.labelMedium)
+                                                        fontSize = 20.sp,
+                                                        lineHeight = 24.sp)
+                                                    Text(option.label,
+                                                        color = if (active) colors.accent else colors.foreground,
+                                                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                                 }
                                             }
                                         }

@@ -12,8 +12,8 @@ B = (UI / 'KlyroBrandChoice.kt').read_text()
 class SettingsRefinement(unittest.TestCase):
     def test_frequent_appearance_controls_precede_launcher_identity(self):
         appearance = S.split('"appearance" -> {', 1)[1].split('"keyboard" -> {', 1)[0]
-        self.assertLess(appearance.index('KlyroAppearanceGroup("App theme"'), appearance.index('Text("Terminal font"'))
-        self.assertLess(appearance.index('Text("Terminal font"'), appearance.index('KlyroAppearanceGroup("Launcher icon"'))
+        self.assertLess(appearance.index('KlyroAppearanceGroup("App theme"'), appearance.index('KlyroAppearanceGroup("Terminal text"'))
+        self.assertLess(appearance.index('KlyroAppearanceGroup("Terminal text"'), appearance.index('KlyroAppearanceGroup("Launcher icon"'))
 
     def test_same_responsive_layout_serves_all_choice_groups(self):
         self.assertGreaterEqual(S.count('KlyroSettingsChoiceGrid('), 5)

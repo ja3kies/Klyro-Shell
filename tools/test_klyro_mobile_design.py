@@ -24,21 +24,29 @@ class KlyroMobileDesignAudit(unittest.TestCase):
             self.assertIn('"' + section + '" -> {', settings)
         self.assertNotIn("SettingsTile(", settings)
 
-    def test_terminal_text_preview_uses_real_font_and_live_size(self):
+    def test_terminal_font_choices_show_their_own_glyphs_without_extra_preview(self):
         settings = src(UI / "KlyroSettingsSheet.kt")
         typography = settings.split('KlyroAppearanceGroup("Terminal text")', 1)[1].split(
             'KlyroAppearanceGroup("Launcher icon")', 1)[0]
         self.assertIn("FontFamily(KlyroTerminalFonts.load(context, option.id))", typography)
-        self.assertIn("fontFamily = previewFonts.getValue(KlyroTerminalFonts.normalize(fontFamilyId))", typography)
+        self.assertIn('Text("Aa 0O 1l"', typography)
         self.assertIn("fontFamily = previewFonts.getValue(option.id)", typography)
-        self.assertIn("fontSize = displayedFontSize.sp", typography)
+        self.assertIn("font-family-outline", typography)
+        self.assertIn("selected = active", typography)
         self.assertIn('fontFeatureSettings = "tnum"', typography)
-        self.assertIn('contentDescription = "Terminal text preview"', typography)
-        self.assertIn("color = colors.terminal", typography)
+        self.assertIn('${displayedFontSize.toInt()} sp', typography)
         self.assertIn("onClick = onResetFont", typography)
         self.assertIn("onFontFamilyChange(option.id)", typography)
         self.assertIn("onFontChange(KlyroTerminalFonts.normalizeSize(it))", typography)
+        self.assertNotIn("Terminal text preview", typography)
         self.assertNotIn('Text("Terminal font"', typography)
+
+    def test_slider_thumb_is_solid_without_losing_feedback(self):
+        thumb = src(UI / "KlyroUiComponents.kt").split("internal fun KlyroThinSlider(", 1)[1].split("track =", 1)[0]
+        self.assertNotIn("Modifier.size(8.dp).background(colors.chrome, CircleShape)", thumb)
+        self.assertIn(".background(colors.foreground, CircleShape)", thumb)
+        self.assertIn("valueLabel != null && (dragging || pressed || focused)", thumb)
+        self.assertIn("scaleX = thumbScale", thumb)
 
     def test_typography_controls_use_slider_not_oversized_steppers(self):
         settings = src(UI / "KlyroSettingsSheet.kt")
