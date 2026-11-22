@@ -35,7 +35,10 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("KlyroUiMetrics.iosSliderTrack", shared)
         self.assertNotIn('Text("A−")', settings)
         self.assertNotIn('Text("A+")', settings)
-        self.assertIn("KlyroUiMetrics.accentSwatch", settings)
+        self.assertIn("KlyroAccentSwatch(", settings)
+        swatch = src(UI / "KlyroAccentSwatch.kt")
+        self.assertIn("KlyroUiMetrics.accentSwatch", swatch)
+        self.assertIn("Role.RadioButton", swatch)
         self.assertIn("Role.RadioButton", settings)
 
     def test_workspaces_use_compact_left_aligned_rows_with_contextual_actions(self):
