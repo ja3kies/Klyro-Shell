@@ -29,5 +29,28 @@ class MotionRestorationTest(unittest.TestCase):
         for marker in ("plugin-tab-background", "plugin-tab-ink", "installed-${plugin.id}", "explore-${plugin.id}"):
             self.assertIn(marker, plugins)
 
+    def test_shape_transitions_preserve_selection_semantics_and_reduced_motion(self):
+        preview = read("ui/KlyroThemePreviewCard.kt")
+        self.assertIn("theme-preview-selection", preview)
+        self.assertIn("theme-preview-corner", preview)
+        self.assertIn("selected = active", preview)
+        self.assertIn("if (motion) tween(240) else snap()", preview)
+        settings = read("ui/KlyroSettingsSheet.kt")
+        for marker in ("monochrome-chevron", "font-family-fill", "font-family-shape"):
+            self.assertIn(marker, settings)
+        self.assertIn("selected = active", settings)
+        self.assertIn("else androidx.compose.animation.core.snap()", settings)
+        plugins = read("ui/KlyroPluginsPage.kt")
+        self.assertIn("plugin-tab-corner", plugins)
+        self.assertIn("RoundedCornerShape(tabCorner)", plugins)
+        self.assertIn("this.selected = selected", plugins)
+
+    def test_slider_stretches_only_visual_thumb_on_drag(self):
+        shared = read("ui/KlyroUiComponents.kt")
+        self.assertIn("scaleX = thumbScale", shared)
+        self.assertIn("scaleY = 1f - (thumbScale - 1f) * .35f", shared)
+        self.assertIn("interactionSource = interactionSource", shared)
+        self.assertIn("modifier.heightIn(min = KlyroUiMetrics.minTouch)", shared)
+
 if __name__ == "__main__":
     unittest.main()
