@@ -254,9 +254,17 @@ class KlyroPluginManager(context: Context) {
         }
     }
 
-    fun uninstall(id: String) {
+    fun uninstall(id: String): KlyroPluginRecord = synchronized(registryLock) {
+        val current = installed()
+        val removed = current.firstOrNull { it.id == id } ?: error("Plugin not installed")
+        save(current.filterNot { it.id == id })
+        removed
+    }
+
+    internal fun restoreRemoved(record: KlyroPluginRecord) {
         synchronized(registryLock) {
-            save(installed().filterNot { it.id == id })
+            require(installed().none { it.id == record.id }) { "Plugin already installed" }
+            upsert(record)
         }
     }
 }

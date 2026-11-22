@@ -34,6 +34,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -82,6 +86,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     val context = LocalContext.current
     val manager = remember(context) { KlyroPluginManager(context) }
     val scope = rememberCoroutineScope()
+    val removalNotice = remember { SnackbarHostState() }
     var mutationBusy by remember { mutableStateOf(false) }
     var previewBusy by remember { mutableStateOf(false) }
     var installed by remember { mutableStateOf<List<KlyroPluginRecord>>(emptyList()) }
@@ -262,189 +267,192 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
     // when a short viewport or large text would leave no room for the list.
     val scrollWholePage = LocalConfiguration.current.screenHeightDp < 600 ||
         LocalDensity.current.fontScale >= 1.3f
-    Column(
-        modifier = Modifier.fillMaxSize()
-            .then(if (scrollWholePage) Modifier.verticalScroll(pageScroll) else Modifier)
-            .padding(horizontal = KlyroUiMetrics.sheetGutter, vertical = KlyroUiMetrics.spaceLg),
-        verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
-        ) {
-            TextButton(
-                onClick = ::navigateBack,
-                enabled = !mutationBusy && !confirmedMutationPending,
-                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-            ) {
-                Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
-                    contentDescription = null, modifier = Modifier.size(20.dp))
-                Text("Home")
-            }
-            Text("Plugins", fontSize = 24.sp, fontWeight = FontWeight.Bold,
-                color = colors.foreground,
-                modifier = Modifier.weight(1f).semantics { heading() })
-        }
-        Text("Offline packs · commands run only when you choose.",
-            color = colors.muted, fontSize = 13.sp, lineHeight = 18.sp)
-
-        Row(
-            modifier = Modifier.fillMaxWidth()
-                .selectableGroup()
-                .background(colors.key, RoundedCornerShape(KlyroUiMetrics.selectedCorner))
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            listOf("explore" to "Explore", "installed" to
-                if (registryLoading || registryReadFailed) "Installed"
-                else "Installed (${installed.size})").forEach { (id, label) ->
-                val selected = page == id
-                val enabled = !mutationBusy && !confirmedMutationPending
-                val pressSource = remember(id) { MutableInteractionSource() }
-                val pressed by pressSource.collectIsPressedAsState()
-                Surface(
-                    modifier = Modifier.weight(1f)
-                        .heightIn(min = KlyroUiMetrics.minTouch)
-                        .clickable(
-                            interactionSource = pressSource, indication = LocalIndication.current,
-                            enabled = enabled, role = Role.Tab,
-                            onClickLabel = "Show $label"
-                        ) {
-                            page = id
-                            error = null
-                        }
-                        .semantics { this.selected = selected },
-                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                    color = if (selected) colors.sheet else colors.key,
-                    border = if (selected) BorderStroke(1.dp, colors.muted.copy(alpha = .45f)) else null,
-                    contentColor = colors.foreground
-                ) {
-                    Text(label, modifier = Modifier.klyroPressScale(pressed, enabled)
-                        .padding(horizontal = 8.dp, vertical = 11.dp),
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        fontSize = 13.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                }
-            }
-        }
+    Column(Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.fillMaxWidth().then(
-                if (scrollWholePage) Modifier else Modifier.weight(1f).verticalScroll(pageScroll)
-            ),
+            modifier = Modifier.weight(1f).fillMaxWidth()
+                .then(if (scrollWholePage) Modifier.verticalScroll(pageScroll) else Modifier)
+                .padding(horizontal = KlyroUiMetrics.sheetGutter, vertical = KlyroUiMetrics.spaceLg),
             verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
         ) {
-            if (mutationBusy || confirmedMutationPending) {
-                KlyroInlineNotice("Updating local plugins…")
-            }
-            if (registryLoading) KlyroInlineNotice("Loading local plugins…")
-            if (registryReadFailed) {
-                KlyroInlineNotice(error ?: "Unable to load local plugins. Retry to refresh the list.", isError = true)
-            } else {
-                error?.let { KlyroInlineNotice(it, isError = true) }
-            }
-            if (registryReadFailed) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+            ) {
                 TextButton(
-                    onClick = { registryRevision += 1 },
-                    enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
+                    onClick = ::navigateBack,
+                    enabled = !mutationBusy && !confirmedMutationPending,
                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                ) { Text("Retry") }
-            }
-            if (page == "installed") {
-                if (installed.isEmpty() && !registryLoading && !registryReadFailed) {
-                    KlyroEmptyState(
-                        title = "Nothing installed yet",
-                        detail = "Explore curated packs or import a local JSON manifest.",
-                        actionLabel = "Explore plugins",
-                        onAction = { page = "explore" }
-                    )
+                ) {
+                    Icon(painterResource(R.drawable.hugeicons_arrow_left_01),
+                        contentDescription = null, modifier = Modifier.size(20.dp))
+                    Text("Home")
                 }
-                installed.forEachIndexed { index, plugin ->
+                Text("Plugins", fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                    color = colors.foreground,
+                    modifier = Modifier.weight(1f).semantics { heading() })
+            }
+            Text("Offline packs · commands run only when you choose.",
+                color = colors.muted, fontSize = 13.sp, lineHeight = 18.sp)
+
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .selectableGroup()
+                    .background(colors.key, RoundedCornerShape(KlyroUiMetrics.selectedCorner))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf("explore" to "Explore", "installed" to
+                    if (registryLoading || registryReadFailed) "Installed"
+                    else "Installed (${installed.size})").forEach { (id, label) ->
+                    val selected = page == id
+                    val enabled = !mutationBusy && !confirmedMutationPending
+                    val pressSource = remember(id) { MutableInteractionSource() }
+                    val pressed by pressSource.collectIsPressedAsState()
                     Surface(
-                        modifier = Modifier.klyroStaggeredEntrance(index, "installed-${plugin.id}", motionEnabled),
-                        color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
-                    ) {
-                        Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            PluginHeading(plugin, "v${plugin.version} · ${plugin.commands.size} commands")
-                            Row(verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
-                                    .toggleable(
-                                        value = plugin.enabled,
-                                        enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
-                                        role = Role.Switch,
-                                        onValueChange = { checked ->
-                                            applyChange({ manager.setEnabled(plugin.id, checked) })
-                                        }
-                                    ).semantics {
-                                        contentDescription =
-                                            (if (plugin.enabled) "Disable " else "Enable ") + plugin.name
-                                    }) {
-                                Text(if (plugin.enabled) "Enabled" else "Disabled",
-                                    modifier = Modifier.weight(1f),
-                                    color = colors.muted, fontSize = 12.sp)
-                                Switch(checked = plugin.enabled,
-                                    onCheckedChange = null,
-                                    enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
-                                    modifier = Modifier.clearAndSetSemantics { })
-                            }
-                            TextButton(
-                                onClick = { error = null; removeId = plugin.id },
-                                enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
-                                colors = ButtonDefaults.textButtonColors(
-                                    contentColor = colors.danger, disabledContentColor = colors.muted
-                                ),
-                                modifier = Modifier.align(Alignment.End).heightIn(min = KlyroUiMetrics.minTouch)
-                                    .semantics { contentDescription = "Remove ${plugin.name}" }
+                        modifier = Modifier.weight(1f)
+                            .heightIn(min = KlyroUiMetrics.minTouch)
+                            .clickable(
+                                interactionSource = pressSource, indication = LocalIndication.current,
+                                enabled = enabled, role = Role.Tab,
+                                onClickLabel = "Show $label"
                             ) {
-                                Text("Remove")
+                                page = id
+                                error = null
+                            }
+                            .semantics { this.selected = selected },
+                        shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                        color = if (selected) colors.sheet else colors.key,
+                        border = if (selected) BorderStroke(1.dp, colors.muted.copy(alpha = .45f)) else null,
+                        contentColor = colors.foreground
+                    ) {
+                        Text(label, modifier = Modifier.klyroPressScale(pressed, enabled)
+                            .padding(horizontal = 8.dp, vertical = 11.dp),
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 13.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
+                }
+            }
+            Column(
+                modifier = Modifier.fillMaxWidth().then(
+                    if (scrollWholePage) Modifier else Modifier.weight(1f).verticalScroll(pageScroll)
+                ),
+                verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)
+            ) {
+                if (mutationBusy || confirmedMutationPending) {
+                    KlyroInlineNotice("Updating local plugins…")
+                }
+                if (registryLoading) KlyroInlineNotice("Loading local plugins…")
+                if (registryReadFailed) {
+                    KlyroInlineNotice(error ?: "Unable to load local plugins. Retry to refresh the list.", isError = true)
+                } else {
+                    error?.let { KlyroInlineNotice(it, isError = true) }
+                }
+                if (registryReadFailed) {
+                    TextButton(
+                        onClick = { registryRevision += 1 },
+                        enabled = !registryLoading && !mutationBusy && !confirmedMutationPending,
+                        modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                    ) { Text("Retry") }
+                }
+                if (page == "installed") {
+                    if (installed.isEmpty() && !registryLoading && !registryReadFailed) {
+                        KlyroEmptyState(
+                            title = "Nothing installed yet",
+                            detail = "Explore curated packs or import a local JSON manifest.",
+                            actionLabel = "Explore plugins",
+                            onAction = { page = "explore" }
+                        )
+                    }
+                    installed.forEachIndexed { index, plugin ->
+                        Surface(
+                            modifier = Modifier.klyroStaggeredEntrance(index, "installed-${plugin.id}", motionEnabled),
+                            color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                PluginHeading(plugin, "v${plugin.version} · ${plugin.commands.size} commands")
+                                Row(verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+                                        .toggleable(
+                                            value = plugin.enabled,
+                                            enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
+                                            role = Role.Switch,
+                                            onValueChange = { checked ->
+                                                applyChange({ manager.setEnabled(plugin.id, checked) })
+                                            }
+                                        ).semantics {
+                                            contentDescription =
+                                                (if (plugin.enabled) "Disable " else "Enable ") + plugin.name
+                                        }) {
+                                    Text(if (plugin.enabled) "Enabled" else "Disabled",
+                                        modifier = Modifier.weight(1f),
+                                        color = colors.muted, fontSize = 12.sp)
+                                    Switch(checked = plugin.enabled,
+                                        onCheckedChange = null,
+                                        enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
+                                        modifier = Modifier.clearAndSetSemantics { })
+                                }
+                                TextButton(
+                                    onClick = { error = null; removeId = plugin.id },
+                                    enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = colors.danger, disabledContentColor = colors.muted
+                                    ),
+                                    modifier = Modifier.align(Alignment.End).heightIn(min = KlyroUiMetrics.minTouch)
+                                        .semantics { contentDescription = "Remove ${plugin.name}" }
+                                ) {
+                                    Text("Remove")
+                                }
                             }
                         }
                     }
-                }
-            } else {
-                KlyroPluginManager.bundled.forEachIndexed { index, plugin ->
-                    val isInstalled = installed.any { it.id == plugin.id }
-                    KlyroExplorePluginCard(
-                        modifier = Modifier.klyroStaggeredEntrance(index, "explore-${plugin.id}", motionEnabled),
-                        plugin = plugin,
-                        isInstalled = isInstalled,
-                        enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
-                        onAdd = { error = null; pendingBundledId = plugin.id }
-                    )
-                }
-                Surface(color = colors.chrome,
-                    shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
-                    border = BorderStroke(1.dp, colors.muted.copy(alpha = .2f))) {
-                    Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Local manifest", color = colors.foreground,
-                            fontWeight = FontWeight.SemiBold)
-                        Text("Review and confirm a local JSON command pack (up to 16 KiB). Extensions cannot run JavaScript or execute shell commands.",
-                            color = colors.muted, fontSize = 12.sp)
-                        OutlinedButton(
-                            onClick = {
-                                // Common SAF providers expose JSON as application/json,
-                                // text/plain or octet-stream. Avoid showing every media file.
-                                importPicker.launch(arrayOf(
-                                    "application/json", "application/x-json",
-                                    "text/plain", "application/octet-stream"
-                                ))
-                            },
-                            enabled = !registryLoading && !previewBusy && !mutationBusy && !confirmedMutationPending && !registryReadFailed &&
-                                pendingImportUri == null,
-                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                        ) {
-                            Icon(painterResource(R.drawable.hugeicons_file_01),
-                                contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text(if (previewBusy) "Reading manifest…" else "Import JSON")
+                } else {
+                    KlyroPluginManager.bundled.forEachIndexed { index, plugin ->
+                        val isInstalled = installed.any { it.id == plugin.id }
+                        KlyroExplorePluginCard(
+                            modifier = Modifier.klyroStaggeredEntrance(index, "explore-${plugin.id}", motionEnabled),
+                            plugin = plugin,
+                            isInstalled = isInstalled,
+                            enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
+                            onAdd = { error = null; pendingBundledId = plugin.id }
+                        )
+                    }
+                    Surface(color = colors.chrome,
+                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner),
+                        border = BorderStroke(1.dp, colors.muted.copy(alpha = .2f))) {
+                        Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Local manifest", color = colors.foreground,
+                                fontWeight = FontWeight.SemiBold)
+                            Text("Review and confirm a local JSON command pack (up to 16 KiB). Extensions cannot run JavaScript or execute shell commands.",
+                                color = colors.muted, fontSize = 12.sp)
+                            OutlinedButton(
+                                onClick = {
+                                    // Common SAF providers expose JSON as application/json,
+                                    // text/plain or octet-stream. Avoid showing every media file.
+                                    importPicker.launch(arrayOf(
+                                        "application/json", "application/x-json",
+                                        "text/plain", "application/octet-stream"
+                                    ))
+                                },
+                                enabled = !registryLoading && !previewBusy && !mutationBusy && !confirmedMutationPending && !registryReadFailed &&
+                                    pendingImportUri == null,
+                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
+                            ) {
+                                Icon(painterResource(R.drawable.hugeicons_file_01),
+                                    contentDescription = null, modifier = Modifier.size(18.dp))
+                                Text(if (previewBusy) "Reading manifest…" else "Import JSON")
+                            }
                         }
                     }
                 }
             }
         }
+        SnackbarHost(removalNotice)
     }
 
     pendingBundledId?.let { id ->
@@ -606,9 +614,29 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     ), onClick = {
                     if (item == null) return@TextButton
                     confirmedRemovalId = id
-                    applyChange({ manager.uninstall(id) }) {
+                    var removed: KlyroPluginRecord? = null
+                    applyChange({ removed = manager.uninstall(id) }) {
                         removeId = null
                         confirmedRemovalId = null
+                        removed?.let { record ->
+                            removalNotice.currentSnackbarData?.dismiss()
+                            scope.launch {
+                                val result = removalNotice.showSnackbar(
+                                    message = "Removed ${record.name}",
+                                    actionLabel = "Undo",
+                                    withDismissAction = true,
+                                    duration = SnackbarDuration.Long
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    if (mutationBusy || confirmedBundledId != null ||
+                                        confirmedImportId != null || confirmedRemovalId != null) {
+                                        error = "Could not restore the plugin while another change was in progress."
+                                    } else {
+                                        applyChange({ manager.restoreRemoved(record) })
+                                    }
+                                }
+                            }
+                        }
                     }
                 }) { Text("Remove") }
             },

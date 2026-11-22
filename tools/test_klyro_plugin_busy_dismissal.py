@@ -10,7 +10,7 @@ class PluginOperationUXContract(unittest.TestCase):
         self.assertIn("fun navigateBack()", CODE)
         self.assertIn("if (mutationBusy || confirmedMutationPending) return", CODE)
         self.assertIn("BackHandler { navigateBack() }", CODE)
-        self.assertIn("onClick = ::navigateBack,\n                enabled = !mutationBusy && !confirmedMutationPending,", CODE)
+        self.assertIn("onClick = ::navigateBack,\n                    enabled = !mutationBusy && !confirmedMutationPending,", CODE)
         tabs = CODE.split('listOf("explore" to "Explore"', 1)[1].split("contentColor = colors.foreground", 1)[0]
         self.assertIn("val enabled = !mutationBusy && !confirmedMutationPending", tabs)
         self.assertIn("enabled = enabled, role = Role.Tab,", tabs)

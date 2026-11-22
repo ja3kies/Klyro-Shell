@@ -3,3 +3,4 @@
 - Inactive session tabs and workspace session lists take up less space.
 - Appearance uses smaller theme previews and closer spacing between settings.
 - Session tabs grow with Android’s text size, and longer names can wrap in Workspaces.
+- After removing a plugin, tap Undo to restore its command pack and enabled state.

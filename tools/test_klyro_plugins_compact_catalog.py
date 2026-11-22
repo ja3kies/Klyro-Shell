@@ -54,7 +54,7 @@ class PluginCompactCatalogTest(unittest.TestCase):
 
     def test_reading_registry_does_not_disable_home_navigation(self):
         self.assertIn(
-            'onClick = ::navigateBack,\n                enabled = !mutationBusy && !confirmedMutationPending,',
+            'onClick = ::navigateBack,\n                    enabled = !mutationBusy && !confirmedMutationPending,',
             CODE
         )
         self.assertIn('if (mutationBusy || confirmedMutationPending) return', CODE)

@@ -9,6 +9,6 @@ class PluginConfirmationRotationTest(unittest.TestCase):
         self.assertIn("var pendingBundledId by rememberSaveable", PAGE)
         self.assertIn("onClick = {\n                            confirmedBundledId = id\n                            applyChange({ manager.installBundled(id) }) {", PAGE)
         self.assertIn("var confirmedBundledId by rememberSaveable", PAGE)
-        self.assertIn("applyChange({ manager.uninstall(id) }) {", PAGE)
+        self.assertIn("applyChange({ removed = manager.uninstall(id) }) {", PAGE)
 if __name__ == "__main__":
     unittest.main()

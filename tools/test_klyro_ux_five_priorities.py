@@ -126,7 +126,7 @@ class UXFivePriorities(unittest.TestCase):
         self.assertIn('applyChange({ manager.installPreview(record) }) {', self.plugins)
 
     def test_plugins_keep_remove_open_on_failure(self):
-        self.assertIn('applyChange({ manager.uninstall(id) }) {', self.plugins)
+        self.assertIn('applyChange({ removed = manager.uninstall(id) }) {', self.plugins)
 
     def test_plugins_have_state_specific_accessibility(self):
         self.assertIn('if (plugin.enabled) "Disable " else "Enable "', self.plugins)
