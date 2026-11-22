@@ -26,6 +26,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.LocalIndication
+import com.oryn.terminal.ui.motion.klyroPressScale
+import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
@@ -1402,6 +1407,7 @@ private fun OrynTerminalApp(
                 ) {
                     Box(
                         modifier = Modifier.size(56.dp)
+                            .klyroStaggeredEntrance(0, "home-brand")
                             .clip(RoundedCornerShape(17.dp))
                             .background(ui.tile),
                         contentAlignment = Alignment.Center
@@ -1433,7 +1439,10 @@ private fun OrynTerminalApp(
                 ) {
                     // An existing PTY remains reachable while runtime checks fail or run.
                     if (homeAction != KlyroHomeAction.NONE) {
+                        val launchSource = remember { MutableInteractionSource() }
+                        val launchPressed by launchSource.collectIsPressedAsState()
                         Button(
+                            interactionSource = launchSource,
                             onClick = onLaunch,
                             enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
@@ -1455,7 +1464,7 @@ private fun OrynTerminalApp(
                                 else if (launchingBash) "Starting Bash…"
                                 else "Launch Bash",
                                 fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).klyroPressScale(launchPressed),
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Start
                             )
                             Icon(
@@ -1499,7 +1508,7 @@ private fun OrynTerminalApp(
                     border = if (calmHomeReady) null else BorderStroke(1.dp, ui.key.copy(alpha = .5f))
                 ) {
                     Column(
-                        modifier = Modifier.padding(if (calmHomeReady) 8.dp else 16.dp),
+                        modifier = Modifier.klyroStaggeredEntrance(1, "home-runtime-status").padding(if (calmHomeReady) 8.dp else 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         val stackRuntimeAction = LocalDensity.current.fontScale >= 1.3f ||
@@ -1707,6 +1716,10 @@ private fun OrynTerminalApp(
                 }
 
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val pluginsSource = remember { MutableInteractionSource() }
+                    val settingsSource = remember { MutableInteractionSource() }
+                    val pluginsPressed by pluginsSource.collectIsPressedAsState()
+                    val settingsPressed by settingsSource.collectIsPressedAsState()
                     val compactTiles = maxWidth < 340.dp ||
                         LocalDensity.current.fontScale >= 1.3f
                     if (compactTiles) {
@@ -1717,8 +1730,10 @@ private fun OrynTerminalApp(
                                 iconRes = R.drawable.ic_klyro_plugins,
                                 emphasized = true,
                                 horizontal = compactTiles,
+                                pressed = pluginsPressed,
                                 modifier = Modifier.fillMaxWidth()
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                    .clickable(interactionSource = pluginsSource, indication = LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro plugins") {
                                         showPlugins = true
                                     }.semantics { contentDescription = "Plugins" }
                             )
@@ -1728,8 +1743,10 @@ private fun OrynTerminalApp(
                                 iconRes = R.drawable.hugeicons_settings_01,
                                 emphasized = false,
                                 horizontal = compactTiles,
+                                pressed = settingsPressed,
                                 modifier = Modifier.fillMaxWidth()
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                    .clickable(interactionSource = settingsSource, indication = LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro settings") {
                                         showHomeSettings = true
                                     }.semantics { contentDescription = "Settings" }
                             )
@@ -1742,8 +1759,10 @@ private fun OrynTerminalApp(
                                 iconRes = R.drawable.ic_klyro_plugins,
                                 emphasized = true,
                                 horizontal = compactTiles,
+                                pressed = pluginsPressed,
                                 modifier = Modifier.weight(1f)
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                    .clickable(interactionSource = pluginsSource, indication = LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro plugins") {
                                         showPlugins = true
                                     }.semantics { contentDescription = "Plugins" }
                             )
@@ -1753,8 +1772,10 @@ private fun OrynTerminalApp(
                                 iconRes = R.drawable.hugeicons_settings_01,
                                 emphasized = false,
                                 horizontal = compactTiles,
+                                pressed = settingsPressed,
                                 modifier = Modifier.weight(1f)
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                    .clickable(interactionSource = settingsSource, indication = LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro settings") {
                                         showHomeSettings = true
                                     }.semantics { contentDescription = "Settings" }
                             )
@@ -1860,7 +1881,8 @@ private fun KlyroHomeNavigationTile(
     iconRes: Int,
     emphasized: Boolean,
     horizontal: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    pressed: Boolean = false
 ) {
     val ui = LocalKlyroColors.current
     val iconColor = if (emphasized) ui.accent else ui.muted
@@ -1871,7 +1893,8 @@ private fun KlyroHomeNavigationTile(
     ) {
         if (horizontal) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.klyroStaggeredEntrance(if (emphasized) 2 else 3, "home-$title")
+                    .klyroPressScale(pressed).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -1894,7 +1917,8 @@ private fun KlyroHomeNavigationTile(
             }
         } else {
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.klyroStaggeredEntrance(if (emphasized) 2 else 3, "home-$title")
+                    .klyroPressScale(pressed).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(
