@@ -24,22 +24,18 @@ class KlyroMobileDesignAudit(unittest.TestCase):
             self.assertIn('"' + section + '" -> {', settings)
         self.assertNotIn("SettingsTile(", settings)
 
-    def test_terminal_font_choices_show_their_own_glyphs_without_extra_preview(self):
+    def test_terminal_font_switcher_shows_one_live_specimen(self):
         settings = src(UI / "KlyroSettingsSheet.kt")
         typography = settings.split('KlyroAppearanceGroup("Terminal text")', 1)[1].split(
             'KlyroAppearanceGroup("Launcher icon")', 1)[0]
-        self.assertIn("FontFamily(KlyroTerminalFonts.load(context, option.id))", typography)
-        self.assertIn('Text("0O 1l"', typography)
-        self.assertIn("fontSize = 32.sp", typography)
-        self.assertIn("fontWeight = FontWeight.Normal", typography)
-        self.assertIn("letterSpacing = 0.sp", typography)
-        self.assertIn('"Android default"', typography)
-        self.assertIn('"Designed for code"', typography)
-        self.assertIn("fontFamily = previewFonts.getValue(option.id)", typography)
-        self.assertIn("font-family-outline", typography)
-        self.assertIn("selected = active", typography)
+        self.assertIn("SingleChoiceSegmentedButtonRow(", typography)
+        self.assertIn("selected = selectedFont == option.id", typography)
+        self.assertIn("contentDescription = option.label", typography)
+        self.assertIn("FontFamily(KlyroTerminalFonts.load(context, selectedFont))", typography)
+        self.assertEqual(typography.count('"0O 1l"'), 1)
+        self.assertIn("fontFamily = previewFont", typography)
         self.assertIn('fontFeatureSettings = "tnum"', typography)
-        self.assertIn('${displayedFontSize.toInt()} sp', typography)
+        self.assertIn("val fontSizeLabel = displayedFontSize.toInt().toString()", typography)
         self.assertIn("onClick = onResetFont", typography)
         self.assertIn("onFontFamilyChange(option.id)", typography)
         self.assertIn("onFontChange(KlyroTerminalFonts.normalizeSize(it))", typography)
@@ -322,7 +318,12 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         menu = pane.split("val toolsMenu: @Composable () -> Unit =", 1)[1].split(
             "\n    Column(", 1
         )[0]
-        self.assertEqual(menu.count("KlyroMenuItem("), 6)
+        self.assertIn('"Show pinned commands" else "Show terminal keys"', menu)
+        self.assertIn("keyboardPager.animateScrollToPage(page)", menu)
+        self.assertIn("keyboardPager.scrollToPage(page)", menu)
+        indicator = src(UI / "KlyroKeyboardPagerIndicator.kt")
+        self.assertIn("Modifier.height(12.dp)", indicator)
+        self.assertNotIn(".clickable(", indicator)
         self.assertIn('KlyroMenuItem("Manage active session"', menu)
         self.assertIn("activeSession != null", menu)
         self.assertIn('KlyroMenuItem("Paste clipboard", R.drawable.hugeicons_clipboard_paste)', menu)

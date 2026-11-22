@@ -15,7 +15,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.draw.rotate
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import com.oryn.terminal.rememberHomeMotionEnabled
 import androidx.compose.ui.semantics.Role
@@ -475,81 +474,48 @@ internal fun KlyroSettingsSheet(
                             }
                             KlyroAppearanceGroup("Terminal text") {
                                 val displayedFontSize = KlyroTerminalFonts.normalizeSize(fontSizeSp)
-                                val fontSizeLabel = "${displayedFontSize.toInt()} sp"
-                                val previewFonts = remember(context) {
-                                    KlyroTerminalFonts.options.associate { option ->
-                                        option.id to FontFamily(KlyroTerminalFonts.load(context, option.id))
-                                    }
+                                val fontSizeLabel = displayedFontSize.toInt().toString()
+                                val selectedFont = KlyroTerminalFonts.normalize(fontFamilyId)
+                                val previewFont = remember(context, selectedFont) {
+                                    FontFamily(KlyroTerminalFonts.load(context, selectedFont))
                                 }
-                                Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                    KlyroSettingsChoiceGrid(columns = 2, minimumInlineWidth = appearanceInlineWidth) {
-                                        KlyroTerminalFonts.options.forEach { option ->
-                                            val active = fontFamilyId == option.id
-                                            val fontFill by animateColorAsState(
-                                                if (active) colors.sheet else colors.sheet.copy(alpha = 0f),
-                                                if (motionEnabled) tween(200) else androidx.compose.animation.core.snap(),
-                                                label = "font-family-fill"
-                                            )
-                                            val fontCorner by animateDpAsState(
-                                                if (active) KlyroUiMetrics.controlCorner else 22.dp,
-                                                if (motionEnabled) tween(220) else androidx.compose.animation.core.snap(),
-                                                label = "font-family-shape"
-                                            )
-                                            val fontOutline by animateColorAsState(
-                                                if (active) colors.accent else colors.muted.copy(alpha = .24f),
-                                                if (motionEnabled) tween(200) else androidx.compose.animation.core.snap(),
-                                                label = "font-family-outline"
-                                            )
-                                            Surface(
-                                                modifier = Modifier.weight(1f)
-                                                    .heightIn(min = KlyroUiMetrics.optionRow)
-                                                    .clickable(role = Role.RadioButton,
-                                                        onClickLabel = "Use " + option.label) {
-                                                        onFontFamilyChange(option.id)
-                                                    }.semantics { selected = active },
-                                                color = fontFill,
-                                                shape = RoundedCornerShape(fontCorner),
-                                                border = BorderStroke(1.dp, fontOutline)
-                                            ) {
-                                                Column(
-                                                    modifier = Modifier.fillMaxWidth().padding(
-                                                        horizontal = KlyroUiMetrics.spaceSm,
-                                                        vertical = KlyroUiMetrics.spaceSm
-                                                    ),
-                                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
-                                                ) {
-                                                    // Each option is its own type specimen, not a separate terminal preview.
-                                                    // Compare the same ambiguous glyphs at an enlarged, equal scale.
-                                                    // Do not change weight or ink when selected: the font itself is the comparison.
-                                                    Text("0O 1l",
-                                                        modifier = Modifier.clearAndSetSemantics { },
-                                                        color = colors.foreground,
-                                                        fontFamily = previewFonts.getValue(option.id),
-                                                        fontWeight = FontWeight.Normal,
-                                                        fontSize = 32.sp,
-                                                        lineHeight = 38.sp,
-                                                        letterSpacing = 0.sp)
-                                                    Text(option.label,
-                                                        color = if (active) colors.accent else colors.foreground,
-                                                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                                                        style = MaterialTheme.typography.labelMedium,
-                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                                                    Text(
-                                                        when (option.id) {
-                                                            "system" -> "Android default"
-                                                            "source-code-pro" -> "Adobe · monospace"
-                                                            else -> "Designed for code"
-                                                        },
-                                                        color = colors.muted,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                                    )
-                                                }
+                                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().semantics {
+                                    contentDescription = "Terminal font"
+                                }) {
+                                    KlyroTerminalFonts.options.forEachIndexed { index, option ->
+                                        SegmentedButton(
+                                            selected = selectedFont == option.id,
+                                            onClick = { onFontFamilyChange(option.id) },
+                                            shape = SegmentedButtonDefaults.itemShape(
+                                                index, KlyroTerminalFonts.options.size
+                                            ),
+                                            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                                .semantics { contentDescription = option.label },
+                                            icon = { }
+                                        ) {
+                                            val label = when (option.id) {
+                                                "system" -> "System"
+                                                "jetbrains" -> "JetBrains"
+                                                else -> "Source Code"
                                             }
+                                            Text(
+                                                label,
+                                                modifier = Modifier.clearAndSetSemantics { },
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                            )
                                         }
                                     }
                                 }
+                                Text(
+                                    "0O 1l",
+                                    modifier = Modifier.fillMaxWidth().clearAndSetSemantics { },
+                                    color = colors.foreground,
+                                    fontFamily = previewFont,
+                                    fontWeight = FontWeight.Normal,
+                                    fontSize = 22.sp,
+                                    letterSpacing = 0.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),

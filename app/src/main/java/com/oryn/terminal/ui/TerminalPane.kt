@@ -34,6 +34,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
@@ -232,6 +233,8 @@ fun TerminalPane(
     }
     val pinnedWorkspaceName = workspaces.firstOrNull { it.id == pinnedWorkspaceId }?.name ?: "General"
     val keyboardPager = rememberPagerState(pageCount = { 2 })
+    val keyboardPagerScope = rememberCoroutineScope()
+    val keyboardMotionEnabled = com.oryn.terminal.rememberHomeMotionEnabled()
     var clipboardAvailable by remember(session) {
         mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
@@ -589,6 +592,18 @@ fun TerminalPane(
                     KlyroMenuItem("Command Palette", R.drawable.hugeicons_search_01) {
                         showToolsMenu = false
                         showCommandPalette = true
+                    }
+                    val showPinned = keyboardPager.currentPage == 0
+                    KlyroMenuItem(
+                        if (showPinned) "Show pinned commands" else "Show terminal keys",
+                        R.drawable.hugeicons_terminal
+                    ) {
+                        showToolsMenu = false
+                        keyboardPagerScope.launch {
+                            val page = if (showPinned) 1 else 0
+                            if (keyboardMotionEnabled) keyboardPager.animateScrollToPage(page)
+                            else keyboardPager.scrollToPage(page)
+                        }
                     }
                     KlyroMenuItem("Workspaces", R.drawable.hugeicons_grid2x2) {
                         showToolsMenu = false
@@ -1008,7 +1023,7 @@ fun TerminalPane(
             Row(
                 modifier = Modifier.fillMaxWidth().background(TerminalSurface)
                     .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 firstRow()
@@ -1017,8 +1032,8 @@ fun TerminalPane(
         } else {
             Column(
                 modifier = Modifier.fillMaxWidth().background(TerminalSurface)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
@@ -1037,7 +1052,7 @@ fun TerminalPane(
                 pagerState = keyboardPager,
                 accent = TerminalAccent,
                 muted = TerminalMuted,
-                motionEnabled = com.oryn.terminal.rememberHomeMotionEnabled()
+                motionEnabled = keyboardMotionEnabled
             )
         }
     }
@@ -1899,7 +1914,7 @@ internal fun TerminalExtraKey(
             onClick = onClick,
             enabled = enabled,
             modifier = Modifier
-                .heightIn(min = 50.dp)
+                .heightIn(min = KlyroUiMetrics.minTouch)
                 .width(keyWidth)
                 .semantics {
                     contentDescription = description ?: label
@@ -1923,7 +1938,7 @@ internal fun TerminalExtraKey(
         // would otherwise double-send a short arrow after the long press.
         val shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
         Surface(
-            modifier = Modifier.heightIn(min = 50.dp).width(keyWidth)
+            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch).width(keyWidth)
                 .clip(shape)
                 .combinedClickable(
                     interactionSource = interaction,

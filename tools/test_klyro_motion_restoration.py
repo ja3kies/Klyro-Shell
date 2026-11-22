@@ -36,8 +36,7 @@ class MotionRestorationTest(unittest.TestCase):
         self.assertIn("selected = active", preview)
         self.assertIn("if (motion) tween(240) else snap()", preview)
         settings = read("ui/KlyroSettingsSheet.kt")
-        for marker in ("monochrome-chevron", "font-family-fill", "font-family-shape"):
-            self.assertIn(marker, settings)
+        self.assertIn("monochrome-chevron", settings)
         self.assertIn("selected = active", settings)
         self.assertIn("else androidx.compose.animation.core.snap()", settings)
         plugins = read("ui/KlyroPluginsPage.kt")
