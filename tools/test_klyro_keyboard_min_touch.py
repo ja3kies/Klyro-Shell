@@ -1,13 +1,16 @@
-"""The extra-key row must scroll rather than shrink below minimum touch size."""
+"""The terminal keys share the available width without horizontal scrolling."""
 from pathlib import Path
 import unittest
-S=(Path(__file__).resolve().parents[1]/"app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt").read_text()
-class KeyTouchSizeTest(unittest.TestCase):
- def test_noncompact_touch_targets_have_minimum_width(self):
-  self.assertIn(".coerceIn(48.dp, 56.dp)",S)
-  self.assertNotIn(".coerceIn(40.dp, 56.dp)",S)
-  self.assertIn('Row(modifier = Modifier.fillMaxWidth()\n                    .horizontalScroll(rememberScrollState()),\n                    horizontalArrangement = Arrangement.spacedBy(4.dp)) { firstRow() }',S)
- def test_compact_shortcut_row_still_scrolls(self):
-  self.assertIn('val keyWidth = if (compact) 48.dp',S)
-  self.assertIn('.horizontalScroll(rememberScrollState())',S)
-if __name__=="__main__":unittest.main()
+
+
+class KeyLayoutTest(unittest.TestCase):
+    def test_rows_fit_and_page_switch_is_explicit(self):
+        root = Path(__file__).resolve().parents[1]
+        pane = (root / "app/src/main/java/com/oryn/terminal/ui/TerminalPane.kt").read_text()
+        keyboard = pane.split("HorizontalPager(state = keyboardPager", 1)[1].split(
+            "KlyroKeyboardPagerIndicator(", 1)[0]
+        self.assertNotIn("horizontalScroll", keyboard)
+        self.assertIn("userScrollEnabled = false", keyboard)
+        self.assertEqual(pane.count("modifier = Modifier.weight(1f), darkChrome"), 14)
+        self.assertIn("compact && maxWidth >= 736.dp", pane)
+        self.assertIn("heightIn(min = KlyroUiMetrics.minTouch)", pane)

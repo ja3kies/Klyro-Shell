@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -553,7 +554,7 @@ fun TerminalPane(
         }
     }
     // Never reduce key targets below Android's 48dp minimum: scroll narrow rows.
-    val keyWidth = if (compact) 48.dp else ((maxWidth - 36.dp) / 7).coerceIn(48.dp, 56.dp)
+    val singleKeyRow = compact && maxWidth >= 736.dp
     val canSendKeys = session.isRunning() && session.emulator != null
     LaunchedEffect(canSendKeys, viewClient, outputRevision) {
         // Clear sticky modifiers when a PTY exits while a key is held.
@@ -890,27 +891,27 @@ fun TerminalPane(
         }
 
         // Portrait: two fixed rows; compact height: one scrollable row to preserve PTY height.
-        val firstRow: @Composable () -> Unit = {
-            TerminalExtraKey("ESC", keyWidth = keyWidth, darkChrome = darkChrome,
+        val firstRow: @Composable RowScope.() -> Unit = {
+            TerminalExtraKey("ESC", modifier = Modifier.weight(1f), darkChrome = darkChrome,
                 enabled = canSendKeys) { sendCodePointIfRunning(session, 27) }
-            TerminalExtraKey("TAB", keyWidth = keyWidth, darkChrome = darkChrome,
+            TerminalExtraKey("TAB", modifier = Modifier.weight(1f), darkChrome = darkChrome,
                 enabled = canSendKeys) { sendCodePointIfRunning(session, 9) }
-            TerminalExtraKey("CTRL", active = controlActive, keyWidth = keyWidth, darkChrome = darkChrome,
+            TerminalExtraKey("CTRL", active = controlActive, modifier = Modifier.weight(1f), darkChrome = darkChrome,
                 enabled = canSendKeys) {
                 controlActive = !controlActive
                 viewClient.setControlDown(controlActive)
             }
-            TerminalExtraKey("ALT", active = altActive, keyWidth = keyWidth, darkChrome = darkChrome,
+            TerminalExtraKey("ALT", active = altActive, modifier = Modifier.weight(1f), darkChrome = darkChrome,
                 enabled = canSendKeys) {
                 altActive = !altActive
                 viewClient.setAltDown(altActive)
             }
-            TerminalExtraKey("SHIFT", active = shiftActive, keyWidth = keyWidth, darkChrome = darkChrome,
+            TerminalExtraKey("SHIFT", active = shiftActive, modifier = Modifier.weight(1f), darkChrome = darkChrome,
                 enabled = canSendKeys) {
                 shiftActive = !shiftActive
                 viewClient.setShiftDown(shiftActive)
             }
-            TerminalExtraKey("FN", active = fnActive, keyWidth = keyWidth, darkChrome = darkChrome,
+            TerminalExtraKey("FN", active = fnActive, modifier = Modifier.weight(1f), darkChrome = darkChrome,
                 enabled = canSendKeys) {
                 fnActive = !fnActive
                 viewClient.setFnDown(fnActive)
@@ -937,7 +938,7 @@ fun TerminalPane(
                     else "Paste clipboard",
                 glyph = if (canSelect) R.drawable.hugeicons_clipboard_list
                     else R.drawable.hugeicons_clipboard_paste,
-                keyWidth = keyWidth, darkChrome = darkChrome,
+                modifier = Modifier.weight(1f), darkChrome = darkChrome,
                 iconCaption = if (canSelect) "SELECT" else "PASTE",
                 tone = if (canSelect) KlyroShortcutTone.SELECT else KlyroShortcutTone.PASTE,
                 active = selectedOutput != null,
@@ -953,32 +954,32 @@ fun TerminalPane(
                 selectTerminalOutput(TerminalActionPolicy.shouldSelect(canSelect, false))
             }
         }
-        val secondRow: @Composable () -> Unit = {
-            TerminalExtraKey("←", description = "Left arrow", arrow = "left", keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys,
+        val secondRow: @Composable RowScope.() -> Unit = {
+            TerminalExtraKey("←", description = "Left arrow", arrow = "left", modifier = Modifier.weight(1f), darkChrome = darkChrome, enabled = canSendKeys,
                 longClickDescription = "Go to start of line",
                 onLongClick = { write(session, TerminalNavigationPolicy.horizontalLongPress(false,
                     session.emulator?.isAlternateBufferActive == true, controlActive, altActive, shiftActive)) }
             ) { write(session, TerminalNavigationPolicy.arrow('D', controlActive, altActive, shiftActive)) }
-            TerminalExtraKey("↑", description = "Up arrow", arrow = "up", keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys) { write(session, TerminalNavigationPolicy.arrow('A', controlActive, altActive, shiftActive)) }
-            TerminalExtraKey("↓", description = "Down arrow", arrow = "down", keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys) { write(session, TerminalNavigationPolicy.arrow('B', controlActive, altActive, shiftActive)) }
-            TerminalExtraKey("→", description = "Right arrow", arrow = "right", keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys,
+            TerminalExtraKey("↑", description = "Up arrow", arrow = "up", modifier = Modifier.weight(1f), darkChrome = darkChrome, enabled = canSendKeys) { write(session, TerminalNavigationPolicy.arrow('A', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("↓", description = "Down arrow", arrow = "down", modifier = Modifier.weight(1f), darkChrome = darkChrome, enabled = canSendKeys) { write(session, TerminalNavigationPolicy.arrow('B', controlActive, altActive, shiftActive)) }
+            TerminalExtraKey("→", description = "Right arrow", arrow = "right", modifier = Modifier.weight(1f), darkChrome = darkChrome, enabled = canSendKeys,
                 longClickDescription = "Go to end of line",
                 onLongClick = { write(session, TerminalNavigationPolicy.horizontalLongPress(true,
                     session.emulator?.isAlternateBufferActive == true, controlActive, altActive, shiftActive)) }
             ) { write(session, TerminalNavigationPolicy.arrow('C', controlActive, altActive, shiftActive)) }
             TerminalExtraKey("END", description = "Go to end of line",
-                keyWidth = keyWidth, darkChrome = darkChrome, enabled = canSendKeys) {
+                modifier = Modifier.weight(1f), darkChrome = darkChrome, enabled = canSendKeys) {
                 write(session, TerminalNavigationPolicy.horizontalLongPress(true,
                     session.emulator?.isAlternateBufferActive == true,
                     controlActive, altActive, shiftActive))
             }
-            TerminalExtraKey("FIND", description = "Find in terminal output", keyWidth = keyWidth, darkChrome = darkChrome) {
+            TerminalExtraKey("FIND", description = "Find in terminal output", modifier = Modifier.weight(1f), darkChrome = darkChrome) {
                 // Keep the previous query for successive searches in this session.
                 searchIndex = 0
                 showTranscriptSearch = true
             }
             TerminalExtraKey("CLEAR", description = "Clear scrollback; preserve current screen and input", glyph = R.drawable.hugeicons_eraser,
-                keyWidth = keyWidth, darkChrome = darkChrome, enabled = session.emulator != null) {
+                modifier = Modifier.weight(1f), darkChrome = darkChrome, enabled = session.emulator != null) {
                 when (TerminalDisplayActions.clearSafely(session)) {
                     TerminalDisplayActions.ClearResult.SCROLLBACK_ONLY -> {
                         terminalActionRevision++
@@ -996,7 +997,7 @@ fun TerminalPane(
                 }
             }
         }
-        HorizontalPager(state = keyboardPager, modifier = Modifier.fillMaxWidth(),
+        HorizontalPager(state = keyboardPager, userScrollEnabled = false, modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top) { page ->
             if (page == 1) {
                 KlyroPinnedCommandBar(
@@ -1019,10 +1020,9 @@ fun TerminalPane(
                         }
                     }
                 )
-            } else if (compact) {
+            } else if (singleKeyRow) {
             Row(
                 modifier = Modifier.fillMaxWidth().background(TerminalSurface)
-                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -1035,11 +1035,9 @@ fun TerminalPane(
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Row(modifier = Modifier.fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) { firstRow() }
-                Row(modifier = Modifier.fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) { secondRow() }
             }
         }
@@ -1814,7 +1812,7 @@ internal fun TerminalExtraKey(
     labelSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     glyph: Int? = null,
     arrow: String? = null,
-    keyWidth: androidx.compose.ui.unit.Dp = 52.dp,
+    modifier: Modifier = Modifier.width(52.dp),
     darkChrome: Boolean = true,
     longClickDescription: String? = null,
     iconCaption: String? = null,
@@ -1908,14 +1906,14 @@ internal fun TerminalExtraKey(
             Text(label, fontSize = labelSize, fontFamily = FontFamily.Monospace)
         }
     }
-    Box(contentAlignment = Alignment.Center) {
+    Box(modifier, contentAlignment = Alignment.Center) {
     if (onLongClick == null) {
         Button(
             onClick = onClick,
             enabled = enabled,
             modifier = Modifier
                 .heightIn(min = KlyroUiMetrics.minTouch)
-                .width(keyWidth)
+                .fillMaxWidth()
                 .semantics {
                     contentDescription = description ?: label
                     stateDescription = spokenState
@@ -1938,7 +1936,7 @@ internal fun TerminalExtraKey(
         // would otherwise double-send a short arrow after the long press.
         val shape = androidx.compose.foundation.shape.RoundedCornerShape(KlyroUiMetrics.controlCorner)
         Surface(
-            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch).width(keyWidth)
+            modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch).fillMaxWidth()
                 .clip(shape)
                 .combinedClickable(
                     interactionSource = interaction,

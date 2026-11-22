@@ -125,7 +125,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("OnPrimaryClipChangedListener", self.pane)
 
     def test_end_remains_available_in_compact_row(self):
-        self.assertIn("val secondRow: @Composable () -> Unit", self.pane)
+        self.assertIn("val secondRow: @Composable RowScope.() -> Unit", self.pane)
         self.assertIn("if (compact)", self.pane)
 
     def test_native_paste_does_not_auto_run_unvalidated_multiline(self):
