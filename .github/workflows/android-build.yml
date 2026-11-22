@@ -132,6 +132,24 @@ jobs:
           test "$(wc -c < "$FONT_DIR/JetBrainsMono-Regular.ttf")" -eq 273900
           echo "PASS: verified JetBrains Mono and OFL licence"
 
+      - name: Prepare verified Source Code Pro terminal font
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="803b7e23ec97ae58b6232ea76519a76d428ba268"
+          FONT_DIR="app/src/main/assets/fonts"
+          mkdir -p "$FONT_DIR"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/adobe-fonts/source-code-pro/$SOURCE_COMMIT/TTF/SourceCodePro-Regular.ttf" \
+            --output "$FONT_DIR/SourceCodePro-Regular.ttf"
+          test "$(git hash-object "$FONT_DIR/SourceCodePro-Regular.ttf")" = "10c73d7d901cf0dfa8ba03e45e3271d466291520"
+          test "$(wc -c < "$FONT_DIR/SourceCodePro-Regular.ttf")" -eq 210312
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/adobe-fonts/source-code-pro/$SOURCE_COMMIT/LICENSE.md" \
+            --output "$FONT_DIR/SourceCodePro-OFL.txt"
+          test "$(git hash-object "$FONT_DIR/SourceCodePro-OFL.txt")" = "70288a864f8dfd1314aa0315748eece0cf80fdda"
+          echo "PASS: verified Source Code Pro and OFL licence"
+
       - name: Run JVM and native alignment auditor unit tests
         run: |
           bash -n scripts/klyro-operational-gate.sh
@@ -212,6 +230,8 @@ jobs:
             lib/arm64-v8a/libandroid-shmem.so \
             assets/proot/runtime-manifest.txt \
             assets/fonts/JetBrainsMono-Regular.ttf \
+            assets/fonts/SourceCodePro-Regular.ttf \
+            assets/fonts/SourceCodePro-OFL.txt \
             assets/fonts/OFL.txt \
             assets/licenses/hugeicons-MIT.txt; do
             grep -Fxq "$entry" <<< "$APK_ENTRIES" || {

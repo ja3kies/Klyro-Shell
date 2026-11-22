@@ -135,6 +135,7 @@ internal fun KlyroSettingsSheet(
         }
     }
     var showFontLicense by rememberSaveable { mutableStateOf(false) }
+    var sourceCodeProLicense by rememberSaveable { mutableStateOf(false) }
     var showHugeiconsLicense by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var showMonochromeThemes by rememberSaveable { mutableStateOf(themeMode.startsWith("mono-")) }
@@ -527,7 +528,11 @@ internal fun KlyroSettingsSheet(
                                                         style = MaterialTheme.typography.labelMedium,
                                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                                     Text(
-                                                        if (option.id == "system") "Android default" else "Designed for code",
+                                                        when (option.id) {
+                                                            "system" -> "Android default"
+                                                            "source-code-pro" -> "Adobe · monospace"
+                                                            else -> "Designed for code"
+                                                        },
                                                         color = colors.muted,
                                                         style = MaterialTheme.typography.labelSmall,
                                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -888,7 +893,12 @@ internal fun KlyroSettingsSheet(
                             "JetBrains Mono licence",
                             "SIL Open Font License 1.1 · included in this APK",
                             R.drawable.hugeicons_information_square
-                        ) { showFontLicense = true }
+                        ) { sourceCodeProLicense = false; showFontLicense = true }
+                        SettingsRowLink(
+                            "Source Code Pro licence",
+                            "SIL Open Font License 1.1 · Adobe",
+                            R.drawable.hugeicons_information_square
+                        ) { sourceCodeProLicense = true; showFontLicense = true }
                         SettingsRowLink(
                             "Hugeicons licence", "MIT · vector icon set",
                             R.drawable.hugeicons_information_square
@@ -1085,7 +1095,10 @@ internal fun KlyroSettingsSheet(
             }
         }
         if (showFontLicense) {
-            KlyroLicenseDialog("JetBrains Mono · OFL 1.1", "fonts/OFL.txt") {
+            KlyroLicenseDialog(
+                if (sourceCodeProLicense) "Source Code Pro · OFL 1.1" else "JetBrains Mono · OFL 1.1",
+                if (sourceCodeProLicense) "fonts/SourceCodePro-OFL.txt" else "fonts/OFL.txt"
+            ) {
                 showFontLicense = false
             }
         }
