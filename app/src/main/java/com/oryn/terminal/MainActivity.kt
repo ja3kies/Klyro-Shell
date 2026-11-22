@@ -1455,15 +1455,28 @@ private fun OrynTerminalApp(
                                         color = ui.onAccent)
                                     Spacer(Modifier.width(10.dp))
                                 }
-                                Text(
-                                    if (homeAction == KlyroHomeAction.RESUME_SESSION)
-                                        "Return to terminal"
-                                    else if (launchingBash) "Starting Bash…"
-                                    else "Launch Bash",
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.weight(1f),
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Start
-                                )
+                                Column(modifier = Modifier.weight(1f).padding(vertical = 6.dp)) {
+                                    Text(
+                                        if (homeAction == KlyroHomeAction.RESUME_SESSION)
+                                            "Return to terminal"
+                                        else if (launchingBash) "Starting Bash…"
+                                        else "Launch Bash",
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    if (homeAction == KlyroHomeAction.RESUME_SESSION) {
+                                        val activeTitle = tabs.firstOrNull { it.first == activeTabId }
+                                            ?.second?.takeIf { it.isNotBlank() }
+                                        if (activeTitle != null) {
+                                            val ended = activeTabId?.let(finishedTabIds::contains) == true
+                                            Text(
+                                                if (ended) "$activeTitle · Ended" else activeTitle,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
                                 Icon(
                                     painter = painterResource(R.drawable.hugeicons_chevron_right),
                                     contentDescription = null,
