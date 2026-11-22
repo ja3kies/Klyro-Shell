@@ -5,6 +5,10 @@ import com.oryn.terminal.ui.motion.klyroPressScale
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.ripple
@@ -367,6 +371,9 @@ internal fun KlyroThinSlider(
     val colors = LocalKlyroColors.current
     val interactionSource = remember { MutableInteractionSource() }
     val dragging by interactionSource.collectIsDraggedAsState()
+    val thumbScale by animateFloatAsState(if (dragging) 1.13f else 1f,
+        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+        label = "slider-drag-feedback")
     val pressed by interactionSource.collectIsPressedAsState()
     val focused by interactionSource.collectIsFocusedAsState()
     val labelOffset = with(LocalDensity.current) {
@@ -389,6 +396,7 @@ internal fun KlyroThinSlider(
         thumb = {
             Box(
                 Modifier.size(KlyroUiMetrics.iosSliderThumb)
+                    .graphicsLayer { scaleX = thumbScale; scaleY = thumbScale }
                     .shadow(if (dragging || pressed) 4.dp else 2.dp, CircleShape)
                     .background(colors.foreground, CircleShape)
                     .border(KlyroUiMetrics.iosSliderBorder,
