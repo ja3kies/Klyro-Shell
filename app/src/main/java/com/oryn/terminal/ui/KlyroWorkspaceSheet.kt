@@ -12,6 +12,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.snap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.IconButton
 
@@ -211,7 +212,7 @@ internal fun KlyroWorkspaceSheet(
                     }
                     val active = entry.id == selected.id
                     val cardColor by animateColorAsState(if (active) androidx.compose.ui.graphics.lerp(c.tile, c.accent, .11f) else c.tile,
-                        tween(200), label = "workspace-selection")
+                        if (motionEnabled) tween(200) else snap(), label = "workspace-selection")
                     val pressSource = remember(entry.id) { MutableInteractionSource() }
                     val pressed by pressSource.collectIsPressedAsState()
                     Surface(

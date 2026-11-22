@@ -124,7 +124,9 @@ internal fun KlyroColorPickerDialog(
         hexInput = "#%06X".format(rgb() and 0xFFFFFF)
     }
 
-    val hasUnsavedColor = argb() != initialArgb
+    // Partial HEX input and a pending preset are drafts too, even when HSV is unchanged.
+    val hasUnsavedColor = argb() != initialArgb || pendingPreset != null ||
+        hexInput != "#%06X".format(initialArgb and 0xFFFFFF)
     KlyroModalTheme {
         if (!showAdvanced && pendingFavoriteDeletion == null) AlertDialog(
             onDismissRequest = { if (!hasUnsavedColor) onDismiss() },

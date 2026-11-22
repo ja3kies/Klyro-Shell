@@ -86,4 +86,32 @@ class KlyroHomeMotionUiTest {
         ui.mainClock.advanceTimeBy(500)
         ui.runOnIdle { assertEquals(cyan.accent, rendered.accent) }
     }
+
+    @Test fun appearanceAndMotionChangesCannotReviveAnOldPalette() {
+        val lime = KlyroColors.create(true, "lime")
+        val cyan = KlyroColors.create(true, "cyan")
+        val light = KlyroColors.create(false, "cyan")
+        val mono = KlyroColors.monochrome("mono-black")
+        val target = mutableStateOf(lime)
+        val motion = mutableStateOf(true)
+        var rendered = lime
+        ui.mainClock.autoAdvance = false
+        ui.setContent {
+            val palette = rememberAnimatedKlyroPalette(target.value, motion.value)
+            SideEffect { rendered = palette }
+        }
+        fun switchTo(value: KlyroColors, enableMotion: Boolean) {
+            ui.runOnIdle { target.value = value; motion.value = enableMotion }
+            ui.mainClock.advanceTimeBy(32)
+            ui.runOnIdle { assertEquals(value, rendered) }
+        }
+        ui.runOnIdle { target.value = cyan }
+        ui.mainClock.advanceTimeBy(100)
+        switchTo(cyan, false)
+        switchTo(cyan, true)
+        switchTo(light, true)
+        switchTo(mono, true)
+        switchTo(cyan, true)
+    }
+
 }
