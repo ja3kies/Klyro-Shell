@@ -13,10 +13,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.draw.rotate
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -413,45 +409,12 @@ internal fun KlyroSettingsSheet(
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 KlyroColors.primary.forEach { preset ->
-                                                    val swatch = KlyroColors.create(colors.dark, preset.id)
-                                                    val active = accentId == preset.id
-                                                    val selection by animateFloatAsState(
-                                                        if (active) 1f else 0f, tween(260),
-                                                        label = "accent-selection-${preset.id}"
+                                                    KlyroAccentSwatch(
+                                                        accent = KlyroColors.create(true, preset.id).accent,
+                                                        active = accentId == preset.id,
+                                                        description = preset.label + " accent",
+                                                        onClick = { onAccentIdChange(preset.id) }
                                                     )
-                                                    Box(
-                                                        modifier = Modifier.size(KlyroUiMetrics.minTouch)
-                                                            .clickable(role = Role.RadioButton,
-                                                                onClickLabel = "Select " + preset.label + " accent") {
-                                                                onAccentIdChange(preset.id)
-                                                            }
-                                                            .semantics {
-                                                                selected = active
-                                                                contentDescription = preset.label + " accent"
-                                                            },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Box(
-                                                            modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
-                                                                .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
-                                                                .then(if (active) Modifier.border(
-                                                                    KlyroUiMetrics.selectedBorder,
-                                                                    colors.foreground,
-                                                                    androidx.compose.foundation.shape.CircleShape
-                                                                ) else Modifier),
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            Icon(painterResource(R.drawable.klyro_accent_shaked),
-                                                                contentDescription = null,
-                                                                tint = lerp(swatch.onAccent, swatch.accent, .14f),
-                                                                modifier = Modifier.size(18.dp).graphicsLayer {
-                                                                    alpha = selection
-                                                                    scaleX = .72f + .28f * selection
-                                                                    scaleY = scaleX
-                                                                    rotationZ = -24f * (1f - selection)
-                                                                })
-                                                        }
-                                                    }
                                                 }
                                             }
                                             Surface(
