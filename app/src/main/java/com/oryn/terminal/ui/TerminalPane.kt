@@ -26,6 +26,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -622,60 +623,65 @@ fun TerminalPane(
             .background(TerminalBackground)
     ) {
         if (!compact) {
-            Box(
+            Row(
                 modifier = Modifier.fillMaxWidth()
                     .background(TerminalSurface)
                     .heightIn(min = 52.dp)
-                    .padding(horizontal = 10.dp)
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     "TERMINAL",
-                    modifier = Modifier.align(Alignment.CenterStart),
+                    modifier = Modifier.width(56.dp),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     color = TerminalMuted,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 1.sp
                 )
-                Surface(
-                    modifier = Modifier.align(Alignment.Center)
-                        .widthIn(max = 160.dp)
-                        .heightIn(min = KlyroUiMetrics.minTouch)
-                        .clickable(
-                            onClickLabel = "Choose workspace",
-                            role = Role.Button,
-                            onClick = { showWorkspaceSheet = true }
-                        )
-                        .semantics(mergeDescendants = true) {
-                            contentDescription = "Workspace: $currentProject"
-                        },
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                        KlyroUiMetrics.controlCorner
-                    ),
-                    color = inactiveTabSurface
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Surface(
+                        modifier = Modifier
+                            .widthIn(max = 160.dp)
+                            .heightIn(min = KlyroUiMetrics.minTouch)
+                            .clickable(
+                                onClickLabel = "Choose workspace",
+                                role = Role.Button,
+                                onClick = { showWorkspaceSheet = true }
+                            )
+                            .semantics(mergeDescendants = true) {
+                                contentDescription = "Workspace: $currentProject"
+                            },
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                            KlyroUiMetrics.controlCorner
+                        ),
+                        color = inactiveTabSurface
                     ) {
-                        Text(
-                            currentProject,
-                            modifier = Modifier.weight(1f, fill = false).widthIn(max = 118.dp),
-                            color = TerminalText,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                        Icon(
-                            painter = painterResource(R.drawable.hugeicons_chevron_right),
-                            contentDescription = null,
-                            modifier = Modifier.rotate(90f).size(16.dp),
-                            tint = TerminalMuted
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                currentProject,
+                                modifier = Modifier.weight(1f, fill = false),
+                                color = TerminalText,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Icon(
+                                painter = painterResource(R.drawable.hugeicons_chevron_right),
+                                contentDescription = null,
+                                modifier = Modifier.rotate(90f).size(16.dp),
+                                tint = TerminalMuted
+                            )
+                        }
                     }
                 }
-                Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                Box(Modifier.width(56.dp), contentAlignment = Alignment.CenterEnd) {
                     toolsMenu()
                 }
             }
@@ -1783,6 +1789,7 @@ internal fun TerminalExtraKey(
     val tooltipOffset = with(LocalDensity.current) { (-60).dp.roundToPx() }
     val interaction = remember { MutableInteractionSource() }
     val held by interaction.collectIsPressedAsState()
+    val keyFocused by interaction.collectIsFocusedAsState()
     val keyState = when {
         !enabled -> ShortcutState.INACTIVE
         held -> ShortcutState.HOLD
@@ -1804,8 +1811,11 @@ internal fun TerminalExtraKey(
     val visuals = KlyroShortcutTonePolicy.resolve(colors, tone, keyState)
     val stateInk = visuals.ink
     val stateBackground = visuals.background
-    val stateBorder = if (tone == KlyroShortcutTone.PASTE)
-        BorderStroke(1.dp, colors.muted.copy(alpha = .24f)) else null
+    val stateBorder = when {
+        enabled && keyFocused -> BorderStroke(2.dp, stateInk)
+        tone == KlyroShortcutTone.PASTE -> BorderStroke(1.dp, colors.muted.copy(alpha = .24f))
+        else -> null
+    }
     val keyContents: @Composable () -> Unit = {
         if (glyph != null) {
             Column(

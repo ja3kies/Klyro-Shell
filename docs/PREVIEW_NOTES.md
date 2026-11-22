@@ -7,3 +7,4 @@
 - Session tabs respond to touch with a subtle press, and the new-session button transitions as availability changes.
 - Short transitions clarify accent, font, launcher, modifier, plugin and workspace selection, folder status and download progress.
 - Scroll indicators follow the keyboard shortcut rows, and the monochrome theme chevron follows its expanded state.
+- The terminal header gives longer workspace names room to wrap, and hardware-keyboard focus is visible on shortcut keys.

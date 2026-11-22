@@ -172,7 +172,7 @@ class P0LifecycleAndShortcuts(unittest.TestCase):
         self.assertIn("Character.isHighSurrogate(text.charAt(start - 1))", (APP / "ui/TerminalActionPolicy.java").read_text())
 
     def test_terminal_header_prioritizes_centered_workspace_without_duplicate_logo(self):
-        self.assertIn("modifier = Modifier.align(Alignment.Center)", self.pane)
+        self.assertIn("Box(Modifier.weight(1f), contentAlignment = Alignment.Center)", self.pane)
         self.assertIn(".widthIn(max = 160.dp)", self.pane)
         self.assertIn('onClickLabel = "Choose workspace"', self.pane)
         self.assertIn('"TERMINAL"', self.pane)
