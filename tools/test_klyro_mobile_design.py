@@ -24,6 +24,22 @@ class KlyroMobileDesignAudit(unittest.TestCase):
             self.assertIn('"' + section + '" -> {', settings)
         self.assertNotIn("SettingsTile(", settings)
 
+    def test_terminal_text_preview_uses_real_font_and_live_size(self):
+        settings = src(UI / "KlyroSettingsSheet.kt")
+        typography = settings.split('KlyroAppearanceGroup("Terminal text")', 1)[1].split(
+            'KlyroAppearanceGroup("Launcher icon")', 1)[0]
+        self.assertIn("FontFamily(KlyroTerminalFonts.load(context, option.id))", typography)
+        self.assertIn("fontFamily = previewFonts.getValue(KlyroTerminalFonts.normalize(fontFamilyId))", typography)
+        self.assertIn("fontFamily = previewFonts.getValue(option.id)", typography)
+        self.assertIn("fontSize = displayedFontSize.sp", typography)
+        self.assertIn('fontFeatureSettings = "tnum"', typography)
+        self.assertIn('contentDescription = "Terminal text preview"', typography)
+        self.assertIn("color = colors.terminal", typography)
+        self.assertIn("onClick = onResetFont", typography)
+        self.assertIn("onFontFamilyChange(option.id)", typography)
+        self.assertIn("onFontChange(KlyroTerminalFonts.normalizeSize(it))", typography)
+        self.assertNotIn('Text("Terminal font"', typography)
+
     def test_typography_controls_use_slider_not_oversized_steppers(self):
         settings = src(UI / "KlyroSettingsSheet.kt")
         self.assertIn("KlyroThinSlider(", settings)
