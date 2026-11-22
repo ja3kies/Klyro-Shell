@@ -25,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -41,12 +40,16 @@ import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.compose.ui.platform.LocalView
 import kotlin.math.ceil
 import kotlin.math.cos
+import kotlin.math.sin
 import com.oryn.terminal.ui.LocalKlyroColors
 
 internal const val HOME_PATTERN_PERIOD_MS = 20_000
 
 /** Four tile translations per color cycle, so motion is visible within a second. */
 internal fun homePatternOffsetCells(degrees: Float): Float = (degrees / 360f * 64f) % 16f
+
+/** A full spin every five seconds, synchronized with the repeating translation. */
+internal fun homePatternRotation(degrees: Float): Float = (degrees * 4f) % 360f
 
 /** CSS conic layers, sampled on a 0.25em grid (4dp at the original 16px em).
  * The 4em tile is 16 cells wide; each repeating-conic tile is two cells wide.
@@ -97,31 +100,40 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
             val columns = ceil(size.width / cell).toInt() + 16
             val rows = ceil(size.height / cell).toInt() + 16
             val pattern = Path()
-            // Geometry is cached. Frames translate and tint a seamless repeated tile.
-            // Merge neighboring colored cells horizontally to reduce path complexity.
-            for (row in 0 until rows) {
-                var column = 0
-                while (column < columns) {
-                    if (!homePatternColoredCell(column, row)) {
-                        column++
-                        continue
-                    }
-                    val first = column
-                    while (column < columns && homePatternColoredCell(column, row)) column++
-                    pattern.addRect(Rect(
-                        first * cell, row * cell,
-                        column * cell,
-                        (row + 1) * cell
-                    ))
-                }
+            val tile = cell * 16f
+            // Cache one repeat's centers. Rotate each individual square around its own
+            // center; reuse one path per frame instead of transforming thousands of cells.
+            val centers = (0 until 16).flatMap { row ->
+                (0 until 16).filter { column -> homePatternColoredCell(column, row) }
+                    .map { column -> (column + .5f) * cell to (row + .5f) * cell }
             }
             onDrawBehind {
                 drawRect(Color.Black)
                 val angle = phase?.value ?: 0f
                 val offset = cell * homePatternOffsetCells(angle)
+                val radians = homePatternRotation(angle).toDouble() * Math.PI / 180.0
+                val half = cell / 2f
+                val u = half * cos(radians).toFloat()
+                val v = half * sin(radians).toFloat()
+                pattern.reset()
+                for ((x, y) in centers) {
+                    pattern.moveTo(x - u + v, y - v - u)
+                    pattern.lineTo(x + u + v, y + v - u)
+                    pattern.lineTo(x + u - v, y + v + u)
+                    pattern.lineTo(x - u - v, y - v + u)
+                    pattern.close()
+                }
                 clipRect {
                     translate(left = -offset, top = -offset) {
-                        drawPath(pattern, homePatternTint(accent, angle))
+                        // Include the adjacent repeats so rotating corners never leave
+                        // a seam at a tile boundary or at the viewport edges.
+                        for (row in -1..(rows / 16)) {
+                            for (column in -1..(columns / 16)) {
+                                translate(left = column * tile, top = row * tile) {
+                                    drawPath(pattern, homePatternTint(accent, angle))
+                                }
+                            }
+                        }
                     }
                 }
             }
