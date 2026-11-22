@@ -1,5 +1,8 @@
 package com.oryn.terminal.ui.motion
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,3 +51,8 @@ internal fun Modifier.klyroStaggeredEntrance(index: Int, itemKey: String, enable
     )
     return graphicsLayer { translationY = offset.dp.toPx() }
 }
+
+/** Brief interpolation for decorative state chrome. Text and semantics update immediately. */
+@Composable
+internal fun klyroStateColor(target: Color, label: String): Color =
+    animateColorAsState(target, animationSpec = tween(140), label = label).value

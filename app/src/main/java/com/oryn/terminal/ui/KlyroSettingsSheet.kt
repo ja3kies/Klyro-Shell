@@ -1,5 +1,9 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.ui.motion.klyroStateColor
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -441,7 +445,8 @@ internal fun KlyroSettingsSheet(
                                                                 ) else Modifier),
                                                             contentAlignment = Alignment.Center
                                                         ) {
-                                                            if (active) {
+                                                            AnimatedVisibility(visible = active, enter = fadeIn(tween(120)),
+                                                                exit = fadeOut(tween(120))) {
                                                                 Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
                                                                     contentDescription = null, tint = swatch.onAccent,
                                                                     modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
@@ -499,7 +504,7 @@ internal fun KlyroSettingsSheet(
                                                         onClickLabel = "Use " + option.label) {
                                                         onFontFamilyChange(option.id)
                                                     }.semantics { selected = active },
-                                                color = if (active) colors.sheet else Color.Transparent,
+                                                color = klyroStateColor(if (active) colors.sheet else Color.Transparent, "font family"),
                                                 shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                                                 border = null
                                             ) {
@@ -604,8 +609,8 @@ internal fun KlyroSettingsSheet(
                                                     }
                                                 },
                                             shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                            color = if (brandReady && selectedBrand == choice)
-                                                colors.sheet else Color.Transparent,
+                                            color = klyroStateColor(if (brandReady && selectedBrand == choice)
+                                                colors.sheet else Color.Transparent, "launcher icon"),
                                             border = if (brandReady && selectedBrand == choice) BorderStroke(1.dp, colors.accent) else null
                                         ) {
                                             Column(
@@ -663,7 +668,8 @@ internal fun KlyroSettingsSheet(
                                         contentDescription = "$label modifier"
                                         stateDescription = if (active) "Active" else "Inactive"
                                     },
-                                    color = if (active) colors.accent.copy(alpha = .17f) else colors.key,
+                                    color = klyroStateColor(if (active) colors.accent.copy(alpha = .17f)
+                                        else colors.key, "$label modifier"),
                                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
                                     border = if (active) BorderStroke(
                                         KlyroUiMetrics.selectedBorder, colors.accent
@@ -934,7 +940,12 @@ internal fun KlyroSettingsSheet(
                                         result.candidate.notes.take(2_000), color = colors.muted,
                                         style = MaterialTheme.typography.bodySmall)
                                     if (updateDownloading) {
-                                        LinearProgressIndicator(progress = { updateProgress },
+                                        val displayedProgress by animateFloatAsState(
+                                            targetValue = updateProgress,
+                                            animationSpec = tween(120),
+                                            label = "update download progress"
+                                        )
+                                        LinearProgressIndicator(progress = { displayedProgress },
                                             modifier = Modifier.fillMaxWidth(), color = colors.accent)
                                         Text(if (updateProgress > 0f)
                                             "Downloading ${(updateProgress * 100).toInt()}%" else "Preparing secure download…",
@@ -1083,8 +1094,8 @@ internal fun KlyroFolderAccessSummary(count: Int) {
         else -> "$count folders connected"
     }
     Surface(
-        color = if (failed) colors.dangerContainer else if (connected)
-            colors.readyInk.copy(alpha = .10f) else colors.tile,
+        color = klyroStateColor(if (failed) colors.dangerContainer else if (connected)
+            colors.readyInk.copy(alpha = .10f) else colors.tile, "folder connection"),
         shape = RoundedCornerShape(KlyroUiMetrics.selectedCorner)
     ) {
         Row(

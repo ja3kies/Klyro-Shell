@@ -1,5 +1,6 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.ui.motion.klyroStateColor
 import androidx.compose.animation.animateColorAsState
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
@@ -238,7 +239,7 @@ internal fun KlyroWorkspaceSheet(
                                     Icon(
                                         painterResource(R.drawable.hugeicons_folder_01),
                                         contentDescription = null,
-                                        tint = if (active) c.accent else c.muted,
+                                        tint = klyroStateColor(if (active) c.accent else c.muted, "workspace marker"),
                                         modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
                                     )
                                 }
@@ -419,7 +420,7 @@ internal fun KlyroWorkspaceSheet(
                                     Icon(
                                         painterResource(R.drawable.hugeicons_terminal),
                                         contentDescription = null,
-                                        tint = if (current) c.accent else c.muted,
+                                        tint = klyroStateColor(if (current) c.accent else c.muted, "workspace session marker"),
                                         modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
                                     )
                                     Text(name.ifBlank { "Terminal" },

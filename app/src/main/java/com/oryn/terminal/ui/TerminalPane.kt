@@ -1,5 +1,6 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.ui.motion.klyroStateColor
 import androidx.compose.foundation.ScrollState
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
@@ -736,7 +737,8 @@ fun TerminalPane(
                 Surface(
                     modifier = Modifier.size(38.dp),
                     // A translucent affordance, distinct from the active tab.
-                    color = if (tabs.size < 8 && !launchingBash) TerminalAccent.copy(alpha = 0.14f) else inactiveTabSurface,
+                    color = klyroStateColor(if (tabs.size < 8 && !launchingBash)
+                        TerminalAccent.copy(alpha = 0.14f) else inactiveTabSurface, "new session availability"),
                     contentColor = if (tabs.size < 8 && !launchingBash) TerminalAccent else TerminalMuted,
                     shape = androidx.compose.foundation.shape.CircleShape,
                     border = if (tabs.size < 8 && !launchingBash) androidx.compose.foundation.BorderStroke(

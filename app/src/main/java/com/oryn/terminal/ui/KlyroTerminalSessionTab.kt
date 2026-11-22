@@ -1,5 +1,7 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.ui.motion.klyroPressScale
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -56,6 +58,7 @@ internal fun KlyroTerminalSessionTab(
     val contentInk = if (active) colors.onAccent else colors.foreground
     val interactions = remember { MutableInteractionSource() }
     val focused = interactions.collectIsFocusedAsState()
+    val pressed = interactions.collectIsPressedAsState()
     Box(
         modifier = modifier
             .heightIn(min = KlyroUiMetrics.minTouch)
@@ -96,7 +99,7 @@ internal fun KlyroTerminalSessionTab(
             shape = RoundedCornerShape(19.dp)
         ) {
             Row(
-                modifier = Modifier.padding(
+                modifier = Modifier.klyroPressScale(pressed.value).padding(
                     horizontal = if (active) 14.dp else 10.dp,
                     vertical = if (active) 6.dp else 4.dp
                 ),

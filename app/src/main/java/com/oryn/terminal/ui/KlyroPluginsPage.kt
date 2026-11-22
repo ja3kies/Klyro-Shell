@@ -1,5 +1,6 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.ui.motion.klyroStateColor
 import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
 import com.oryn.terminal.rememberHomeMotionEnabled
 import androidx.compose.foundation.LocalIndication
@@ -322,7 +323,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             }
                             .semantics { this.selected = selected },
                         shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                        color = if (selected) colors.sheet else colors.key,
+                        color = klyroStateColor(if (selected) colors.sheet else colors.key, "$id plugin tab"),
                         border = if (selected) BorderStroke(1.dp, colors.muted.copy(alpha = .45f)) else null,
                         contentColor = colors.foreground
                     ) {

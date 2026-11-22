@@ -4,3 +4,6 @@
 - Appearance uses smaller theme previews and closer spacing between settings.
 - Session tabs grow with Android’s text size, and longer names can wrap in Workspaces.
 - After removing a plugin, tap Undo to restore its command pack and enabled state.
+- Session tabs respond to touch with a subtle press, and the new-session button transitions as availability changes.
+- Short transitions clarify accent, font, launcher, modifier, plugin and workspace selection, folder status and download progress.
+- Scroll indicators follow the keyboard shortcut rows, and the monochrome theme chevron follows its expanded state.

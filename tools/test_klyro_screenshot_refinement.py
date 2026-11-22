@@ -17,7 +17,7 @@ class ScreenshotRefinementTest(unittest.TestCase):
 
     def test_plugin_tabs_use_selection_outline_instead_of_primary_action_fill(self):
         self.assertIn('border = if (selected) BorderStroke', PLUGINS)
-        self.assertIn('color = if (selected) colors.sheet else colors.key', PLUGINS)
+        self.assertIn('color = klyroStateColor(if (selected) colors.sheet else colors.key', PLUGINS)
         self.assertIn('selectableGroup()', PLUGINS)
 
     def test_catalog_card_adapts_instead_of_squeezing_action_beside_large_text(self):
