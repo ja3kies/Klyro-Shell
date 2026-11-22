@@ -2,3 +2,4 @@
 - Home’s illustration keeps moving while it’s visible behind Settings or the repair confirmation.
 - Inactive session tabs and workspace session lists take up less space.
 - Appearance uses smaller theme previews and closer spacing between settings.
+- Session tabs grow with Android’s text size, and longer names can wrap in Workspaces.

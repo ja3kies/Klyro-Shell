@@ -49,7 +49,7 @@ class SessionTabActionContract(unittest.TestCase):
         tab = TAB_PATH.read_text()
         for contract in (
             "colors.accent", "colors.key", "KlyroUiMetrics.minTouch",
-            "height(48.dp)", "widthIn(max = 140.dp)", "activityTag",
+            "heightIn(min = KlyroUiMetrics.minTouch)", "widthIn(max = if (largeText) 224.dp else 140.dp)", "activityTag",
             "showUnreadOutput", "horizontalArrangement = Arrangement.spacedBy(if (active) 6.dp else 4.dp)",
             "TextOverflow.Ellipsis",
         ):

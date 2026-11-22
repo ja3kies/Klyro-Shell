@@ -10,7 +10,7 @@ class TouchAndNarrationUX(unittest.TestCase):
   self.assertIn('Modifier.size(KlyroUiMetrics.minTouch)',block)
   self.assertIn('contentDescription = "More actions"',block)
  def test_session_pills_maintain_48dp_width_and_height(self):
-  self.assertIn('.height(48.dp)',TAB)
+  self.assertIn('.heightIn(min = KlyroUiMetrics.minTouch)',TAB)
   self.assertIn('.widthIn(min = KlyroUiMetrics.minTouch)',TAB)
   self.assertIn('role = Role.Tab',TAB)
   self.assertIn('selected = active',TAB)

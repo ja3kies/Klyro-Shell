@@ -11,7 +11,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -51,13 +51,14 @@ internal fun KlyroTerminalSessionTab(
     onManage: () -> Unit
 ) {
     val colors = LocalKlyroColors.current
+    val largeText = LocalDensity.current.fontScale >= 1.3f
     val safeTitle = title.ifBlank { "Session" }
     val contentInk = if (active) colors.onAccent else colors.foreground
     val interactions = remember { MutableInteractionSource() }
     val focused = interactions.collectIsFocusedAsState()
     Box(
         modifier = modifier
-            .height(48.dp)
+            .heightIn(min = KlyroUiMetrics.minTouch)
             .widthIn(min = KlyroUiMetrics.minTouch)
             .clip(RoundedCornerShape(24.dp))
             .combinedClickable(
@@ -88,7 +89,7 @@ internal fun KlyroTerminalSessionTab(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            modifier = Modifier.heightIn(min = if (active) 36.dp else 30.dp).widthIn(max = 140.dp),
+            modifier = Modifier.heightIn(min = if (active) 36.dp else 30.dp).widthIn(max = if (largeText) 224.dp else 140.dp),
             color = if (active) colors.accent else colors.key,
             contentColor = contentInk,
             border = if (focused.value) BorderStroke(2.dp, colors.foreground) else null,
@@ -111,7 +112,7 @@ internal fun KlyroTerminalSessionTab(
                     safeTitle,
                     fontSize = 12.sp,
                     fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                    maxLines = 1,
+                    maxLines = if (largeText) 2 else 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (activityTag != null) {

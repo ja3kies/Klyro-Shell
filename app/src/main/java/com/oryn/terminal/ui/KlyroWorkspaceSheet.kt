@@ -423,7 +423,8 @@ internal fun KlyroWorkspaceSheet(
                                         modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
                                     )
                                     Text(name.ifBlank { "Terminal" },
-                                        modifier = Modifier.weight(1f), maxLines = 1,
+                                        modifier = Modifier.weight(1f).padding(vertical = KlyroUiMetrics.spaceXs),
+                                        maxLines = 2,
                                         overflow = TextOverflow.Ellipsis, color = c.foreground)
                                     if (editingSessions) {
                                         IconButton(onClick = { renameSessionId = id }) {
