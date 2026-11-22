@@ -98,7 +98,9 @@ class CycleThreeUX(unittest.TestCase):
 
     def test_accent_selected_state_has_custom_glyph(self):
         self.assertIn("R.drawable.klyro_accent_shaked", self.settings)
-        self.assertIn("tint = swatch.onAccent", self.settings)
+        self.assertIn("tint = lerp(swatch.onAccent, swatch.accent, .14f)", self.settings)
+        self.assertIn("accent-selection-${preset.id}", self.settings)
+        self.assertIn("alpha = selection", self.settings)
         self.assertTrue((UI.parents[4] / "res/drawable/klyro_accent_shaked.xml").is_file())
 
     def test_launcher_error_can_recover_on_verified_choice(self):
