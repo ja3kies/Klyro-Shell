@@ -7,6 +7,9 @@ import com.oryn.terminal.ui.motion.klyroPressScale
 import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import com.oryn.terminal.rememberHomeMotionEnabled
 
 import androidx.activity.compose.BackHandler
 import android.net.Uri
@@ -303,10 +306,13 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 val enabled = !mutationBusy && !confirmedMutationPending
                 val pressSource = remember(id) { MutableInteractionSource() }
                 val pressed by pressSource.collectIsPressedAsState()
+                val motion = rememberHomeMotionEnabled()
+                val tabCorner by animateDpAsState(if (selected) KlyroUiMetrics.controlCorner else 22.dp,
+                    if (motion) tween(220) else snap(), label = "plugin-tab-corner")
                 val tabColor by animateColorAsState(if (selected) colors.sheet else colors.key,
-                    tween(180), label = "plugin-tab-background")
+                    if (motion) tween(180) else snap(), label = "plugin-tab-background")
                 val tabInk by animateColorAsState(if (selected) colors.foreground else colors.muted,
-                    tween(180), label = "plugin-tab-ink")
+                    if (motion) tween(180) else snap(), label = "plugin-tab-ink")
                 Surface(
                     modifier = Modifier.weight(1f)
                         .heightIn(min = KlyroUiMetrics.minTouch)
@@ -319,7 +325,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                             error = null
                         }
                         .semantics { this.selected = selected },
-                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                    shape = RoundedCornerShape(tabCorner),
                     color = tabColor,
                     border = if (selected) BorderStroke(1.dp, colors.muted.copy(alpha = .45f)) else null,
                     contentColor = colors.foreground
