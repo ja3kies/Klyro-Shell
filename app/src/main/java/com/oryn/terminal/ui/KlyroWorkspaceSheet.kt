@@ -2,6 +2,10 @@ package com.oryn.terminal.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import com.oryn.terminal.ui.motion.klyroPressScale
 import com.oryn.terminal.rememberHomeMotionEnabled
 import kotlin.math.sin
 import androidx.compose.animation.core.animateFloat
@@ -206,7 +210,10 @@ internal fun KlyroWorkspaceSheet(
                         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == entry.id
                     }
                     val active = entry.id == selected.id
-                    val cardColor = if (active) c.accent.copy(alpha = .11f) else c.tile
+                    val cardColor by animateColorAsState(if (active) androidx.compose.ui.graphics.lerp(c.tile, c.accent, .11f) else c.tile,
+                        tween(200), label = "workspace-selection")
+                    val pressSource = remember(entry.id) { MutableInteractionSource() }
+                    val pressed by pressSource.collectIsPressedAsState()
                     Surface(
                         color = cardColor,
                         border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder,
@@ -221,10 +228,12 @@ internal fun KlyroWorkspaceSheet(
                             Row(
                                 modifier = Modifier.weight(1f)
                                     .heightIn(min = KlyroUiMetrics.workspaceRow)
-                                    .clickable(role = Role.RadioButton,
+                                    .clickable(interactionSource = pressSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        role = Role.RadioButton,
                                         onClickLabel = "Select workspace " + entry.name) {
                                         onSelectProject(entry.id)
-                                    }.semantics { this.selected = active },
+                                    }.semantics { this.selected = active }.klyroPressScale(pressed),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
