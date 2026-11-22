@@ -6,6 +6,8 @@ import android.net.Uri
 import android.provider.Settings
 import android.graphics.Color as AndroidColor
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.BorderStroke
@@ -338,6 +340,11 @@ internal fun KlyroSettingsSheet(
                                         )
                                     }
                                 }
+                                val monochromeChevron by animateFloatAsState(
+                                    targetValue = if (showMonochromeThemes) 90f else 0f,
+                                    animationSpec = tween(140),
+                                    label = "monochrome disclosure"
+                                )
                                 val selectedMonochrome = when (themeMode) {
                                     "mono-contrast" -> "Contrast"
                                     "mono-black" -> "OLED"
@@ -378,7 +385,7 @@ internal fun KlyroSettingsSheet(
                                             contentDescription = null,
                                             tint = colors.muted,
                                             modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
-                                                .rotate(if (showMonochromeThemes) 90f else 0f)
+                                                .rotate(monochromeChevron)
                                         )
                                     }
                                 }

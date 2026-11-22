@@ -1,5 +1,11 @@
 package com.oryn.terminal.ui
 
+import androidx.compose.foundation.ScrollState
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.LayoutDirection
 import android.content.ClipData
 import android.content.Intent
 import android.content.ClipboardManager
@@ -972,9 +978,12 @@ fun TerminalPane(
             }
         }
         if (compact) {
+            val shortcutScroll = rememberScrollState()
             Row(
                 modifier = Modifier.fillMaxWidth().background(TerminalSurface)
-                    .horizontalScroll(rememberScrollState())
+                    .shortcutScrollIndicator(shortcutScroll, TerminalMuted)
+                    .padding(bottom = 4.dp)
+                    .horizontalScroll(shortcutScroll)
                     .padding(horizontal = 6.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -982,16 +991,22 @@ fun TerminalPane(
                 secondRow()
             }
         } else {
+            val firstRowScroll = rememberScrollState()
+            val secondRowScroll = rememberScrollState()
             Column(
                 modifier = Modifier.fillMaxWidth().background(TerminalSurface)
                     .padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                    .shortcutScrollIndicator(firstRowScroll, TerminalMuted)
+                    .padding(bottom = 4.dp)
+                    .horizontalScroll(firstRowScroll),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) { firstRow() }
                 Row(modifier = Modifier.fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                    .shortcutScrollIndicator(secondRowScroll, TerminalMuted)
+                    .padding(bottom = 4.dp)
+                    .horizontalScroll(secondRowScroll),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) { secondRow() }
             }
         }
@@ -1938,3 +1953,19 @@ private fun sendCodePointToRunningSession(session: TerminalSession, codePoint: I
     if (!session.isRunning() || session.emulator == null) return
     session.writeCodePoint(false, codePoint)
 }
+
+/** A passive scrollbar: position follows the gesture directly and adds no touch target. */
+private fun Modifier.shortcutScrollIndicator(scroll: ScrollState, color: Color): Modifier =
+    drawWithContent {
+        drawContent()
+        val overflow = scroll.maxValue
+        if (overflow <= 0 || overflow == Int.MAX_VALUE || size.width <= 0f) return@drawWithContent
+        val thumb = (size.width * (size.width / (size.width + overflow)))
+            .coerceIn(16.dp.toPx().coerceAtMost(size.width), size.width)
+        val travel = size.width - thumb
+        val fraction = (scroll.value.toFloat() / overflow).coerceIn(0f, 1f)
+        val left = travel * if (layoutDirection == LayoutDirection.Rtl) 1f - fraction else fraction
+        val thickness = 2.dp.toPx()
+        drawRoundRect(color, Offset(left, size.height - thickness),
+            Size(thumb, thickness), CornerRadius(thickness / 2))
+    }
