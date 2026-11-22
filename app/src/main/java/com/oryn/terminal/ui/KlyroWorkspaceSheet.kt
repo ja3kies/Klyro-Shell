@@ -384,62 +384,60 @@ internal fun KlyroWorkspaceSheet(
                         modifier = Modifier.padding(vertical = KlyroUiMetrics.spaceSm),
                         color = c.muted, style = MaterialTheme.typography.bodySmall)
                 } else {
-                    projectTabs.forEach { (id, name) ->
-                        val current = id == activeTabId
-                        Surface(
-                            modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
-                                .graphicsLayer {
-                                    val phase = editPhase?.value
-                                    if (phase == null) {
-                                        rotationZ = 0f
-                                        translationY = 0f
-                                    } else {
-                                        val offset = (id % 17) / 17.0
-                                        rotationZ = (0.65 * sin(2 * Math.PI * (phase * 5 + offset))).toFloat()
-                                        translationY = (sin(2 * Math.PI * (phase * 7 + offset * 2))).toFloat().dp.toPx()
+                    Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
+                        projectTabs.forEach { (id, name) ->
+                            val current = id == activeTabId
+                            Surface(
+                                modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+                                    .graphicsLayer {
+                                        val phase = editPhase?.value
+                                        if (phase == null) {
+                                            rotationZ = 0f
+                                            translationY = 0f
+                                        } else {
+                                            val offset = (id % 17) / 17.0
+                                            rotationZ = (0.65 * sin(2 * Math.PI * (phase * 5 + offset))).toFloat()
+                                            translationY = (sin(2 * Math.PI * (phase * 7 + offset * 2))).toFloat().dp.toPx()
+                                        }
                                     }
-                                }
-                                .clickable(
-                                    enabled = !current && !editingSessions,
-                                    role = Role.Button,
-                                    onClickLabel = "Switch to " + name
-                                ) {
-                                    onSwitchTab(id)
-                                    onDismiss()
-                                },
-                            color = c.tile,
-                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = KlyroUiMetrics.spaceMd),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                                    .clickable(
+                                        enabled = !current && !editingSessions,
+                                        role = Role.Button,
+                                        onClickLabel = "Switch to " + name
+                                    ) {
+                                        onSwitchTab(id)
+                                        onDismiss()
+                                    },
+                                color = c.tile,
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                             ) {
-                                Icon(
-                                    painterResource(R.drawable.hugeicons_terminal),
-                                    contentDescription = null,
-                                    tint = if (current) c.accent else c.muted,
-                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
-                                )
-                                Text(name.ifBlank { "Terminal" },
-                                    modifier = Modifier.weight(1f), maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis, color = c.foreground)
-                                if (editingSessions) {
-                                    IconButton(onClick = { renameSessionId = id }) {
-                                        Icon(painterResource(R.drawable.hugeicons_pen_01),
-                                            contentDescription = "Rename $name", tint = c.foreground)
+                                Row(
+                                    modifier = Modifier.padding(horizontal = KlyroUiMetrics.spaceMd),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                                ) {
+                                    Icon(
+                                        painterResource(R.drawable.hugeicons_terminal),
+                                        contentDescription = null,
+                                        tint = if (current) c.accent else c.muted,
+                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
+                                    )
+                                    Text(name.ifBlank { "Terminal" },
+                                        modifier = Modifier.weight(1f), maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis, color = c.foreground)
+                                    if (editingSessions) {
+                                        IconButton(onClick = { renameSessionId = id }) {
+                                            Icon(painterResource(R.drawable.hugeicons_pen_01),
+                                                contentDescription = "Rename $name", tint = c.foreground)
+                                        }
+                                        IconButton(onClick = { closeSessionId = id }) {
+                                            Icon(painterResource(R.drawable.hugeicons_cancel_circle),
+                                                contentDescription = "Close $name", tint = c.danger)
+                                        }
+                                    } else if (current) {
+                                        Text("Current", color = c.accent,
+                                            style = MaterialTheme.typography.labelMedium)
                                     }
-                                    IconButton(onClick = { closeSessionId = id }) {
-                                        Icon(painterResource(R.drawable.hugeicons_cancel_circle),
-                                            contentDescription = "Close $name", tint = c.danger)
-                                    }
-                                } else if (current) {
-                                    Text("Current", color = c.accent,
-                                        style = MaterialTheme.typography.labelMedium)
-                                } else {
-                                    Icon(painterResource(R.drawable.hugeicons_chevron_right),
-                                        contentDescription = null, tint = c.muted,
-                                        modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
                                 }
                             }
                         }

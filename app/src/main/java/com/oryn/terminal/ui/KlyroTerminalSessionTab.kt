@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -87,15 +88,18 @@ internal fun KlyroTerminalSessionTab(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            modifier = Modifier.height(36.dp).widthIn(max = 140.dp),
+            modifier = Modifier.heightIn(min = if (active) 36.dp else 30.dp).widthIn(max = 140.dp),
             color = if (active) colors.accent else colors.key,
             contentColor = contentInk,
             border = if (focused.value) BorderStroke(2.dp, colors.foreground) else null,
             shape = RoundedCornerShape(19.dp)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(
+                    horizontal = if (active) 14.dp else 10.dp,
+                    vertical = if (active) 6.dp else 4.dp
+                ),
+                horizontalArrangement = Arrangement.spacedBy(if (active) 6.dp else 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (showUnreadOutput && !active) {
