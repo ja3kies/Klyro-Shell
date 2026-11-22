@@ -24,7 +24,11 @@ import kotlin.math.sin
 internal enum class HomeIllustration(val label: String, val description: String) {
     CHECKERBOARD("Checkerboard", "Rotating pixel tiles"),
     MAYFLY("Concentric rings", "Pulsing circular pattern"),
-    GRADIENT("Animated gradient", "Flowing ambient light");
+    GRADIENT("Animated gradient", "Flowing ambient light"),
+    WARM_LION("Warm Lion", "Flowing dotted light streams");
+
+    val periodMs: Int
+        get() = if (this == WARM_LION) WARM_LION_PERIOD_MS else HOME_PATTERN_PERIOD_MS
 
     companion object {
         fun fromStored(value: String?) = entries.firstOrNull { it.name == value } ?: CHECKERBOARD

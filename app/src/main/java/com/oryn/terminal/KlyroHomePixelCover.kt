@@ -96,7 +96,7 @@ internal fun KlyroHomePixelCover(
             initialValue = 0f,
             targetValue = 360f,
             animationSpec = infiniteRepeatable(
-                animation = tween((HOME_PATTERN_PERIOD_MS / illustration.effectiveSpeed).toInt(), easing = LinearEasing),
+                animation = tween((illustration.kind.periodMs / illustration.effectiveSpeed).toInt(), easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             ),
             label = "home-pattern-phase"
@@ -112,6 +112,9 @@ internal fun KlyroHomePixelCover(
             val cell = 4.dp.toPx()
             val columns = ceil(size.width / cell).toInt() + 16
             val rows = ceil(size.height / cell).toInt() + 16
+            val warmLionMask = if (illustration.kind == HomeIllustration.WARM_LION) {
+                warmLionDotMask(size, density)
+            } else null
             val pattern = Path()
             val tile = cell * 16f
             // Cache one repeat's centers. Rotate each individual square around its own
@@ -130,6 +133,10 @@ internal fun KlyroHomePixelCover(
                     }
                     HomeIllustration.GRADIENT -> {
                         drawHomeGradient(accent, angle)
+                        return@onDrawBehind
+                    }
+                    HomeIllustration.WARM_LION -> {
+                        warmLionMask?.let { drawHomeWarmLion(accent, angle, it) }
                         return@onDrawBehind
                     }
                     HomeIllustration.CHECKERBOARD -> Unit

@@ -1,6 +1,7 @@
 package com.oryn.terminal
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class KlyroHomeIllustrationSettingsTest {
@@ -9,6 +10,20 @@ class KlyroHomeIllustrationSettingsTest {
         assertEquals(HomeIllustration.CHECKERBOARD, HomeIllustration.fromStored("unknown"))
         HomeIllustration.entries.forEach {
             assertEquals(it, HomeIllustration.fromStored(it.name))
+        }
+    }
+
+    @Test fun warmLionKeepsTheSourceTimingAndSeamlessWrap() {
+        assertEquals(150_000, HomeIllustration.WARM_LION.periodMs)
+        assertEquals(20_000, HomeIllustration.CHECKERBOARD.periodMs)
+        assertEquals(12, warmLionStreams.size)
+        assertEquals(listOf(235, 252, 150, 253, 204, 134, 179, 299, 215, 281, 158, 210),
+            warmLionStreams.map { it.period })
+        for (stream in warmLionStreams) {
+            assertEquals(stream.initial.toFloat(), stream.offset(0f), .01f)
+            assertEquals(stream.offset(0f), stream.offset(1f), .01f)
+            assertTrue(stream.offset(.001f) != stream.offset(0f))
+            assertTrue(stream.offset(.5f) in 0f..stream.period.toFloat())
         }
     }
 
