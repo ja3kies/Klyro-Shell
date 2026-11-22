@@ -2,6 +2,7 @@ package com.oryn.terminal.ui
 
 import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.oryn.terminal.R
 import org.json.JSONArray
 import org.json.JSONObject
@@ -103,7 +106,8 @@ internal fun KlyroPinnedCommandBar(
                                             onClick = { onExecute(command) },
                                             onLongClick = { menuId = command.id }
                                         ).testTag("pinned-command-" + command.id),
-                                    color = colors.key,
+                                    // Executable shortcuts are tonal, not primary CTAs.
+                                    color = androidx.compose.ui.graphics.lerp(colors.key, colors.accent, .11f),
                                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner)
                                 ) {
                                     Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -128,16 +132,18 @@ internal fun KlyroPinnedCommandBar(
                                     }
                                 }
                             }
-                            index == shown.size -> Surface(
+                            index == shown.size -> OutlinedButton(
+                                onClick = { edit(null) },
                                 modifier = Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
-                                    .clip(RoundedCornerShape(KlyroUiMetrics.controlCorner))
-                                    .clickable(role = Role.Button) { edit(null) },
-                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner), color = colors.key
+                                    .testTag("add-pinned-command")
+                                    .semantics { contentDescription = "Add pinned command" },
+                                border = BorderStroke(1.dp, colors.muted.copy(alpha = .55f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
+                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
                             ) {
-                                Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-                                    Text("+ Add command", color = colors.accent,
-                                        style = MaterialTheme.typography.labelMedium)
-                                }
+                                Text("+ Add", style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             else -> Unit
                         }

@@ -6,7 +6,7 @@ Review this ledger before every cumulative Preview build. An approved design is 
 |---|---|---|
 | One recent session on Home, direct resume, hidden when absent | KlyroHomeRecentSession + MainActivity | JVM selection tests; device verification pending |
 | Last workspace shortcut, no Home command history or Home command pins | MainActivity + existing KlyroWorkspaceSheet | Device verification pending |
-| Keep original terminal keys; second page for four executable command slots | TerminalPane HorizontalPager + KlyroPinnedCommandBar | JVM scope/capacity/reorder tests; device verification pending |
+| Keep original terminal keys; second page for four executable command slots, with animated 2-dot page indicator (no text tabs) | TerminalPane HorizontalPager + KlyroPinnedCommandBar + KlyroKeyboardPagerIndicator | JVM scope/capacity/reorder tests; Compose page-indicator UI tests added; physical verification pending |
 | Custom label, global/workspace scope, edit/delete/reorder; no duplicate action | KlyroPinnedCommandStore + policy | JVM tests; device verification pending |
 | Compound/multiline commands, no execution from command discovery | Explicit pinned-command submit path; command palette stays insert-only | JVM validation + atomic terminal input tests; device verification pending |
 | Advanced settings switch, inline animation speed, persisted selection | Home illustration settings + Appearance | JVM settings tests; device verification pending |

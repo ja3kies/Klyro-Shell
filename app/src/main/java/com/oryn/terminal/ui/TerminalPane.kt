@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -233,7 +232,6 @@ fun TerminalPane(
     }
     val pinnedWorkspaceName = workspaces.firstOrNull { it.id == pinnedWorkspaceId }?.name ?: "General"
     val keyboardPager = rememberPagerState(pageCount = { 2 })
-    val keyboardScope = rememberCoroutineScope()
     var clipboardAvailable by remember(session) {
         mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
@@ -1031,16 +1029,16 @@ fun TerminalPane(
             }
         }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically) {
-            listOf("Keys", "Commands").forEachIndexed { index, label ->
-                Text(label, modifier = Modifier.heightIn(min = 48.dp)
-                    .clickable(role = Role.Tab) { keyboardScope.launch { keyboardPager.scrollToPage(index) } }
-                    .semantics { selected = keyboardPager.currentPage == index }
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                    color = if (keyboardPager.currentPage == index) TerminalAccent else TerminalMuted,
-                    style = MaterialTheme.typography.labelSmall)
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth().background(TerminalSurface),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            KlyroKeyboardPagerIndicator(
+                pagerState = keyboardPager,
+                accent = TerminalAccent,
+                muted = TerminalMuted,
+                motionEnabled = com.oryn.terminal.rememberHomeMotionEnabled()
+            )
         }
     }
 
