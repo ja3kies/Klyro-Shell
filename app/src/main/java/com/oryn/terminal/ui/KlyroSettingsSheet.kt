@@ -13,6 +13,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.draw.rotate
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import com.oryn.terminal.rememberHomeMotionEnabled
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -157,6 +162,7 @@ internal fun KlyroSettingsSheet(
     var brandUpdating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val colors = LocalKlyroColors.current
+    val motionEnabled = rememberHomeMotionEnabled()
     var authorizedFolderCount by remember { mutableStateOf(-1) }
     var folderRevision by remember { mutableStateOf(0) }
     LaunchedEffect(context, section, folderRevision) {
@@ -343,6 +349,11 @@ internal fun KlyroSettingsSheet(
                                     "mono-paper" -> "Paper"
                                     else -> null
                                 }
+                                val monochromeRotation by animateFloatAsState(
+                                    if (showMonochromeThemes) 90f else 0f,
+                                    if (motionEnabled) tween(180) else androidx.compose.animation.core.snap(),
+                                    label = "monochrome-chevron"
+                                )
                                 Surface(
                                     modifier = Modifier.fillMaxWidth()
                                         .heightIn(min = KlyroUiMetrics.minTouch)
@@ -377,7 +388,7 @@ internal fun KlyroSettingsSheet(
                                             contentDescription = null,
                                             tint = colors.muted,
                                             modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
-                                                .rotate(if (showMonochromeThemes) 90f else 0f)
+                                                .rotate(monochromeRotation)
                                         )
                                     }
                                 }
@@ -459,6 +470,16 @@ internal fun KlyroSettingsSheet(
                                     KlyroSettingsChoiceGrid(columns = 2, minimumInlineWidth = appearanceInlineWidth) {
                                         KlyroTerminalFonts.options.forEach { option ->
                                             val active = fontFamilyId == option.id
+                                            val fontFill by animateColorAsState(
+                                                if (active) colors.sheet else colors.sheet.copy(alpha = 0f),
+                                                if (motionEnabled) tween(200) else androidx.compose.animation.core.snap(),
+                                                label = "font-family-fill"
+                                            )
+                                            val fontCorner by animateDpAsState(
+                                                if (active) KlyroUiMetrics.controlCorner else 22.dp,
+                                                if (motionEnabled) tween(220) else androidx.compose.animation.core.snap(),
+                                                label = "font-family-shape"
+                                            )
                                             Surface(
                                                 modifier = Modifier.weight(1f)
                                                     .heightIn(min = KlyroUiMetrics.optionRow)
@@ -466,8 +487,8 @@ internal fun KlyroSettingsSheet(
                                                         onClickLabel = "Use " + option.label) {
                                                         onFontFamilyChange(option.id)
                                                     }.semantics { selected = active },
-                                                color = if (active) colors.sheet else Color.Transparent,
-                                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                                color = fontFill,
+                                                shape = RoundedCornerShape(fontCorner),
                                                 border = null
                                             ) {
                                                 Box(
