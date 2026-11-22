@@ -1324,7 +1324,7 @@ private fun OrynTerminalApp(
 
     Box(Modifier.fillMaxSize().background(screenChrome)) {
         if (homeVisible) {
-            KlyroHomePixelCover(bannerHeight, screenChrome, animate = !showHomeSettings && !showRepairConfirmation)
+            KlyroHomePixelCover(bannerHeight, screenChrome)
         }
         Surface(
             modifier = Modifier.fillMaxSize()

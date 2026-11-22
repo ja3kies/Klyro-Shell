@@ -42,12 +42,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boolean = true) {
+internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color) {
     val motionEnabled = rememberHomeMotionEnabled()
 
     Box(Modifier.fillMaxWidth().height(height).clearAndSetSemantics { }) {
         if (motionEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            KlyroAnimatedGifCover(animate)
+            KlyroAnimatedGifCover()
         } else {
             KlyroStaticGifCover()
         }
@@ -97,7 +97,7 @@ internal fun rememberHomeMotionEnabled(): Boolean {
 /** API 28+ native GIF decoder, isolated from the Android 8 fallback for lint. */
 @TargetApi(Build.VERSION_CODES.P)
 @Composable
-private fun KlyroAnimatedGifCover(animate: Boolean) {
+private fun KlyroAnimatedGifCover() {
     val context = LocalContext.current
     val decoded by produceState<AnimatedImageDrawable?>(null, context) {
         value = withContext(Dispatchers.IO) {
@@ -133,18 +133,16 @@ private fun KlyroAnimatedGifCover(animate: Boolean) {
 
     // A hidden screen or stopped Activity must not keep decoding GIF frames.
     val lifecycle = (context as? LifecycleOwner)?.lifecycle
-    DisposableEffect(animated, lifecycle, animate) {
+    DisposableEffect(animated, lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> if (animate) animated.start() else animated.stop()
+                Lifecycle.Event.ON_START -> animated.start()
                 Lifecycle.Event.ON_STOP -> animated.stop()
                 else -> Unit
             }
         }
         lifecycle?.addObserver(observer)
-        if (animate && (lifecycle == null ||
-            lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
-        ) animated.start() else animated.stop()
+        if (lifecycle == null || lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) animated.start() else animated.stop()
 
         onDispose {
             lifecycle?.removeObserver(observer)
