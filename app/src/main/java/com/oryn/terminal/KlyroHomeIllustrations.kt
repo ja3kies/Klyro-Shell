@@ -10,6 +10,7 @@ import androidx.compose.runtime.State
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
@@ -23,12 +24,17 @@ import kotlin.math.sin
 
 internal enum class HomeIllustration(val label: String, val description: String) {
     CHECKERBOARD("Checkerboard", "Rotating pixel tiles"),
-    MAYFLY("Concentric rings", "Pulsing circular pattern"),
+    MAYFLY("Concentric rings", "Expanding radial ripples"),
     GRADIENT("Animated gradient", "Flowing ambient light"),
     WARM_LION("Warm Lion", "Flowing dotted light streams");
 
     val periodMs: Int
-        get() = if (this == WARM_LION) WARM_LION_PERIOD_MS else HOME_PATTERN_PERIOD_MS
+        get() = when (this) {
+            CHECKERBOARD -> HOME_PATTERN_PERIOD_MS
+            MAYFLY -> 6_000
+            GRADIENT -> 12_000
+            WARM_LION -> WARM_LION_PERIOD_MS
+        }
 
     companion object {
         fun fromStored(value: String?) = entries.firstOrNull { it.name == value } ?: CHECKERBOARD
@@ -78,32 +84,42 @@ internal fun rememberHomeIllustrationSettings(): State<HomeIllustrationSettings>
  * Original: https://10015.io/tools/css-background-pattern-generator
  * MIT License; see assets/licenses/home-illustrations-MIT.txt.
  * Preserve the original 76px tile with alternating concentric rings at
- * corners and center. Animate ring luminance and radius within the active theme.
+ * corners and center. Animate expanding ripples within the active theme.
  */
+/** A crest moves outward by one ring spacing per cycle. Corner and center tiles alternate. */
+internal fun mayflyRingPhase(distance: Float, degrees: Float, corner: Boolean): Float {
+    val turns = distance * 5f - degrees / 360f + if (corner) .5f else 0f
+    return (.5 + .5 * cos(turns * 2.0 * PI)).toFloat()
+}
+
 internal fun DrawScope.drawHomeMayfly(accent: Color, degrees: Float) {
     val tile = 76.dp.toPx()
-    val radians = degrees * PI / 180.0
-    val radius = tile * (.475f + .018f * sin(radians).toFloat())
-    val bright = homePatternTint(accent, degrees)
-    val dark = accent.copy(
-        red = accent.red * .12f,
-        green = accent.green * .12f,
-        blue = accent.blue * .12f
-    )
+    val radius = tile * .475f
+    val dark = lerp(Color.Black, accent, .12f)
+    val bright = lerp(Color.Black, accent, .86f)
     drawRect(dark)
-    // One shared radial shader: ten alternating bands, hard stops at each boundary.
-    val stops = (0 until 10).flatMap { band ->
-        val color = if (band % 2 == 0) bright else dark
-        listOf(band / 10f to color, (band + 1) / 10f to color)
-    }.toTypedArray()
-    val rings = Brush.radialGradient(*stops, center = Offset.Zero, radius = radius)
+    // Antialiased concentric bands propagate from each center instead of
+    // merely scaling a static texture. Two shared shaders cover every tile.
+    fun ringBrush(corner: Boolean): Brush {
+        val stops = (0..80).map { index ->
+            val distance = index / 80f
+            val wave = mayflyRingPhase(distance, degrees, corner)
+            val edge = ((1f - distance) * 20f).coerceIn(0f, 1f)
+            distance to lerp(dark, bright, wave * edge)
+        }.toTypedArray()
+        return Brush.radialGradient(*stops, center = Offset.Zero, radius = radius)
+    }
+    val centers = ringBrush(false)
+    val corners = ringBrush(true)
     clipRect {
         for (row in -1..ceil(size.height / tile).toInt()) {
             for (col in -1..ceil(size.width / tile).toInt()) {
-                val x = (col + .5f) * tile
-                val y = (row + .5f) * tile
-                translate(x, y) { drawCircle(rings, radius, center = Offset.Zero) }
-                translate(col * tile, row * tile) { drawCircle(rings, radius, center = Offset.Zero) }
+                translate((col + .5f) * tile, (row + .5f) * tile) {
+                    drawCircle(centers, radius, center = Offset.Zero)
+                }
+                translate(col * tile, row * tile) {
+                    drawCircle(corners, radius, center = Offset.Zero)
+                }
             }
         }
     }

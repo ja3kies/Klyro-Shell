@@ -334,6 +334,9 @@ jobs:
           data = {"packageName": "com.klyro.shell", "versionCode": int(code),
                   "versionName": name, "apkSha256": digest, "branch": branch,
                   "commitSha": os.environ["GITHUB_SHA"]}
+          notes_path = pathlib.Path("docs/PREVIEW_NOTES.md")
+          data["releaseNotes"] = (notes_path.read_text(encoding="utf-8").strip()[:8000]
+                                  if notes_path.is_file() else "Maintenance and reliability update.")
           pathlib.Path("app/build/outputs/apk/debug/klyro-update.json").write_text(
               json.dumps(data, separators=(",", ":")) + "\n", encoding="utf-8")
           PY
@@ -475,6 +478,10 @@ jobs:
                   or metadata["commitSha"] != os.environ["GITHUB_SHA"]
                   or metadata["apkSha256"] != hashlib.sha256((assets / "klyro-shell.apk").read_bytes()).hexdigest()):
               raise SystemExit("Preview metadata does not match the signed build")
+          notes = metadata.get("releaseNotes", "Maintenance and reliability update.")
+          if not isinstance(notes, str) or not notes.strip() or len(notes) > 8000:
+              raise SystemExit("Invalid Preview release notes")
+          (assets / "preview-notes.txt").write_text(notes.strip() + "\n", encoding="utf-8")
           PY
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = true
@@ -499,9 +506,9 @@ jobs:
               exit 0
             fi
             gh release upload "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json --repo "$GITHUB_REPOSITORY" --clobber
-            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "$title" --notes "Signed Android build for $GITHUB_REF_NAME. CI run: $GITHUB_RUN_ID. Commit: $GITHUB_SHA." --latest=false
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "$title" --notes-file release-assets/preview-notes.txt --latest=false
           else
             gh release create "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json \
               --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
-              --title "$title" --notes "Signed Android build for $GITHUB_REF_NAME. CI run: $GITHUB_RUN_ID. Commit: $GITHUB_SHA."
+              --title "$title" --notes-file release-assets/preview-notes.txt
           fi

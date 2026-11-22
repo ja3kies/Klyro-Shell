@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -84,13 +86,13 @@ internal fun KlyroHomePixelCover(
     height: Dp,
     screenChrome: Color,
     animate: Boolean = true,
-    onBoundsChanged: ((Rect) -> Unit)? = null
+    onBoundsChanged: ((Rect) -> Unit)? = null,
+    illustration: HomeIllustrationSettings = rememberHomeIllustrationSettings().value
 ) {
     val accent = LocalKlyroColors.current.accent
-    val illustration by rememberHomeIllustrationSettings()
     val motionEnabled = rememberHomeMotionEnabled()
     val started = rememberCoverStarted()
-    val phase = if (animate && motionEnabled && started) {
+    val phase = if (animate && motionEnabled && started) key(illustration.kind, illustration.effectiveSpeed) {
         val transition = rememberInfiniteTransition(label = "home-pattern-pulse")
         transition.animateFloat(
             initialValue = 0f,
@@ -103,7 +105,7 @@ internal fun KlyroHomePixelCover(
         )
     } else null
 
-    Box(Modifier.fillMaxWidth().height(height)
+    Box(Modifier.fillMaxWidth().height(height).clipToBounds()
         .then(if (onBoundsChanged != null) Modifier.onGloballyPositioned { coordinates ->
             coordinates.homePatternScreenBounds()?.let(onBoundsChanged)
         } else Modifier)

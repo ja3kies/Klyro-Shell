@@ -27,6 +27,16 @@ class KlyroHomeIllustrationSettingsTest {
         }
     }
 
+    @Test fun rippleCrestTravelsOutwardAndLoops() {
+        assertEquals(1f, mayflyRingPhase(0f, 0f, false), .001f)
+        assertEquals(1f, mayflyRingPhase(.05f, 90f, false), .001f)
+        assertEquals(0f, mayflyRingPhase(0f, 180f, false), .001f)
+        assertEquals(0f, mayflyRingPhase(0f, 0f, true), .001f)
+        assertEquals(mayflyRingPhase(.12f, 0f, false),
+            mayflyRingPhase(.12f, 360f, false), .001f)
+        assertEquals(4, HomeIllustration.entries.map { it.periodMs }.distinct().size)
+    }
+
     @Test fun speedIsBoundedAndAdvancedSwitchRestoresDefault() {
         assertEquals(.5f, HomeIllustrationSettings.normalizeSpeed(-10f), 0f)
         assertEquals(2f, HomeIllustrationSettings.normalizeSpeed(100f), 0f)

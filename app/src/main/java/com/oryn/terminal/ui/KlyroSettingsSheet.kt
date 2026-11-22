@@ -1024,7 +1024,7 @@ internal fun KlyroSettingsSheet(
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold)
                                 Text(if (updateChannel == com.oryn.terminal.updates.UpdateChannel.STABLE)
-                                    "Stable releases · signed APK" else "Preview · latest signed build across branches",
+                                    "Stable releases · signed APK" else "Preview · cumulative signed updates",
                                     color = colors.muted, style = MaterialTheme.typography.bodySmall)
                             }
                         }
@@ -1042,16 +1042,18 @@ internal fun KlyroSettingsSheet(
                                     result.candidate.sourceBranch?.takeIf {
                                         result.candidate.channel == com.oryn.terminal.updates.UpdateChannel.PREVIEW
                                     }?.let { source ->
-                                        Text("Source branch: $source", color = colors.muted,
-                                            style = MaterialTheme.typography.bodySmall)
                                         if (source != com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(
                                                 com.oryn.terminal.BuildConfig.UPDATE_BRANCH)) {
-                                            KlyroInlineNotice("This Preview comes from a different development branch and may not contain all installed features.")
+                                            KlyroInlineNotice("This Preview switches to the cumulative update channel and may not contain all installed features.")
                                         }
                                     }
-                                    if (result.candidate.notes.isNotBlank()) Text(
-                                        result.candidate.notes.take(2_000), color = colors.muted,
-                                        style = MaterialTheme.typography.bodySmall)
+                                    if (result.candidate.notes.isNotBlank()) {
+                                        Text("What's new", color = colors.foreground,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold)
+                                        Text(result.candidate.notes.take(2_000), color = colors.muted,
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
                                     if (updateDownloading) {
                                         LinearProgressIndicator(progress = { updateProgress },
                                             modifier = Modifier.fillMaxWidth(), color = colors.accent)

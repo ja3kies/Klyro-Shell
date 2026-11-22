@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.unit.dp
@@ -85,6 +86,7 @@ internal fun DrawScope.drawHomeWarmLion(accent: Color, degrees: Float, dotMask: 
     val ry = 116f * unit
     val firstColumn = floor(-rx / pitch).toInt()
     val lastColumn = ceil((size.width + rx) / pitch).toInt()
+    clipRect {
     for (column in firstColumn..lastColumn) {
         val stream = warmLionStreams[((column % 12) + 12) % 12]
         val x = column * pitch + 1.5f * unit
@@ -101,4 +103,5 @@ internal fun DrawScope.drawHomeWarmLion(accent: Color, degrees: Float, dotMask: 
         }
     }
     drawPath(dotMask, Color(0xFF0A0A0A))
+    }
 }

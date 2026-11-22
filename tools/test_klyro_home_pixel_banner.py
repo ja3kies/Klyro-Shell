@@ -21,6 +21,9 @@ class HomePatternContract(unittest.TestCase):
         self.assertNotIn("AndroidView", COVER)
         self.assertNotIn("R.drawable.klyro_home_landscape_loop", COVER)
 
+    def test_every_renderer_is_clipped_before_the_fade(self):
+        self.assertIn("Box(Modifier.fillMaxWidth().height(height).clipToBounds()", COVER)
+
     def test_animation_contract(self):
         self.assertIn("HOME_PATTERN_PERIOD_MS = 20_000", COVER)
         self.assertIn("targetValue = 360f", COVER)

@@ -64,8 +64,15 @@ class InAppUpdateContractTest(unittest.TestCase):
         self.assertIn('git merge-base --is-ancestor 9705735f5a654df8625411c9d3d4b3a699ff9172 HEAD', WORKFLOW)
         self.assertIn('sourceBranch = manifest.optString("branch")', REPO)
         self.assertIn("publishedBranch.isBlank()", REPO)
-        self.assertIn("Source branch: $source", SETTINGS)
+        self.assertNotIn("Source branch: $source", SETTINGS)
+        self.assertIn('Text("What\'s new"', SETTINGS)
         self.assertIn("may not contain all installed features", SETTINGS)
+
+    def test_preview_release_uses_user_facing_notes_from_exact_build(self):
+        self.assertIn('data["releaseNotes"]', WORKFLOW)
+        self.assertEqual(WORKFLOW.count("--notes-file release-assets/preview-notes.txt"), 2)
+        self.assertNotIn('--notes "Signed Android build for', WORKFLOW)
+        self.assertIn('previewUserNotes(manifest.optString("releaseNotes"), release.optString("body"))', REPO)
 
     def test_expired_preview_has_separate_message_and_recovery_action(self):
         self.assertIn('connection.responseCode in setOf(404, 410)', REPO)

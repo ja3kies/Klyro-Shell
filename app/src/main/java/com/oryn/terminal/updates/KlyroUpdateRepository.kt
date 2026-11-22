@@ -36,6 +36,17 @@ internal fun newestPreview(global: UpdateLookup, branch: UpdateLookup): UpdateLo
         ?: if (global == UpdateLookup.Current || branch == UpdateLookup.Current)
             UpdateLookup.Current else UpdateLookup.NonePublished
 
+/** Read user-facing notes without exposing the legacy technical release body. */
+internal fun previewUserNotes(notes: String?, legacyBody: String): String {
+    val text = notes?.trim()?.takeIf { it.isNotEmpty() } ?: legacyBody.trim()
+    if (text.isBlank() || text.startsWith("Signed Android build for ")) {
+        return "Maintenance and reliability update. Detailed release notes are not available for this build."
+    }
+    return text.lineSequence().joinToString("\n") { line ->
+        if (line.startsWith("- ")) "• " + line.drop(2) else line
+    }.take(8_000)
+}
+
 /** Public GitHub API client. All methods are blocking and must run on Dispatchers.IO. */
 internal class KlyroUpdateRepository(private val context: Context) {
     private val api = "https://api.github.com/repos/ja3kies/Klyro-Shell"
@@ -99,7 +110,9 @@ internal class KlyroUpdateRepository(private val context: Context) {
         }
         val candidate = manifest.toCandidate(
             channel = channel,
-            notes = release.optString("body").take(8_000),
+            notes = if (channel == UpdateChannel.PREVIEW)
+                previewUserNotes(manifest.optString("releaseNotes"), release.optString("body"))
+            else release.optString("body").take(8_000),
             downloadUrl = apk.optString("browser_download_url"),
             digest = apk.optString("digest").takeIf(String::isNotBlank),
             archive = false,

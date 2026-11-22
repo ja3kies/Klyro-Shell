@@ -33,4 +33,16 @@ class KlyroPreviewSelectionTest {
         assertEquals(UpdateLookup.NonePublished,
             newestPreview(UpdateLookup.NonePublished, UpdateLookup.NonePublished))
     }
+
+    @Test fun previewNotesPreferPublishedFeatures() {
+        assertEquals("• New font\n• Home animation",
+            previewUserNotes("- New font\n- Home animation", "Signed Android build for main. CI run: 1. Commit: abc."))
+        assertEquals("• Existing notes", previewUserNotes(null, "- Existing notes"))
+    }
+
+    @Test fun technicalOnlyLegacyNotesNeverReachUpdateCard() {
+        assertEquals("Maintenance and reliability update. Detailed release notes are not available for this build.",
+            previewUserNotes("", "Signed Android build for integration. CI run: 1. Commit: abc."))
+    }
+
 }
