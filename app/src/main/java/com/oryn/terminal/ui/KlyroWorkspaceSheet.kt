@@ -504,7 +504,7 @@ internal fun KlyroWorkspaceSheet(
                 title = { Text("Delete " + name + "?") },
                 text = {
                     Text(if (target == null) "Workspace no longer available. Cancel this action."
-                        else "Its sessions return to General. No shell or files are deleted.")
+                        else "Its sessions return to General. Workspace-only pinned commands are removed. No shell or files are deleted.")
                 },
                 confirmButton = {
                     TextButton(

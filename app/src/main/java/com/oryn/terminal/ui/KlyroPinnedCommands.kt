@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,8 +54,9 @@ internal class KlyroPinnedCommandStore(context: Context) {
         return true
     }
 
-    fun removeWorkspace(id: String) {
-        save(commands.filterNot { it.workspaceId == id })
+    fun removeMissingWorkspaces(existingIds: Set<String>) {
+        val next = commands.filter { it.workspaceId == null || it.workspaceId in existingIds }
+        if (next != commands) save(next)
     }
 }
 
@@ -100,7 +100,7 @@ internal fun KlyroPinnedCommandBar(
                                         .combinedClickable(
                                             role = Role.Button, onClickLabel = "Run " + command.label,
                                             onLongClickLabel = "Options for " + command.label,
-                                            onClick = { if (canExecute) onExecute(command) },
+                                            onClick = { onExecute(command) },
                                             onLongClick = { menuId = command.id }
                                         ).testTag("pinned-command-" + command.id),
                                     color = colors.key,
@@ -139,12 +139,14 @@ internal fun KlyroPinnedCommandBar(
                                         style = MaterialTheme.typography.labelMedium)
                                 }
                             }
+                            else -> Unit
                         }
                     }
                 }
             }
         }
     }
+    KlyroModalTheme {
     if (editorOpen) {
         var label by remember(editing?.id) { mutableStateOf(editing?.label.orEmpty()) }
         var command by remember(editing?.id) { mutableStateOf(editing?.command.orEmpty()) }
@@ -207,5 +209,6 @@ internal fun KlyroPinnedCommandBar(
                     }
                 }
             }, confirmButton = { TextButton(onClick = { reorder = false }) { Text("Done") } })
+    }
     }
 }

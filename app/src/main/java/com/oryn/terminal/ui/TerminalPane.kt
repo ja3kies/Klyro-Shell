@@ -227,7 +227,10 @@ fun TerminalPane(
         context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     }
     val pinnedStore = remember(context) { KlyroPinnedCommandStore(context) }
-    val pinnedWorkspaceId = tabWorkspaces[activeTabId] ?: KlyroWorkspaceCatalog.GENERAL
+    val pinnedWorkspaceId = activeTabId?.let(tabWorkspaces::get) ?: KlyroWorkspaceCatalog.GENERAL
+    LaunchedEffect(workspaces) {
+        pinnedStore.removeMissingWorkspaces(workspaces.map { it.id }.toSet())
+    }
     val pinnedWorkspaceName = workspaces.firstOrNull { it.id == pinnedWorkspaceId }?.name ?: "General"
     val keyboardPager = rememberPagerState(pageCount = { 2 })
     val keyboardScope = rememberCoroutineScope()
@@ -993,7 +996,8 @@ fun TerminalPane(
                         if (expected == null || currentSessionId() != expected || !session.isRunning() ||
                             emulator == null || emulator.isAlternateBufferActive ||
                             tabJobActivity[expected]?.sample?.hasForegroundJob() == true ||
-                            (item.workspaceId != null && item.workspaceId != pinnedWorkspaceId)) {
+                            (item.workspaceId != null && item.workspaceId != pinnedWorkspaceId) ||
+                            pinnedStore.commands.none { it == item }) {
                             Toast.makeText(context, "Return to the current Bash prompt first.", Toast.LENGTH_SHORT).show()
                             return@execute
                         }
