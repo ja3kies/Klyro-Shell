@@ -37,6 +37,18 @@ class KlyroHomePatternTest {
         }
     }
 
+    @Test fun squareRotationCompletesFourFullTurnsPerPulse() {
+        assertEquals(0f, homePatternRotation(0f), .001f)
+        assertEquals(72f, homePatternRotation(18f), .001f)
+        assertEquals(180f, homePatternRotation(45f), .001f)
+        assertEquals(0f, homePatternRotation(90f), .001f)
+        assertEquals(0f, homePatternRotation(360f), .001f)
+        for (degrees in 0..360) {
+            assertEquals(homePatternRotation(degrees.toFloat()),
+                homePatternRotation(degrees.toFloat() + 90f), .001f)
+        }
+    }
+
     @Test fun themePulsePreservesHueAndLoopsWithoutDiscontinuity() {
         val accents = listOf(Color(0xFFBDCC64), Color(0xFF00F0FF),
             Color(0xFFF57C41), Color(0xFFCA5DEC), Color.White)
