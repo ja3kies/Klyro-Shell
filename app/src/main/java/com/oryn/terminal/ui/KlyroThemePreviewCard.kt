@@ -75,7 +75,7 @@ internal fun KlyroThemePreviewCard(
     val pressed by pressSource.collectIsPressedAsState()
     Surface(
         modifier = modifier
-            .heightIn(min = 78.dp)
+            .heightIn(min = KlyroUiMetrics.minTouch)
             .clickable(interactionSource = pressSource,
                 indication = androidx.compose.foundation.LocalIndication.current,
                 role = Role.RadioButton, onClickLabel = "Use $label theme", onClick = onClick)
@@ -86,11 +86,11 @@ internal fun KlyroThemePreviewCard(
         border = null
     ) {
         Column(
-            modifier = Modifier.klyroPressScale(pressed).padding(6.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp)
+            modifier = Modifier.klyroPressScale(pressed).padding(KlyroUiMetrics.spaceXs),
+            verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
         ) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(40.dp)
+                modifier = Modifier.fillMaxWidth().height(32.dp)
                     .then(if (active) Modifier.border(KlyroUiMetrics.selectedBorder, current.accent, RoundedCornerShape(8.dp)) else Modifier)
                     .padding(2.dp).clearAndSetSemantics { },
                 contentAlignment = Alignment.Center
@@ -98,7 +98,7 @@ internal fun KlyroThemePreviewCard(
                 if (mode == "system") {
                     // One preview for BOTH device appearances, never inherit a stale mono preview.
                     Row(
-                        modifier = Modifier.fillMaxWidth().height(40.dp)
+                        modifier = Modifier.fillMaxWidth().height(32.dp)
                             .clip(RoundedCornerShape(6.dp))
                     ) {
                         listOf(lightPreview, darkPreview).forEach { palette ->
@@ -115,7 +115,7 @@ internal fun KlyroThemePreviewCard(
                     }
                 } else {
                     Row(
-                        modifier = Modifier.fillMaxWidth().height(40.dp)
+                        modifier = Modifier.fillMaxWidth().height(32.dp)
                             .background(preview.terminal, RoundedCornerShape(6.dp))
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically

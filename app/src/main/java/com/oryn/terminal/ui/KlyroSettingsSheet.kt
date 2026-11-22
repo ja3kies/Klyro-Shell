@@ -325,7 +325,7 @@ internal fun KlyroSettingsSheet(
                     }
                     "appearance" -> {
                         val appearanceInlineWidth = 240.dp
-                        Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceLg)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd)) {
                             KlyroAppearanceGroup("App theme") {
                                 KlyroSettingsChoiceGrid(columns = 3, minimumInlineWidth = appearanceInlineWidth) {
                                     listOf("system" to "System", "light" to "Light",
@@ -502,7 +502,7 @@ internal fun KlyroSettingsSheet(
                                                 ) {
                                                     Text(option.label, modifier = Modifier.padding(
                                                         horizontal = KlyroUiMetrics.spaceSm,
-                                                        vertical = KlyroUiMetrics.spaceMd
+                                                        vertical = KlyroUiMetrics.spaceSm
                                                     ), color = colors.foreground,
                                                         fontWeight = if (active) FontWeight.SemiBold
                                                             else FontWeight.Normal,
@@ -549,7 +549,6 @@ internal fun KlyroSettingsSheet(
                                             contentDescription = "Terminal font size"
                                         }
                                     )
-
                                 }
                             }
                             KlyroAppearanceGroup("Launcher icon") {
