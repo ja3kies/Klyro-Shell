@@ -39,7 +39,7 @@ class HomePatternContract(unittest.TestCase):
         self.assertIn("val homeVisible = !showPlugins &&", HOME)
         self.assertIn("if (homeVisible) {", HOME)
         self.assertIn("KlyroHomePixelCover(bannerHeight, screenChrome,", HOME)
-        self.assertIn("animate = !showHomeSettings || homePatternVisibility.shouldAnimate", HOME)
+        self.assertIn("animate = (!showHomeSettings && !showHomeWorkspaces) || homePatternVisibility.shouldAnimate", HOME)
         self.assertIn("LocalHomePatternVisibility provides homePatternVisibility", HOME)
         self.assertIn(".50f to Color.Transparent", COVER)
         self.assertIn(".74f to screenChrome.copy(alpha = .28f)", COVER)

@@ -31,6 +31,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
@@ -222,6 +226,11 @@ fun TerminalPane(
     val clipboardManager = remember(context) {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     }
+    val pinnedStore = remember(context) { KlyroPinnedCommandStore(context) }
+    val pinnedWorkspaceId = tabWorkspaces[activeTabId] ?: KlyroWorkspaceCatalog.GENERAL
+    val pinnedWorkspaceName = workspaces.firstOrNull { it.id == pinnedWorkspaceId }?.name ?: "General"
+    val keyboardPager = rememberPagerState(pageCount = { 2 })
+    val keyboardScope = rememberCoroutineScope()
     var clipboardAvailable by remember(session) {
         mutableStateOf(ClipboardTextReader.hasPlainText(clipboardManager))
     }
@@ -971,7 +980,29 @@ fun TerminalPane(
                 }
             }
         }
-        if (compact) {
+        HorizontalPager(state = keyboardPager, modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top) { page ->
+            if (page == 1) {
+                KlyroPinnedCommandBar(
+                    store = pinnedStore, workspaceId = pinnedWorkspaceId,
+                    workspaceName = pinnedWorkspaceName, compact = compact,
+                    canExecute = canSendKeys,
+                    onExecute = execute@{ item ->
+                        val emulator = session.emulator
+                        val expected = activeTabId
+                        if (expected == null || currentSessionId() != expected || !session.isRunning() ||
+                            emulator == null || emulator.isAlternateBufferActive ||
+                            tabJobActivity[expected]?.sample?.hasForegroundJob() == true ||
+                            (item.workspaceId != null && item.workspaceId != pinnedWorkspaceId)) {
+                            Toast.makeText(context, "Return to the current Bash prompt first.", Toast.LENGTH_SHORT).show()
+                            return@execute
+                        }
+                        if (!emulator.submitPasteWithResult(item.command)) {
+                            Toast.makeText(context, "Command could not be queued. Try again.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
+            } else if (compact) {
             Row(
                 modifier = Modifier.fillMaxWidth().background(TerminalSurface)
                     .horizontalScroll(rememberScrollState())
@@ -993,6 +1024,18 @@ fun TerminalPane(
                 Row(modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) { secondRow() }
+            }
+        }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
+            listOf("Keys", "Commands").forEachIndexed { index, label ->
+                Text(label, modifier = Modifier.heightIn(min = 48.dp)
+                    .clickable(role = Role.Tab) { keyboardScope.launch { keyboardPager.scrollToPage(index) } }
+                    .semantics { selected = keyboardPager.currentPage == index }
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                    color = if (keyboardPager.currentPage == index) TerminalAccent else TerminalMuted,
+                    style = MaterialTheme.typography.labelSmall)
             }
         }
     }

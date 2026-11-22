@@ -90,6 +90,7 @@ import androidx.compose.ui.graphics.toArgb
 import com.oryn.terminal.ui.KlyroColors
 import com.oryn.terminal.ui.KlyroUiMetrics
 import com.oryn.terminal.ui.KlyroSettingsSheet
+import com.oryn.terminal.ui.KlyroWorkspaceSheet
 import com.oryn.terminal.ui.KlyroTerminalFonts
 import com.oryn.terminal.ui.KlyroBrandChoice
 import com.oryn.terminal.ui.LocalKlyroColors
@@ -1216,6 +1217,7 @@ private fun OrynTerminalApp(
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
     var showHomeSettings by rememberSaveable { mutableStateOf(false) }
+    var showHomeWorkspaces by rememberSaveable { mutableStateOf(false) }
     // Keep the saveable position alive when Plugins or Terminal replaces Home.
     val homeScrollState = rememberScrollState()
     var homeLauncherIcon by remember(context) {
@@ -1271,6 +1273,28 @@ private fun OrynTerminalApp(
     val calmHomeReady = badge.severity == KlyroRuntimeBadgeSeverity.READY &&
         technicalErrorDetails == null && homeStatus.terminalFailure == null
     val homeWorkspaceName = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
+    val recentSession = homeRecentSession(activeTabId, tabs, tabWorkspaces,
+        workspaces.associate { it.id to it.name }, finishedTabIds)
+    val recentPty = recentSession?.let { jobSessions[it.id] }
+    var recentDirectory by remember(recentSession?.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(session, showPlugins, recentSession?.id, recentPty) {
+        if (session == null && !showPlugins && recentPty != null) {
+            recentDirectory = withContext(Dispatchers.IO) {
+                runCatching {
+                    val home = OrynPaths(context.filesDir,
+                        File(context.applicationInfo.nativeLibraryDir)).home.absolutePath
+                    homeDisplayDirectory(recentPty.cwd, home)
+                }.getOrNull()
+            }
+        }
+    }
+    fun resumeHomeTab(id: Long) {
+        onSelectTab(id)
+        if (currentSessionId() == id) {
+            showHomeWorkspaces = false
+            onLaunch()
+        }
+    }
     val stateColor = when (badge.severity) {
         KlyroRuntimeBadgeSeverity.READY -> ui.readyInk
         KlyroRuntimeBadgeSeverity.WARNING -> ui.warningInk
@@ -1332,7 +1356,7 @@ private fun OrynTerminalApp(
     Box(Modifier.fillMaxSize().background(screenChrome)) {
         if (homeVisible) {
             KlyroHomePixelCover(bannerHeight, screenChrome,
-                animate = !showHomeSettings || homePatternVisibility.shouldAnimate,
+                animate = (!showHomeSettings && !showHomeWorkspaces) || homePatternVisibility.shouldAnimate,
                 onBoundsChanged = { homePatternVisibility.coverBounds = it })
         }
         Surface(
@@ -1503,6 +1527,60 @@ private fun OrynTerminalApp(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
+                    }
+                }
+
+                recentSession?.let { recent ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(KlyroUiMetrics.cardCorner))
+                            .clickable(role = Role.Button, onClickLabel = "Resume " + recent.title) {
+                                resumeHomeTab(recent.id)
+                            },
+                        color = ui.tile,
+                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    ) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Last session", color = ui.muted,
+                                style = MaterialTheme.typography.labelMedium)
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Icon(painterResource(R.drawable.hugeicons_terminal), null, tint = ui.accent,
+                                    modifier = Modifier.size(24.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(recent.title, color = ui.foreground,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(recentDirectory ?: recent.workspace, color = ui.muted,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    if (recent.finished) Text("Output retained", color = ui.muted,
+                                        style = MaterialTheme.typography.labelSmall)
+                                }
+                                Icon(painterResource(R.drawable.hugeicons_chevron_right), null, tint = ui.muted,
+                                    modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    }
+                }
+                if (workspaces.size > 1) {
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+                            .clip(RoundedCornerShape(KlyroUiMetrics.controlCorner))
+                            .clickable(role = Role.Button, onClickLabel = "Open last workspace") {
+                                showHomeWorkspaces = true
+                            }.padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(painterResource(R.drawable.hugeicons_folder_01), null, tint = ui.muted,
+                            modifier = Modifier.size(22.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Last workspace", color = ui.muted, style = MaterialTheme.typography.labelSmall)
+                            Text(homeWorkspaceName, color = ui.foreground, style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Icon(painterResource(R.drawable.hugeicons_chevron_right), null, tint = ui.muted,
+                            modifier = Modifier.size(20.dp))
                     }
                 }
 
@@ -1792,6 +1870,19 @@ private fun OrynTerminalApp(
             }
         }
     }
+    }
+    if (showHomeWorkspaces && homeVisible) {
+        CompositionLocalProvider(LocalHomePatternVisibility provides homePatternVisibility) {
+            KlyroWorkspaceSheet(
+                entries = workspaces, selectedId = selectedWorkspaceId,
+                tabs = tabs, tabWorkspaces = tabWorkspaces, activeTabId = null,
+                onSelectProject = onSelectWorkspace, onCreateProject = onCreateWorkspace,
+                onRenameProject = onRenameWorkspace, onDeleteProject = onDeleteWorkspace,
+                onAssignCurrentTab = {},
+                onSwitchTab = ::resumeHomeTab, onRenameTab = onRenameTab, onCloseTab = onCloseTab,
+                onDismiss = { showHomeWorkspaces = false }
+            )
+        }
     }
     if (showHomeSettings) {
         CompositionLocalProvider(LocalHomePatternVisibility provides homePatternVisibility) {
