@@ -4,6 +4,9 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.oryn.terminal.ui.motion.klyroPressScale
+import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 
 import androidx.activity.compose.BackHandler
 import android.net.Uri
@@ -300,6 +303,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 val enabled = !mutationBusy && !confirmedMutationPending
                 val pressSource = remember(id) { MutableInteractionSource() }
                 val pressed by pressSource.collectIsPressedAsState()
+                val tabColor by animateColorAsState(if (selected) colors.sheet else colors.key,
+                    tween(180), label = "plugin-tab-background")
                 Surface(
                     modifier = Modifier.weight(1f)
                         .heightIn(min = KlyroUiMetrics.minTouch)
@@ -313,7 +318,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         }
                         .semantics { this.selected = selected },
                     shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                    color = if (selected) colors.sheet else colors.key,
+                    color = tabColor,
                     border = if (selected) BorderStroke(1.dp, colors.muted.copy(alpha = .45f)) else null,
                     contentColor = colors.foreground
                 ) {
@@ -356,11 +361,11 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                         onAction = { page = "explore" }
                     )
                 }
-                installed.forEach { plugin ->
+                installed.forEachIndexed { index, plugin ->
                     Surface(
                         color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
                     ) {
-                        Column(Modifier.fillMaxWidth().padding(KlyroUiMetrics.cardPadding),
+                        Column(Modifier.fillMaxWidth().klyroStaggeredEntrance(index, "installed-${plugin.id}").padding(KlyroUiMetrics.cardPadding),
                             verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             PluginHeading(plugin, "v${plugin.version} · ${plugin.commands.size} commands")
                             Row(verticalAlignment = Alignment.CenterVertically,
@@ -400,13 +405,14 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     }
                 }
             } else {
-                KlyroPluginManager.bundled.forEach { plugin ->
+                KlyroPluginManager.bundled.forEachIndexed { index, plugin ->
                     val isInstalled = installed.any { it.id == plugin.id }
                     KlyroExplorePluginCard(
                         plugin = plugin,
                         isInstalled = isInstalled,
                         enabled = !registryLoading && !mutationBusy && !confirmedMutationPending && !registryReadFailed,
-                        onAdd = { error = null; pendingBundledId = plugin.id }
+                        onAdd = { error = null; pendingBundledId = plugin.id },
+                        entranceIndex = index
                     )
                 }
                 Surface(color = colors.chrome,
@@ -625,11 +631,12 @@ internal fun KlyroExplorePluginCard(
     plugin: KlyroPluginRecord,
     isInstalled: Boolean,
     enabled: Boolean,
-    onAdd: () -> Unit
+    onAdd: () -> Unit,
+    entranceIndex: Int = 0
 ) {
     val colors = LocalKlyroColors.current
     Surface(color = colors.tile, shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().klyroStaggeredEntrance(entranceIndex, "explore-${plugin.id}").padding(12.dp)) {
             val stacked = maxWidth < 320.dp || LocalDensity.current.fontScale >= 1.3f
             val addAction: @Composable () -> Unit = {
                 OutlinedButton(
