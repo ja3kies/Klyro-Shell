@@ -97,10 +97,17 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn("border = if (brandReady && selectedBrand == choice) BorderStroke(1.dp, colors.accent) else null", launcher)
 
     def test_accent_selected_state_has_custom_glyph(self):
-        self.assertIn("R.drawable.klyro_accent_shaked", self.settings)
-        self.assertIn("tint = lerp(swatch.onAccent, swatch.accent, .14f)", self.settings)
-        self.assertIn("accent-selection-${preset.id}", self.settings)
-        self.assertIn("alpha = selection", self.settings)
+        self.assertIn("KlyroAccentSwatch(", self.settings)
+        swatch = (UI / "KlyroAccentSwatch.kt").read_text()
+        self.assertIn("R.drawable.klyro_accent_shaked", swatch)
+        self.assertIn("tint = accentGlyphTint(accent)", swatch)
+        self.assertIn("accent-swatch-selection", swatch)
+        self.assertIn("alpha = selection", swatch)
+        self.assertIn("rotationZ = 45f * (1f - selection)", swatch)
+        self.assertIn("size.minDimension * (.5f - .2f * p)", swatch)
+        self.assertIn("animationSpec = if (motion)", swatch)
+        self.assertIn("selected = active", swatch)
+        self.assertIn("Modifier.size(KlyroUiMetrics.minTouch)", swatch)
         self.assertTrue((UI.parents[4] / "res/drawable/klyro_accent_shaked.xml").is_file())
 
     def test_launcher_error_can_recover_on_verified_choice(self):
