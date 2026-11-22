@@ -68,9 +68,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.layout.onGloballyPositioned
 import com.oryn.terminal.LocalHomePatternVisibility
-import com.oryn.terminal.homePatternScreenBounds
+import com.oryn.terminal.homeSheetPlacedBounds
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.material3.ModalBottomSheetProperties
@@ -148,6 +152,7 @@ internal fun KlyroSheet(
         confirmValueChange = { it != SheetValue.Hidden || dismissal.canDismiss(enabled.value) }
     )
     val homePattern = LocalHomePatternVisibility.current
+    var measuredSheetSize by remember { mutableStateOf(IntSize.Zero) }
     DisposableEffect(homePattern) {
         onDispose { homePattern?.clearSheet() }
     }
@@ -168,8 +173,8 @@ internal fun KlyroSheet(
     }
     ModalBottomSheet(
         modifier = Modifier.testTag("klyro-modal-sheet")
-            .then(if (homePattern != null) Modifier.onGloballyPositioned { coordinates ->
-                coordinates.homePatternScreenBounds()?.let(homePattern::updateSheet)
+            .then(if (homePattern != null) Modifier.onSizeChanged {
+                measuredSheetSize = it
             } else Modifier),
         properties = ModalBottomSheetProperties(shouldDismissOnBackPress = dismissEnabled),
         sheetState = sheetState,
@@ -181,7 +186,26 @@ internal fun KlyroSheet(
             topEnd = KlyroUiMetrics.sheetCorner
         ),
         dragHandle = if (dismissEnabled) { { BottomSheetDefaults.DragHandle(color = colors.muted) } } else null,
-        content = content
+        content = {
+            if (homePattern != null) {
+                // LocalView here belongs to the modal's own Android window.
+                // Observe the actual anchor offset after layout, not the
+                // external modifier coordinates before the sheet is placed.
+                val dialogView = LocalView.current
+                LaunchedEffect(sheetState, homePattern, dialogView) {
+                    val origin = IntArray(2)
+                    snapshotFlow {
+                        measuredSheetSize to runCatching { sheetState.requireOffset() }.getOrNull()
+                    }.collect { (sheetSize, offset) ->
+                        dialogView.getLocationOnScreen(origin)
+                        homePattern.updateSheet(homeSheetPlacedBounds(
+                            origin[0], origin[1], dialogView.width, sheetSize, offset
+                        ))
+                    }
+                }
+            }
+            content()
+        }
     )
 }
 
