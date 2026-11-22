@@ -40,25 +40,27 @@ internal fun newestPreview(global: UpdateLookup, branch: UpdateLookup): UpdateLo
 internal class KlyroUpdateRepository(private val context: Context) {
     private val api = "https://api.github.com/repos/ja3kies/Klyro-Shell"
 
-    fun check(channel: UpdateChannel, branch: String, installed: KlyroVersion): UpdateLookup =
+    fun check(channel: UpdateChannel, installed: KlyroVersion): UpdateLookup =
         when (channel) {
             UpdateChannel.STABLE -> checkStable(installed)
-            UpdateChannel.PREVIEW -> checkPreview(branch, installed)
+            UpdateChannel.PREVIEW -> checkPreview(installed)
         }
 
     private fun checkStable(installed: KlyroVersion): UpdateLookup =
         checkRelease("$api/releases/latest", UpdateChannel.STABLE, installed)
 
-    private fun checkPreview(branch: String, installed: KlyroVersion): UpdateLookup {
-        val safeBranch = KlyroUpdatePolicy.branchOrMain(branch)
+    private fun checkPreview(installed: KlyroVersion): UpdateLookup {
+        val safeBranch = KlyroUpdatePolicy.CONSOLIDATED_PREVIEW_BRANCH
         val branchHash = MessageDigest.getInstance("SHA-256")
             .digest(safeBranch.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it.toInt() and 0xff) }
-        // The global Preview tracks successful signed builds across branches.
-        // Keep support for older branch-only publications during migration.
-        val latest = checkRelease("$api/releases/tags/preview-latest", UpdateChannel.PREVIEW, installed)
+        // Always follow the cumulative branch, never a newer-numbered experimental branch.
+        // The branch-scoped publication also protects against old workflow revisions
+        // that can still overwrite the legacy global tag.
         val local = checkRelease("$api/releases/tags/preview-$branchHash", UpdateChannel.PREVIEW,
             installed, safeBranch)
+        val latest = checkRelease("$api/releases/tags/preview-latest", UpdateChannel.PREVIEW,
+            installed, safeBranch, ignoreOtherBranch = true)
         return newestPreview(latest, local)
     }
 
@@ -66,7 +68,8 @@ internal class KlyroUpdateRepository(private val context: Context) {
         url: String,
         channel: UpdateChannel,
         installed: KlyroVersion,
-        branch: String? = null
+        branch: String? = null,
+        ignoreOtherBranch: Boolean = false
     ): UpdateLookup {
         val release = try {
             getJson(url)
@@ -86,6 +89,7 @@ internal class KlyroUpdateRepository(private val context: Context) {
             ?: throw UpdateException("Release is missing update metadata")
         val manifest = getJson(manifestAsset.optString("browser_download_url"))
         if (branch != null && manifest.optString("branch") != branch) {
+            if (ignoreOtherBranch) return UpdateLookup.NonePublished
             throw UpdateException("Preview metadata does not match the installed branch")
         }
         if (channel == UpdateChannel.PREVIEW) {

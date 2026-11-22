@@ -231,8 +231,6 @@ internal fun KlyroSettingsSheet(
                 updateResult = withContext(Dispatchers.IO) {
                     com.oryn.terminal.updates.KlyroUpdateRepository(context).check(
                         updateChannel,
-                        com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(
-                            com.oryn.terminal.BuildConfig.UPDATE_BRANCH),
                         installedUpdateVersion
                     )
                 }

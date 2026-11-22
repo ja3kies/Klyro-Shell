@@ -57,6 +57,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Require cumulative Preview baseline
+        if: github.ref_name == 'integration/senior-release-20261121' || github.head_ref == 'integration/senior-release-20261121'
+        run: git merge-base --is-ancestor 9705735f5a654df8625411c9d3d4b3a699ff9172 HEAD
       - name: Syntax and targeted regression gate
         shell: bash
         env:
@@ -326,10 +329,11 @@ jobs:
           APK="app/build/outputs/apk/debug/klyro-shell.apk"
           APK_SHA256="$(sha256sum "$APK" | cut -d ' ' -f1)"
           python3 - "$VERSION_CODE" "$VERSION_NAME" "$APK_SHA256" "$UPDATE_BRANCH" <<'PY'
-          import json, pathlib, sys
+          import json, os, pathlib, sys
           code, name, digest, branch = sys.argv[1:]
           data = {"packageName": "com.klyro.shell", "versionCode": int(code),
-                  "versionName": name, "apkSha256": digest, "branch": branch}
+                  "versionName": name, "apkSha256": digest, "branch": branch,
+                  "commitSha": os.environ["GITHUB_SHA"]}
           pathlib.Path("app/build/outputs/apk/debug/klyro-update.json").write_text(
               json.dumps(data, separators=(",", ":")) + "\n", encoding="utf-8")
           PY
@@ -441,12 +445,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          CONSOLIDATED_BRANCH="integration/senior-release-20261121"
+          if [[ "$PREVIEW_SCOPE" == global && "$GITHUB_REF_NAME" != "$CONSOLIDATED_BRANCH" ]]; then
+            echo "Isolated branch: publish its own Preview only."
+            exit 0
+          fi
+          if [[ "$GITHUB_REF_NAME" == "$CONSOLIDATED_BRANCH" ]]; then
+            head_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$GITHUB_REF_NAME" --jq .object.sha)"
+            if [[ "$head_sha" != "$GITHUB_SHA" ]]; then
+              echo "A newer cumulative source revision exists; skip superseded publication."
+              exit 0
+            fi
+          fi
           branch_hash="$(printf '%s' "$GITHUB_REF_NAME" | sha256sum | cut -d ' ' -f 1)"
           tag="preview-$branch_hash"
           title="Klyro Preview · $GITHUB_REF_NAME"
           if [[ "$PREVIEW_SCOPE" == global ]]; then
             tag="preview-latest"
-            title="Klyro Preview · Latest successful build"
+            title="Klyro Preview · Cumulative integration"
           fi
           python3 - <<'PY'
           import hashlib, json, os
@@ -456,6 +472,7 @@ jobs:
           if (metadata["packageName"] != "com.klyro.shell"
                   or not isinstance(metadata["versionCode"], int) or metadata["versionCode"] <= 0
                   or metadata["branch"] != os.environ["GITHUB_REF_NAME"]
+                  or metadata["commitSha"] != os.environ["GITHUB_SHA"]
                   or metadata["apkSha256"] != hashlib.sha256((assets / "klyro-shell.apk").read_bytes()).hexdigest()):
               raise SystemExit("Preview metadata does not match the signed build")
           PY
@@ -465,15 +482,26 @@ jobs:
             gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern klyro-update.json --dir "$prior"
             old_code="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1]))["versionCode"]))' "$prior/klyro-update.json")"
             new_code="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1]))["versionCode"]))' release-assets/klyro-update.json)"
+            if [[ "$GITHUB_REF_NAME" == "$CONSOLIDATED_BRANCH" ]]; then
+              old_sha="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("commitSha","") if d.get("branch")==sys.argv[2] else "")' "$prior/klyro-update.json" "$CONSOLIDATED_BRANCH")"
+              if [[ -n "$old_sha" ]]; then
+                [[ "$old_sha" =~ ^[0-9a-f]{40}$ ]]
+                lineage="$(gh api "repos/$GITHUB_REPOSITORY/compare/$old_sha...$GITHUB_SHA" --jq .status)"
+                [[ "$lineage" == ahead || "$lineage" == identical ]] || {
+                  echo "Refusing to publish a non-descendant of the previous cumulative Preview."
+                  exit 1
+                }
+              fi
+            fi
             rm -rf "$prior"
             if (( new_code <= old_code )); then
               echo "A newer or identical Preview is already published; refusing downgrade."
               exit 0
             fi
             gh release upload "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json --repo "$GITHUB_REPOSITORY" --clobber
-            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "$title" --notes "Signed Android build for $GITHUB_REF_NAME. CI run: $GITHUB_RUN_ID." --latest=false
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "$title" --notes "Signed Android build for $GITHUB_REF_NAME. CI run: $GITHUB_RUN_ID. Commit: $GITHUB_SHA." --latest=false
           else
             gh release create "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json \
               --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
-              --title "$title" --notes "Signed Android build for $GITHUB_REF_NAME. CI run: $GITHUB_RUN_ID."
+              --title "$title" --notes "Signed Android build for $GITHUB_REF_NAME. CI run: $GITHUB_RUN_ID. Commit: $GITHUB_SHA."
           fi

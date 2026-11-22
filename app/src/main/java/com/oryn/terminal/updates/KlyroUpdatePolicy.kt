@@ -25,6 +25,7 @@ internal data class PreviewArtifact(
 
 internal object KlyroUpdatePolicy {
     const val PACKAGE_NAME = "com.klyro.shell"
+    const val CONSOLIDATED_PREVIEW_BRANCH = "integration/senior-release-20261121"
     const val SIGNED_PREVIEW_ARTIFACT = "klyro-shell-debug"
     const val WORKFLOW_PATH = ".github/workflows/android-build.yml"
     const val MAX_APK_BYTES = 250L * 1024L * 1024L
