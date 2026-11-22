@@ -305,6 +305,8 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                 val pressed by pressSource.collectIsPressedAsState()
                 val tabColor by animateColorAsState(if (selected) colors.sheet else colors.key,
                     tween(180), label = "plugin-tab-background")
+                val tabInk by animateColorAsState(if (selected) colors.foreground else colors.muted,
+                    tween(180), label = "plugin-tab-ink")
                 Surface(
                     modifier = Modifier.weight(1f)
                         .heightIn(min = KlyroUiMetrics.minTouch)
@@ -322,7 +324,7 @@ internal fun KlyroPluginsPage(onBack: () -> Unit) {
                     border = if (selected) BorderStroke(1.dp, colors.muted.copy(alpha = .45f)) else null,
                     contentColor = colors.foreground
                 ) {
-                    Text(label, modifier = Modifier.klyroPressScale(pressed, enabled)
+                    Text(label, color = tabInk, modifier = Modifier.klyroPressScale(pressed, enabled)
                         .padding(horizontal = 8.dp, vertical = 11.dp),
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                         fontSize = 13.sp,
