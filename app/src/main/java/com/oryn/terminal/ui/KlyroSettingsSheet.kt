@@ -511,17 +511,27 @@ internal fun KlyroSettingsSheet(
                                                     verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
                                                 ) {
                                                     // Each option is its own type specimen, not a separate terminal preview.
-                                                    Text("Aa 0O 1l",
+                                                    // Compare the same ambiguous glyphs at an enlarged, equal scale.
+                                                    // Do not change weight or ink when selected: the font itself is the comparison.
+                                                    Text("0O 1l",
                                                         modifier = Modifier.clearAndSetSemantics { },
                                                         color = colors.foreground,
                                                         fontFamily = previewFonts.getValue(option.id),
-                                                        fontSize = 20.sp,
-                                                        lineHeight = 24.sp)
+                                                        fontWeight = FontWeight.Normal,
+                                                        fontSize = 32.sp,
+                                                        lineHeight = 38.sp,
+                                                        letterSpacing = 0.sp)
                                                     Text(option.label,
                                                         color = if (active) colors.accent else colors.foreground,
                                                         fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                                                         style = MaterialTheme.typography.labelMedium,
                                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                                    Text(
+                                                        if (option.id == "system") "Android default" else "Designed for code",
+                                                        color = colors.muted,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                    )
                                                 }
                                             }
                                         }

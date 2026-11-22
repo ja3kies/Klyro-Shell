@@ -29,7 +29,12 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         typography = settings.split('KlyroAppearanceGroup("Terminal text")', 1)[1].split(
             'KlyroAppearanceGroup("Launcher icon")', 1)[0]
         self.assertIn("FontFamily(KlyroTerminalFonts.load(context, option.id))", typography)
-        self.assertIn('Text("Aa 0O 1l"', typography)
+        self.assertIn('Text("0O 1l"', typography)
+        self.assertIn("fontSize = 32.sp", typography)
+        self.assertIn("fontWeight = FontWeight.Normal", typography)
+        self.assertIn("letterSpacing = 0.sp", typography)
+        self.assertIn('"Android default"', typography)
+        self.assertIn('"Designed for code"', typography)
         self.assertIn("fontFamily = previewFonts.getValue(option.id)", typography)
         self.assertIn("font-family-outline", typography)
         self.assertIn("selected = active", typography)
