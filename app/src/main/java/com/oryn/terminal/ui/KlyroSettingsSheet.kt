@@ -52,6 +52,12 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.selection.toggleable
+import com.oryn.terminal.HomeIllustration
+import com.oryn.terminal.HomeIllustrationSettings
+import com.oryn.terminal.homeIllustrationPrefs
+import com.oryn.terminal.rememberHomeIllustrationSettings
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -137,10 +143,13 @@ internal fun KlyroSettingsSheet(
     var showFontLicense by rememberSaveable { mutableStateOf(false) }
     var sourceCodeProLicense by rememberSaveable { mutableStateOf(false) }
     var showHugeiconsLicense by rememberSaveable { mutableStateOf(false) }
+    var showIllustrationLicense by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var showMonochromeThemes by rememberSaveable { mutableStateOf(themeMode.startsWith("mono-")) }
     var cannotOpenPermissions by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
+    val illustration by rememberHomeIllustrationSettings()
+    val illustrationPrefs = remember(context) { homeIllustrationPrefs(context) }
     val updatePreferences = remember(context) {
         context.getSharedPreferences("klyro_updates", Context.MODE_PRIVATE)
     }
@@ -203,6 +212,7 @@ internal fun KlyroSettingsSheet(
             showColorPicker -> showColorPicker = false
             showFontLicense -> showFontLicense = false
             showHugeiconsLicense -> showHugeiconsLicense = false
+            showIllustrationLicense -> showIllustrationLicense = false
             cannotOpenPermissions -> cannotOpenPermissions = false
             section == "freeze" -> section = "diagnostics"
             section != "home" -> section = "home"
@@ -211,7 +221,7 @@ internal fun KlyroSettingsSheet(
     }
     // System Back is an external dismissal; the labelled Settings button navigates internally.
     val canDismissSheet = !showColorPicker && !showFontLicense &&
-        !showHugeiconsLicense && !brandUpdating
+        !showHugeiconsLicense && !showIllustrationLicense && !brandUpdating
     BackHandler(enabled = canDismissSheet) { onDismiss() }
     val version = com.oryn.terminal.BuildConfig.VERSION_NAME
     val installedUpdateVersion = remember {
@@ -660,6 +670,80 @@ internal fun KlyroSettingsSheet(
                                 Text("Reopen your launcher if the icon has not refreshed.",
                                     color = colors.muted, style = MaterialTheme.typography.labelSmall)
                             }
+                            KlyroAppearanceGroup("Home illustration") {
+                                Column(Modifier.selectableGroup(),
+                                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
+                                    HomeIllustration.entries.forEach { option ->
+                                        val active = illustration.kind == option
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth()
+                                                .heightIn(min = KlyroUiMetrics.minTouch)
+                                                .clickable(role = Role.RadioButton) {
+                                                    illustrationPrefs.edit().putString("kind", option.name).apply()
+                                                }.semantics { selected = active },
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                            color = if (active) colors.sheet else Color.Transparent,
+                                            border = BorderStroke(1.dp, if (active) colors.accent else colors.muted.copy(alpha = .24f))
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(KlyroUiMetrics.spaceSm),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                                            ) {
+                                                Column(Modifier.weight(1f)) {
+                                                    Text(option.label, color = colors.foreground,
+                                                        style = MaterialTheme.typography.bodyMedium)
+                                                    Text(option.description, color = colors.muted,
+                                                        style = MaterialTheme.typography.labelSmall)
+                                                }
+                                                if (active) Text("Selected", color = colors.accent,
+                                                    style = MaterialTheme.typography.labelSmall)
+                                            }
+                                        }
+                                    }
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .heightIn(min = KlyroUiMetrics.minTouch)
+                                        .toggleable(illustration.advanced, role = Role.Switch) { enabled ->
+                                            illustrationPrefs.edit().putBoolean("advanced", enabled).apply()
+                                        },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Advanced settings", color = colors.foreground,
+                                            style = MaterialTheme.typography.bodyMedium)
+                                        Text("Customize animation behavior", color = colors.muted,
+                                            style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Switch(checked = illustration.advanced, onCheckedChange = null,
+                                        modifier = Modifier.clearAndSetSemantics { })
+                                }
+                                if (illustration.advanced) {
+                                    val speedLabel = "${illustration.speed.toString().removeSuffix(".0")}×"
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Animation speed", color = colors.muted, modifier = Modifier.weight(1f))
+                                        Text(speedLabel, color = colors.foreground)
+                                    }
+                                    KlyroThinSlider(
+                                        value = illustration.speed,
+                                        onValueChange = { illustrationPrefs.edit().putFloat("speed",
+                                            HomeIllustrationSettings.normalizeSpeed(it)).apply() },
+                                        valueRange = .5f..2f, steps = 5, valueLabel = speedLabel,
+                                        modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Home animation speed" }
+                                    )
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("Slower", color = colors.muted, style = MaterialTheme.typography.labelSmall)
+                                        Text("Faster", color = colors.muted, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    if (illustration.speed != 1f) {
+                                        TextButton(onClick = {
+                                            illustrationPrefs.edit().putFloat("speed", 1f).apply()
+                                        }) { Text("Reset") }
+                                    }
+                                }
+                            }
                         }
                     }
                     "keyboard" -> {
@@ -901,6 +985,10 @@ internal fun KlyroSettingsSheet(
                             "Hugeicons licence", "MIT · vector icon set",
                             R.drawable.hugeicons_information_square
                         ) { showHugeiconsLicense = true }
+                        SettingsRowLink(
+                            "Home illustration credits", "Uiverse · MIT",
+                            R.drawable.hugeicons_information_square
+                        ) { showIllustrationLicense = true }
                     }
                     "updates" -> {
                         KlyroSectionHeading("App updates", "Updates are checked inside Klyro.")
@@ -1090,6 +1178,11 @@ internal fun KlyroSettingsSheet(
         if (showHugeiconsLicense) {
             KlyroLicenseDialog("Hugeicons · MIT", "licenses/hugeicons-MIT.txt") {
                 showHugeiconsLicense = false
+            }
+        }
+        if (showIllustrationLicense) {
+            KlyroLicenseDialog("Home illustrations · MIT", "licenses/home-illustrations-MIT.txt") {
+                showIllustrationLicense = false
             }
         }
         if (showFontLicense) {

@@ -87,6 +87,7 @@ internal fun KlyroHomePixelCover(
     onBoundsChanged: ((Rect) -> Unit)? = null
 ) {
     val accent = LocalKlyroColors.current.accent
+    val illustration by rememberHomeIllustrationSettings()
     val motionEnabled = rememberHomeMotionEnabled()
     val started = rememberCoverStarted()
     val phase = if (animate && motionEnabled && started) {
@@ -95,7 +96,7 @@ internal fun KlyroHomePixelCover(
             initialValue = 0f,
             targetValue = 360f,
             animationSpec = infiniteRepeatable(
-                animation = tween(HOME_PATTERN_PERIOD_MS, easing = LinearEasing),
+                animation = tween((HOME_PATTERN_PERIOD_MS / illustration.effectiveSpeed).toInt(), easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             ),
             label = "home-pattern-phase"
@@ -122,6 +123,17 @@ internal fun KlyroHomePixelCover(
             onDrawBehind {
                 drawRect(Color.Black)
                 val angle = phase?.value ?: 0f
+                when (illustration.kind) {
+                    HomeIllustration.MAYFLY -> {
+                        drawHomeMayfly(accent, angle)
+                        return@onDrawBehind
+                    }
+                    HomeIllustration.GRADIENT -> {
+                        drawHomeGradient(accent, angle)
+                        return@onDrawBehind
+                    }
+                    HomeIllustration.CHECKERBOARD -> Unit
+                }
                 val offset = cell * homePatternOffsetCells(angle)
                 val radians = homePatternRotation(angle).toDouble() * Math.PI / 180.0
                 val half = cell / 2f
