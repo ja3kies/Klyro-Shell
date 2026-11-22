@@ -403,6 +403,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
           name: klyro-shell-debug
@@ -425,11 +428,17 @@ jobs:
                   or metadata["apkSha256"] != hashlib.sha256((assets / "klyro-shell.apk").read_bytes()).hexdigest()):
               raise SystemExit("Preview metadata does not match the signed build")
           PY
+          notes_file="docs/PREVIEW_NOTES.md"
+          if [[ ! -s "$notes_file" ]]; then
+            notes_file="$RUNNER_TEMP/klyro-preview-notes.md"
+            printf '%s\n' 'No user-facing highlights have been written for this Preview.' > "$notes_file"
+          fi
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = true
             gh release upload "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --notes-file "$notes_file"
           else
             gh release create "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json \
               --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
-              --title "Klyro Preview · $GITHUB_REF_NAME" --notes "Signed Android build for $GITHUB_REF_NAME."
+              --title "Klyro Preview · $GITHUB_REF_NAME" --notes-file "$notes_file"
           fi

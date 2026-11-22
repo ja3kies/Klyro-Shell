@@ -1,0 +1,4 @@
+- Home shows which session you’ll return to and marks retained sessions that have ended.
+- Home’s illustration keeps moving while it’s visible behind Settings or the repair confirmation.
+- Inactive session tabs and workspace session lists take up less space.
+- Appearance uses smaller theme previews and closer spacing between settings.
