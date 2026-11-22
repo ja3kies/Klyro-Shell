@@ -1,3 +1,4 @@
+- Saved custom accent colors are reusable directly from My colors, preserving opacity; Edit and Remove remain separate actions.
 - Resume the last open terminal session directly from Home, even before executing a command.
 - Open the last workspace from Home when several workspaces exist.
 - Swipe between terminal keys and four pinned command slots, with a compact animated page indicator instead of text tabs. Use custom labels, global or workspace-specific scope, immediate execution, editing, deletion and reordering.

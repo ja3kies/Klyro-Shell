@@ -38,6 +38,10 @@ internal object KlyroFavoriteColors {
             hex + "|" + normalizeLabel(favorite.label)
         }.joinToString("\n")
 
+    /** Restore the exact saved ARGB (including opacity) through the existing theme setter. */
+    fun selectableAccentId(favorite: Favorite): String? =
+        normalizeHex(favorite.hex)?.let { "custom:$it" }
+
     /** Do not silently delete a saved color when the six-slot collection is full. */
     fun canSaveWithoutEviction(favorites: List<Favorite>, hex: String): Boolean {
         val value = normalizeHex(hex) ?: return false

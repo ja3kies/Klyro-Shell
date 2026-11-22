@@ -12,6 +12,6 @@ Review this ledger before every cumulative Preview build. An approved design is 
 | Advanced settings switch, inline animation speed, persisted selection | Home illustration settings + Appearance | JVM settings tests; device verification pending |
 | Four native theme-aware illustrations with separate motion | KlyroHomePixelCover + illustrations | Render tests compiled; device verification pending |
 | User-facing cumulative Preview notes, preserve signed lineage | PREVIEW_NOTES.md + android-build.yml + updater | CI contracts |
-| No customization/hiding Home components for now; no history or command pins on Home | Excluded intentionally | Review before publication |
+| Saved accent favorites can be applied later without entering Edit, with ARGB preserved | KlyroColorPickerDialog + KlyroFavoriteColors | JVM saved-color roundtrip and Compose tap-to-apply regression tests added; device verification pending |\n| No customization/hiding Home components for now; no history or command pins on Home | Excluded intentionally | Review before publication |
 
 Deferred: alternate command creation from terminal history (user wants to discuss later). No new creation-from-history workflow. Physical tests and screenshot comparison remain necessary before claiming the approved UI is visually validated.
