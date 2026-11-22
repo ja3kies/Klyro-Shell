@@ -45,6 +45,15 @@ class MotionRestorationTest(unittest.TestCase):
         self.assertIn("RoundedCornerShape(tabCorner)", plugins)
         self.assertIn("this.selected = selected", plugins)
 
+    def test_system_motion_is_shared_and_press_is_immediate(self):
+        cover = read("KlyroHomePixelCover.kt")
+        self.assertIn("LocalKlyroMotionEnabled.current?.let { return it }", cover)
+        home = read("MainActivity.kt")
+        self.assertIn("LocalKlyroMotionEnabled provides motionEnabled", home)
+        press = read("ui/motion/KlyroMotion.kt").split("fun Modifier.klyroStaggeredEntrance", 1)[0]
+        self.assertIn("if (!motion || pressed) snap() else spring(", press)
+        self.assertIn("if (enabled && motion) scale else 1f", press)
+
     def test_slider_stretches_only_visual_thumb_on_drag(self):
         shared = read("ui/KlyroUiComponents.kt")
         self.assertIn("scaleX = thumbScale", shared)

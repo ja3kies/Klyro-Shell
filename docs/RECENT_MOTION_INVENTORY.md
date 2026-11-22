@@ -29,3 +29,9 @@ Port only the missing motion behavior to the newest branch. Preserve existing ac
 - [Prior motion source](https://github.com/ja3kies/Klyro-Shell/tree/feat/premium-motion-system)
 - [Rotation implementation](https://github.com/ja3kies/Klyro-Shell/commit/12f332893832d2f9ce7436ded15dadf6501421ea)
 - [Rotation regression tests](https://github.com/ja3kies/Klyro-Shell/commit/f640da5fba3435d4b4a2d28be071431b456e4e533)
+
+## Final refinement — current integration branch
+
+All listed PR #52 motion ports are now present in source. The accent swatch adds a Calcula-inspired circle-to-rounded-square morph, 45° rotation, tonal ring, and hue-preserving dark selection glyph. Theme previews, typography choices, monochrome disclosure and plugin tabs have bounded selection transitions. Slider feedback stretches in the drag axis. Press feedback is immediate while held and settles on release. A single composition-level system animator-duration observer is shared with child controls; standalone tests retain a fallback. The terminal keyboard, PTY, modal lifecycle and input paths are not replaced. No extra animation dependency is required.
+
+Validation: CI build/compilation and physical-device execution are separate gates. Do not interpret an instrumented APK as an executed Android UI test; use the existing physical-device robot and manual motion inspection for final runtime evidence.

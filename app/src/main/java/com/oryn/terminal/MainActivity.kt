@@ -522,8 +522,10 @@ class MainActivity : ComponentActivity() {
             }
             // Animate only Compose colors. Native PTY palette and system bars keep
             // their final values, avoiding per-frame native and Binder updates.
-            val visualPalette = com.oryn.terminal.ui.rememberAnimatedKlyroPalette(palette)
-            CompositionLocalProvider(LocalKlyroColors provides visualPalette) {
+            val motionEnabled = rememberHomeMotionEnabled()
+            val visualPalette = com.oryn.terminal.ui.rememberAnimatedKlyroPalette(palette, motionEnabled)
+            CompositionLocalProvider(LocalKlyroColors provides visualPalette,
+                LocalKlyroMotionEnabled provides motionEnabled) {
                 MaterialTheme(
                     colorScheme = if (darkTheme) darkColorScheme(
                         surface = visualPalette.chrome,

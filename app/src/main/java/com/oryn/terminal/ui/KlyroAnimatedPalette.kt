@@ -9,8 +9,10 @@ import com.oryn.terminal.rememberHomeMotionEnabled
 
 /** Animate accent changes within an appearance; snap across light/dark for readable contrast. */
 @Composable
-internal fun rememberAnimatedKlyroPalette(target: KlyroColors): KlyroColors {
-    val motion = rememberHomeMotionEnabled()
+internal fun rememberAnimatedKlyroPalette(
+    target: KlyroColors,
+    motion: Boolean = rememberHomeMotionEnabled()
+): KlyroColors {
     val transition = updateTransition(target, label = "Klyro accent")
     val background by transition.animateColor(transitionSpec = { tween(420) }, label = "background") { it.background }
     val chrome by transition.animateColor(transitionSpec = { tween(420) }, label = "chrome") { it.chrome }

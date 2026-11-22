@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -173,9 +174,13 @@ private fun rememberCoverStarted(): Boolean {
     return started
 }
 
-/** React immediately when accessibility settings change while Home is visible. */
+/** One system-motion observer per app composition; standalone previews and tests can fall back. */
+internal val LocalKlyroMotionEnabled = compositionLocalOf<Boolean?> { null }
+
+/** React immediately when accessibility settings change. */
 @Composable
 internal fun rememberHomeMotionEnabled(): Boolean {
+    LocalKlyroMotionEnabled.current?.let { return it }
     val context = LocalContext.current
     fun readMotionEnabled() = runCatching {
         Settings.Global.getFloat(

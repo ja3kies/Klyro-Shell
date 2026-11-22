@@ -7,6 +7,8 @@ import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
+import com.oryn.terminal.rememberHomeMotionEnabled
 import androidx.compose.animation.core.Spring
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.LocalRippleConfiguration
@@ -70,7 +72,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -371,8 +372,9 @@ internal fun KlyroThinSlider(
     val colors = LocalKlyroColors.current
     val interactionSource = remember { MutableInteractionSource() }
     val dragging by interactionSource.collectIsDraggedAsState()
-    val thumbScale by animateFloatAsState(if (dragging) 1.13f else 1f,
-        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+    val motion = rememberHomeMotionEnabled()
+    val thumbScale by animateFloatAsState(if (dragging && motion) 1.13f else 1f,
+        if (!motion) snap() else spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
         label = "slider-drag-feedback")
     val pressed by interactionSource.collectIsPressedAsState()
     val focused by interactionSource.collectIsFocusedAsState()
