@@ -9,9 +9,9 @@ class HomeSettingsUX(unittest.TestCase):
  def test_home_has_settings_without_creating_pty(self):
   self.assertIn('onClickLabel = "Open Klyro settings"',M)
   self.assertIn('showHomeSettings = true',M)
-  self.assertIn('if (showHomeSettings) {\n        KlyroSettingsSheet(',M)
+  self.assertRegex(M, r'if \(showHomeSettings\) \{\s*CompositionLocalProvider\(LocalHomePatternVisibility provides homePatternVisibility\) \{\s*KlyroSettingsSheet\(')
   self.assertIn('onDismiss = { showHomeSettings = false }',M)
-  settings=M.split('if (showHomeSettings) {',1)[1].split('if (showRepairConfirmation)',1)[0]
+  settings=M.split('CompositionLocalProvider(LocalHomePatternVisibility provides homePatternVisibility)',1)[1].split('if (showRepairConfirmation)',1)[0]
   self.assertNotIn('launchBash()',settings)
  def test_font_preferences_are_not_duplicated_in_app_state(self):
   self.assertIn('getSharedPreferences("klyro_terminal_preferences"',M)
