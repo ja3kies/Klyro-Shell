@@ -13,6 +13,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.draw.rotate
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -411,6 +415,10 @@ internal fun KlyroSettingsSheet(
                                                 KlyroColors.primary.forEach { preset ->
                                                     val swatch = KlyroColors.create(colors.dark, preset.id)
                                                     val active = accentId == preset.id
+                                                    val selection by animateFloatAsState(
+                                                        if (active) 1f else 0f, tween(260),
+                                                        label = "accent-selection-${preset.id}"
+                                                    )
                                                     Box(
                                                         modifier = Modifier.size(KlyroUiMetrics.minTouch)
                                                             .clickable(role = Role.RadioButton,
@@ -433,11 +441,15 @@ internal fun KlyroSettingsSheet(
                                                                 ) else Modifier),
                                                             contentAlignment = Alignment.Center
                                                         ) {
-                                                            if (active) {
-                                                                Icon(painterResource(R.drawable.klyro_accent_shaked),
-                                                                    contentDescription = null, tint = swatch.onAccent,
-                                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                                                            }
+                                                            Icon(painterResource(R.drawable.klyro_accent_shaked),
+                                                                contentDescription = null,
+                                                                tint = lerp(swatch.onAccent, swatch.accent, .14f),
+                                                                modifier = Modifier.size(18.dp).graphicsLayer {
+                                                                    alpha = selection
+                                                                    scaleX = .72f + .28f * selection
+                                                                    scaleY = scaleX
+                                                                    rotationZ = -24f * (1f - selection)
+                                                                })
                                                         }
                                                     }
                                                 }
