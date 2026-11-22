@@ -79,6 +79,9 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -463,10 +466,37 @@ internal fun KlyroSettingsSheet(
                                     }
                                 }
                             }
-                            KlyroAppearanceGroup("Text") {
+                            KlyroAppearanceGroup("Terminal text") {
+                                val displayedFontSize = KlyroTerminalFonts.normalizeSize(fontSizeSp)
+                                val fontSizeLabel = "${displayedFontSize.toInt()} sp"
+                                val previewFonts = remember(context) {
+                                    KlyroTerminalFonts.options.associate { option ->
+                                        option.id to FontFamily(KlyroTerminalFonts.load(context, option.id))
+                                    }
+                                }
+                                // Render a static command sample in the actual terminal typeface
+                                // and size. No commands run and no terminal session is required.
+                                Surface(
+                                    color = colors.terminal,
+                                    shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                    modifier = Modifier.fillMaxWidth()
+                                        .semantics { contentDescription = "Terminal text preview" }
+                                ) {
+                                    Text(
+                                        text = buildAnnotatedString {
+                                            withStyle(SpanStyle(color = colors.terminalPrompt)) {
+                                                append("› ls\n")
+                                            }
+                                            append("src  README.md")
+                                        },
+                                        color = colors.terminalInk,
+                                        fontFamily = previewFonts.getValue(KlyroTerminalFonts.normalize(fontFamilyId)),
+                                        fontSize = displayedFontSize.sp,
+                                        lineHeight = (displayedFontSize * 1.35f).sp,
+                                        modifier = Modifier.padding(KlyroUiMetrics.spaceMd)
+                                    )
+                                }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                    Text("Terminal font", color = colors.muted,
-                                        style = MaterialTheme.typography.bodyMedium)
                                     KlyroSettingsChoiceGrid(columns = 2, minimumInlineWidth = appearanceInlineWidth) {
                                         KlyroTerminalFonts.options.forEach { option ->
                                             val active = fontFamilyId == option.id
@@ -501,6 +531,7 @@ internal fun KlyroSettingsSheet(
                                                     ), color = colors.foreground,
                                                         fontWeight = if (active) FontWeight.SemiBold
                                                             else FontWeight.Normal,
+                                                        fontFamily = previewFonts.getValue(option.id),
                                                         style = MaterialTheme.typography.labelMedium)
                                                 }
                                             }
@@ -508,30 +539,24 @@ internal fun KlyroSettingsSheet(
                                     }
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
-                                    val displayedFontSize = KlyroTerminalFonts.normalizeSize(fontSizeSp)
-                                    val fontSizeLabel = displayedFontSize.toInt().toString()
-                                    KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false, minimumInlineWidth = appearanceInlineWidth) {
-                                        Box(
-                                            modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
-                                            contentAlignment = Alignment.CenterStart
-                                        ) {
-                                            Text("Font size", color = colors.muted,
-                                                style = MaterialTheme.typography.bodyMedium)
-                                        }
-                                        Row(Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
-                                            horizontalArrangement = Arrangement.End,
-                                            verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                fontSizeLabel,
-                                                color = colors.foreground, fontWeight = FontWeight.Medium,
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            if (displayedFontSize != KlyroTerminalFonts.DEFAULT_SIZE) {
-                                                TextButton(
-                                                    onClick = onResetFont,
-                                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                                ) { Text("Reset", style = MaterialTheme.typography.bodyMedium) }
-                                            }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Font size", color = colors.muted,
+                                            modifier = Modifier.weight(1f),
+                                            style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            fontSizeLabel,
+                                            color = colors.foreground, fontWeight = FontWeight.Medium,
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum")
+                                        )
+                                        if (displayedFontSize != KlyroTerminalFonts.DEFAULT_SIZE) {
+                                            TextButton(
+                                                onClick = onResetFont,
+                                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                            ) { Text("Reset", style = MaterialTheme.typography.labelMedium) }
                                         }
                                     }
                                     KlyroThinSlider(
