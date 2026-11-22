@@ -26,6 +26,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.LocalIndication
+import com.oryn.terminal.ui.motion.klyroPressScale
+import com.oryn.terminal.ui.motion.klyroStaggeredEntrance
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
@@ -85,6 +90,7 @@ import androidx.compose.ui.graphics.toArgb
 import com.oryn.terminal.ui.KlyroColors
 import com.oryn.terminal.ui.KlyroUiMetrics
 import com.oryn.terminal.ui.KlyroSettingsSheet
+import com.oryn.terminal.ui.KlyroWorkspaceSheet
 import com.oryn.terminal.ui.KlyroTerminalFonts
 import com.oryn.terminal.ui.KlyroBrandChoice
 import com.oryn.terminal.ui.LocalKlyroColors
@@ -515,34 +521,39 @@ class MainActivity : ComponentActivity() {
                     controller.isAppearanceLightNavigationBars = !darkTheme
                 }
             }
-            CompositionLocalProvider(LocalKlyroColors provides palette) {
+            // Animate only Compose colors. Native PTY palette and system bars keep
+            // their final values, avoiding per-frame native and Binder updates.
+            val motionEnabled = rememberHomeMotionEnabled()
+            val visualPalette = com.oryn.terminal.ui.rememberAnimatedKlyroPalette(palette, motionEnabled)
+            CompositionLocalProvider(LocalKlyroColors provides visualPalette,
+                LocalKlyroMotionEnabled provides motionEnabled) {
                 MaterialTheme(
                     colorScheme = if (darkTheme) darkColorScheme(
-                        surface = palette.chrome,
-                        primary = palette.accent,
-                        onPrimary = palette.onAccent,
-                        secondary = palette.accent,
-                        onSecondary = palette.onAccent,
-                        surfaceVariant = palette.tile,
-                        onSurfaceVariant = palette.muted,
-                        outline = palette.muted,
-                        error = palette.danger,
-                        background = palette.background,
-                        onBackground = palette.foreground,
-                        onSurface = palette.foreground
+                        surface = visualPalette.chrome,
+                        primary = visualPalette.accent,
+                        onPrimary = visualPalette.onAccent,
+                        secondary = visualPalette.accent,
+                        onSecondary = visualPalette.onAccent,
+                        surfaceVariant = visualPalette.tile,
+                        onSurfaceVariant = visualPalette.muted,
+                        outline = visualPalette.muted,
+                        error = visualPalette.danger,
+                        background = visualPalette.background,
+                        onBackground = visualPalette.foreground,
+                        onSurface = visualPalette.foreground
                     ) else lightColorScheme(
-                        surface = palette.chrome,
-                        primary = palette.accent,
-                        onPrimary = palette.onAccent,
-                        secondary = palette.accent,
-                        onSecondary = palette.onAccent,
-                        surfaceVariant = palette.tile,
-                        onSurfaceVariant = palette.muted,
-                        outline = palette.muted,
-                        error = palette.danger,
-                        background = palette.background,
-                        onBackground = palette.foreground,
-                        onSurface = palette.foreground
+                        surface = visualPalette.chrome,
+                        primary = visualPalette.accent,
+                        onPrimary = visualPalette.onAccent,
+                        secondary = visualPalette.accent,
+                        onSecondary = visualPalette.onAccent,
+                        surfaceVariant = visualPalette.tile,
+                        onSurfaceVariant = visualPalette.muted,
+                        outline = visualPalette.muted,
+                        error = visualPalette.danger,
+                        background = visualPalette.background,
+                        onBackground = visualPalette.foreground,
+                        onSurface = visualPalette.foreground
                     )
                 ) {
                 // Material3 and foundation controls share the same transparent
@@ -1206,6 +1217,7 @@ private fun OrynTerminalApp(
     // Preserve the plugin route across rotation; navigating back never stops a PTY.
     var showPlugins by rememberSaveable { mutableStateOf(false) }
     var showHomeSettings by rememberSaveable { mutableStateOf(false) }
+    var showHomeWorkspaces by rememberSaveable { mutableStateOf(false) }
     // Keep the saveable position alive when Plugins or Terminal replaces Home.
     val homeScrollState = rememberScrollState()
     var homeLauncherIcon by remember(context) {
@@ -1261,6 +1273,28 @@ private fun OrynTerminalApp(
     val calmHomeReady = badge.severity == KlyroRuntimeBadgeSeverity.READY &&
         technicalErrorDetails == null && homeStatus.terminalFailure == null
     val homeWorkspaceName = workspaces.firstOrNull { it.id == selectedWorkspaceId }?.name ?: "General"
+    val recentSession = homeRecentSession(activeTabId, tabs, tabWorkspaces,
+        workspaces.associate { it.id to it.name }, finishedTabIds)
+    val recentPty = recentSession?.let { jobSessions[it.id] }
+    var recentDirectory by remember(recentSession?.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(session, showPlugins, recentSession?.id, recentPty) {
+        if (session == null && !showPlugins && recentPty != null) {
+            recentDirectory = withContext(Dispatchers.IO) {
+                runCatching {
+                    val home = OrynPaths(context.filesDir,
+                        File(context.applicationInfo.nativeLibraryDir)).home.absolutePath
+                    homeDisplayDirectory(recentPty.cwd, home)
+                }.getOrNull()
+            }
+        }
+    }
+    fun resumeHomeTab(id: Long) {
+        onSelectTab(id)
+        if (currentSessionId() == id) {
+            showHomeWorkspaces = false
+            onLaunch()
+        }
+    }
     val stateColor = when (badge.severity) {
         KlyroRuntimeBadgeSeverity.READY -> ui.readyInk
         KlyroRuntimeBadgeSeverity.WARNING -> ui.warningInk
@@ -1304,6 +1338,7 @@ private fun OrynTerminalApp(
         )
     }
     val screenChrome = ui.chrome
+    val homePatternVisibility = remember { HomePatternVisibility() }
     val homeVisible = !showPlugins &&
         !(session != null && sessionClient != null && viewClient != null)
     val compactHomeHeight = LocalConfiguration.current.screenHeightDp < 660
@@ -1320,7 +1355,9 @@ private fun OrynTerminalApp(
 
     Box(Modifier.fillMaxSize().background(screenChrome)) {
         if (homeVisible) {
-            KlyroHomePixelCover(bannerHeight, screenChrome, animate = !showHomeSettings && !showRepairConfirmation)
+            KlyroHomePixelCover(bannerHeight, screenChrome,
+                animate = (!showHomeSettings && !showHomeWorkspaces) || homePatternVisibility.shouldAnimate,
+                onBoundsChanged = { homePatternVisibility.coverBounds = it })
         }
         Surface(
             modifier = Modifier.fillMaxSize()
@@ -1399,6 +1436,7 @@ private fun OrynTerminalApp(
                 ) {
                     Box(
                         modifier = Modifier.size(56.dp)
+                            .klyroStaggeredEntrance(0, "home-brand")
                             .clip(RoundedCornerShape(17.dp))
                             .background(ui.tile),
                         contentAlignment = Alignment.Center
@@ -1430,7 +1468,10 @@ private fun OrynTerminalApp(
                 ) {
                     // An existing PTY remains reachable while runtime checks fail or run.
                     if (homeAction != KlyroHomeAction.NONE) {
+                        val launchSource = remember { MutableInteractionSource() }
+                        val launchPressed by launchSource.collectIsPressedAsState()
                         Button(
+                            interactionSource = launchSource,
                             onClick = onLaunch,
                             enabled = homeAction != KlyroHomeAction.START_BASH || !launchingBash,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
@@ -1452,7 +1493,7 @@ private fun OrynTerminalApp(
                                 else if (launchingBash) "Starting Bash…"
                                 else "Launch Bash",
                                 fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).klyroPressScale(launchPressed),
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Start
                             )
                             Icon(
@@ -1489,6 +1530,60 @@ private fun OrynTerminalApp(
                     }
                 }
 
+                recentSession?.let { recent ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(KlyroUiMetrics.cardCorner))
+                            .clickable(role = Role.Button, onClickLabel = "Resume " + recent.title) {
+                                resumeHomeTab(recent.id)
+                            },
+                        color = ui.tile,
+                        shape = RoundedCornerShape(KlyroUiMetrics.cardCorner)
+                    ) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Last session", color = ui.muted,
+                                style = MaterialTheme.typography.labelMedium)
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Icon(painterResource(R.drawable.hugeicons_terminal), null, tint = ui.accent,
+                                    modifier = Modifier.size(24.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(recent.title, color = ui.foreground,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(recentDirectory ?: recent.workspace, color = ui.muted,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    if (recent.finished) Text("Output retained", color = ui.muted,
+                                        style = MaterialTheme.typography.labelSmall)
+                                }
+                                Icon(painterResource(R.drawable.hugeicons_chevron_right), null, tint = ui.muted,
+                                    modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    }
+                }
+                if (workspaces.size > 1) {
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = KlyroUiMetrics.minTouch)
+                            .clip(RoundedCornerShape(KlyroUiMetrics.controlCorner))
+                            .clickable(role = Role.Button, onClickLabel = "Open last workspace") {
+                                showHomeWorkspaces = true
+                            }.padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(painterResource(R.drawable.hugeicons_folder_01), null, tint = ui.muted,
+                            modifier = Modifier.size(22.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Last workspace", color = ui.muted, style = MaterialTheme.typography.labelSmall)
+                            Text(homeWorkspaceName, color = ui.foreground, style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Icon(painterResource(R.drawable.hugeicons_chevron_right), null, tint = ui.muted,
+                            modifier = Modifier.size(20.dp))
+                    }
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
                     color = if (calmHomeReady) screenChrome else ui.sheet,
@@ -1496,7 +1591,7 @@ private fun OrynTerminalApp(
                     border = if (calmHomeReady) null else BorderStroke(1.dp, ui.key.copy(alpha = .5f))
                 ) {
                     Column(
-                        modifier = Modifier.padding(if (calmHomeReady) 8.dp else 16.dp),
+                        modifier = Modifier.klyroStaggeredEntrance(1, "home-runtime-status").padding(if (calmHomeReady) 8.dp else 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         val stackRuntimeAction = LocalDensity.current.fontScale >= 1.3f ||
@@ -1704,6 +1799,10 @@ private fun OrynTerminalApp(
                 }
 
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val pluginsSource = remember { MutableInteractionSource() }
+                    val settingsSource = remember { MutableInteractionSource() }
+                    val pluginsPressed by pluginsSource.collectIsPressedAsState()
+                    val settingsPressed by settingsSource.collectIsPressedAsState()
                     val compactTiles = maxWidth < 340.dp ||
                         LocalDensity.current.fontScale >= 1.3f
                     if (compactTiles) {
@@ -1714,8 +1813,10 @@ private fun OrynTerminalApp(
                                 iconRes = R.drawable.ic_klyro_plugins,
                                 emphasized = true,
                                 horizontal = compactTiles,
+                                pressed = pluginsPressed,
                                 modifier = Modifier.fillMaxWidth()
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                    .clickable(interactionSource = pluginsSource, indication = LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro plugins") {
                                         showPlugins = true
                                     }.semantics { contentDescription = "Plugins" }
                             )
@@ -1725,8 +1826,10 @@ private fun OrynTerminalApp(
                                 iconRes = R.drawable.hugeicons_settings_01,
                                 emphasized = false,
                                 horizontal = compactTiles,
+                                pressed = settingsPressed,
                                 modifier = Modifier.fillMaxWidth()
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                    .clickable(interactionSource = settingsSource, indication = LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro settings") {
                                         showHomeSettings = true
                                     }.semantics { contentDescription = "Settings" }
                             )
@@ -1739,8 +1842,10 @@ private fun OrynTerminalApp(
                                 iconRes = R.drawable.ic_klyro_plugins,
                                 emphasized = true,
                                 horizontal = compactTiles,
+                                pressed = pluginsPressed,
                                 modifier = Modifier.weight(1f)
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro plugins") {
+                                    .clickable(interactionSource = pluginsSource, indication = LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro plugins") {
                                         showPlugins = true
                                     }.semantics { contentDescription = "Plugins" }
                             )
@@ -1750,8 +1855,10 @@ private fun OrynTerminalApp(
                                 iconRes = R.drawable.hugeicons_settings_01,
                                 emphasized = false,
                                 horizontal = compactTiles,
+                                pressed = settingsPressed,
                                 modifier = Modifier.weight(1f)
-                                    .clickable(role = Role.Button, onClickLabel = "Open Klyro settings") {
+                                    .clickable(interactionSource = settingsSource, indication = LocalIndication.current,
+                                        role = Role.Button, onClickLabel = "Open Klyro settings") {
                                         showHomeSettings = true
                                     }.semantics { contentDescription = "Settings" }
                             )
@@ -1764,7 +1871,21 @@ private fun OrynTerminalApp(
         }
     }
     }
+    if (showHomeWorkspaces && homeVisible) {
+        CompositionLocalProvider(LocalHomePatternVisibility provides homePatternVisibility) {
+            KlyroWorkspaceSheet(
+                entries = workspaces, selectedId = selectedWorkspaceId,
+                tabs = tabs, tabWorkspaces = tabWorkspaces, activeTabId = null,
+                onSelectProject = onSelectWorkspace, onCreateProject = onCreateWorkspace,
+                onRenameProject = onRenameWorkspace, onDeleteProject = onDeleteWorkspace,
+                onAssignCurrentTab = {},
+                onSwitchTab = ::resumeHomeTab, onRenameTab = onRenameTab, onCloseTab = onCloseTab,
+                onDismiss = { showHomeWorkspaces = false }
+            )
+        }
+    }
     if (showHomeSettings) {
+        CompositionLocalProvider(LocalHomePatternVisibility provides homePatternVisibility) {
         KlyroSettingsSheet(
             initialSection = "home",
             themeMode = themeMode,
@@ -1825,6 +1946,7 @@ private fun OrynTerminalApp(
             },
             onDismiss = { showHomeSettings = false }
         )
+        }
     }
     if (showRepairConfirmation) {
         AlertDialog(
@@ -1857,7 +1979,8 @@ private fun KlyroHomeNavigationTile(
     iconRes: Int,
     emphasized: Boolean,
     horizontal: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    pressed: Boolean = false
 ) {
     val ui = LocalKlyroColors.current
     val iconColor = if (emphasized) ui.accent else ui.muted
@@ -1868,7 +1991,8 @@ private fun KlyroHomeNavigationTile(
     ) {
         if (horizontal) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.klyroStaggeredEntrance(if (emphasized) 2 else 3, "home-$title")
+                    .klyroPressScale(pressed).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -1891,7 +2015,8 @@ private fun KlyroHomeNavigationTile(
             }
         } else {
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.klyroStaggeredEntrance(if (emphasized) 2 else 3, "home-$title")
+                    .klyroPressScale(pressed).padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(

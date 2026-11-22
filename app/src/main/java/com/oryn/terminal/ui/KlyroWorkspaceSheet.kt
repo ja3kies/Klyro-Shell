@@ -2,12 +2,17 @@ package com.oryn.terminal.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import com.oryn.terminal.ui.motion.klyroPressScale
 import com.oryn.terminal.rememberHomeMotionEnabled
 import kotlin.math.sin
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.snap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.IconButton
 
@@ -206,7 +211,10 @@ internal fun KlyroWorkspaceSheet(
                         (tabWorkspaces[it.first] ?: KlyroWorkspaceCatalog.GENERAL) == entry.id
                     }
                     val active = entry.id == selected.id
-                    val cardColor = if (active) c.accent.copy(alpha = .11f) else c.tile
+                    val cardColor by animateColorAsState(if (active) androidx.compose.ui.graphics.lerp(c.tile, c.accent, .11f) else c.tile,
+                        if (motionEnabled) tween(200) else snap(), label = "workspace-selection")
+                    val pressSource = remember(entry.id) { MutableInteractionSource() }
+                    val pressed by pressSource.collectIsPressedAsState()
                     Surface(
                         color = cardColor,
                         border = if (active) BorderStroke(KlyroUiMetrics.selectedBorder,
@@ -221,10 +229,12 @@ internal fun KlyroWorkspaceSheet(
                             Row(
                                 modifier = Modifier.weight(1f)
                                     .heightIn(min = KlyroUiMetrics.workspaceRow)
-                                    .clickable(role = Role.RadioButton,
+                                    .clickable(interactionSource = pressSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        role = Role.RadioButton,
                                         onClickLabel = "Select workspace " + entry.name) {
                                         onSelectProject(entry.id)
-                                    }.semantics { this.selected = active },
+                                    }.semantics { this.selected = active }.klyroPressScale(pressed),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
@@ -300,9 +310,9 @@ internal fun KlyroWorkspaceSheet(
                 if (editorId != null) {
                     val editing = !editorId.isNullOrEmpty()
                     val editTarget = entries.firstOrNull { it.id == editorId }
-                    val canSave = editorText.trim().isNotEmpty() &&
+                    val canSave = editorText.trim().isNotEmpty() && KlyroWorkspaceCatalog.cleanName(editorText).isNotEmpty() &&
                         (!editing || (editTarget != null &&
-                            editorText.trim() != editTarget.name))
+                            KlyroWorkspaceCatalog.cleanName(editorText) != editTarget.name))
                     fun saveWorkspaceEdit() {
                         if (!canSave || editorId == null) return
                         val saved = if (editing) {
@@ -326,7 +336,7 @@ internal fun KlyroWorkspaceSheet(
                             OutlinedTextField(
                                 value = editorText,
                                 onValueChange = {
-                                    editorText = it.take(KlyroWorkspaceCatalog.MAX_NAME_CHARS)
+                                    editorText = KlyroWorkspaceCatalog.limitDraftName(it)
                                     editorError = false
                                 },
                                 label = { Text("Workspace name") },
@@ -494,7 +504,7 @@ internal fun KlyroWorkspaceSheet(
                 title = { Text("Delete " + name + "?") },
                 text = {
                     Text(if (target == null) "Workspace no longer available. Cancel this action."
-                        else "Its sessions return to General. No shell or files are deleted.")
+                        else "Its sessions return to General. Workspace-only pinned commands are removed. No shell or files are deleted.")
                 },
                 confirmButton = {
                     TextButton(

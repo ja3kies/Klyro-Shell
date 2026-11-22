@@ -24,6 +24,35 @@ class KlyroMobileDesignAudit(unittest.TestCase):
             self.assertIn('"' + section + '" -> {', settings)
         self.assertNotIn("SettingsTile(", settings)
 
+    def test_terminal_font_choices_show_their_own_glyphs_without_extra_preview(self):
+        settings = src(UI / "KlyroSettingsSheet.kt")
+        typography = settings.split('KlyroAppearanceGroup("Terminal text")', 1)[1].split(
+            'KlyroAppearanceGroup("Launcher icon")', 1)[0]
+        self.assertIn("FontFamily(KlyroTerminalFonts.load(context, option.id))", typography)
+        self.assertIn('Text("0O 1l"', typography)
+        self.assertIn("fontSize = 32.sp", typography)
+        self.assertIn("fontWeight = FontWeight.Normal", typography)
+        self.assertIn("letterSpacing = 0.sp", typography)
+        self.assertIn('"Android default"', typography)
+        self.assertIn('"Designed for code"', typography)
+        self.assertIn("fontFamily = previewFonts.getValue(option.id)", typography)
+        self.assertIn("font-family-outline", typography)
+        self.assertIn("selected = active", typography)
+        self.assertIn('fontFeatureSettings = "tnum"', typography)
+        self.assertIn('${displayedFontSize.toInt()} sp', typography)
+        self.assertIn("onClick = onResetFont", typography)
+        self.assertIn("onFontFamilyChange(option.id)", typography)
+        self.assertIn("onFontChange(KlyroTerminalFonts.normalizeSize(it))", typography)
+        self.assertNotIn("Terminal text preview", typography)
+        self.assertNotIn('Text("Terminal font"', typography)
+
+    def test_slider_thumb_is_solid_without_losing_feedback(self):
+        thumb = src(UI / "KlyroUiComponents.kt").split("internal fun KlyroThinSlider(", 1)[1].split("track =", 1)[0]
+        self.assertNotIn("Modifier.size(8.dp).background(colors.chrome, CircleShape)", thumb)
+        self.assertIn(".background(colors.foreground, CircleShape)", thumb)
+        self.assertIn("valueLabel != null && (dragging || pressed || focused)", thumb)
+        self.assertIn("scaleX = thumbScale", thumb)
+
     def test_typography_controls_use_slider_not_oversized_steppers(self):
         settings = src(UI / "KlyroSettingsSheet.kt")
         self.assertIn("KlyroThinSlider(", settings)
@@ -35,7 +64,10 @@ class KlyroMobileDesignAudit(unittest.TestCase):
         self.assertIn("KlyroUiMetrics.iosSliderTrack", shared)
         self.assertNotIn('Text("A−")', settings)
         self.assertNotIn('Text("A+")', settings)
-        self.assertIn("KlyroUiMetrics.accentSwatch", settings)
+        self.assertIn("KlyroAccentSwatch(", settings)
+        swatch = src(UI / "KlyroAccentSwatch.kt")
+        self.assertIn("KlyroUiMetrics.accentSwatch", swatch)
+        self.assertIn("Role.RadioButton", swatch)
         self.assertIn("Role.RadioButton", settings)
 
     def test_workspaces_use_compact_left_aligned_rows_with_contextual_actions(self):
@@ -134,7 +166,8 @@ class KlyroMobileDesignAudit(unittest.TestCase):
                 self.assertEqual(page.count("KlyroSheet("), count)
                 self.assertNotIn("ModalBottomSheet(", page)
         settings = src(UI / "KlyroSettingsSheet.kt")
-        self.assertEqual(settings.count("KlyroLicenseDialog("), 2)
+        self.assertEqual(settings.count("KlyroLicenseDialog("), 3)
+        self.assertIn('"licenses/home-illustrations-MIT.txt"', settings)
         self.assertNotIn("private fun SectionHeading(", settings)
         self.assertNotIn("Klyro SAF access · no Unix mount", settings)
         self.assertNotIn("Terminal settings and Android integration", settings)

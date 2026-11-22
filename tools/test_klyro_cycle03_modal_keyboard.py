@@ -91,9 +91,24 @@ class CycleThreeUX(unittest.TestCase):
         self.assertIn("onClick = onResetFont,", self.settings)
         self.assertIn("modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)", self.settings)
 
-    def test_launcher_selected_state_has_visual_check(self):
-        self.assertIn("if (brandReady && selectedBrand == choice)", self.settings)
-        self.assertIn("R.drawable.hugeicons_checkmark_circle_01", self.settings)
+    def test_launcher_selected_state_has_visual_border(self):
+        launcher = self.settings.split('KlyroAppearanceGroup("Launcher icon")', 1)[1].split('"keyboard" ->', 1)[0]
+        self.assertIn("selected = brandReady && selectedBrand == choice", launcher)
+        self.assertIn("border = if (brandReady && selectedBrand == choice) BorderStroke(1.dp, colors.accent) else null", launcher)
+
+    def test_accent_selected_state_has_custom_glyph(self):
+        self.assertIn("KlyroAccentSwatch(", self.settings)
+        swatch = (UI / "KlyroAccentSwatch.kt").read_text()
+        self.assertIn("R.drawable.klyro_accent_shaked", swatch)
+        self.assertIn("tint = accentGlyphTint(accent)", swatch)
+        self.assertIn("accent-swatch-selection", swatch)
+        self.assertIn("alpha = selection", swatch)
+        self.assertIn("rotationZ = 45f * (1f - selection)", swatch)
+        self.assertIn("size.minDimension * (.5f - .2f * p)", swatch)
+        self.assertIn("animationSpec = if (motion)", swatch)
+        self.assertIn("selected = active", swatch)
+        self.assertIn("Modifier.size(KlyroUiMetrics.minTouch)", swatch)
+        self.assertTrue((UI.parents[4] / "res/drawable/klyro_accent_shaked.xml").is_file())
 
     def test_launcher_error_can_recover_on_verified_choice(self):
         self.assertIn("KlyroBrandChoice.isVerifiedSelection(context, choice) ||", self.settings)

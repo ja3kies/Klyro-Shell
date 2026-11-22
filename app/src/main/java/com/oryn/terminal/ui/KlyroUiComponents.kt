@@ -1,8 +1,16 @@
 package com.oryn.terminal.ui
 
+import com.oryn.terminal.ui.motion.klyroPressScale
+
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
+import com.oryn.terminal.rememberHomeMotionEnabled
+import androidx.compose.animation.core.Spring
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.ripple
@@ -58,13 +66,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import com.oryn.terminal.LocalHomePatternVisibility
+import com.oryn.terminal.homeSheetPlacedBounds
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.SheetValue
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -133,8 +151,31 @@ internal fun KlyroSheet(
         skipPartiallyExpanded = true,
         confirmValueChange = { it != SheetValue.Hidden || dismissal.canDismiss(enabled.value) }
     )
+    val homePattern = LocalHomePatternVisibility.current
+    var measuredSheetSize by remember { mutableStateOf(IntSize.Zero) }
+    DisposableEffect(homePattern) {
+        onDispose { homePattern?.clearSheet() }
+    }
+    LaunchedEffect(sheetState, homePattern) {
+        if (homePattern != null) {
+            snapshotFlow {
+                sheetState.targetValue == SheetValue.Hidden && sheetState.currentValue != SheetValue.Hidden
+            }.collect { homePattern.closing = it }
+        }
+    }
+    LaunchedEffect(homePattern) {
+        if (homePattern != null) {
+            snapshotFlow { homePattern.sheetBounds }.collectLatest {
+                delay(200)
+                homePattern.settleMovement()
+            }
+        }
+    }
     ModalBottomSheet(
-        modifier = Modifier.testTag("klyro-modal-sheet"),
+        modifier = Modifier.testTag("klyro-modal-sheet")
+            .then(if (homePattern != null) Modifier.onSizeChanged {
+                measuredSheetSize = it
+            } else Modifier),
         properties = ModalBottomSheetProperties(shouldDismissOnBackPress = dismissEnabled),
         sheetState = sheetState,
         onDismissRequest = { dismissal.dismiss(enabled.value, !sheetState.isVisible) { closeOwner.value() } },
@@ -145,7 +186,26 @@ internal fun KlyroSheet(
             topEnd = KlyroUiMetrics.sheetCorner
         ),
         dragHandle = if (dismissEnabled) { { BottomSheetDefaults.DragHandle(color = colors.muted) } } else null,
-        content = content
+        content = {
+            if (homePattern != null) {
+                // LocalView here belongs to the modal's own Android window.
+                // Observe the actual anchor offset after layout, not the
+                // external modifier coordinates before the sheet is placed.
+                val dialogView = LocalView.current
+                LaunchedEffect(sheetState, homePattern, dialogView) {
+                    val origin = IntArray(2)
+                    snapshotFlow {
+                        measuredSheetSize to runCatching { sheetState.requireOffset() }.getOrNull()
+                    }.collect { (sheetSize, offset) ->
+                        dialogView.getLocationOnScreen(origin)
+                        homePattern.updateSheet(homeSheetPlacedBounds(
+                            origin[0], origin[1], dialogView.width, sheetSize, offset
+                        ))
+                    }
+                }
+            }
+            content()
+        }
     )
 }
 
@@ -188,16 +248,21 @@ internal fun KlyroActionRow(
 ) {
     val colors = LocalKlyroColors.current
     val ink = if (!enabled) colors.muted else if (destructive) colors.danger else colors.muted
+    val pressSource = remember { MutableInteractionSource() }
+    val pressed by pressSource.collectIsPressedAsState()
     Row(
         modifier = Modifier.fillMaxWidth()
             .heightIn(min = KlyroUiMetrics.minTouch)
-            .clickable(enabled = enabled, role = Role.Button,
+            .clickable(interactionSource = pressSource,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                enabled = enabled, role = Role.Button,
                 onClickLabel = label, onClick = onClick)
             .semantics {
                 contentDescription = if (subtitle.isNullOrBlank()) label else "$label. $subtitle"
                 if (!enabled) stateDescription = "Unavailable"
                 else if (destructive) stateDescription = "Destructive action"
             }
+            .klyroPressScale(pressed, enabled)
             .padding(horizontal = KlyroUiMetrics.spaceLg, vertical = KlyroUiMetrics.spaceSm),
         horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceMd),
         verticalAlignment = Alignment.CenterVertically
@@ -360,6 +425,10 @@ internal fun KlyroThinSlider(
     val colors = LocalKlyroColors.current
     val interactionSource = remember { MutableInteractionSource() }
     val dragging by interactionSource.collectIsDraggedAsState()
+    val motion = rememberHomeMotionEnabled()
+    val thumbScale by animateFloatAsState(if (dragging && motion) 1.13f else 1f,
+        if (!motion) snap() else spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+        label = "slider-drag-feedback")
     val pressed by interactionSource.collectIsPressedAsState()
     val focused by interactionSource.collectIsFocusedAsState()
     val labelOffset = with(LocalDensity.current) {
@@ -382,13 +451,17 @@ internal fun KlyroThinSlider(
         thumb = {
             Box(
                 Modifier.size(KlyroUiMetrics.iosSliderThumb)
+                    .graphicsLayer {
+                        // Stretch along the drag axis, instead of swelling in every direction.
+                        scaleX = thumbScale
+                        scaleY = 1f - (thumbScale - 1f) * .35f
+                    }
                     .shadow(if (dragging || pressed) 4.dp else 2.dp, CircleShape)
                     .background(colors.foreground, CircleShape)
                     .border(KlyroUiMetrics.iosSliderBorder,
                         colors.muted.copy(alpha = .35f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Box(Modifier.size(8.dp).background(colors.chrome, CircleShape))
                 if (valueLabel != null && (dragging || pressed || focused)) {
                     Popup(
                         alignment = Alignment.BottomCenter,

@@ -35,6 +35,45 @@ class InAppUpdateContractTest(unittest.TestCase):
         self.assertIn('apk.optString("browser_download_url")', REPO)
         self.assertNotIn('archive_download_url', REPO)
 
+    def test_only_cumulative_branch_may_publish_global_preview(self):
+        self.assertIn("branches: ['**']", WORKFLOW)
+        preview = WORKFLOW.split("  publish-preview:", 1)[1]
+        self.assertIn("github.ref_type == 'branch'", preview)
+        self.assertIn("github.event_name == 'push'", preview)
+        self.assertIn("github.event_name == 'workflow_dispatch'", preview)
+        self.assertIn("needs: debug-apk", preview)
+        self.assertIn("scope: [branch, global]", preview)
+        self.assertIn('tag="preview-latest"', preview)
+        self.assertIn('CONSOLIDATED_BRANCH="integration/senior-release-20261121"', preview)
+        self.assertIn('"$PREVIEW_SCOPE" == global && "$GITHUB_REF_NAME" != "$CONSOLIDATED_BRANCH"', preview)
+        self.assertIn('"$head_sha" != "$GITHUB_SHA"', preview)
+        self.assertIn('compare/$old_sha...$GITHUB_SHA', preview)
+        self.assertIn('metadata["commitSha"] != os.environ["GITHUB_SHA"]', preview)
+        self.assertIn("new_code <= old_code", preview)
+        self.assertIn("cancel-in-progress: false", preview)
+        self.assertIn("--prerelease --latest=false", preview)
+        self.assertIn('metadata["branch"] != os.environ["GITHUB_REF_NAME"]', preview)
+        self.assertIn('metadata["apkSha256"] != hashlib.sha256', preview)
+
+    def test_preview_rejects_unrelated_branch_even_with_newer_build_number(self):
+        self.assertIn('releases/tags/preview-latest', REPO)
+        self.assertIn('releases/tags/preview-$branchHash', REPO)
+        self.assertIn('val safeBranch = KlyroUpdatePolicy.CONSOLIDATED_PREVIEW_BRANCH', REPO)
+        self.assertIn('ignoreOtherBranch = true', REPO)
+        self.assertIn('if (ignoreOtherBranch) return UpdateLookup.NonePublished', REPO)
+        self.assertIn('git merge-base --is-ancestor 9705735f5a654df8625411c9d3d4b3a699ff9172 HEAD', WORKFLOW)
+        self.assertIn('sourceBranch = manifest.optString("branch")', REPO)
+        self.assertIn("publishedBranch.isBlank()", REPO)
+        self.assertNotIn("Source branch: $source", SETTINGS)
+        self.assertIn('Text("What\'s new"', SETTINGS)
+        self.assertIn("may not contain all installed features", SETTINGS)
+
+    def test_preview_release_uses_user_facing_notes_from_exact_build(self):
+        self.assertIn('data["releaseNotes"]', WORKFLOW)
+        self.assertEqual(WORKFLOW.count("--notes-file release-assets/preview-notes.txt"), 2)
+        self.assertNotIn('--notes "Signed Android build for', WORKFLOW)
+        self.assertIn('previewUserNotes(manifest.optString("releaseNotes"), release.optString("body"))', REPO)
+
     def test_expired_preview_has_separate_message_and_recovery_action(self):
         self.assertIn('connection.responseCode in setOf(404, 410)', REPO)
         self.assertIn('stalePreview = true', REPO)

@@ -25,7 +25,7 @@ val releaseVersionName = System.getenv("KLYRO_RELEASE_VERSION_NAME")?.takeIf { i
 val finalVersionName = releaseVersionName ?: (baseKlyroVersionName +
     (ciBuild?.let { (run, attempt) -> ".$run.$attempt" } ?: ""))
 val updateBranch = (System.getenv("GITHUB_HEAD_REF")?.takeIf { it.isNotBlank() }
-    ?: System.getenv("GITHUB_REF_NAME")?.takeIf { it.isNotBlank() && !it.startsWith("v") }
+    ?: System.getenv("GITHUB_REF_NAME")?.takeIf { it.isNotBlank() && System.getenv("GITHUB_REF_TYPE") != "tag" }
     ?: "main").replace("\\", "").replace("\"", "")
 
 android {

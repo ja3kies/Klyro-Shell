@@ -13,6 +13,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.draw.rotate
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import com.oryn.terminal.rememberHomeMotionEnabled
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +52,12 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.selection.toggleable
+import com.oryn.terminal.HomeIllustration
+import com.oryn.terminal.HomeIllustrationSettings
+import com.oryn.terminal.homeIllustrationPrefs
+import com.oryn.terminal.rememberHomeIllustrationSettings
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -69,6 +80,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -129,11 +141,15 @@ internal fun KlyroSettingsSheet(
         }
     }
     var showFontLicense by rememberSaveable { mutableStateOf(false) }
+    var sourceCodeProLicense by rememberSaveable { mutableStateOf(false) }
     var showHugeiconsLicense by rememberSaveable { mutableStateOf(false) }
+    var showIllustrationLicense by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var showMonochromeThemes by rememberSaveable { mutableStateOf(themeMode.startsWith("mono-")) }
     var cannotOpenPermissions by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
+    val illustration by rememberHomeIllustrationSettings()
+    val illustrationPrefs = remember(context) { homeIllustrationPrefs(context) }
     val updatePreferences = remember(context) {
         context.getSharedPreferences("klyro_updates", Context.MODE_PRIVATE)
     }
@@ -157,6 +173,7 @@ internal fun KlyroSettingsSheet(
     var brandUpdating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val colors = LocalKlyroColors.current
+    val motionEnabled = rememberHomeMotionEnabled()
     var authorizedFolderCount by remember { mutableStateOf(-1) }
     var folderRevision by remember { mutableStateOf(0) }
     LaunchedEffect(context, section, folderRevision) {
@@ -195,6 +212,7 @@ internal fun KlyroSettingsSheet(
             showColorPicker -> showColorPicker = false
             showFontLicense -> showFontLicense = false
             showHugeiconsLicense -> showHugeiconsLicense = false
+            showIllustrationLicense -> showIllustrationLicense = false
             cannotOpenPermissions -> cannotOpenPermissions = false
             section == "freeze" -> section = "diagnostics"
             section != "home" -> section = "home"
@@ -203,7 +221,7 @@ internal fun KlyroSettingsSheet(
     }
     // System Back is an external dismissal; the labelled Settings button navigates internally.
     val canDismissSheet = !showColorPicker && !showFontLicense &&
-        !showHugeiconsLicense && !brandUpdating
+        !showHugeiconsLicense && !showIllustrationLicense && !brandUpdating
     BackHandler(enabled = canDismissSheet) { onDismiss() }
     val version = com.oryn.terminal.BuildConfig.VERSION_NAME
     val installedUpdateVersion = remember {
@@ -223,8 +241,6 @@ internal fun KlyroSettingsSheet(
                 updateResult = withContext(Dispatchers.IO) {
                     com.oryn.terminal.updates.KlyroUpdateRepository(context).check(
                         updateChannel,
-                        com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(
-                            com.oryn.terminal.BuildConfig.UPDATE_BRANCH),
                         installedUpdateVersion
                     )
                 }
@@ -343,6 +359,11 @@ internal fun KlyroSettingsSheet(
                                     "mono-paper" -> "Paper"
                                     else -> null
                                 }
+                                val monochromeRotation by animateFloatAsState(
+                                    if (showMonochromeThemes) 90f else 0f,
+                                    if (motionEnabled) tween(180) else androidx.compose.animation.core.snap(),
+                                    label = "monochrome-chevron"
+                                )
                                 Surface(
                                     modifier = Modifier.fillMaxWidth()
                                         .heightIn(min = KlyroUiMetrics.minTouch)
@@ -377,7 +398,7 @@ internal fun KlyroSettingsSheet(
                                             contentDescription = null,
                                             tint = colors.muted,
                                             modifier = Modifier.size(KlyroUiMetrics.glyphSmall)
-                                                .rotate(if (showMonochromeThemes) 90f else 0f)
+                                                .rotate(monochromeRotation)
                                         )
                                     }
                                 }
@@ -409,37 +430,12 @@ internal fun KlyroSettingsSheet(
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 KlyroColors.primary.forEach { preset ->
-                                                    val swatch = KlyroColors.create(colors.dark, preset.id)
-                                                    val active = accentId == preset.id
-                                                    Box(
-                                                        modifier = Modifier.size(KlyroUiMetrics.minTouch)
-                                                            .clickable(role = Role.RadioButton,
-                                                                onClickLabel = "Select " + preset.label + " accent") {
-                                                                onAccentIdChange(preset.id)
-                                                            }
-                                                            .semantics {
-                                                                selected = active
-                                                                contentDescription = preset.label + " accent"
-                                                            },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Box(
-                                                            modifier = Modifier.size(KlyroUiMetrics.accentSwatch)
-                                                                .background(swatch.accent, androidx.compose.foundation.shape.CircleShape)
-                                                                .then(if (active) Modifier.border(
-                                                                    KlyroUiMetrics.selectedBorder,
-                                                                    colors.foreground,
-                                                                    androidx.compose.foundation.shape.CircleShape
-                                                                ) else Modifier),
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            if (active) {
-                                                                Icon(painterResource(R.drawable.hugeicons_checkmark_circle_01),
-                                                                    contentDescription = null, tint = swatch.onAccent,
-                                                                    modifier = Modifier.size(KlyroUiMetrics.glyphSmall))
-                                                            }
-                                                        }
-                                                    }
+                                                    KlyroAccentSwatch(
+                                                        accent = KlyroColors.create(true, preset.id).accent,
+                                                        active = accentId == preset.id,
+                                                        description = preset.label + " accent",
+                                                        onClick = { onAccentIdChange(preset.id) }
+                                                    )
                                                 }
                                             }
                                             Surface(
@@ -477,13 +473,33 @@ internal fun KlyroSettingsSheet(
                                     }
                                 }
                             }
-                            KlyroAppearanceGroup("Text") {
+                            KlyroAppearanceGroup("Terminal text") {
+                                val displayedFontSize = KlyroTerminalFonts.normalizeSize(fontSizeSp)
+                                val fontSizeLabel = "${displayedFontSize.toInt()} sp"
+                                val previewFonts = remember(context) {
+                                    KlyroTerminalFonts.options.associate { option ->
+                                        option.id to FontFamily(KlyroTerminalFonts.load(context, option.id))
+                                    }
+                                }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)) {
-                                    Text("Terminal font", color = colors.muted,
-                                        style = MaterialTheme.typography.bodyMedium)
                                     KlyroSettingsChoiceGrid(columns = 2, minimumInlineWidth = appearanceInlineWidth) {
                                         KlyroTerminalFonts.options.forEach { option ->
                                             val active = fontFamilyId == option.id
+                                            val fontFill by animateColorAsState(
+                                                if (active) colors.sheet else colors.sheet.copy(alpha = 0f),
+                                                if (motionEnabled) tween(200) else androidx.compose.animation.core.snap(),
+                                                label = "font-family-fill"
+                                            )
+                                            val fontCorner by animateDpAsState(
+                                                if (active) KlyroUiMetrics.controlCorner else 22.dp,
+                                                if (motionEnabled) tween(220) else androidx.compose.animation.core.snap(),
+                                                label = "font-family-shape"
+                                            )
+                                            val fontOutline by animateColorAsState(
+                                                if (active) colors.accent else colors.muted.copy(alpha = .24f),
+                                                if (motionEnabled) tween(200) else androidx.compose.animation.core.snap(),
+                                                label = "font-family-outline"
+                                            )
                                             Surface(
                                                 modifier = Modifier.weight(1f)
                                                     .heightIn(min = KlyroUiMetrics.optionRow)
@@ -491,51 +507,68 @@ internal fun KlyroSettingsSheet(
                                                         onClickLabel = "Use " + option.label) {
                                                         onFontFamilyChange(option.id)
                                                     }.semantics { selected = active },
-                                                color = if (active) colors.sheet else Color.Transparent,
-                                                shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
-                                                border = null
+                                                color = fontFill,
+                                                shape = RoundedCornerShape(fontCorner),
+                                                border = BorderStroke(1.dp, fontOutline)
                                             ) {
-                                                Box(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(option.label, modifier = Modifier.padding(
+                                                Column(
+                                                    modifier = Modifier.fillMaxWidth().padding(
                                                         horizontal = KlyroUiMetrics.spaceSm,
-                                                        vertical = KlyroUiMetrics.spaceMd
-                                                    ), color = colors.foreground,
-                                                        fontWeight = if (active) FontWeight.SemiBold
-                                                            else FontWeight.Normal,
-                                                        style = MaterialTheme.typography.labelMedium)
+                                                        vertical = KlyroUiMetrics.spaceSm
+                                                    ),
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
+                                                ) {
+                                                    // Each option is its own type specimen, not a separate terminal preview.
+                                                    // Compare the same ambiguous glyphs at an enlarged, equal scale.
+                                                    // Do not change weight or ink when selected: the font itself is the comparison.
+                                                    Text("0O 1l",
+                                                        modifier = Modifier.clearAndSetSemantics { },
+                                                        color = colors.foreground,
+                                                        fontFamily = previewFonts.getValue(option.id),
+                                                        fontWeight = FontWeight.Normal,
+                                                        fontSize = 32.sp,
+                                                        lineHeight = 38.sp,
+                                                        letterSpacing = 0.sp)
+                                                    Text(option.label,
+                                                        color = if (active) colors.accent else colors.foreground,
+                                                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                                    Text(
+                                                        when (option.id) {
+                                                            "system" -> "Android default"
+                                                            "source-code-pro" -> "Adobe · monospace"
+                                                            else -> "Designed for code"
+                                                        },
+                                                        color = colors.muted,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                    )
                                                 }
                                             }
                                         }
                                     }
                                 }
                                 Column(verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
-                                    val displayedFontSize = KlyroTerminalFonts.normalizeSize(fontSizeSp)
-                                    val fontSizeLabel = displayedFontSize.toInt().toString()
-                                    KlyroSettingsChoiceGrid(columns = 2, selectionGroup = false, minimumInlineWidth = appearanceInlineWidth) {
-                                        Box(
-                                            modifier = Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
-                                            contentAlignment = Alignment.CenterStart
-                                        ) {
-                                            Text("Font size", color = colors.muted,
-                                                style = MaterialTheme.typography.bodyMedium)
-                                        }
-                                        Row(Modifier.weight(1f).heightIn(min = KlyroUiMetrics.minTouch),
-                                            horizontalArrangement = Arrangement.End,
-                                            verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                fontSizeLabel,
-                                                color = colors.foreground, fontWeight = FontWeight.Medium,
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            if (displayedFontSize != KlyroTerminalFonts.DEFAULT_SIZE) {
-                                                TextButton(
-                                                    onClick = onResetFont,
-                                                    modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
-                                                ) { Text("Reset", style = MaterialTheme.typography.bodyMedium) }
-                                            }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Font size", color = colors.muted,
+                                            modifier = Modifier.weight(1f),
+                                            style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            fontSizeLabel,
+                                            color = colors.foreground, fontWeight = FontWeight.Medium,
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum")
+                                        )
+                                        if (displayedFontSize != KlyroTerminalFonts.DEFAULT_SIZE) {
+                                            TextButton(
+                                                onClick = onResetFont,
+                                                modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch)
+                                            ) { Text("Reset", style = MaterialTheme.typography.labelMedium) }
                                         }
                                     }
                                     KlyroThinSlider(
@@ -636,6 +669,80 @@ internal fun KlyroSettingsSheet(
                                 }
                                 Text("Reopen your launcher if the icon has not refreshed.",
                                     color = colors.muted, style = MaterialTheme.typography.labelSmall)
+                            }
+                            KlyroAppearanceGroup("Home illustration") {
+                                Column(Modifier.selectableGroup(),
+                                    verticalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)) {
+                                    HomeIllustration.entries.forEach { option ->
+                                        val active = illustration.kind == option
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth()
+                                                .heightIn(min = KlyroUiMetrics.minTouch)
+                                                .clickable(role = Role.RadioButton) {
+                                                    illustrationPrefs.edit().putString("kind", option.name).apply()
+                                                }.semantics { selected = active },
+                                            shape = RoundedCornerShape(KlyroUiMetrics.controlCorner),
+                                            color = if (active) colors.sheet else Color.Transparent,
+                                            border = BorderStroke(1.dp, if (active) colors.accent else colors.muted.copy(alpha = .24f))
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(KlyroUiMetrics.spaceSm),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                                            ) {
+                                                Column(Modifier.weight(1f)) {
+                                                    Text(option.label, color = colors.foreground,
+                                                        style = MaterialTheme.typography.bodyMedium)
+                                                    Text(option.description, color = colors.muted,
+                                                        style = MaterialTheme.typography.labelSmall)
+                                                }
+                                                if (active) Text("Selected", color = colors.accent,
+                                                    style = MaterialTheme.typography.labelSmall)
+                                            }
+                                        }
+                                    }
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .heightIn(min = KlyroUiMetrics.minTouch)
+                                        .toggleable(illustration.advanced, role = Role.Switch) { enabled ->
+                                            illustrationPrefs.edit().putBoolean("advanced", enabled).apply()
+                                        },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Advanced settings", color = colors.foreground,
+                                            style = MaterialTheme.typography.bodyMedium)
+                                        Text("Customize animation behavior", color = colors.muted,
+                                            style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Switch(checked = illustration.advanced, onCheckedChange = null,
+                                        modifier = Modifier.clearAndSetSemantics { })
+                                }
+                                if (illustration.advanced) {
+                                    val speedLabel = "${illustration.speed.toString().removeSuffix(".0")}×"
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Animation speed", color = colors.muted, modifier = Modifier.weight(1f))
+                                        Text(speedLabel, color = colors.foreground)
+                                    }
+                                    KlyroThinSlider(
+                                        value = illustration.speed,
+                                        onValueChange = { illustrationPrefs.edit().putFloat("speed",
+                                            HomeIllustrationSettings.normalizeSpeed(it)).apply() },
+                                        valueRange = .5f..2f, steps = 5, valueLabel = speedLabel,
+                                        modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Home animation speed" }
+                                    )
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("Slower", color = colors.muted, style = MaterialTheme.typography.labelSmall)
+                                        Text("Faster", color = colors.muted, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    if (illustration.speed != 1f) {
+                                        TextButton(onClick = {
+                                            illustrationPrefs.edit().putFloat("speed", 1f).apply()
+                                        }) { Text("Reset") }
+                                    }
+                                }
                             }
                         }
                     }
@@ -868,11 +975,20 @@ internal fun KlyroSettingsSheet(
                             "JetBrains Mono licence",
                             "SIL Open Font License 1.1 · included in this APK",
                             R.drawable.hugeicons_information_square
-                        ) { showFontLicense = true }
+                        ) { sourceCodeProLicense = false; showFontLicense = true }
+                        SettingsRowLink(
+                            "Source Code Pro licence",
+                            "SIL Open Font License 1.1 · Adobe",
+                            R.drawable.hugeicons_information_square
+                        ) { sourceCodeProLicense = true; showFontLicense = true }
                         SettingsRowLink(
                             "Hugeicons licence", "MIT · vector icon set",
                             R.drawable.hugeicons_information_square
                         ) { showHugeiconsLicense = true }
+                        SettingsRowLink(
+                            "Home illustration credits", "Uiverse · MIT",
+                            R.drawable.hugeicons_information_square
+                        ) { showIllustrationLicense = true }
                     }
                     "updates" -> {
                         KlyroSectionHeading("App updates", "Updates are checked inside Klyro.")
@@ -908,7 +1024,7 @@ internal fun KlyroSettingsSheet(
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold)
                                 Text(if (updateChannel == com.oryn.terminal.updates.UpdateChannel.STABLE)
-                                    "Stable releases · signed APK" else "Preview builds · ${com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(com.oryn.terminal.BuildConfig.UPDATE_BRANCH)}",
+                                    "Stable releases · signed APK" else "Preview · cumulative signed updates",
                                     color = colors.muted, style = MaterialTheme.typography.bodySmall)
                             }
                         }
@@ -923,9 +1039,21 @@ internal fun KlyroSettingsSheet(
                                         fontWeight = FontWeight.SemiBold)
                                     Text(result.candidate.version.name, color = colors.foreground,
                                         style = MaterialTheme.typography.bodyLarge)
-                                    if (result.candidate.notes.isNotBlank()) Text(
-                                        result.candidate.notes.take(2_000), color = colors.muted,
-                                        style = MaterialTheme.typography.bodySmall)
+                                    result.candidate.sourceBranch?.takeIf {
+                                        result.candidate.channel == com.oryn.terminal.updates.UpdateChannel.PREVIEW
+                                    }?.let { source ->
+                                        if (source != com.oryn.terminal.updates.KlyroUpdatePolicy.branchOrMain(
+                                                com.oryn.terminal.BuildConfig.UPDATE_BRANCH)) {
+                                            KlyroInlineNotice("This Preview switches to the cumulative update channel and may not contain all installed features.")
+                                        }
+                                    }
+                                    if (result.candidate.notes.isNotBlank()) {
+                                        Text("What's new", color = colors.foreground,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold)
+                                        Text(result.candidate.notes.take(2_000), color = colors.muted,
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
                                     if (updateDownloading) {
                                         LinearProgressIndicator(progress = { updateProgress },
                                             modifier = Modifier.fillMaxWidth(), color = colors.accent)
@@ -1013,7 +1141,7 @@ internal fun KlyroSettingsSheet(
                             com.oryn.terminal.updates.UpdateLookup.NonePublished -> KlyroInlineNotice(
                                 if (updateChannel == com.oryn.terminal.updates.UpdateChannel.STABLE)
                                     "No Stable release is published yet. Preview builds may be available on the Preview channel."
-                                else "No Preview release has been published for this branch.")
+                                else "No signed Preview build has been published yet.")
                             null -> if (updateChecking) KlyroInlineNotice("Checking ${updateChannel.label} updates…")
                         }
                         updateError?.let { error ->
@@ -1054,8 +1182,16 @@ internal fun KlyroSettingsSheet(
                 showHugeiconsLicense = false
             }
         }
+        if (showIllustrationLicense) {
+            KlyroLicenseDialog("Home illustrations · MIT", "licenses/home-illustrations-MIT.txt") {
+                showIllustrationLicense = false
+            }
+        }
         if (showFontLicense) {
-            KlyroLicenseDialog("JetBrains Mono · OFL 1.1", "fonts/OFL.txt") {
+            KlyroLicenseDialog(
+                if (sourceCodeProLicense) "Source Code Pro · OFL 1.1" else "JetBrains Mono · OFL 1.1",
+                if (sourceCodeProLicense) "fonts/SourceCodePro-OFL.txt" else "fonts/OFL.txt"
+            ) {
                 showFontLicense = false
             }
         }

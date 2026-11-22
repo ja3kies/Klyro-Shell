@@ -2413,6 +2413,16 @@ public final class TerminalEmulator {
     }
 
     public boolean pasteWithResult(String text) {
+        return queuePaste(text, false);
+    }
+
+    /** Explicit user-owned pinned commands only: one atomic payload including Enter. */
+    public boolean submitPasteWithResult(String text) {
+        if (text == null || text.trim().isEmpty() || isAlternateBufferActive()) return false;
+        return queuePaste(text.replaceFirst("[\\r\\n]+$", ""), true);
+    }
+
+    private boolean queuePaste(String text, boolean submit) {
         // First: Always remove escape key and C1 control characters [0x80,0x9F]:
         text = text.replaceAll("(\u001B|[\u0080-\u009F])", "");
         // Second: Replace all newlines (\n) or CRLF (\r\n) with carriage returns (\r).
@@ -2421,8 +2431,8 @@ public final class TerminalEmulator {
         // Then: Implement bracketed paste mode if enabled:
         boolean bracketed = isDecsetInternalBitSet(DECSET_BIT_BRACKETED_PASTE_MODE);
         // Enqueue the whole paste atomically so rejection cannot leave bracketed mode open.
-        byte[] bytes = (bracketed ? "\033[200~" + text + "\033[201~" : text)
-                .getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = ((bracketed ? "\033[200~" + text + "\033[201~" : text)
+                + (submit ? "\r" : "")).getBytes(StandardCharsets.UTF_8);
         return mSession.tryWrite(bytes, 0, bytes.length);
     }
 

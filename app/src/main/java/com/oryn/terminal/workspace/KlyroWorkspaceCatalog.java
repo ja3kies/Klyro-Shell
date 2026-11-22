@@ -43,6 +43,18 @@ public final class KlyroWorkspaceCatalog {
         return false;
     }
 
+    /** Bound editable drafts without splitting a Unicode surrogate pair or trimming spaces. */
+    public static String limitDraftName(String value) {
+        if (value == null) return "";
+        int end = Math.min(value.length(), MAX_NAME_CHARS);
+        if (end < value.length() && end > 0 &&
+                Character.isHighSurrogate(value.charAt(end - 1)) &&
+                Character.isLowSurrogate(value.charAt(end))) {
+            end--;
+        }
+        return value.substring(0, end);
+    }
+
     public static String cleanName(String value) {
         if (value == null) return "";
         StringBuilder result = new StringBuilder();

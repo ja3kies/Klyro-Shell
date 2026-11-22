@@ -1,16 +1,19 @@
 package com.oryn.terminal
 
 import android.Manifest
-import android.graphics.BitmapFactory
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import com.oryn.terminal.ui.KlyroColors
+import com.oryn.terminal.ui.LocalKlyroColors
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
@@ -20,12 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.math.max
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
-/** Runs against the real Android settings provider and decoded GIF, without a PTY. */
+/** Runs against the real Android settings provider and native illustrations, without a PTY. */
 @SdkSuppress(minSdkVersion = 29)
 class HomeCoverUiTest {
     @get:Rule val ui = createComposeRule()
@@ -61,40 +64,52 @@ class HomeCoverUiTest {
         ui.waitUntil(5_000) { observed.get() == false }
     }
 
-    @Test fun shortCoverCropsDecodedPixelsWithoutSquashingMascot() = withAnimationScale { setScale ->
-        setScale("0")
+    @Test fun allHomeIllustrationsStayInsideBannerAndAnimateIndependently() = withAnimationScale { setScale ->
+        setScale("1")
+        val pattern = mutableStateOf(HomeIllustration.CHECKERBOARD)
+        val palette = mutableStateOf(KlyroColors.create(true, "cyan"))
+        val moving = mutableStateOf(true)
+        val chrome = Color(0xFF172333)
+        ui.mainClock.autoAdvance = false
         ui.setContent {
-            Box(Modifier.width(320.dp).height(148.dp).background(Color.Black).testTag("cover")) {
-                KlyroHomePixelCover(148.dp, Color.Black)
-            }
-        }
-        ui.waitUntil(5_000) {
-            ui.onNodeWithTag("cover").captureToImage().toPixelMap()[0, 0] != Color.Black
-        }
-        val rendered = ui.onNodeWithTag("cover").captureToImage()
-        val pixels = rendered.toPixelMap()
-        val source = BitmapFactory.decodeResource(
-            InstrumentationRegistry.getInstrumentation().targetContext.resources,
-            R.drawable.klyro_home_landscape_loop
-        )
-        try {
-            val scale = max(rendered.width.toFloat() / source.width, rendered.height.toFloat() / source.height)
-            var mismatches = 0
-            var samples = 0
-            // Stay above the deliberate bottom fade. Compare against uniform center-crop.
-            for (y in 2 until (rendered.height * .6f).toInt() step 3) {
-                for (x in 2 until rendered.width - 2 step 3) {
-                    val sx = ((x + .5f - rendered.width / 2f) / scale + source.width / 2f)
-                        .toInt().coerceIn(0, source.width - 1)
-                    val sy = ((y + .5f - rendered.height / 2f) / scale + source.height / 2f)
-                        .toInt().coerceIn(0, source.height - 1)
-                    if (pixels[x, y].toArgb() != source.getPixel(sx, sy)) mismatches++
-                    samples++
+            CompositionLocalProvider(LocalKlyroColors provides palette.value,
+                LocalKlyroMotionEnabled provides true) {
+                Box(Modifier.width(240.dp).height(260.dp).background(chrome).testTag("home")) {
+                    KlyroHomePixelCover(148.dp, chrome, animate = moving.value,
+                        illustration = HomeIllustrationSettings(kind = pattern.value))
                 }
             }
-            assertTrue("Uniform crop differs at $mismatches/$samples pixels", mismatches < samples * .03f)
-        } finally {
-            source.recycle()
+        }
+        fun frame() = ui.onNodeWithTag("home").captureToImage().toPixelMap()
+        fun changed(a: androidx.compose.ui.graphics.PixelMap, b: androidx.compose.ui.graphics.PixelMap): Int {
+            var count = 0
+            for (y in 0 until (a.height * .32f).toInt() step 4)
+                for (x in 0 until a.width step 4)
+                    if (a[x, y] != b[x, y]) count++
+            return count
+        }
+        for (kind in HomeIllustration.entries) {
+            ui.runOnIdle {
+                pattern.value = kind
+                palette.value = KlyroColors.create(true, "cyan")
+                moving.value = true
+            }
+            ui.mainClock.advanceTimeBy(64)
+            val before = frame()
+            ui.mainClock.advanceTimeBy(1500)
+            val after = frame()
+            assertTrue("$kind must move when visible", changed(before, after) > 20)
+            for (y in (after.height * .60f).toInt() until after.height step 4)
+                for (x in 0 until after.width step 4)
+                    assertEquals("$kind leaked outside the banner at $x,$y", chrome, after[x, y])
+            ui.runOnIdle { moving.value = false }
+            ui.mainClock.advanceTimeBy(64)
+            val still = frame()
+            ui.mainClock.advanceTimeBy(1500)
+            assertEquals("$kind must stop when hidden", 0, changed(still, frame()))
+            ui.runOnIdle { palette.value = KlyroColors.create(true, "lime") }
+            ui.mainClock.advanceTimeBy(64)
+            assertTrue("$kind must adapt to its theme", changed(still, frame()) > 20)
         }
     }
 }

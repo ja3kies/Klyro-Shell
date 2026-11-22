@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -59,6 +60,8 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.text.font.FontFamily
@@ -124,7 +127,9 @@ internal fun KlyroColorPickerDialog(
         hexInput = "#%06X".format(rgb() and 0xFFFFFF)
     }
 
-    val hasUnsavedColor = argb() != initialArgb
+    // Partial HEX input and a pending preset are drafts too, even when HSV is unchanged.
+    val hasUnsavedColor = argb() != initialArgb || pendingPreset != null ||
+        hexInput != "#%06X".format(initialArgb and 0xFFFFFF)
     KlyroModalTheme {
         if (!showAdvanced && pendingFavoriteDeletion == null) AlertDialog(
             onDismissRequest = { if (!hasUnsavedColor) onDismiss() },
@@ -436,39 +441,68 @@ internal fun KlyroColorPickerDialog(
                             modifier = Modifier.fillMaxWidth()
                                 .heightIn(min = KlyroUiMetrics.minTouch)
                         ) { Text("Save current color") }
+                        Text("Tap a saved color to use it. Edit and Remove are separate actions.",
+                            color = colors.muted, style = MaterialTheme.typography.labelSmall)
                         favorites.forEach { favorite ->
+                            val reusableId = KlyroFavoriteColors.selectableAccentId(favorite)
+                            val active = reusableId == colors.accentId
                             Row(
                                 modifier = Modifier.fillMaxWidth()
                                     .heightIn(min = KlyroUiMetrics.minTouch),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                                horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceXs)
                             ) {
-                                Surface(
-                                    modifier = Modifier.size(24.dp),
-                                    color = Color(AndroidColor.parseColor(favorite.hex)),
-                                    shape = CircleShape
-                                ) {}
-                                Text(
-                                    favorite.label,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 1,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                Row(
+                                    modifier = Modifier.weight(1f)
+                                        .heightIn(min = KlyroUiMetrics.minTouch)
+                                        .clip(RoundedCornerShape(KlyroUiMetrics.controlCorner))
+                                        .clickable(
+                                            enabled = reusableId != null,
+                                            role = Role.Button,
+                                            onClickLabel = "Use saved color ${favorite.label}"
+                                        ) { reusableId?.let(onApply) }
+                                        .semantics {
+                                            contentDescription = "Use saved color ${favorite.label}"
+                                            if (active) {
+                                                selected = true
+                                                stateDescription = "Current accent"
+                                            }
+                                        }
+                                        .testTag("saved-color-use-${favorite.hex}")
+                                        .padding(horizontal = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(KlyroUiMetrics.spaceSm)
+                                ) {
+                                    Surface(
+                                        modifier = Modifier.size(24.dp),
+                                        color = Color(AndroidColor.parseColor(favorite.hex)),
+                                        shape = CircleShape
+                                    ) {}
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(favorite.label, maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.bodySmall)
+                                        Text(if (active) "In use" else "Use",
+                                            color = if (active) colors.accent else colors.muted,
+                                            style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
                                 TextButton(
                                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                     onClick = {
-                                    favoriteName = favorite.label
-                                    val favArgb = AndroidColor.parseColor(favorite.hex)
-                                    val hsv = FloatArray(3)
-                                    AndroidColor.colorToHSV(favArgb or -0x1000000, hsv)
-                                    hue = hsv[0]
-                                    saturation = hsv[1]
-                                    brightness = hsv[2]
-                                    alpha = (favArgb ushr 24) / 255f
-                                    hexInput = "#%06X".format(favArgb and 0xFFFFFF)
-                                    pendingPreset = null
-                                    showAdvanced = false
-                                }) { Text("Edit") }
+                                        favoriteName = favorite.label
+                                        val favArgb = AndroidColor.parseColor(favorite.hex)
+                                        val hsv = FloatArray(3)
+                                        AndroidColor.colorToHSV(favArgb or -0x1000000, hsv)
+                                        hue = hsv[0]
+                                        saturation = hsv[1]
+                                        brightness = hsv[2]
+                                        alpha = (favArgb ushr 24) / 255f
+                                        hexInput = "#%06X".format(favArgb and 0xFFFFFF)
+                                        pendingPreset = null
+                                        showAdvanced = false
+                                    }
+                                ) { Text("Edit") }
                                 TextButton(
                                     modifier = Modifier.heightIn(min = KlyroUiMetrics.minTouch),
                                     onClick = { pendingFavoriteDeletionHex = favorite.hex }

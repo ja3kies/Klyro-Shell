@@ -29,33 +29,58 @@ internal sealed interface UpdateLookup {
     data object NonePublished : UpdateLookup
 }
 
+/** Branch and global publications can finish independently. Never prefer a lower version. */
+internal fun newestPreview(global: UpdateLookup, branch: UpdateLookup): UpdateLookup =
+    listOf(global, branch).filterIsInstance<UpdateLookup.Available>()
+        .maxByOrNull { it.candidate.version.code }
+        ?: if (global == UpdateLookup.Current || branch == UpdateLookup.Current)
+            UpdateLookup.Current else UpdateLookup.NonePublished
+
+/** Read user-facing notes without exposing the legacy technical release body. */
+internal fun previewUserNotes(notes: String?, legacyBody: String): String {
+    val text = notes?.trim()?.takeIf { it.isNotEmpty() } ?: legacyBody.trim()
+    if (text.isBlank() || text.startsWith("Signed Android build for ")) {
+        return "Maintenance and reliability update. Detailed release notes are not available for this build."
+    }
+    return text.lineSequence().joinToString("\n") { line ->
+        if (line.startsWith("- ")) "• " + line.drop(2) else line
+    }.take(8_000)
+}
+
 /** Public GitHub API client. All methods are blocking and must run on Dispatchers.IO. */
 internal class KlyroUpdateRepository(private val context: Context) {
     private val api = "https://api.github.com/repos/ja3kies/Klyro-Shell"
 
-    fun check(channel: UpdateChannel, branch: String, installed: KlyroVersion): UpdateLookup =
+    fun check(channel: UpdateChannel, installed: KlyroVersion): UpdateLookup =
         when (channel) {
             UpdateChannel.STABLE -> checkStable(installed)
-            UpdateChannel.PREVIEW -> checkPreview(branch, installed)
+            UpdateChannel.PREVIEW -> checkPreview(installed)
         }
 
     private fun checkStable(installed: KlyroVersion): UpdateLookup =
         checkRelease("$api/releases/latest", UpdateChannel.STABLE, installed)
 
-    private fun checkPreview(branch: String, installed: KlyroVersion): UpdateLookup {
-        val safeBranch = KlyroUpdatePolicy.branchOrMain(branch)
+    private fun checkPreview(installed: KlyroVersion): UpdateLookup {
+        val safeBranch = KlyroUpdatePolicy.CONSOLIDATED_PREVIEW_BRANCH
         val branchHash = MessageDigest.getInstance("SHA-256")
             .digest(safeBranch.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it.toInt() and 0xff) }
-        return checkRelease("$api/releases/tags/preview-$branchHash", UpdateChannel.PREVIEW,
+        // Always follow the cumulative branch, never a newer-numbered experimental branch.
+        // The branch-scoped publication also protects against old workflow revisions
+        // that can still overwrite the legacy global tag.
+        val local = checkRelease("$api/releases/tags/preview-$branchHash", UpdateChannel.PREVIEW,
             installed, safeBranch)
+        val latest = checkRelease("$api/releases/tags/preview-latest", UpdateChannel.PREVIEW,
+            installed, safeBranch, ignoreOtherBranch = true)
+        return newestPreview(latest, local)
     }
 
     private fun checkRelease(
         url: String,
         channel: UpdateChannel,
         installed: KlyroVersion,
-        branch: String? = null
+        branch: String? = null,
+        ignoreOtherBranch: Boolean = false
     ): UpdateLookup {
         val release = try {
             getJson(url)
@@ -75,18 +100,28 @@ internal class KlyroUpdateRepository(private val context: Context) {
             ?: throw UpdateException("Release is missing update metadata")
         val manifest = getJson(manifestAsset.optString("browser_download_url"))
         if (branch != null && manifest.optString("branch") != branch) {
+            if (ignoreOtherBranch) return UpdateLookup.NonePublished
             throw UpdateException("Preview metadata does not match the installed branch")
+        }
+        if (channel == UpdateChannel.PREVIEW) {
+            val publishedBranch = manifest.optString("branch")
+            if (publishedBranch.isBlank() || KlyroUpdatePolicy.branchOrMain(publishedBranch) != publishedBranch)
+                throw UpdateException("Preview metadata contains an invalid source branch")
         }
         val candidate = manifest.toCandidate(
             channel = channel,
-            notes = release.optString("body").take(8_000),
+            notes = if (channel == UpdateChannel.PREVIEW)
+                previewUserNotes(manifest.optString("releaseNotes"), release.optString("body"))
+            else release.optString("body").take(8_000),
             downloadUrl = apk.optString("browser_download_url"),
             digest = apk.optString("digest").takeIf(String::isNotBlank),
             archive = false,
             size = apk.optLong("size", 0)
         ) ?: throw UpdateException("Release update metadata failed validation")
         return if (KlyroUpdatePolicy.isNewer(installed, candidate.version)) {
-            UpdateLookup.Available(candidate)
+            UpdateLookup.Available(candidate.copy(
+                sourceBranch = manifest.optString("branch").takeIf(String::isNotBlank)
+            ))
         } else UpdateLookup.Current
     }
 

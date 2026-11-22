@@ -2,7 +2,7 @@ name: Android build
 
 on:
   push:
-    branches: [fix/modal-lifecycle-touch-freeze, fix/klyro-three-core-hardening-20261115, fix/klyro-three-major-ui-20261115, fix/klyro-six-ui-ux-20261115, fix/klyro-monotonic-apk-versioning-20261115, feat/klyro-progressive-ci-robot-20261115, fix/freeze-forensics-ux-completion, fix/p0-reliability-closure, feat/production-ready-terminal, main, chore/android-api-36, feat/terminal-keyboard-ux, feat/klyro-0110, fix/klyro-hi-terminal-resilience-20261106, fix/klyro-critical-session-20261107, feature/klyro-storage-ux-20261107, feature/klyro-multistorage-bento-monochrome-20261107, fix/klyro-acceptance-apple-slider-20261107, fix/klyro-hugeicons-audit-20261107, fix/klyro-visual-copy-components-20261107, fix/klyro-adversarial-ux-icons-20261108, fix/klyro-adversarial-final-20261108, feat/klyro-compact-sheets-plugins-20261108, feat/klyro-ux-systematic-audit-20261108, feat/klyro-dual-brand-smart-all-20261108, feat/p0-cycle1-25-actions-20261108, feat/in-app-updates-20261118, fix/screen-audit-20261118, 'p0/**', 'p1/**', 'integration/**', 'feat/ux-five-priorities-cycle-02', 'fix/ux-t4-confirm-bundled-install', 'p1/ux-modal-keyboard-cycle-03', 'p0/select-paste-adversarial-audit-20261109']
+    branches: ['**']
     tags: ['v*']
     paths-ignore:
       # The fast robot-quality-gate workflow validates these changes
@@ -57,6 +57,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Require cumulative Preview baseline
+        if: github.ref_name == 'integration/senior-release-20261121' || github.head_ref == 'integration/senior-release-20261121'
+        run: git merge-base --is-ancestor 9705735f5a654df8625411c9d3d4b3a699ff9172 HEAD
       - name: Syntax and targeted regression gate
         shell: bash
         env:
@@ -131,6 +134,24 @@ jobs:
             "8bee4148c1d54dbf5dae6d6c117fc80414266abb"
           test "$(wc -c < "$FONT_DIR/JetBrainsMono-Regular.ttf")" -eq 273900
           echo "PASS: verified JetBrains Mono and OFL licence"
+
+      - name: Prepare verified Source Code Pro terminal font
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="803b7e23ec97ae58b6232ea76519a76d428ba268"
+          FONT_DIR="app/src/main/assets/fonts"
+          mkdir -p "$FONT_DIR"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/adobe-fonts/source-code-pro/$SOURCE_COMMIT/TTF/SourceCodePro-Regular.ttf" \
+            --output "$FONT_DIR/SourceCodePro-Regular.ttf"
+          test "$(git hash-object "$FONT_DIR/SourceCodePro-Regular.ttf")" = "10c73d7d901cf0dfa8ba03e45e3271d466291520"
+          test "$(wc -c < "$FONT_DIR/SourceCodePro-Regular.ttf")" -eq 210312
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/adobe-fonts/source-code-pro/$SOURCE_COMMIT/LICENSE.md" \
+            --output "$FONT_DIR/SourceCodePro-OFL.txt"
+          test "$(git hash-object "$FONT_DIR/SourceCodePro-OFL.txt")" = "70288a864f8dfd1314aa0315748eece0cf80fdda"
+          echo "PASS: verified Source Code Pro and OFL licence"
 
       - name: Run JVM and native alignment auditor unit tests
         run: |
@@ -212,6 +233,8 @@ jobs:
             lib/arm64-v8a/libandroid-shmem.so \
             assets/proot/runtime-manifest.txt \
             assets/fonts/JetBrainsMono-Regular.ttf \
+            assets/fonts/SourceCodePro-Regular.ttf \
+            assets/fonts/SourceCodePro-OFL.txt \
             assets/fonts/OFL.txt \
             assets/licenses/hugeicons-MIT.txt; do
             grep -Fxq "$entry" <<< "$APK_ENTRIES" || {
@@ -306,10 +329,14 @@ jobs:
           APK="app/build/outputs/apk/debug/klyro-shell.apk"
           APK_SHA256="$(sha256sum "$APK" | cut -d ' ' -f1)"
           python3 - "$VERSION_CODE" "$VERSION_NAME" "$APK_SHA256" "$UPDATE_BRANCH" <<'PY'
-          import json, pathlib, sys
+          import json, os, pathlib, sys
           code, name, digest, branch = sys.argv[1:]
           data = {"packageName": "com.klyro.shell", "versionCode": int(code),
-                  "versionName": name, "apkSha256": digest, "branch": branch}
+                  "versionName": name, "apkSha256": digest, "branch": branch,
+                  "commitSha": os.environ["GITHUB_SHA"]}
+          notes_path = pathlib.Path("docs/PREVIEW_NOTES.md")
+          data["releaseNotes"] = (notes_path.read_text(encoding="utf-8").strip()[:8000]
+                                  if notes_path.is_file() else "Maintenance and reliability update.")
           pathlib.Path("app/build/outputs/apk/debug/klyro-update.json").write_text(
               json.dumps(data, separators=(",", ":")) + "\n", encoding="utf-8")
           PY
@@ -397,7 +424,14 @@ jobs:
             --title "$GITHUB_REF_NAME" --generate-notes
 
   publish-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/screen-audit-20261118'
+    if: github.ref_type == 'branch' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    strategy:
+      fail-fast: false
+      matrix:
+        scope: [branch, global]
+    concurrency:
+      group: preview-publish-${{ matrix.scope == 'global' && 'global' || github.ref }}
+      cancel-in-progress: false
     needs: debug-apk
     runs-on: ubuntu-latest
     permissions:
@@ -410,26 +444,71 @@ jobs:
       - name: Verify and publish signed Preview
         env:
           GH_TOKEN: ${{ github.token }}
+          PREVIEW_SCOPE: ${{ matrix.scope }}
         shell: bash
         run: |
           set -euo pipefail
+          CONSOLIDATED_BRANCH="integration/senior-release-20261121"
+          if [[ "$PREVIEW_SCOPE" == global && "$GITHUB_REF_NAME" != "$CONSOLIDATED_BRANCH" ]]; then
+            echo "Isolated branch: publish its own Preview only."
+            exit 0
+          fi
+          if [[ "$GITHUB_REF_NAME" == "$CONSOLIDATED_BRANCH" ]]; then
+            head_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$GITHUB_REF_NAME" --jq .object.sha)"
+            if [[ "$head_sha" != "$GITHUB_SHA" ]]; then
+              echo "A newer cumulative source revision exists; skip superseded publication."
+              exit 0
+            fi
+          fi
           branch_hash="$(printf '%s' "$GITHUB_REF_NAME" | sha256sum | cut -d ' ' -f 1)"
           tag="preview-$branch_hash"
+          title="Klyro Preview · $GITHUB_REF_NAME"
+          if [[ "$PREVIEW_SCOPE" == global ]]; then
+            tag="preview-latest"
+            title="Klyro Preview · Cumulative integration"
+          fi
           python3 - <<'PY'
           import hashlib, json, os
           from pathlib import Path
           assets = Path("release-assets")
           metadata = json.loads((assets / "klyro-update.json").read_text())
           if (metadata["packageName"] != "com.klyro.shell"
+                  or not isinstance(metadata["versionCode"], int) or metadata["versionCode"] <= 0
                   or metadata["branch"] != os.environ["GITHUB_REF_NAME"]
+                  or metadata["commitSha"] != os.environ["GITHUB_SHA"]
                   or metadata["apkSha256"] != hashlib.sha256((assets / "klyro-shell.apk").read_bytes()).hexdigest()):
               raise SystemExit("Preview metadata does not match the signed build")
+          notes = metadata.get("releaseNotes", "Maintenance and reliability update.")
+          if not isinstance(notes, str) or not notes.strip() or len(notes) > 8000:
+              raise SystemExit("Invalid Preview release notes")
+          (assets / "preview-notes.txt").write_text(notes.strip() + "\n", encoding="utf-8")
           PY
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = true
+            prior="$(mktemp -d)"
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern klyro-update.json --dir "$prior"
+            old_code="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1]))["versionCode"]))' "$prior/klyro-update.json")"
+            new_code="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1]))["versionCode"]))' release-assets/klyro-update.json)"
+            if [[ "$GITHUB_REF_NAME" == "$CONSOLIDATED_BRANCH" ]]; then
+              old_sha="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("commitSha","") if d.get("branch")==sys.argv[2] else "")' "$prior/klyro-update.json" "$CONSOLIDATED_BRANCH")"
+              if [[ -n "$old_sha" ]]; then
+                [[ "$old_sha" =~ ^[0-9a-f]{40}$ ]]
+                lineage="$(gh api "repos/$GITHUB_REPOSITORY/compare/$old_sha...$GITHUB_SHA" --jq .status)"
+                [[ "$lineage" == ahead || "$lineage" == identical ]] || {
+                  echo "Refusing to publish a non-descendant of the previous cumulative Preview."
+                  exit 1
+                }
+              fi
+            fi
+            rm -rf "$prior"
+            if (( new_code <= old_code )); then
+              echo "A newer or identical Preview is already published; refusing downgrade."
+              exit 0
+            fi
             gh release upload "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "$title" --notes-file release-assets/preview-notes.txt --latest=false
           else
             gh release create "$tag" release-assets/klyro-shell.apk release-assets/klyro-update.json \
               --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
-              --title "Klyro Preview · $GITHUB_REF_NAME" --notes "Signed Android build for $GITHUB_REF_NAME."
+              --title "$title" --notes-file release-assets/preview-notes.txt
           fi

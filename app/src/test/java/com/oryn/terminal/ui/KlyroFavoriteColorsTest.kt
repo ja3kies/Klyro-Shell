@@ -36,6 +36,16 @@ class KlyroFavoriteColorsTest {
         assertEquals("#FF00AABB", KlyroFavoriteColors.normalizeHex("#ff00aabb"))
     }
 
+    @Test fun savedArgbRoundTripsIntoSelectableAccentWithoutLosingOpacity() {
+        val saved = KlyroFavoriteColors.decode("#804488CC|Ocean\n#FFBDCC64|Lime")
+        assertEquals("custom:#804488CC", KlyroFavoriteColors.selectableAccentId(saved[0]))
+        assertEquals("custom:#FFBDCC64", KlyroFavoriteColors.selectableAccentId(saved[1]))
+        assertEquals("custom:#804488CC",
+            KlyroColors.normalizedAccent(KlyroFavoriteColors.selectableAccentId(saved[0])))
+        assertEquals(null, KlyroFavoriteColors.selectableAccentId(
+            KlyroFavoriteColors.Favorite("#nonsense", "Bad")))
+    }
+
     @Test fun labelLimitDoesNotSplitSupplementaryCharacters() {
         val wanted = "a".repeat(21) + "😀"
         assertEquals(wanted, KlyroFavoriteColors.normalizeLabel(wanted + "x"))

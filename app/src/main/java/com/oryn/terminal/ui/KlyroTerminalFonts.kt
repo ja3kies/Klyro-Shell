@@ -5,8 +5,8 @@ import android.graphics.Typeface
 import kotlin.math.roundToInt
 
 /**
- * DSH Go uses JetBrains Mono (SIL OFL 1.1) with system monospace fallback.
- * CI pins its font asset to an immutable source commit and verifies its blob.
+ * Bundled OFL terminal typefaces use immutable, verified font assets.
+ * Android monospace remains the fallback.
  */
 internal object KlyroTerminalFonts {
     const val DEFAULT_SIZE = 14f
@@ -21,16 +21,21 @@ internal object KlyroTerminalFonts {
 
     val options = listOf(
         Choice("system", "System Mono"),
-        Choice("jetbrains", "JetBrains Mono")
+        Choice("jetbrains", "JetBrains Mono"),
+        Choice("source-code-pro", "Source Code Pro")
     )
 
     fun normalize(id: String?): String =
         id?.takeIf { candidate -> options.any { it.id == candidate } } ?: "system"
 
     fun load(context: Context, id: String): Typeface {
-        if (normalize(id) != "jetbrains") return Typeface.MONOSPACE
+        val asset = when (normalize(id)) {
+            "jetbrains" -> "fonts/JetBrainsMono-Regular.ttf"
+            "source-code-pro" -> "fonts/SourceCodePro-Regular.ttf"
+            else -> return Typeface.MONOSPACE
+        }
         return runCatching {
-            Typeface.createFromAsset(context.assets, "fonts/JetBrainsMono-Regular.ttf")
+            Typeface.createFromAsset(context.assets, asset)
         }.getOrElse { Typeface.MONOSPACE }
     }
 }
