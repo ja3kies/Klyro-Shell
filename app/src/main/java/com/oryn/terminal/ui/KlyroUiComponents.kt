@@ -396,7 +396,11 @@ internal fun KlyroThinSlider(
         thumb = {
             Box(
                 Modifier.size(KlyroUiMetrics.iosSliderThumb)
-                    .graphicsLayer { scaleX = thumbScale; scaleY = thumbScale }
+                    .graphicsLayer {
+                        // Stretch along the drag axis, instead of swelling in every direction.
+                        scaleX = thumbScale
+                        scaleY = 1f - (thumbScale - 1f) * .35f
+                    }
                     .shadow(if (dragging || pressed) 4.dp else 2.dp, CircleShape)
                     .background(colors.foreground, CircleShape)
                     .border(KlyroUiMetrics.iosSliderBorder,
