@@ -25,6 +25,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,7 +80,12 @@ internal fun homePatternTint(accent: Color, degrees: Float): Color {
 
 /** Native replacement for the old GIF, preserving Home's existing banner layout. */
 @Composable
-internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boolean = true) {
+internal fun KlyroHomePixelCover(
+    height: Dp,
+    screenChrome: Color,
+    animate: Boolean = true,
+    onBoundsChanged: ((Rect) -> Unit)? = null
+) {
     val accent = LocalKlyroColors.current.accent
     val motionEnabled = rememberHomeMotionEnabled()
     val started = rememberCoverStarted()
@@ -95,7 +102,11 @@ internal fun KlyroHomePixelCover(height: Dp, screenChrome: Color, animate: Boole
         )
     } else null
 
-    Box(Modifier.fillMaxWidth().height(height).clearAndSetSemantics { }) {
+    Box(Modifier.fillMaxWidth().height(height)
+        .then(if (onBoundsChanged != null) Modifier.onGloballyPositioned { coordinates ->
+            coordinates.homePatternScreenBounds()?.let(onBoundsChanged)
+        } else Modifier)
+        .clearAndSetSemantics { }) {
         Box(Modifier.fillMaxSize().drawWithCache {
             val cell = 4.dp.toPx()
             val columns = ceil(size.width / cell).toInt() + 16

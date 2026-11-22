@@ -66,6 +66,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.layout.onGloballyPositioned
+import com.oryn.terminal.LocalHomePatternVisibility
+import com.oryn.terminal.homePatternScreenBounds
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.SheetValue
 import androidx.compose.ui.platform.testTag
@@ -140,8 +147,30 @@ internal fun KlyroSheet(
         skipPartiallyExpanded = true,
         confirmValueChange = { it != SheetValue.Hidden || dismissal.canDismiss(enabled.value) }
     )
+    val homePattern = LocalHomePatternVisibility.current
+    DisposableEffect(homePattern) {
+        onDispose { homePattern?.clearSheet() }
+    }
+    LaunchedEffect(sheetState, homePattern) {
+        if (homePattern != null) {
+            snapshotFlow {
+                sheetState.targetValue == SheetValue.Hidden && sheetState.currentValue != SheetValue.Hidden
+            }.collect { homePattern.closing = it }
+        }
+    }
+    LaunchedEffect(homePattern) {
+        if (homePattern != null) {
+            snapshotFlow { homePattern.sheetBounds }.collectLatest {
+                delay(200)
+                homePattern.settleMovement()
+            }
+        }
+    }
     ModalBottomSheet(
-        modifier = Modifier.testTag("klyro-modal-sheet"),
+        modifier = Modifier.testTag("klyro-modal-sheet")
+            .then(if (homePattern != null) Modifier.onGloballyPositioned { coordinates ->
+                coordinates.homePatternScreenBounds()?.let(homePattern::updateSheet)
+            } else Modifier),
         properties = ModalBottomSheetProperties(shouldDismissOnBackPress = dismissEnabled),
         sheetState = sheetState,
         onDismissRequest = { dismissal.dismiss(enabled.value, !sheetState.isVisible) { closeOwner.value() } },

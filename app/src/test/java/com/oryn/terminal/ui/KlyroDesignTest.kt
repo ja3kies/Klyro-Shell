@@ -170,6 +170,7 @@ class KlyroDesignTest {
         assertEquals("system", KlyroTerminalFonts.normalize(null))
         assertEquals("system", KlyroTerminalFonts.normalize("invalid"))
         assertEquals("jetbrains", KlyroTerminalFonts.normalize("jetbrains"))
-        assertEquals(2, KlyroTerminalFonts.options.size)
+        assertEquals("source-code-pro", KlyroTerminalFonts.normalize("source-code-pro"))
+        assertEquals(setOf("system", "jetbrains", "source-code-pro"), KlyroTerminalFonts.options.map { it.id }.toSet())
     }
 }

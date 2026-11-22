@@ -1314,6 +1314,7 @@ private fun OrynTerminalApp(
         )
     }
     val screenChrome = ui.chrome
+    val homePatternVisibility = remember { HomePatternVisibility() }
     val homeVisible = !showPlugins &&
         !(session != null && sessionClient != null && viewClient != null)
     val compactHomeHeight = LocalConfiguration.current.screenHeightDp < 660
@@ -1330,7 +1331,9 @@ private fun OrynTerminalApp(
 
     Box(Modifier.fillMaxSize().background(screenChrome)) {
         if (homeVisible) {
-            KlyroHomePixelCover(bannerHeight, screenChrome, animate = !showHomeSettings && !showRepairConfirmation)
+            KlyroHomePixelCover(bannerHeight, screenChrome,
+                animate = !showHomeSettings || homePatternVisibility.shouldAnimate,
+                onBoundsChanged = { homePatternVisibility.coverBounds = it })
         }
         Surface(
             modifier = Modifier.fillMaxSize()
@@ -1791,6 +1794,7 @@ private fun OrynTerminalApp(
     }
     }
     if (showHomeSettings) {
+        CompositionLocalProvider(LocalHomePatternVisibility provides homePatternVisibility) {
         KlyroSettingsSheet(
             initialSection = "home",
             themeMode = themeMode,
@@ -1851,6 +1855,7 @@ private fun OrynTerminalApp(
             },
             onDismiss = { showHomeSettings = false }
         )
+        }
     }
     if (showRepairConfirmation) {
         AlertDialog(
