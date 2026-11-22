@@ -28,7 +28,7 @@ class KlyroSavedAccentUiTest {
 
     @Test fun tappingSavedSwatchAppliesExactArgbAndClosesPicker() {
         prefs.edit().putString("custom_favorites",
-            "#804488CC|Ocean\\n#FFBDCC64|Lime").commit()
+            "#804488CC|Ocean\n#FFBDCC64|Lime").commit()
         val applied = mutableStateOf<String?>(null)
         val visible = mutableStateOf(true)
         ui.setContent {

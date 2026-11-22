@@ -37,7 +37,7 @@ class KlyroFavoriteColorsTest {
     }
 
     @Test fun savedArgbRoundTripsIntoSelectableAccentWithoutLosingOpacity() {
-        val saved = KlyroFavoriteColors.decode("#804488CC|Ocean\\n#FFBDCC64|Lime")
+        val saved = KlyroFavoriteColors.decode("#804488CC|Ocean\n#FFBDCC64|Lime")
         assertEquals("custom:#804488CC", KlyroFavoriteColors.selectableAccentId(saved[0]))
         assertEquals("custom:#FFBDCC64", KlyroFavoriteColors.selectableAccentId(saved[1]))
         assertEquals("custom:#804488CC",
