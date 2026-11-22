@@ -2,6 +2,11 @@ package com.oryn.terminal.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.ui.graphics.graphicsLayer
+import com.oryn.terminal.rememberHomeMotionEnabled
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.remember
@@ -65,8 +70,13 @@ internal fun KlyroThemePreviewCard(
     onClick: () -> Unit
 ) {
     val current = LocalKlyroColors.current
+    val motion = rememberHomeMotionEnabled()
+    val selection by animateFloatAsState(if (active) 1f else 0f,
+        if (motion) tween(240) else snap(), label = "theme-preview-selection")
+    val selectedCorner by animateDpAsState(if (active) 10.dp else 6.dp,
+        if (motion) tween(240) else snap(), label = "theme-preview-corner")
     val labelColor by animateColorAsState(if (active) current.accent else current.foreground,
-        tween(220), label = "theme-preview-label")
+        if (motion) tween(220) else snap(), label = "theme-preview-label")
     // Generate previews from the selected accent instead of a fixed Lime palette.
     val preview = KlyroThemePreviewPalette.forMode(mode, accentId)
     val (lightPreview, darkPreview) = KlyroThemePreviewPalette.systemPair(accentId)
@@ -91,7 +101,7 @@ internal fun KlyroThemePreviewCard(
         ) {
             Box(
                 modifier = Modifier.fillMaxWidth().height(40.dp)
-                    .then(if (active) Modifier.border(KlyroUiMetrics.selectedBorder, current.accent, RoundedCornerShape(8.dp)) else Modifier)
+                    .border(KlyroUiMetrics.selectedBorder, current.accent.copy(alpha = selection), RoundedCornerShape(selectedCorner))
                     .padding(2.dp).clearAndSetSemantics { },
                 contentAlignment = Alignment.Center
             ) {
@@ -99,7 +109,7 @@ internal fun KlyroThemePreviewCard(
                     // One preview for BOTH device appearances, never inherit a stale mono preview.
                     Row(
                         modifier = Modifier.fillMaxWidth().height(40.dp)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape((selectedCorner - 2.dp).coerceAtLeast(4.dp)))
                     ) {
                         listOf(lightPreview, darkPreview).forEach { palette ->
                             Box(
@@ -116,7 +126,7 @@ internal fun KlyroThemePreviewCard(
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth().height(40.dp)
-                            .background(preview.terminal, RoundedCornerShape(6.dp))
+                            .background(preview.terminal, RoundedCornerShape((selectedCorner - 2.dp).coerceAtLeast(4.dp)))
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
